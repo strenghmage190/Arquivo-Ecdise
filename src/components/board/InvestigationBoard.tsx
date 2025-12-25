@@ -400,17 +400,17 @@ export function InvestigationBoard({ investigationId }: Props) {
           if (e.target === corkboardRef.current || e.target === e.currentTarget) {
             const board = corkboardRef.current?.getBoundingClientRect();
             if (!board) return;
-            // start marquee when Shift is held; otherwise start panning
-            if (e.shiftKey) {
-              // start marquee in screen + board coords
+            // Left click on empty board: start marquee selection
+            // Middle-click (button===1) starts panning (common UX)
+            if (e.button === 1) {
+              panningRef.current = { startX: e.clientX, startY: e.clientY, originX: origin.x, originY: origin.y };
+            } else {
               const sx = e.clientX - board.left;
               const sy = e.clientY - board.top;
               const bx = sx / zoom + origin.x;
               const by = sy / zoom + origin.y;
               marqueeStartRef.current = { sx, sy, bx, by };
               setMarqueeRect({ left: sx, top: sy, width: 0, height: 0 });
-            } else {
-              panningRef.current = { startX: e.clientX, startY: e.clientY, originX: origin.x, originY: origin.y };
             }
           }
         }}
