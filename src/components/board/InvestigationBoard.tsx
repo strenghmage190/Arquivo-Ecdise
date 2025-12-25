@@ -4,6 +4,7 @@ import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
 import CreateClueModal from '../modals/CreateClueModal';
+import Toast from '../../components/ui/Toast';
 import BoardButton from '../tools/BoardButton';
 import './investigation.css';
 
@@ -205,6 +206,8 @@ export function InvestigationBoard({ investigationId }: Props) {
       const created = await connApi.createInvestigationConnection(payload);
       setConnections((prev) => [...prev, created]);
       setConnectionUndoStack((s) => [...s, created]);
+      // show toast with undo
+      showToast({ id: created.id, message: 'Conexão criada', connectionId: created.id });
     } catch (err) {
       console.error('Failed to create connection', err);
     }
@@ -238,6 +241,34 @@ export function InvestigationBoard({ investigationId }: Props) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [connectionUndoStack]);
+
+  const [toast, setToast] = useState<{ id: string; message: string; connectionId?: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearToast = () => {
+    setToast(null);
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current as any);
+      toastTimer.current = null;
+    }
+  };
+
+  const showToast = (t: { id: string; message: string; connectionId?: string }, duration = 6000) => {
+    setToast(t);
+    if (toastTimer.current) clearTimeout(toastTimer.current as any);
+    toastTimer.current = setTimeout(() => setToast(null), duration) as any;
+  };
+
+  const undoConnectionById = async (id: string) => {
+    try {
+      await connApi.deleteInvestigationConnection(id);
+      setConnections((prev) => prev.filter((c) => c.id !== id));
+      setConnectionUndoStack((s) => s.filter((it) => it.id !== id));
+      clearToast();
+    } catch (err) {
+      console.error('Failed to undo connection', err);
+    }
+  };
 
   const getCardCenter = (cardId: string | undefined | null) => {
     if (!cardId) return null;
@@ -357,6 +388,16 @@ export function InvestigationBoard({ investigationId }: Props) {
       <CreateClueModal isOpen={createModalOpen} investigationId={investigationId} onClose={() => setCreateModalOpen(false)} onSaved={loadBoard} />
 
       <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} />
+      <div className="toast-container">
+        {toast && (
+          <Toast
+            message={toast.message}
+            actionLabel={toast.connectionId ? 'Desfazer' : undefined}
+            onAction={() => toast.connectionId && undoConnectionById(toast.connectionId)}
+            onClose={() => clearToast()}
+          />
+        )}
+      </div>
     </div>
   );
 }
