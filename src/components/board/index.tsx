@@ -30,6 +30,15 @@ export default function InvestigationBoard() {
     // limit stack
     if (undoStack.current.length > 50) undoStack.current.shift();
     redoStack.current = [];
+    // persist stacks to localStorage
+    try {
+      if (id) {
+        localStorage.setItem(`board_undo_${id}`, JSON.stringify(undoStack.current));
+        localStorage.setItem(`board_redo_${id}`, JSON.stringify(redoStack.current));
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   function applySnapshot(snap: Record<string, { x: number; y: number }>) {
@@ -57,6 +66,53 @@ export default function InvestigationBoard() {
       delete saveTimers.current[id];
     }, 600);
   }
+
+  // Load persisted stacks on mount for this investigation
+  useEffect(() => {
+    try {
+      if (!id) return;
+      const u = localStorage.getItem(`board_undo_${id}`);
+      const r = localStorage.getItem(`board_redo_${id}`);
+      if (u) undoStack.current = JSON.parse(u);
+      if (r) redoStack.current = JSON.parse(r);
+    } catch (e) {
+      // ignore
+    }
+  }, [id]);
+
+  // Keyboard shortcuts: Ctrl/Cmd+Z (undo), Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z (redo)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        const snap = undoStack.current.pop();
+        if (!snap) return;
+        redoStack.current.push((() => {
+          const cur: Record<string, { x: number; y: number }> = {};
+          for (const c of cards) cur[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
+          return cur;
+        })());
+        applySnapshot(snap);
+        try { if (id) { localStorage.setItem(`board_undo_${id}`, JSON.stringify(undoStack.current)); localStorage.setItem(`board_redo_${id}`, JSON.stringify(redoStack.current)); } } catch (e) {}
+      }
+      if (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault();
+        const snap = redoStack.current.pop();
+        if (!snap) return;
+        undoStack.current.push((() => {
+          const cur: Record<string, { x: number; y: number }> = {};
+          for (const c of cards) cur[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
+          return cur;
+        })());
+        applySnapshot(snap);
+        try { if (id) { localStorage.setItem(`board_undo_${id}`, JSON.stringify(undoStack.current)); localStorage.setItem(`board_redo_${id}`, JSON.stringify(redoStack.current)); } } catch (e) {}
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [cards, id]);
 
   useEffect(() => {
     if (!id) return;
