@@ -1,15 +1,19 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
-import Investigation from './pages/Investigation';
+import InvestigationPage from './pages/Investigation';
 
-export default function App() {
+function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/investigation/:id" element={<Investigation />} />
-      </Routes>
+      <div className="app-container">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/case/:id" element={<InvestigationPage />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
+
+export default App;
