@@ -26,6 +26,8 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const marqueeStartRef = useRef<{ sx: number; sy: number; bx: number; by: number } | null>(null);
   const [connectionColor, setConnectionColor] = useState<string>('#9a2b2b');
   const [connectionType, setConnectionType] = useState<'confirmed'|'theory'|'mystic'>('confirmed');
   const [connectionUndoStack, setConnectionUndoStack] = useState<any[]>([]);
@@ -98,10 +100,54 @@ export function InvestigationBoard({ investigationId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [investigationId]);
 
+  // Marquee: start on shift+mousedown on background, update on move, finalize on mouseup
+  const startMarquee = (e: MouseEvent) => {
+    const board = corkboardRef.current?.getBoundingClientRect();
+    if (!board) return;
+    const sx = e.clientX - board.left;
+    const sy = e.clientY - board.top;
+    const bx = sx / zoom + origin.x;
+    const by = sy / zoom + origin.y;
+    marqueeStartRef.current = { sx, sy, bx, by };
+    setMarqueeRect({ left: sx, top: sy, width: 0, height: 0 });
+  };
+
   // TODO: implement pointer/mouse move handlers that update `cards` or a localPositions map
   // Implement global move handlers to update localPositions while dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // update marquee if active
+      if (marqueeStartRef.current) {
+        const board = corkboardRef.current?.getBoundingClientRect();
+        if (!board) return;
+        const sx = e.clientX - board.left;
+        const sy = e.clientY - board.top;
+        const start = marqueeStartRef.current;
+        const left = Math.min(start.sx, sx);
+        const top = Math.min(start.sy, sy);
+        const width = Math.abs(sx - start.sx);
+        const height = Math.abs(sy - start.sy);
+        setMarqueeRect({ left, top, width, height });
+        // compute selection in board coords
+        const bx1 = Math.min(start.bx, sx / zoom + origin.x);
+        const by1 = Math.min(start.by, sy / zoom + origin.y);
+        const bx2 = Math.max(start.bx, sx / zoom + origin.x);
+        const by2 = Math.max(start.by, sy / zoom + origin.y);
+        const sel: string[] = [];
+        const CARD_W = 220;
+        const CARD_H = 160;
+        cards.forEach((c) => {
+          const p = localPositions[c.id] || { x: c.x || 100, y: c.y || 100 };
+          const cx1 = p.x;
+          const cy1 = p.y;
+          const cx2 = p.x + CARD_W;
+          const cy2 = p.y + CARD_H;
+          const overlap = !(cx2 < bx1 || cx1 > bx2 || cy2 < by1 || cy1 > by2);
+          if (overlap) sel.push(c.id);
+        });
+        setSelectedIds(sel);
+        return; // marquee handled
+      }
       const p = panningRef.current;
       if (p) {
         const dx = e.clientX - p.startX;
@@ -158,6 +204,19 @@ export function InvestigationBoard({ investigationId }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom, connectionMode, connectionStart]);
+
+  // finalize marquee on mouseup
+  useEffect(() => {
+    const up = (e: MouseEvent) => {
+      if (marqueeStartRef.current) {
+        marqueeStartRef.current = null;
+        // leave selection as-is; hide marquee overlay
+        setTimeout(() => setMarqueeRect(null), 10);
+      }
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, []);
 
   const scheduleDebouncedSave = useCallback((id: string) => {
     const existing = saveTimeouts.current[id];
@@ -236,6 +295,27 @@ export function InvestigationBoard({ investigationId }: Props) {
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (connectionUndoStack.length > 0) undoLastConnection();
+      }
+
+      // keyboard move for selection
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        // don't move while editing text
+        const tg = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tg === 'input' || tg === 'textarea' || tg === 'select' || e.altKey) return;
+        e.preventDefault();
+        if (!selectedIds || selectedIds.length === 0) return;
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        setLocalPositions((prev) => {
+          const next = { ...prev };
+          selectedIds.forEach((id) => {
+            const cur = prev[id] || { x: 100, y: 100 };
+            next[id] = { x: cur.x + dx, y: cur.y + dy };
+            scheduleDebouncedSave(id);
+          });
+          return next;
+        });
       }
     };
     window.addEventListener('keydown', handler);
@@ -318,10 +398,24 @@ export function InvestigationBoard({ investigationId }: Props) {
         className="corkboard-canvas"
         onMouseDown={(e) => {
           if (e.target === corkboardRef.current || e.target === e.currentTarget) {
-            panningRef.current = { startX: e.clientX, startY: e.clientY, originX: origin.x, originY: origin.y };
+            const board = corkboardRef.current?.getBoundingClientRect();
+            if (!board) return;
+            // start marquee when Shift is held; otherwise start panning
+            if (e.shiftKey) {
+              // start marquee in screen + board coords
+              const sx = e.clientX - board.left;
+              const sy = e.clientY - board.top;
+              const bx = sx / zoom + origin.x;
+              const by = sy / zoom + origin.y;
+              marqueeStartRef.current = { sx, sy, bx, by };
+              setMarqueeRect({ left: sx, top: sy, width: 0, height: 0 });
+            } else {
+              panningRef.current = { startX: e.clientX, startY: e.clientY, originX: origin.x, originY: origin.y };
+            }
           }
         }}
       >
+        {marqueeRect && <div className="marquee-rect" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
         <div
           className="board-transform-layer"
           style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}

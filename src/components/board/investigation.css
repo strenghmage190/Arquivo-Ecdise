@@ -70,6 +70,14 @@
 .toast-action { background: transparent; color: #ffd54f; border: 1px solid rgba(255,213,79,0.12); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .toast-close { background: transparent; color: #aaa; border: none; padding: 4px 6px; font-size: 16px; cursor: pointer; }
 
+.marquee-rect {
+  position: absolute;
+  border: 2px dashed rgba(255,213,79,0.9);
+  background: rgba(255,213,79,0.06);
+  pointer-events: none;
+  z-index: 4000;
+}
+
 .card-node {
   position: absolute;
   width: 220px;
