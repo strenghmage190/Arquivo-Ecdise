@@ -53,6 +53,11 @@
 
 .card-node:active { cursor: grabbing; }
 
+.card-node.selected {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6), 0 0 0 3px rgba(180,160,100,0.12) inset;
+  border: 1px solid rgba(200,170,100,0.12);
+}
+
 .card-photo {
   height: 96px;
   background-size: cover;

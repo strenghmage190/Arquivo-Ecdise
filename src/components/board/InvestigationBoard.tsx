@@ -28,6 +28,7 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   // localPositions used while dragging to avoid frequent re-fetches
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<any>(null);
@@ -108,10 +109,23 @@ export function InvestigationBoard({ investigationId }: Props) {
       if (!d || !d.id) return;
       const dx = (e.clientX - d.startX) / zoom;
       const dy = (e.clientY - d.startY) / zoom;
-      setLocalPositions((prev) => ({ ...prev, [d.id]: { x: d.origX + dx, y: d.origY + dy } }));
+      // if multiple selected and the dragged id is part of selection, move all selected
+      if (selectedIds.length > 0 && selectedIds.includes(d.id)) {
+        setLocalPositions((prev) => {
+          const next = { ...prev };
+          selectedIds.forEach((sid) => {
+            const base = prev[sid] || { x: d.origX, y: d.origY };
+            next[sid] = { x: base.x + dx, y: base.y + dy };
+          });
+          return next;
+        });
+        // schedule saves for all
+        selectedIds.forEach((sid) => scheduleDebouncedSave(sid));
+      } else {
+        setLocalPositions((prev) => ({ ...prev, [d.id]: { x: d.origX + dx, y: d.origY + dy } }));
+        if (d.id) scheduleDebouncedSave(d.id);
+      }
       if (connectionMode && connectionStart) setMousePos({ x: e.clientX, y: e.clientY });
-      // schedule debounce save
-      if (d.id) scheduleDebouncedSave(d.id);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -155,6 +169,40 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
     }, 600);
   }, [localPositions]);
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const toggleSelect = (id: string, additive = false) => {
+    setSelectedIds((prev) => {
+      if (!additive) return [id];
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      return [...prev, id];
+    });
+  };
+
+  const onCardClickWhenConnecting = async (cardId: string) => {
+    if (!connectionMode) return false;
+    if (!connectionStart) {
+      setConnectionStart(cardId);
+      return true;
+    }
+    if (connectionStart === cardId) {
+      setConnectionStart(null);
+      setConnectionMode(false);
+      return true;
+    }
+    try {
+      const payload: any = { investigation_id: investigationId, from_card_id: connectionStart, to_card_id: cardId, metadata: { type: 'confirmed' } };
+      const created = await connApi.createInvestigationConnection(payload);
+      setConnections((prev) => [...prev, created]);
+    } catch (err) {
+      console.error('Failed to create connection', err);
+    }
+    setConnectionStart(null);
+    setConnectionMode(false);
+    setMousePos(null);
+    return true;
+  };
 
   const getCardCenter = (cardId: string | undefined | null) => {
     if (!cardId) return null;
@@ -216,15 +264,27 @@ export function InvestigationBoard({ investigationId }: Props) {
 
           {cards.map((card) => {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };
+            const isSelected = selectedIds.includes(card.id);
             return (
               <div
                 key={card.id}
-                className="card-node"
+                className={`card-node ${isSelected ? 'selected' : ''}`}
                 style={{ left: pos.x, top: pos.y }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
+                  const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+                  if (!connectionMode) toggleSelect(card.id, additive);
                   const next = { id: card.id, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
                   draggingRef.current = next;
+                }}
+                onClick={async (ev) => {
+                  ev.stopPropagation();
+                  if (connectionMode) {
+                    const handled = await onCardClickWhenConnecting(card.id);
+                    if (handled) return;
+                  }
+                  // normal click toggles selection (single click selects)
+                  if (!ev.shiftKey && !ev.ctrlKey && !ev.metaKey) toggleSelect(card.id, false);
                 }}
                 onTouchStart={(ev) => {
                   const t = ev.touches[0];
