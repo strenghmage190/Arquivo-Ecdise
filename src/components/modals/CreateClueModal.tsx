@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
+import { validateImageFile } from '../../utils/fileValidators';
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
 
   const handleFileChange = async (file: File | null) => {
     if (!file) return;
+    const check = validateImageFile(file);
+    if (!check.ok) {
+      alert(check.reason);
+      return;
+    }
     setImageUploading(true);
     try {
       const publicUrl = await uploadInvestigationImage(file, investigationId);

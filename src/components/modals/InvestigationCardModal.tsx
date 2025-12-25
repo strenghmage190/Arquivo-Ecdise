@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
 import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
+import { validateImageFile } from '../../utils/fileValidators';
 
 interface Props {
   open: boolean;
@@ -66,6 +67,11 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     const file = event.target.files[0];
+    const check = validateImageFile(file);
+    if (!check.ok) {
+      alert(check.reason);
+      return;
+    }
     setUploading(true);
     try {
       const publicUrl = await uploadInvestigationImage(file, investigationId);

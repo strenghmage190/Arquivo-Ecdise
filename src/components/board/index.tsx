@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchInvestigationById, fetchCardsForInvestigation, updateInvestigationCard } from '../../api/investigations';
 import { fetchConnectionsForInvestigation } from '../../api/connections';
+import { CreateClueModal, InvestigationCardModal } from '../modals';
 
 type Card = any;
 type Connection = any;
@@ -126,6 +127,15 @@ export default function InvestigationBoard() {
     })();
   }, [id]);
 
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+
+  const refreshCards = async () => {
+    if (!id) return;
+    const c = await fetchCardsForInvestigation(id);
+    setCards(c || []);
+  };
+
   const updateCardLocally = useCallback((cardId: string, x: number, y: number) => {
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, x, y } : c)));
   }, []);
@@ -151,6 +161,11 @@ export default function InvestigationBoard() {
   return (
     <div ref={boardRef} style={{ position: 'relative', width: '100%', height: '80vh', background: '#0b1220', overflow: 'auto' }}>
       <h2 style={{ color: '#e6eef8', padding: 12 }}>{investigation?.title || 'Quadro de Investigação'}</h2>
+
+      <div style={{ padding: 12, display: 'flex', gap: 8 }}>
+        <button onClick={() => setOpenCreateModal(true)}>+ Novo Caso / Pista</button>
+        <button onClick={() => { if (selectedCard) setOpenEditModal(true); else alert('Selecione um card primeiro'); }}>Editar Card Selecionado</button>
+      </div>
 
       <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', gap: 8 }}>
         <button onClick={() => {
@@ -279,6 +294,14 @@ export default function InvestigationBoard() {
           <div style={{ fontSize: 12, color: '#9ca3af' }}>{card.description_public}</div>
         </div>
       ))}
+
+      {/* Modals integration */}
+      {id && (
+        <>
+          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); }} investigationId={id} onSaved={() => refreshCards()} />
+          <InvestigationCardModal open={openEditModal} onClose={() => setOpenEditModal(false)} investigationId={id} existing={selectedCard || undefined} onSaved={(c) => { setOpenEditModal(false); refreshCards(); }} />
+        </>
+      )}
 
       {/* Sidebar para editar card selecionado */}
       {selectedCard && (
