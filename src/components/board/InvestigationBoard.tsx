@@ -30,7 +30,8 @@ export function InvestigationBoard({ investigationId }: Props) {
   const marqueeStartRef = useRef<{ sx: number; sy: number; bx: number; by: number } | null>(null);
   const [connectionColor, setConnectionColor] = useState<string>('#9a2b2b');
   const [connectionType, setConnectionType] = useState<'confirmed'|'theory'|'mystic'>('confirmed');
-  const [connectionUndoStack, setConnectionUndoStack] = useState<any[]>([]);
+  const [undoStack, setUndoStack] = useState<any[]>([]);
+  const [redoStack, setRedoStack] = useState<any[]>([]);
 
   // localPositions used while dragging to avoid frequent re-fetches
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -73,20 +74,29 @@ export function InvestigationBoard({ investigationId }: Props) {
       return;
     }
     if (draggingRef.current) {
-      const { id } = draggingRef.current;
-      const pos = localPositions[id];
+      const d = draggingRef.current;
       draggingRef.current = null;
-      // immediate save: cancel debounce and persist
-      const to = saveTimeouts.current[id];
-      if (to) {
-        clearTimeout(to as any);
-        saveTimeouts.current[id] = null;
+      const origs: Record<string, { x: number; y: number }> = d.origPositions || (d.origX !== undefined ? { [d.id]: { x: d.origX, y: d.origY } } : {});
+      const affected = Object.keys(origs);
+      const changes: any[] = [];
+      for (const aid of affected) {
+        const pos = localPositions[aid];
+        // cancel debounce
+        const to = saveTimeouts.current[aid];
+        if (to) {
+          clearTimeout(to as any);
+          saveTimeouts.current[aid] = null;
+        }
+        if (pos) {
+          changes.push({ id: aid, from: origs[aid], to: { x: Math.round(pos.x), y: Math.round(pos.y) } });
+        }
       }
-      if (pos) {
-        try {
-          await api.updateCard(id, { x: Math.round(pos.x), y: Math.round(pos.y) });
-        } catch (err) {
-          console.error('Falha ao salvar posição do card', err);
+      if (changes.length) {
+        // push move action
+        pushUndo({ type: 'move', payload: { changes } });
+        // persist all
+        for (const c of changes) {
+          try { await api.updateCard(c.id, { x: c.to.x, y: c.to.y }); } catch (err) { console.error('Falha ao salvar posição do card', err); }
         }
       }
     }
@@ -264,7 +274,9 @@ export function InvestigationBoard({ investigationId }: Props) {
       };
       const created = await connApi.createInvestigationConnection(payload);
       setConnections((prev) => [...prev, created]);
-      setConnectionUndoStack((s) => [...s, created]);
+      // push undo action for created connection
+      setUndoStack((s) => [...s, { type: 'create_connection', payload: created }]);
+      setRedoStack([]);
       // show toast with undo
       showToast({ id: created.id, message: 'Conexão criada', connectionId: created.id });
     } catch (err) {
@@ -276,15 +288,62 @@ export function InvestigationBoard({ investigationId }: Props) {
     return true;
   };
 
-  const undoLastConnection = async () => {
-    const last = connectionUndoStack[connectionUndoStack.length - 1];
+  const pushUndo = (action: any) => {
+    setUndoStack((s) => [...s, action]);
+    setRedoStack([]);
+  };
+
+  const undo = async () => {
+    const last = undoStack[undoStack.length - 1];
     if (!last) return;
+    setUndoStack((s) => s.slice(0, s.length - 1));
     try {
-      await connApi.deleteInvestigationConnection(last.id);
-      setConnections((prev) => prev.filter((c) => c.id !== last.id));
-      setConnectionUndoStack((s) => s.slice(0, s.length - 1));
+      if (last.type === 'create_connection') {
+        const created = last.payload;
+        await connApi.deleteInvestigationConnection(created.id);
+        setConnections((prev) => prev.filter((c) => c.id !== created.id));
+        setRedoStack((s) => [...s, last]);
+      } else if (last.type === 'move') {
+        const changes = last.payload.changes;
+        setLocalPositions((prev) => {
+          const next = { ...prev };
+          changes.forEach((c: any) => { next[c.id] = { x: c.from.x, y: c.from.y }; });
+          return next;
+        });
+        for (const c of changes) {
+          try { await api.updateCard(c.id, { x: Math.round(c.from.x), y: Math.round(c.from.y) }); } catch (e) { console.error('undo move persist failed', e); }
+        }
+        setRedoStack((s) => [...s, last]);
+      }
     } catch (err) {
-      console.error('Failed to undo connection', err);
+      console.error('Undo failed', err);
+    }
+  };
+
+  const redo = async () => {
+    const last = redoStack[redoStack.length - 1];
+    if (!last) return;
+    setRedoStack((s) => s.slice(0, s.length - 1));
+    try {
+      if (last.type === 'create_connection') {
+        const payload = last.payload;
+        const recreated = await connApi.createInvestigationConnection({ investigation_id: payload.investigation_id, from_card_id: payload.from_card_id, to_card_id: payload.to_card_id, metadata: payload.metadata || {}, color: payload.color });
+        setConnections((prev) => [...prev, recreated]);
+        setUndoStack((s) => [...s, { type: 'create_connection', payload: recreated }]);
+      } else if (last.type === 'move') {
+        const changes = last.payload.changes;
+        setLocalPositions((prev) => {
+          const next = { ...prev };
+          changes.forEach((c: any) => { next[c.id] = { x: c.to.x, y: c.to.y }; });
+          return next;
+        });
+        for (const c of changes) {
+          try { await api.updateCard(c.id, { x: Math.round(c.to.x), y: Math.round(c.to.y) }); } catch (e) { console.error('redo move persist failed', e); }
+        }
+        setUndoStack((s) => [...s, last]);
+      }
+    } catch (err) {
+      console.error('Redo failed', err);
     }
   };
 
@@ -294,12 +353,15 @@ export function InvestigationBoard({ investigationId }: Props) {
       const ctrl = isMac ? e.metaKey : e.ctrlKey;
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        if (connectionUndoStack.length > 0) undoLastConnection();
+        undo();
+      }
+      if ((ctrl && e.key.toLowerCase() === 'y') || (ctrl && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault();
+        redo();
       }
 
       // keyboard move for selection
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        // don't move while editing text
         const tg = (e.target as HTMLElement)?.tagName?.toLowerCase();
         if (tg === 'input' || tg === 'textarea' || tg === 'select' || e.altKey) return;
         e.preventDefault();
@@ -320,7 +382,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [connectionUndoStack]);
+  }, [undoStack, redoStack, selectedIds]);
 
   const [toast, setToast] = useState<{ id: string; message: string; connectionId?: string } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -339,16 +401,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     toastTimer.current = setTimeout(() => setToast(null), duration) as any;
   };
 
-  const undoConnectionById = async (id: string) => {
-    try {
-      await connApi.deleteInvestigationConnection(id);
-      setConnections((prev) => prev.filter((c) => c.id !== id));
-      setConnectionUndoStack((s) => s.filter((it) => it.id !== id));
-      clearToast();
-    } catch (err) {
-      console.error('Failed to undo connection', err);
-    }
-  };
+
 
   const getCardCenter = (cardId: string | undefined | null) => {
     if (!cardId) return null;
@@ -383,10 +436,12 @@ export function InvestigationBoard({ investigationId }: Props) {
                 <div key={c} onClick={() => setConnectionColor(c)} style={{ width: 18, height: 18, borderRadius: 6, background: c, cursor: 'pointer', border: connectionColor === c ? '2px solid #fff' : '1px solid rgba(255,255,255,0.06)' }} />
               ))}
             </div>
-            <BoardButton onClick={undoLastConnection} disabled={connectionUndoStack.length === 0}>Undo</BoardButton>
+            {/* Undo button moved to main toolbar controls */}
           </div>
         )}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <BoardButton onClick={() => undo()} disabled={undoStack.length === 0}>Undo</BoardButton>
+          <BoardButton onClick={() => redo()} disabled={redoStack.length === 0}>Redo</BoardButton>
           <BoardButton onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}>−</BoardButton>
           <div style={{ minWidth: 48, textAlign: 'center' }}>{Math.round(zoom * 100)}%</div>
           <BoardButton onClick={() => setZoom((z) => z + 0.1)}>+</BoardButton>
@@ -452,7 +507,16 @@ export function InvestigationBoard({ investigationId }: Props) {
                   e.stopPropagation();
                   const additive = e.shiftKey || e.ctrlKey || e.metaKey;
                   if (!connectionMode) toggleSelect(card.id, additive);
-                  const next = { id: card.id, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+                  const affected = (selectedIds.length > 0 && selectedIds.includes(card.id)) ? selectedIds : [card.id];
+                  const origPositions: Record<string, { x: number; y: number }> = {};
+                  affected.forEach((id) => {
+                    const p = localPositions[id] || (() => {
+                      const found = cards.find((cc) => cc.id === id);
+                      return found ? { x: found.x || 100, y: found.y || 100 } : { x: pos.x, y: pos.y };
+                    })();
+                    origPositions[id] = { x: p.x, y: p.y };
+                  });
+                  const next = { id: card.id, startX: e.clientX, startY: e.clientY, origPositions };
                   draggingRef.current = next;
                 }}
                 onClick={async (ev) => {
@@ -466,7 +530,16 @@ export function InvestigationBoard({ investigationId }: Props) {
                 }}
                 onTouchStart={(ev) => {
                   const t = ev.touches[0];
-                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, origX: pos.x, origY: pos.y };
+                  const affected = (selectedIds.length > 0 && selectedIds.includes(card.id)) ? selectedIds : [card.id];
+                  const origPositions: Record<string, { x: number; y: number }> = {};
+                  affected.forEach((id) => {
+                    const p = localPositions[id] || (() => {
+                      const found = cards.find((cc) => cc.id === id);
+                      return found ? { x: found.x || 100, y: found.y || 100 } : { x: pos.x, y: pos.y };
+                    })();
+                    origPositions[id] = { x: p.x, y: p.y };
+                  });
+                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, origPositions };
                   draggingRef.current = next;
                 }}
                 onDoubleClick={() => { setEditingCard(card); setModalOpen(true); }}
@@ -487,7 +560,7 @@ export function InvestigationBoard({ investigationId }: Props) {
           <Toast
             message={toast.message}
             actionLabel={toast.connectionId ? 'Desfazer' : undefined}
-            onAction={() => toast.connectionId && undoConnectionById(toast.connectionId)}
+            onAction={() => { undo(); clearToast(); }}
             onClose={() => clearToast()}
           />
         )}
