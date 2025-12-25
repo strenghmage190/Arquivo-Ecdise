@@ -14,6 +14,49 @@ export default function InvestigationBoard() {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Undo/redo stacks (store map of id -> {x,y})
+  const undoStack = useRef<Array<Record<string, { x: number; y: number }>>>([]);
+  const redoStack = useRef<Array<Record<string, { x: number; y: number }>>>([]);
+
+  // Debounce timers for saving positions
+  const saveTimers = useRef<Record<string, number>>({});
+
+  function pushSnapshot() {
+    const snap: Record<string, { x: number; y: number }> = {};
+    for (const c of cards) snap[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
+    undoStack.current.push(snap);
+    // limit stack
+    if (undoStack.current.length > 50) undoStack.current.shift();
+    redoStack.current = [];
+  }
+
+  function applySnapshot(snap: Record<string, { x: number; y: number }>) {
+    setCards((prev) => prev.map((c) => (snap[c.id] ? { ...c, x: snap[c.id].x, y: snap[c.id].y } : c)));
+  }
+
+  async function persistPositions(ids: string[]) {
+    // Persist multiple card positions
+    await Promise.all(ids.map(async (id) => {
+      const card = cards.find((c) => c.id === id);
+      if (!card) return;
+      try {
+        await updateInvestigationCard(id, { x: card.x ?? 0, y: card.y ?? 0 });
+      } catch (e) {
+        console.error('Erro ao persistir posição do card', id, e);
+      }
+    }));
+  }
+
+  function schedulePersist(id: string) {
+    // debounce 600ms
+    if (saveTimers.current[id]) window.clearTimeout(saveTimers.current[id]);
+    saveTimers.current[id] = window.setTimeout(() => {
+      persistPositions([id]);
+      delete saveTimers.current[id];
+    }, 600);
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -53,6 +96,29 @@ export default function InvestigationBoard() {
     <div ref={boardRef} style={{ position: 'relative', width: '100%', height: '80vh', background: '#0b1220', overflow: 'auto' }}>
       <h2 style={{ color: '#e6eef8', padding: 12 }}>{investigation?.title || 'Quadro de Investigação'}</h2>
 
+      <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', gap: 8 }}>
+        <button onClick={() => {
+          const snap = undoStack.current.pop();
+          if (!snap) return;
+          redoStack.current.push((() => {
+            const cur: Record<string, { x: number; y: number }> = {};
+            for (const c of cards) cur[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
+            return cur;
+          })());
+          applySnapshot(snap);
+        }}>Undo</button>
+        <button onClick={() => {
+          const snap = redoStack.current.pop();
+          if (!snap) return;
+          undoStack.current.push((() => {
+            const cur: Record<string, { x: number; y: number }> = {};
+            for (const c of cards) cur[c.id] = { x: c.x ?? 0, y: c.y ?? 0 };
+            return cur;
+          })());
+          applySnapshot(snap);
+        }}>Redo</button>
+      </div>
+
       {/* SVG layer for connections */}
       <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         {connections.map((conn) => {
@@ -80,11 +146,26 @@ export default function InvestigationBoard() {
       {cards.map((card) => (
         <div
           key={card.id}
-          onClick={() => setSelectedCard(card)}
+          onClick={(e) => {
+            const shift = (e as React.MouseEvent).shiftKey;
+            if (shift) {
+              setSelectedIds((prev) => {
+                const copy = new Set(prev);
+                if (copy.has(card.id)) copy.delete(card.id);
+                else copy.add(card.id);
+                return copy;
+              });
+            } else {
+              setSelectedIds(new Set([card.id]));
+              setSelectedCard(card);
+            }
+          }}
           onPointerDown={(e) => {
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             dragRef.current = { id: card.id, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
             (e.currentTarget as HTMLElement).setPointerCapture((e as any).pointerId);
+            // push snapshot on drag start
+            pushSnapshot();
           }}
           onPointerMove={(e) => {
             if (!dragRef.current || dragRef.current.id !== card.id) return;
@@ -92,7 +173,23 @@ export default function InvestigationBoard() {
             if (!boardRect) return;
             const x = e.clientX - boardRect.left - dragRef.current.offsetX;
             const y = e.clientY - boardRect.top - dragRef.current.offsetY;
-            updateCardLocally(card.id, x, y);
+            // if multiple selected and dragging one of them, move all
+            if (selectedIds.has(card.id) && selectedIds.size > 1) {
+              // compute deltas relative to initial positions
+              const base = cards.find((c) => c.id === card.id);
+              if (!base) return;
+              const dx = x - (base.x ?? 0);
+              const dy = y - (base.y ?? 0);
+              setCards((prev) => prev.map((c) => (selectedIds.has(c.id) ? { ...c, x: (c.x ?? 0) + dx, y: (c.y ?? 0) + dy } : c)));
+            } else {
+              updateCardLocally(card.id, x, y);
+            }
+            // schedule debounced persist for this card (or group)
+            if (selectedIds.has(card.id) && selectedIds.size > 1) {
+              selectedIds.forEach((id) => schedulePersist(id));
+            } else {
+              schedulePersist(card.id);
+            }
           }}
           onPointerUp={async (e) => {
             if (!dragRef.current || dragRef.current.id !== card.id) return;
@@ -101,7 +198,12 @@ export default function InvestigationBoard() {
             const x = e.clientX - boardRect.left - dragRef.current.offsetX;
             const y = e.clientY - boardRect.top - dragRef.current.offsetY;
             dragRef.current = null;
-            await persistCardPosition(card.id, x, y);
+            // persist immediately on pointer up
+            if (selectedIds.has(card.id) && selectedIds.size > 1) {
+              await persistPositions(Array.from(selectedIds));
+            } else {
+              await persistCardPosition(card.id, x, y);
+            }
           }}
           style={{
             position: 'absolute',
@@ -109,7 +211,7 @@ export default function InvestigationBoard() {
             top: card.y ?? 0,
             width: 200,
             padding: 8,
-            background: '#111827',
+            background: selectedIds.has(card.id) ? '#15202b' : '#111827',
             color: '#e6eef8',
             border: '1px solid #374151',
             borderRadius: 6,
