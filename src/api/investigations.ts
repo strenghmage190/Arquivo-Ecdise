@@ -1,0 +1,175 @@
+import { supabase } from '../supabaseClient';
+import { isValidId } from '../utils/supabaseHelpers';
+
+// --- Types ---
+export interface InvestigationCardInsight {
+  id: string;
+  skill: string;
+  cost: number;
+  text: string;
+  visibility?: 'hidden' | 'group' | 'player';
+  reveal_to?: string[];
+}
+
+export interface InvestigationCard {
+  id?: string;
+  investigation_id: string;
+  title: string;
+  image_url?: string | null;
+  description_public?: string | null;
+  description_hidden?: string | null;
+  x?: number;
+  y?: number;
+  z_index?: number;
+  visibility?: any;
+  tags?: string[];
+  insights?: InvestigationCardInsight[];
+}
+
+// --- QUADRO (BOARD) ---
+export async function fetchInvestigationById(id: string) {
+  const { data, error } = await supabase
+    .from('investigations')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Backwards-compatible alias
+export const getInvestigationById = fetchInvestigationById;
+
+// --- CARTAS (CARDS/CLUES) ---
+export async function fetchCards(investigationId: string) {
+  return fetchCardsForInvestigation(investigationId);
+}
+
+export async function fetchCardsForInvestigation(investigationId: string) {
+  const { data, error } = await supabase
+    .from('investigation_cards')
+    .select('*')
+    .eq('investigation_id', investigationId);
+  if (error) {
+    console.error('Erro ao buscar cards:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createCard(payload: any) {
+  const { data, error } = await supabase
+    .from('investigation_cards')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function createInvestigationCard(card: InvestigationCard) {
+  const payload: any = {
+    investigation_id: card.investigation_id,
+    title: card.title,
+    image_url: card.image_url || null,
+    description_public: card.description_public || null,
+    description_hidden: card.description_hidden || null,
+    x: card.x ?? 0,
+    y: card.y ?? 0,
+    z_index: card.z_index ?? 0,
+    visibility: card.visibility || null,
+    tags: card.tags || [],
+    insights: card.insights || [],
+    metadata: (card as any).metadata || {},
+  };
+  const { data, error } = await supabase
+    .from('investigation_cards')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) {
+    console.error('Erro ao criar card:', error);
+    throw error;
+  }
+  return data;
+}
+
+export async function updateCard(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('investigation_cards')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateInvestigationCard(id: string, patch: Partial<InvestigationCard>) {
+  const { data, error } = await supabase
+    .from('investigation_cards')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('Erro ao atualizar card:', error);
+    throw error;
+  }
+  return data;
+}
+
+export async function deleteCard(id: string) {
+  const { error } = await supabase.from('investigation_cards').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
+export async function deleteInvestigationCard(id: string) {
+  const { error } = await supabase
+    .from('investigation_cards')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Erro ao deletar card:', error);
+    throw error;
+  }
+  return true;
+}
+
+export async function fetchOrCreateInvestigationForCampaign(campaignId: string) {
+  try {
+    if (!isValidId(campaignId)) {
+      console.warn('fetchOrCreateInvestigationForCampaign called with invalid campaignId:', campaignId);
+      return null;
+    }
+    const { data: existing, error: selErr } = await supabase
+      .from('investigations')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .limit(1)
+      .maybeSingle();
+
+    if (selErr) {
+      console.error('Erro ao buscar investigation para campanha:', selErr);
+      throw selErr;
+    }
+
+    if (existing) return existing;
+
+    const { data: created, error: insErr } = await supabase
+      .from('investigations')
+      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', created_by: (await supabase.auth.getUser()).data.user?.id || null })
+      .select()
+      .single();
+
+    if (insErr) {
+      console.error('Erro ao criar investigation para campanha:', insErr);
+      throw insErr;
+    }
+    return created;
+  } catch (e) {
+    console.error('fetchOrCreateInvestigationForCampaign erro inesperado', e);
+    throw e;
+  }
+}

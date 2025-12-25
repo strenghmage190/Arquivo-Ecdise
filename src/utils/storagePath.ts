@@ -1,3 +1,6 @@
-export function storagePathForInvestigation(investigationId: string, filename: string) {
-  return `investigations/${investigationId}/${filename}`;
+export function storagePathForCase(caseId: string, filename: string) {
+  return `cases/${caseId}/${filename}`;
 }
+
+// Backwards-compatible alias
+export const storagePathForInvestigation = storagePathForCase;

@@ -1,0 +1,17 @@
+/* Estilos básicos para a Home - ajuste conforme desejar */
+.home-screen h1 {
+  font-family: 'Courier Prime', monospace;
+  color: #f2e6e6;
+}
+
+.home-screen .case-card:hover {
+  transform: translateY(-4px);
+  transition: transform 0.15s ease;
+}
+
+/* Responsividade simples */
+@media (max-width: 600px) {
+  .home-screen {
+    padding: 20px;
+  }
+}

@@ -5,7 +5,16 @@ import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
 import CreateClueModal from '../modals/CreateClueModal';
 import Toast from '../../components/ui/Toast';
-import BoardButton from '../tools/BoardButton';
+// Local fallback for BoardButton (avoids missing module error)
+const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
+  const base = 'board-button';
+  const vclass = variant === 'primary' ? 'board-button--primary' : '';
+  return (
+    <button {...props} className={`${base} ${vclass} ${className || ''}`.trim()}>
+      {children}
+    </button>
+  );
+};
 import './investigation.css';
 
 interface Props {
