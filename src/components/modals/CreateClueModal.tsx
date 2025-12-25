@@ -18,6 +18,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
 
   useEscapeClose(isOpen, onClose);
   if (!isOpen) return null;
@@ -31,6 +33,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
     }
     setImageUploading(true);
     try {
+      // build preview and dimensions before upload
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = String(reader.result || '');
+        setPreviewUrl(url);
+        const img = new Image();
+        img.onload = () => setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
+        img.src = url;
+      };
+      reader.readAsDataURL(file);
+
       const publicUrl = await uploadInvestigationImage(file, investigationId);
       if (publicUrl) {
         setImageUrl(publicUrl);
@@ -87,6 +100,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
             <input type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)} />
             <div style={{ fontSize: 12 }}>{selectedFileName}</div>
             {imageUploading && <div style={{ fontSize: 12 }}>Enviando imagem...</div>}
+            {previewUrl && (
+              <div style={{ marginTop: 8 }}>
+                <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, display: 'block' }} />
+                {imageDims && <div style={{ fontSize: 12, color: '#ccc' }}>Dimensões: {imageDims.w}x{imageDims.h}</div>}
+              </div>
+            )}
           </div>
         </div>
 

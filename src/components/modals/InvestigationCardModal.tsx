@@ -23,6 +23,8 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [uploading, setUploading] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(existing?.image_url || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
 
   useEscapeClose(open, onClose);
   useEffect(() => {
@@ -74,6 +76,17 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     }
     setUploading(true);
     try {
+      // build preview and measure dimensions
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = String(reader.result || '');
+        setPreviewUrl(url);
+        const img = new Image();
+        img.onload = () => setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
+        img.src = url;
+      };
+      reader.readAsDataURL(file);
+
       const publicUrl = await uploadInvestigationImage(file, investigationId);
       if (publicUrl) {
         setSelectedFileName(file.name);
@@ -111,6 +124,12 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} />
             <div style={{ fontSize: 12 }}>{selectedFileName}</div>
             {uploading && <div style={{ fontSize: 12 }}>Enviando imagem...</div>}
+            {previewUrl && (
+              <div style={{ marginTop: 8 }}>
+                <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, display: 'block' }} />
+                {imageDims && <div style={{ fontSize: 12, color: '#ccc' }}>Dimensões: {imageDims.w}x{imageDims.h}</div>}
+              </div>
+            )}
             <div style={{ marginTop: 8 }}>
               <label>Insights</label>
               {insights.map((ins, i) => (
