@@ -1,42 +1,41 @@
--- Supabase schema para SiteDeInvestigação
-
--- Extensão UUID
-create extension if not exists "pgcrypto";
-
--- Tabela de investigações (casos)
-create table if not exists public.investigations (
-  id uuid default gen_random_uuid() primary key,
-  title text not null,
+-- 1. Tabela de Investigações (Os quadros)
+create table if not exists investigations (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null default 'Novo Caso',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   description text,
-  metadata jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
+  gm_id uuid references auth.users(id) -- Opcional, para saber quem criou
 );
 
--- Tabela de pistas (clues) associadas a uma investigação
-create table if not exists public.clues (
-  id uuid default gen_random_uuid() primary key,
-  investigation_id uuid not null references public.investigations(id) on delete cascade,
+-- 2. Tabela de Cartas (Pistas)
+create table if not exists investigation_cards (
+  id uuid default uuid_generate_v4() primary key,
+  investigation_id uuid references investigations(id) on delete cascade not null,
   title text,
-  content text,
-  position jsonb,
-  created_at timestamptz default now()
+  description_public text,
+  description_hidden text,
+  image_url text,
+  x float default 0,
+  y float default 0,
+  z_index int default 0,
+  tags text[],
+  visibility text,
+  insights jsonb default '[]'::jsonb,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Tabela de notas livres
-create table if not exists public.notes (
-  id uuid default gen_random_uuid() primary key,
-  investigation_id uuid references public.investigations(id) on delete set null,
-  content text,
-  created_at timestamptz default now()
+-- 3. Tabela de Conexões (Linhas)
+create table if not exists investigation_connections (
+  id uuid default uuid_generate_v4() primary key,
+  investigation_id uuid references investigations(id) on delete cascade not null,
+  from_card_id uuid references investigation_cards(id) on delete cascade not null,
+  to_card_id uuid references investigation_cards(id) on delete cascade not null,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Índices úteis
-create index if not exists idx_investigations_created_at on public.investigations(created_at);
-create index if not exists idx_clues_investigation on public.clues(investigation_id);
-
--- Policy / roles: exemplo simples (ajuste no painel do Supabase conforme necessário)
--- Allow authenticated users to select investigations
--- NOTE: configure as needed no Supabase Auth Policies
-
--- Storage: pasta para anexos (imagens, áudios)
--- Use o painel Storage do Supabase para criar um bucket chamado `investigations-assets`.
+-- 4. Storage (Habilitar upload de imagens)
+insert into storage.buckets (id, name, public) values ('investigation-assets', 'investigation-assets', true);
+create policy "Public Access" on storage.objects for select using ( bucket_id = 'investigation-assets' );
+create policy "Auth Upload" on storage.objects for insert with check ( auth.role() = 'anon' or auth.role() = 'authenticated' );
