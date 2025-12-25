@@ -25,6 +25,9 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [connectionColor, setConnectionColor] = useState<string>('#9a2b2b');
+  const [connectionType, setConnectionType] = useState<'confirmed'|'theory'|'mystic'>('confirmed');
+  const [connectionUndoStack, setConnectionUndoStack] = useState<any[]>([]);
 
   // localPositions used while dragging to avoid frequent re-fetches
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -192,9 +195,16 @@ export function InvestigationBoard({ investigationId }: Props) {
       return true;
     }
     try {
-      const payload: any = { investigation_id: investigationId, from_card_id: connectionStart, to_card_id: cardId, metadata: { type: 'confirmed' } };
+      const payload: any = {
+        investigation_id: investigationId,
+        from_card_id: connectionStart,
+        to_card_id: cardId,
+        metadata: { type: connectionType },
+        color: connectionColor,
+      };
       const created = await connApi.createInvestigationConnection(payload);
       setConnections((prev) => [...prev, created]);
+      setConnectionUndoStack((s) => [...s, created]);
     } catch (err) {
       console.error('Failed to create connection', err);
     }
@@ -203,6 +213,31 @@ export function InvestigationBoard({ investigationId }: Props) {
     setMousePos(null);
     return true;
   };
+
+  const undoLastConnection = async () => {
+    const last = connectionUndoStack[connectionUndoStack.length - 1];
+    if (!last) return;
+    try {
+      await connApi.deleteInvestigationConnection(last.id);
+      setConnections((prev) => prev.filter((c) => c.id !== last.id));
+      setConnectionUndoStack((s) => s.slice(0, s.length - 1));
+    } catch (err) {
+      console.error('Failed to undo connection', err);
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrl = isMac ? e.metaKey : e.ctrlKey;
+      if (ctrl && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (connectionUndoStack.length > 0) undoLastConnection();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [connectionUndoStack]);
 
   const getCardCenter = (cardId: string | undefined | null) => {
     if (!cardId) return null;
@@ -225,6 +260,21 @@ export function InvestigationBoard({ investigationId }: Props) {
       <div className="investigation-toolbar">
         <BoardButton variant="primary" onClick={() => { setEditingCard(null); setCreateModalOpen(true); }}>+ PISTA</BoardButton>
         <BoardButton onClick={() => setConnectionMode(!connectionMode)}>{connectionMode ? 'CANCELAR CONEXÃO' : 'CONECTAR PISTAS'}</BoardButton>
+        {connectionMode && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 8 }}>
+            <select value={connectionType} onChange={(e) => setConnectionType(e.target.value as any)} style={{ background: 'transparent', color: '#e6d9b3', borderRadius: 6, padding: 6 }}>
+              <option value="confirmed">Confirmada</option>
+              <option value="theory">Teoria</option>
+              <option value="mystic">Mística</option>
+            </select>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {['#9a2b2b','#ff8a65','#ffd54f','#7fe0ff','#b39ddb','#ffffff'].map((c) => (
+                <div key={c} onClick={() => setConnectionColor(c)} style={{ width: 18, height: 18, borderRadius: 6, background: c, cursor: 'pointer', border: connectionColor === c ? '2px solid #fff' : '1px solid rgba(255,255,255,0.06)' }} />
+              ))}
+            </div>
+            <BoardButton onClick={undoLastConnection} disabled={connectionUndoStack.length === 0}>Undo</BoardButton>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <BoardButton onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}>−</BoardButton>
           <div style={{ minWidth: 48, textAlign: 'center' }}>{Math.round(zoom * 100)}%</div>
@@ -258,7 +308,10 @@ export function InvestigationBoard({ investigationId }: Props) {
               if (!a || !board) return null;
               const mx = (mousePos.x - board.left) / zoom + origin.x;
               const my = (mousePos.y - board.top) / zoom + origin.y;
-              return <line className="temp-line" x1={a.x} y1={a.y} x2={mx} y2={my} stroke="rgba(255,255,255,0.7)" strokeWidth={2} strokeDasharray="6 6" />;
+              const stroke = connectionColor || 'rgba(255,255,255,0.8)';
+              const dash = connectionType === 'theory' ? '6 6' : connectionType === 'mystic' ? '2 8' : undefined;
+              const width = connectionType === 'mystic' ? 2 : 3;
+              return <line className="temp-line" x1={a.x} y1={a.y} x2={mx} y2={my} stroke={stroke} strokeWidth={width} strokeDasharray={dash} />;
             })()}
           </svg>
 
