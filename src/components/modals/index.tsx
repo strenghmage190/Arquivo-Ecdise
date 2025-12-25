@@ -1,9 +1,2 @@
-import React from 'react';
-
-export function CreateClueModal() {
-  return <div>CreateClueModal (placeholder)</div>;
-}
-
-export function InvestigationCardModal() {
-  return <div>InvestigationCardModal (placeholder)</div>;
-}
+export { default as CreateClueModal } from './CreateClueModal';
+export { default as InvestigationCardModal } from './InvestigationCardModal';
