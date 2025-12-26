@@ -1,0 +1,117 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import './Login.css';
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg('');
+
+    try {
+      if (isSignUp) {
+        const res = await supabase.auth.signUp({ email, password });
+        console.debug('signUp response', res);
+        if (res.error) throw res.error;
+        setMsg('Solicitação enviada! Verifique seu email para confirmar o recrutamento.');
+      } else {
+        const res = await supabase.auth.signInWithPassword({ email, password });
+        console.debug('signIn response', res);
+        if (res.error) {
+          // Mostra erro do supabase (mensagem mais detalhada)
+          throw res.error;
+        }
+        // Se tiver sessão no retorno, informa usuário e redireciona
+        if (res.data?.session) {
+          setMsg('Sessão iniciada. Redirecionando...');
+          navigate('/');
+        } else {
+          // Tenta obter sessão manualmente (caso seja retornada em outra call)
+          try {
+            const sess = await supabase.auth.getSession();
+            console.debug('getSession after signIn', sess);
+            if (sess.data?.session) {
+              setMsg('Sessão iniciada. Redirecionando...');
+              navigate('/');
+            } else {
+              setMsg('Resposta inesperada do servidor. Verifique o console (F12).');
+              console.warn('signIn no session', res);
+            }
+          } catch (e) {
+            console.error('getSession error after signIn', e);
+            setMsg('Erro ao obter sessão; verifique o console.');
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Auth error', error);
+      setMsg(error.message || JSON.stringify(error) || 'Erro ao acessar o sistema.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-terminal">
+      <div className="terminal-box">
+        <h1 className="ordo-logo">ORDO REALITAS</h1>
+        <div className="scan-line"></div>
+        
+        <p style={{ textAlign: 'center', marginBottom: 20, color: '#888' }}>
+          {isSignUp ? 'RECRUTAMENTO DE NOVOS AGENTES' : 'ACESSO AO SISTEMA'}
+        </p>
+
+        <form onSubmit={handleAuth}>
+          <div className="input-group">
+            <label>IDENTIFICAÇÃO (EMAIL)</label>
+            <input 
+              type="email" 
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="agente@ordo.com"
+            />
+          </div>
+
+          <div className="input-group">
+            <label>SENHA DE ACESSO</label>
+            <input 
+              type="password" 
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button disabled={loading} className="btn-access">
+            {loading ? 'PROCESSANDO...' : (isSignUp ? 'ENVIAR SOLICITAÇÃO' : 'INICIAR SESSÃO')}
+          </button>
+
+          {msg && <div className="system-msg">{msg}</div>}
+        </form>
+
+        <div className="auth-switch">
+          {isSignUp ? 'Já possui credencial?' : 'Ainda não é um agente?'}
+          <button type="button" onClick={() => { setIsSignUp(!isSignUp); setMsg(''); }}>
+            {isSignUp ? 'Acesse aqui' : 'Recrutar-se'}
+          </button>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 10 }}>
+          <button type="button" onClick={() => navigate('/reset-password')} style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer' }}>
+            Esqueci minha senha
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

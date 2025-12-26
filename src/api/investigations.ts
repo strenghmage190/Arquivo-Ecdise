@@ -15,6 +15,7 @@ export interface InvestigationCard {
   id?: string;
   investigation_id: string;
   title: string;
+  image_uv_url?: string | null;
   image_url?: string | null;
   description_public?: string | null;
   description_hidden?: string | null;
@@ -71,6 +72,7 @@ export async function createInvestigationCard(card: InvestigationCard) {
   const payload: any = {
     investigation_id: card.investigation_id,
     title: card.title,
+    image_uv_url: (card as any).image_uv_url || null,
     image_url: card.image_url || null,
     description_public: card.description_public || null,
     description_hidden: card.description_hidden || null,
@@ -172,4 +174,15 @@ export async function fetchOrCreateInvestigationForCampaign(campaignId: string) 
     console.error('fetchOrCreateInvestigationForCampaign erro inesperado', e);
     throw e;
   }
+}
+
+// Fetch basic details including owner_id for permission checks
+export async function fetchInvestigationDetails(id: string) {
+  const { data, error } = await supabase
+    .from('investigations')
+    .select('id, title, owner_id')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
 }

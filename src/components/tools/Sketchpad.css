@@ -1,0 +1,59 @@
+.sketchpad-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 5000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sketchpad-container {
+  width: 95vw;
+  height: 95vh;
+  border: 2px solid #b33;
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  box-shadow: 0 0 30px rgba(180, 50, 50, 0.3);
+}
+
+.sketch-header {
+  height: 50px;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #333;
+}
+
+.excalidraw-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.excalidraw {
+  --color-primary: #b33 !important;
+  --color-primary-dark: #900 !important;
+}
+
+.btn-save-sketch {
+  background: #daceaa;
+  color: #000;
+  border: none;
+  font-weight: bold;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: 'Courier New';
+}
+
+.btn-close-sketch {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 8px 16px;
+  cursor: pointer;
+}

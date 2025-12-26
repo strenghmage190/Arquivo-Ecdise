@@ -62,4 +62,22 @@ export async function uploadInvestigationImage(file: File, investigationId: stri
   }
 }
 
-export default { uploadInvestigationImage };
+// Upload arbitrary file (JSON, etc.) to the investigation bucket and return public URL
+export async function uploadInvestigationFile(file: File | Blob, investigationId: string, extHint?: string): Promise<string | null> {
+  try {
+    const fileExt = extHint || (file instanceof File ? file.name.split('.').pop() : 'bin');
+    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    const filePath = `${investigationId}/${fileName}`;
+
+    const uploadResult = await supabase.storage.from('investigation-assets').upload(filePath, file as File | Blob, { cacheControl: '3600', upsert: false, contentType: (file instanceof File ? file.type : undefined) });
+    if (uploadResult.error) throw uploadResult.error;
+
+    const { data } = supabase.storage.from('investigation-assets').getPublicUrl(filePath);
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Upload file falhou:', error);
+    return null;
+  }
+}
+
+export default { uploadInvestigationImage, uploadInvestigationFile };

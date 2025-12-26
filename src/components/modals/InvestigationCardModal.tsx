@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
-import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
+import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
 
@@ -11,11 +11,12 @@ interface Props {
   investigationId: string;
   existing?: InvestigationCard;
   onSaved?: (card: any) => void;
+  isGameMaster?: boolean;
 }
 
 const emptyInsight = (): InvestigationCardInsight => ({ id: String(Date.now()), skill: '', cost: 1, text: '', visibility: 'hidden', reveal_to: [] });
 
-export default function InvestigationCardModal({ open, onClose, investigationId, existing, onSaved }: Props) {
+export default function InvestigationCardModal({ open, onClose, investigationId, existing, onSaved, isGameMaster = false }: Props) {
   const [title, setTitle] = useState(existing?.title || '');
   const [descriptionPublic, setDescriptionPublic] = useState(existing?.description_public || '');
   const [descriptionHidden, setDescriptionHidden] = useState(existing?.description_hidden || '');
@@ -102,26 +103,43 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     }
   };
 
+  const handleDelete = async () => {
+    if (!existing || !existing.id) return;
+    if (!confirm('Tem certeza que deseja apagar esta pista?')) return;
+    try {
+      await deleteInvestigationCard(existing.id);
+      onSaved && onSaved(null);
+      onClose();
+    } catch (e) {
+      console.error('Falha ao deletar pista', e);
+      alert('Erro ao deletar. Veja o console.');
+    }
+  };
+
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: 720, maxWidth: '95vw' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>{existing ? 'Editar Pista' : 'Criar Pista'}</h3>
+          <h3>{isGameMaster ? (existing ? 'EDITAR PISTA' : 'CRIAR PISTA') : 'DETALHES DA EVIDÊNCIA'}</h3>
           <button onClick={onClose}>×</button>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1 }}>
             <label>Título</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%' }} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%', border: !isGameMaster ? 'none' : undefined }} disabled={!isGameMaster} />
             <label>Descrição Visível</label>
-            <textarea value={descriptionPublic} onChange={(e) => setDescriptionPublic(e.target.value)} style={{ width: '100%' }} />
+            <textarea value={descriptionPublic} onChange={(e) => setDescriptionPublic(e.target.value)} style={{ width: '100%', border: !isGameMaster ? 'none' : undefined }} disabled={!isGameMaster} />
             <label>Descrição Oculta</label>
-            <textarea value={descriptionHidden} onChange={(e) => setDescriptionHidden(e.target.value)} style={{ width: '100%' }} />
+            <textarea value={descriptionHidden} onChange={(e) => setDescriptionHidden(e.target.value)} style={{ width: '100%', border: !isGameMaster ? 'none' : undefined }} disabled={!isGameMaster} />
           </div>
           <div style={{ width: 320 }}>
             <label>Imagem (opcional)</label>
-            <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+            {isGameMaster ? (
+              <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+            ) : (
+              <div style={{ fontSize: 12, color: '#ccc' }}>{imageUrl ? 'Imagem disponível' : 'Sem imagem'}</div>
+            )}
             <div style={{ fontSize: 12 }}>{selectedFileName}</div>
             {uploading && <div style={{ fontSize: 12 }}>Enviando imagem...</div>}
             {previewUrl && (
@@ -134,19 +152,26 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
               <label>Insights</label>
               {insights.map((ins, i) => (
                 <div key={ins.id} style={{ marginBottom: 8 }}>
-                  <input value={ins.skill} onChange={(e) => updateInsight(i, { skill: e.target.value })} />
-                  <input type="number" value={ins.cost} onChange={(e) => updateInsight(i, { cost: Number(e.target.value) })} />
-                  <button onClick={() => removeInsight(i)}>Remover</button>
+                  <input value={ins.skill} onChange={(e) => updateInsight(i, { skill: e.target.value })} disabled={!isGameMaster} />
+                  <input type="number" value={ins.cost} onChange={(e) => updateInsight(i, { cost: Number(e.target.value) })} disabled={!isGameMaster} />
+                  {isGameMaster && <button onClick={() => removeInsight(i)}>Remover</button>}
                 </div>
               ))}
-              <button onClick={addInsight}>+ Insight</button>
+              {isGameMaster && <button onClick={addInsight}>+ Insight</button>}
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose}>Cancelar</button>
-          <button onClick={handleSave}>Salvar</button>
+          <button onClick={onClose}>FECHAR</button>
+          {isGameMaster && (
+            <>
+              {existing && (
+                <button className="btn-danger" onClick={handleDelete}>DELETAR</button>
+              )}
+              <button className="btn-primary" onClick={handleSave}>SALVAR ALTERAÇÕES</button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,0 +1,101 @@
+.login-terminal {
+  height: 100vh;
+  background-color: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', monospace;
+  background-image: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+}
+
+.terminal-box {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
+  border: 1px solid #333;
+  background: rgba(0,0,0,0.8);
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.ordo-logo {
+  color: #fff;
+  text-align: center;
+  border-bottom: 2px solid #b33;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  letter-spacing: 4px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  color: #b33;
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.input-group input {
+  width: 100%;
+  background: #111;
+  border: 1px solid #444;
+  padding: 12px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #b33;
+  box-shadow: 0 0 10px rgba(180, 50, 50, 0.2);
+}
+
+.btn-access {
+  width: 100%;
+  padding: 15px;
+  background: #b33;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: background 0.2s;
+}
+
+.btn-access:hover {
+  background: #900;
+}
+
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+.auth-switch button {
+  background: none;
+  border: none;
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.system-msg {
+  margin-top: 15px;
+  color: #daceaa;
+  text-align: center;
+  font-size: 12px;
+  border: 1px dashed #daceaa;
+  padding: 10px;
+}

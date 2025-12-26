@@ -129,10 +129,12 @@ export default function InvestigationBoard() {
 
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [createModalPos, setCreateModalPos] = useState<{ x: number; y: number } | null>(null);
 
   const refreshCards = async () => {
     if (!id) return;
     const c = await fetchCardsForInvestigation(id);
+    console.debug('board/index: refreshCards fetched', c);
     setCards(c || []);
   };
 
@@ -163,7 +165,18 @@ export default function InvestigationBoard() {
       <h2 style={{ color: '#e6eef8', padding: 12 }}>{investigation?.title || 'Quadro de Investigação'}</h2>
 
       <div style={{ padding: 12, display: 'flex', gap: 8 }}>
-        <button onClick={() => setOpenCreateModal(true)}>+ Novo Caso / Pista</button>
+        <button onClick={() => {
+          if (!boardRef.current) { setOpenCreateModal(true); return; }
+          const viewW = boardRef.current.clientWidth;
+          const viewH = boardRef.current.clientHeight;
+          const scrollLeft = boardRef.current.scrollLeft || 0;
+          const scrollTop = boardRef.current.scrollTop || 0;
+          const CARD_W = 220; const CARD_H = 160;
+          const x = Math.round(scrollLeft + viewW / 2 - CARD_W / 2);
+          const y = Math.round(scrollTop + viewH / 2 - CARD_H / 2);
+          setCreateModalPos({ x, y });
+          setOpenCreateModal(true);
+        }}>+ Novo Caso / Pista</button>
         <button onClick={() => { if (selectedCard) setOpenEditModal(true); else alert('Selecione um card primeiro'); }}>Editar Card Selecionado</button>
       </div>
 
@@ -298,7 +311,7 @@ export default function InvestigationBoard() {
       {/* Modals integration */}
       {id && (
         <>
-          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); }} investigationId={id} onSaved={() => refreshCards()} />
+          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); setCreateModalPos(null); }} investigationId={id} onSaved={() => { refreshCards(); setCreateModalPos(null); }} initialX={createModalPos?.x} initialY={createModalPos?.y} />
           <InvestigationCardModal open={openEditModal} onClose={() => setOpenEditModal(false)} investigationId={id} existing={selectedCard || undefined} onSaved={(c) => { setOpenEditModal(false); refreshCards(); }} />
         </>
       )}

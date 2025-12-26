@@ -1,0 +1,84 @@
+/* Animação de Luz Falhando (Lâmpada velha) */
+@keyframes uv-flicker {
+  0% { opacity: 0.9; }
+  3% { opacity: 0.8; }
+  6% { opacity: 0.95; }
+  7% { opacity: 0.7; }
+  8% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+
+/* O "Noise" estático (aquela chiadeira de TV) */
+.uv-noise-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+  z-index: 5;
+}
+
+/* O circulo roxo da lanterna (A Lente) */
+.flashlight-lens {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  mix-blend-mode: hard-light;
+  z-index: 10;
+}
+
+/* A Tinta Secreta em si */
+.hidden-ink-layer {
+  filter: drop-shadow(0 0 6px #b366ff) drop-shadow(0 0 12px #b366ff) brightness(1.6) saturate(1.2);
+  mix-blend-mode: screen;
+  animation: uv-flicker 3.6s infinite alternate;
+  z-index: 9;
+}
+
+/* Robust container and hard flicker for better visibility */
+.uv-container {
+  width: 100%;
+  height: 140px; /* Altura fixa obrigatória */
+  position: relative;
+  background-color: #000;
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+@keyframes flicker-hard {
+  0%, 100% { opacity: 1; }
+  32% { opacity: 0.8; }
+  33% { opacity: 0.3; }
+  34% { opacity: 0.8; }
+  70% { opacity: 0.95; }
+  72% { opacity: 0.5; }
+}
+
+.static-noise {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url('https://grainy-gradients.vercel.app/noise.svg');
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.uv-lens-flare {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 30;
+  mix-blend-mode: overlay;
+  transition: opacity 0.2s ease-out;
+}
+
+.secret-ink {
+  filter: drop-shadow(0 0 5px #a100ff) drop-shadow(0 0 10px #7000ff);
+  mix-blend-mode: color-dodge;
+  z-index: 15;
+  animation: flicker-hard 4s infinite linear;
+}

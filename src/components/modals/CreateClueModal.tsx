@@ -4,22 +4,32 @@ import useEscapeClose from './useEscapeClose';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
+import UVEditor from '../tools/UVEditor';
+import '../tools/UVEditor.css';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
-  onSaved?: () => void;
+  onSaved?: (created?: any) => void;
+  initialX?: number;
+  initialY?: number;
 }
 
-export default function CreateClueModal({ isOpen, onClose, investigationId, onSaved }: Props) {
+export default function CreateClueModal({ isOpen, onClose, investigationId, onSaved, initialX, initialY }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
+  // UV / secret layer states
+  const [uvFile, setUvFile] = useState<File | null>(null);
+  const [uvUploading, setUvUploading] = useState(false);
+  const [uvUrl, setUvUrl] = useState<string | null>(null);
+  const [showUvEditor, setShowUvEditor] = useState(false);
 
   useEscapeClose(isOpen, onClose);
   if (!isOpen) return null;
@@ -59,24 +69,66 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
     }
   };
 
+  const handleUvFileChange = async (file: File | null) => {
+    if (!file) return;
+    setUvUploading(true);
+    try {
+      const url = await uploadInvestigationImage(file, investigationId);
+      setUvUrl(url);
+      setUvFile(file);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao subir imagem UV.');
+    } finally {
+      setUvUploading(false);
+    }
+  };
+
+  const handleSaveFromEditor = async (file: File) => {
+    setUvUploading(true);
+    try {
+      const url = await uploadInvestigationImage(file, investigationId);
+      setUvUrl(url);
+      setShowUvEditor(false);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao salvar arte UV.');
+    } finally {
+      setUvUploading(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (imageUploading) {
+      alert('Ainda a enviar imagem. Aguarde até concluir o upload antes de salvar.');
+      return;
+    }
+    setSaving(true);
     try {
       const payload: any = {
         investigation_id: investigationId,
         title: title || 'Pista sem título',
         description_public: description || null,
-        x: 100,
-        y: 100,
+        x: (typeof initialX === 'number' ? Math.round(initialX) : 100),
+        y: (typeof initialY === 'number' ? Math.round(initialY) : 100),
         image_url: imageUrl || undefined,
+        image_uv_url: uvUrl || null,
       };
+      console.debug('CreateClueModal: creating card with payload', payload);
       const created = await createInvestigationCard(payload);
+      console.debug('CreateClueModal: createInvestigationCard response', created);
       if (created) {
-        onSaved && onSaved();
+        onSaved && onSaved(created);
         onClose();
+      } else {
+        alert('Resposta inesperada do servidor. Veja o console para detalhes.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Falha ao criar pista:', err);
-      alert('Erro ao salvar pista. Veja o console para mais detalhes.');
+      const msg = err?.message || String(err);
+      alert('Erro ao salvar pista: ' + msg + '. Veja o console para mais detalhes.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -109,9 +161,32 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, onSa
           </div>
         </div>
 
+        <div style={{ borderTop: '1px dashed #444', paddingTop: 10, marginTop: 10 }}>
+          <label style={{color: '#b366ff'}}>🔦 Camada Oculta (Luz UV)</label>
+          {imageUrl ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {uvUrl ? <span style={{ color: '#39ff14' }}>✔ Segredo Criado!</span> : <small style={{ color: '#777' }}>Nenhum segredo definido.</small>}
+              <button className="btn-retro" onClick={() => setShowUvEditor(true)} style={{ fontSize: 12, padding: '5px 10px' }}>
+                {uvUrl ? '✏️ EDITAR NOVAMENTE' : '✨ DESENHAR SIGILO / PISTA'}
+              </button>
+              <div style={{ marginLeft: 'auto' }}>
+                <input id="uv-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleUvFileChange(e.target.files ? e.target.files[0] : null)} />
+                <label htmlFor="uv-upload-input" style={{ border: '1px dashed #b366ff', color: '#d8b3ff', padding: '6px 8px', cursor: 'pointer' }}>{uvUrl ? 'Substituir UV' : 'Anexar UV'}</label>
+              </div>
+            </div>
+          ) : (
+            <small style={{ color: '#b33' }}>Faça upload da imagem principal primeiro.</small>
+          )}
+          {uvUploading && <div style={{ fontSize: 12 }}>Enviando UV...</div>}
+        </div>
+
+        {showUvEditor && imageUrl && (
+          <UVEditor baseImageUrl={imageUrl} onSave={handleSaveFromEditor} onClose={() => setShowUvEditor(false)} />
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose}>Cancelar</button>
-          <button onClick={handleSave}>Salvar</button>
+          <button onClick={onClose} disabled={saving || imageUploading}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving || imageUploading}>{saving ? 'Salvando...' : 'Salvar'}</button>
         </div>
       </div>
     </div>

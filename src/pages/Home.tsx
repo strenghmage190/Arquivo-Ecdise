@@ -7,6 +7,11 @@ export default function Home() {
   const navigate = useNavigate();
   const [cases, setCases] = useState<any[]>([]);
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate('/login');
+  }
+
   useEffect(() => {
     fetchCases();
   }, []);
@@ -39,6 +44,9 @@ export default function Home() {
 
   return (
     <div className="home-screen" style={{ background: '#1a1a1a', minHeight: '100vh', padding: 40, color: '#e0e0e0', fontFamily: 'Courier Prime, monospace' }}>
+      <button onClick={handleLogout} style={{ position: 'fixed', top: 20, right: 20, background: '#b33', color: '#fff', border: 'none', padding: '10px 14px', cursor: 'pointer', borderRadius: 4, zIndex: 60 }}>
+        SAIR DO SISTEMA
+      </button>
       <h1 style={{ borderBottom: '2px solid #b33', paddingBottom: 10 }}>ARQUIVOS DA ORDEM</h1>
       
       <div style={{ marginTop: 30, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20 }}>
