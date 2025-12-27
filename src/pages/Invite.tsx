@@ -34,15 +34,45 @@ export default function InvitePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !inviteInfo) return;
 
+    // --- LÓGICA ANTI-CONFLITO ---
+    // 1. Primeiro, checa se já sou membro
+    try {
+      const { data: existingMember } = await supabase
+        .from('investigation_members')
+        .select('id')
+        .eq('investigation_id', inviteInfo.investigation_id)
+        .eq('user_id', user.id)
+        .single();
+
+      // 2. Se já sou membro, apenas redireciono
+      if (existingMember) {
+        console.log('Usuário já é membro, redirecionando...');
+        const rawId = inviteInfo.investigation_id as string;
+        const cleanId = rawId?.split(':')?.[0] || rawId;
+        navigate(`/case/${cleanId}`);
+        return;
+      }
+    } catch (checkErr) {
+      // se a consulta single() falhar com 406 por exemplo, continuamos e tentamos inserir
+      console.debug('check existingMember error (non-fatal)', checkErr);
+    }
+
+    // Se não sou membro, continuo com o processo de inserção
     const { error } = await supabase
       .from('investigation_members')
       .insert({ investigation_id: inviteInfo.investigation_id, user_id: user.id });
 
-    if (error && error.code !== '23505') {
-      alert('Erro ao entrar na missão.');
+    if (error) {
+      // se já existir (conflito), simplesmente redireciona sem mostrar erro
+      if (error.code === '23505') {
+        const rawId = inviteInfo.investigation_id as string;
+        const cleanId = rawId?.split(':')?.[0] || rawId;
+        navigate(`/case/${cleanId}`);
+        return;
+      }
+      alert('Erro ao entrar na missão: ' + (error.message || error.code));
       setStatus('valid');
     } else {
-      // normalize investigation_id in case it contains a suffix like `:1`
       const rawId = inviteInfo.investigation_id as string;
       const cleanId = rawId?.split(':')?.[0] || rawId;
       navigate(`/case/${cleanId}`);
