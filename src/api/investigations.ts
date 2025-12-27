@@ -58,11 +58,17 @@ export async function fetchInvestigationById(id: string) {
     .from('investigations')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
+
   if (error) {
     console.error('fetchInvestigationById error', error);
     await debugFetchInvestigationsRest();
     throw error;
+  }
+
+  if (!data) {
+    console.warn('fetchInvestigationById: no investigation found for id', id);
+    return null;
   }
   return data;
 }

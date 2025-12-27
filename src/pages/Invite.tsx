@@ -42,7 +42,10 @@ export default function InvitePage() {
       alert('Erro ao entrar na missão.');
       setStatus('valid');
     } else {
-      navigate(`/case/${inviteInfo.investigation_id}`);
+      // normalize investigation_id in case it contains a suffix like `:1`
+      const rawId = inviteInfo.investigation_id as string;
+      const cleanId = rawId?.split(':')?.[0] || rawId;
+      navigate(`/case/${cleanId}`);
     }
   };
 

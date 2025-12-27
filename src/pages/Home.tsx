@@ -38,7 +38,8 @@ export default function Home() {
     if (error) {
       alert('Erro ao iniciar caso');
     } else if (data) {
-      navigate(`/case/${data.id}`);
+      const newId = String(data.id).split(':')[0];
+      navigate(`/case/${newId}`);
     }
   }
 
@@ -71,7 +72,7 @@ export default function Home() {
         {cases.map(c => (
           <div 
             key={c.id} 
-            onClick={() => navigate(`/case/${c.id}`)}
+            onClick={() => { const clean = String(c.id).split(':')[0]; navigate(`/case/${clean}`); }}
             style={{ 
               background: '#222', 
               border: '1px solid #444', 

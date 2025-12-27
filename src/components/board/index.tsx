@@ -8,7 +8,10 @@ type Card = any;
 type Connection = any;
 
 export default function InvestigationBoard() {
-  const { id } = useParams();
+  const params = useParams();
+  const rawId = params.id;
+  // normalize id in case it's malformed like 'uuid:1'
+  const id = rawId ? String(rawId).split(':')[0] : undefined;
   const [investigation, setInvestigation] = useState<any | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
