@@ -1,0 +1,32 @@
+.audio-decoder-panel {
+  background: #111;
+  border: 1px solid #444;
+  padding: 12px;
+  border-radius: 6px;
+  width: 100%;
+  color: #ddd;
+}
+
+.visualizer {
+  height: 56px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  border: 1px solid #222;
+  padding: 6px;
+}
+
+.bar { width: 6px; background: #b33; transition: height 0.08s; }
+
+.controls-row { display: flex; gap: 10px; align-items: center; }
+
+.btn-play { background: #222; border: 1px solid #fff; color: #fff; width: 44px; height: 32px; border-radius: 6px; cursor: pointer; }
+.btn-play.active { background: #b33; border-color: #b33; }
+
+.knob-container { flex: 1; display:flex; flex-direction: column; }
+.knob-container label { font-size: 12px; color: #aaa; margin-bottom: 6px; font-family: monospace; }
+.frequency-slider { width: 100%; accent-color: #b33; }
+
+.signal-meter { display:flex; flex-direction:column; align-items:center; font-family: monospace; font-size: 11px; color:#888; width:80px; }

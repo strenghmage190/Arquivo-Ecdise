@@ -10,6 +10,17 @@ interface GlobalMouse {
 interface Props {
   baseSrc?: string;
   hiddenSrc?: string;
+  filterLayerSrc?: string;
+  filters?: {
+    brightness: number;
+    contrast: number;
+    saturate: number;
+  };
+  revealTarget?: {
+    brightness?: number;
+    contrast?: number;
+    saturate?: number;
+  } | null;
   isUVMode: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -20,7 +31,10 @@ interface Props {
 export function MysteryImage({
   baseSrc,
   hiddenSrc,
+  filterLayerSrc,
   isUVMode,
+  filters = { brightness: 100, contrast: 100, saturate: 100 },
+  revealTarget = null,
   className = '',
   style = {},
   fit = 'cover',
@@ -50,22 +64,62 @@ export function MysteryImage({
   }, [pointerLocal]);
 
   const hasSecret = Boolean(hiddenSrc);
-  const RADIUS = 120;
+
+  // compute reveal radius dynamically based on element size so large images get a larger UV lens
+  const computeRadius = () => {
+    try {
+      if (!containerRef.current) return 120;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      // use ~18% of the smallest dimension, but clamp to reasonable bounds
+      const r = Math.round(Math.max(80, Math.min(w, h) * 0.18));
+      return r;
+    } catch (e) { return 120; }
+  };
+
+  const RADIUS = computeRadius();
 
   const maskStyle: React.CSSProperties = {
-    maskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 100%, transparent 100%)`,
-    WebkitMaskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 100%, transparent 100%)`
+    // explicit gradient stops: solid black up to 60% of the radius, then fade to transparent
+    maskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 0%, black 60%, transparent 100%)`,
+    WebkitMaskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 0%, black 60%, transparent 100%)`
   };
 
   const bgStyle: React.CSSProperties = {
     backgroundSize: fit,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
-    transition: 'filter 0.3s ease'
+    transition: 'filter 0.1s linear'
   };
 
   const bgImage = baseSrc ? `url(${baseSrc})` : 'none';
   const hiddenImage = hiddenSrc ? `url(${hiddenSrc})` : 'none';
+  const filterImage = filterLayerSrc ? `url(${filterLayerSrc})` : 'none';
+
+  // Aplica filtros na imagem base
+  const filterStyle: React.CSSProperties = {
+    backgroundSize: fit,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+    transition: 'filter 0.1s linear',
+    position: 'absolute', inset: 0,
+    filter: isUVMode ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)' : `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`
+  };
+
+  // Cálculo de opacidade da camada de tratamento (puzzle)
+  let hiddenLayerOpacity = 0;
+  if (revealTarget && (revealTarget.brightness || revealTarget.contrast || revealTarget.saturate)) {
+    const rb = revealTarget.brightness ?? 100;
+    const rc = revealTarget.contrast ?? 100;
+    const rs = revealTarget.saturate ?? 100;
+    const closeness = Math.abs(filters.brightness - rb) + Math.abs(filters.contrast - rc) + Math.abs(filters.saturate - rs);
+    // quanto mais próximo do alvo, maior a opacidade. 0 = totalmente diferente, 0 quando closeness >= THRESH
+    const THRESH = 50; // ajuste de sensibilidade
+    hiddenLayerOpacity = Math.max(0, Math.min(1, 1 - (closeness / THRESH)));
+  } else {
+    const distortionLevel = Math.abs(filters.brightness - 100) + Math.abs(filters.contrast - 100) + Math.abs(filters.saturate - 100);
+    hiddenLayerOpacity = Math.min(1, distortionLevel / 50);
+  }
 
   return (
     <div
@@ -75,7 +129,17 @@ export function MysteryImage({
       onMouseLeave={handleMouseLeave}
       style={{ ...style, cursor: isUVMode ? 'none' : 'default' }}
     >
-      <div style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: bgImage, filter: isUVMode ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)' : 'none' }} />
+      <div style={{ ...filterStyle, backgroundImage: bgImage }} />
+
+      {/* 2. CAMADA DO PUZZLE DE TRATAMENTO */}
+      {filterLayerSrc && !isUVMode && (
+        <div style={{
+          ...filterStyle,
+          backgroundImage: filterImage,
+          mixBlendMode: 'screen',
+          opacity: hiddenLayerOpacity
+        }} />
+      )}
 
       {isUVMode && hasSecret && (
         <div className="secret-ink" style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: hiddenImage, ...maskStyle }} />
@@ -84,7 +148,10 @@ export function MysteryImage({
       {isUVMode && isHovering && (
         <>
           <div className="static-noise" style={maskStyle} />
-          <div className="uv-lens-flare" style={{ background: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, rgba(160,160,255,0.1) 0%, rgba(80,0,180,0.3) 60%, rgba(30,0,80,0.8) 100%)` }} />
+          <div className="uv-lens-flare" style={{
+            background: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, rgba(160,160,255,0.12) 0%, rgba(80,0,180,0.28) 60%, rgba(30,0,80,0.8) 100%)`,
+            position: 'absolute', inset: 0
+          }} />
         </>
       )}
 

@@ -1,0 +1,55 @@
+.terminal-wrapper {
+  width: 100%; height: 100%;
+  background-color: #050505;
+  color: #33ff33;
+  font-family: 'Courier New', monospace;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crt-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none; z-index: 10;
+}
+
+.terminal-content {
+  width: 80%; max-width: 600px;
+  z-index: 5;
+}
+
+.term-header {
+  border-bottom: 1px solid #33ff33;
+  display: flex; justify-content: space-between;
+  margin-bottom: 20px; font-weight: bold; letter-spacing: 2px;
+}
+
+.ascii-lock {
+  font-size: 40px; text-align: center; margin: 20px 0;
+  text-shadow: 0 0 10px #33ff33;
+}
+
+.error-msg { color: #ff3333; margin: 15px 0; animation: shake 0.3s; }
+.success-msg { color: #33ff33; margin: 15px 0; text-shadow: 0 0 5px #33ff33; }
+
+.input-line {
+  display: flex; align-items: center;
+  background: rgba(0, 50, 0, 0.3);
+  padding: 10px; border: 1px solid #33ff33;
+}
+
+.input-line input {
+  background: transparent; border: none; color: #33ff33;
+  font-family: inherit; font-size: 18px; width: 100%; outline: none; text-transform: uppercase;
+}
+
+.blinker { animation: blink 1s infinite; font-weight: bold; }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+.term-hint { margin-top: 12px; color: #bdb; font-size: 12px; }

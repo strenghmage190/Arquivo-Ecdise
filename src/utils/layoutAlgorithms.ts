@@ -1,10 +1,9 @@
-// Define o tamanho padrão para calcular espaçamento
 const CARD_WIDTH = 240;
-const CARD_HEIGHT = 180; // Altura visual média incluindo textos
-const GAP_X = 50; // Espaço horizontal entre colunas
-const GAP_Y = 30; // Espaço vertical entre cartas
-const START_X = 50;
-const START_Y = 100;
+const CARD_HEIGHT = 160; // Altura aproximada
+const GAP_X = 60; // Espaço lateral entre colunas
+const GAP_Y = 30; // Espaço vertical
+const START_X = 0;
+const START_Y = 0;
 
 export interface CardPosition {
   id: string;
@@ -13,104 +12,74 @@ export interface CardPosition {
 }
 
 /**
- * Organiza por linha do tempo baseada em Tags (dia:1, dia:2) ou Criação.
+ * Função Genérica que organiza em Colunas baseada em um extrator de chave
  */
-export function organizeByTimeline(cards: any[]): CardPosition[] {
-  // 1. Agrupar cartas por "Tempo"
+function organizeByGroup(cards: any[], getKey: (card: any) => string): CardPosition[] {
   const groups: Record<string, any[]> = {};
-  const unsorted: any[] = [];
-
+  
+  // 1. Agrupar
   cards.forEach(card => {
-    // Tenta achar tags como 'dia:1', 'dia:2', 'tempo:noite'
-    // Formatos aceitos na tag: "dia:X", "time:X", "data:XX/XX"
-    const timeTag = (card.tags || []).find((t: string) => 
-      t.toLowerCase().startsWith('dia:') || 
-      t.toLowerCase().startsWith('time:') ||
-      t.toLowerCase().startsWith('data:')
-    );
-
-    if (timeTag) {
-      // Normaliza a chave (ex: "dia:1" vira "dia:1")
-      const key = timeTag.toLowerCase();
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(card);
-    } else {
-      unsorted.push(card);
-    }
-  });
-
-  // 2. Ordenar as Chaves dos grupos (ex: dia:1 antes de dia:2)
-  const sortedKeys = Object.keys(groups).sort((a, b) => {
-    // Tenta extrair números para comparar
-    const numA = parseInt(a.replace(/\D/g, '')) || 0;
-    const numB = parseInt(b.replace(/\D/g, '')) || 0;
-    return numA - numB;
+    const key = (getKey(card) || 'Outros');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(card);
   });
 
   const finalPositions: CardPosition[] = [];
   let currentX = START_X;
+  
+  // Ordenar chaves para consistência (Opcional)
+  const sortedKeys = Object.keys(groups).sort();
 
-  // 3. Posicionar os grupos cronológicos
+  // 2. Calcular Posições
   sortedKeys.forEach(key => {
     const groupCards = groups[key];
-    
-    // Opcional: ordenar dentro do grupo por ID ou Titulo
-    // groupCards.sort(...) 
-
     let currentY = START_Y;
     
-    // Cabeçalho da Coluna (mentalmente): Vamos empilhar verticalmente
     groupCards.forEach(card => {
-      finalPositions.push({
-        id: card.id,
-        x: currentX,
-        y: currentY
-      });
+      finalPositions.push({ id: card.id, x: currentX, y: currentY });
       currentY += CARD_HEIGHT + GAP_Y;
     });
 
-    // Avança para a próxima coluna
-    currentX += CARD_WIDTH + GAP_X;
+    currentX += CARD_WIDTH + GAP_X; // Próxima coluna
   });
-
-  // 4. Lidar com cartas "Sem Tempo" (Grid no final ou abaixo)
-  // Vamos colocá-las em uma nova seção à direita
-  if (unsorted.length > 0) {
-    currentX += GAP_X; // Separador extra
-    let currentY = START_Y;
-    
-    unsorted.forEach((card, index) => {
-      finalPositions.push({
-        id: card.id,
-        x: currentX,
-        y: currentY
-      });
-      
-      currentY += CARD_HEIGHT + GAP_Y;
-      
-      // Quebra coluna se ficar muito alta (max 5 cartas)
-      if ((index + 1) % 5 === 0) {
-        currentY = START_Y;
-        currentX += CARD_WIDTH + GAP_X;
-      }
-    });
-  }
 
   return finalPositions;
 }
 
-/**
- * Organiza em Grid Compacto (sem considerar tempo)
- */
-export function organizeByGrid(cards: any[]): CardPosition[] {
-  const COLUMNS = 5; // Quantos cards por linha
-  return cards.map((card, index) => {
-    const col = index % COLUMNS;
-    const row = Math.floor(index / COLUMNS);
-    return {
-      id: card.id,
-      x: START_X + col * (CARD_WIDTH + GAP_X),
-      y: START_Y + row * (CARD_HEIGHT + GAP_Y)
-    };
+// --- ESTRATÉGIAS ESPECÍFICAS ---
+
+// 1. Veracidade: Separa o que é CONFIRMADO, o que é FALSO e o resto
+export function organizeByVeracity(cards: any[]) {
+  return organizeByGroup(cards, (card) => {
+    const tags = (card.tags || []).join(' ').toLowerCase();
+    const imp = (card.metadata?.importance || '').toLowerCase();
+
+    if (tags.includes('falso') || tags.includes('mentira') || imp === 'falso') return '1_Falso / Pista Fria ❌';
+    if (tags.includes('certeza') || tags.includes('fato') || imp === 'central') return '3_Fato Confirmado ✅';
+    if (imp === 'contexto') return '2_Contexto 📄';
+    return '0_Em Análise 🔍';
+  });
+}
+
+// 2. Elementos: Separa por Sangue, Morte, Conhecimento...
+export function organizeByElement(cards: any[]) {
+  return organizeByGroup(cards, (card) => {
+    const tags = (card.tags || []).join(' ').toLowerCase();
+    
+    if (tags.includes('sangue')) return 'Sangue 🩸';
+    if (tags.includes('morte')) return 'Morte 💀';
+    if (tags.includes('conhecimento')) return 'Conhecimento 👁️';
+    if (tags.includes('energia')) return 'Energia ⚡';
+    if (tags.includes('medo')) return 'Medo ∞';
+    return 'Mundano / Sem Elemento';
+  });
+}
+
+// 3. Timeline (Revisada): Tenta pegar datas
+export function organizeByTimeline(cards: any[]) {
+  return organizeByGroup(cards, (card) => {
+    const tTags = (card.tags || []).filter((t: string) => t.startsWith('dia:') || t.startsWith('time:'));
+    if (tTags && tTags.length > 0) return tTags[0].toUpperCase(); // Ex: "DIA:1"
+    return 'SEM DATA';
   });
 }

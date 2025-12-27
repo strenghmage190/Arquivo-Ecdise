@@ -1,0 +1,102 @@
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  z-index: 10000; display: flex; align-items: center; justify-content: center;
+}
+
+.modal-dossier {
+  width: 95%; max-width: 1200px;
+  max-height: 96vh; overflow-y: auto;
+  background: #111; border: 1px solid #444;
+  border-radius: 6px; box-shadow: 0 10px 60px rgba(0,0,0,0.85);
+  display: flex; flex-direction: column;
+}
+
+/* Header: Estilo Ficha Policial */
+.dossier-header {
+  background: #1a1a1f; padding: 15px 25px; border-bottom: 2px solid #b33;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.dossier-header h2 {
+  font-family: 'Special Elite', cursive; color: #f2f2f2; font-size: 22px; margin: 0;
+  letter-spacing: 1px;
+}
+.top-actions .btn-close {
+  background: none; border: none; color: #666; font-size: 24px; cursor: pointer;
+}
+.top-actions .btn-close:hover { color: #fff; }
+
+/* Corpo do Formulário */
+.dossier-body {
+  padding: 30px; color: #ddd; display: flex; flex-direction: column; gap: 22px;
+}
+
+.form-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
+
+/* Inputs Modernos */
+label {
+  font-size: 11px; font-weight: bold; color: #b33; text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 6px; display: block;
+}
+
+input[type="text"], textarea, input[type="range"], input {
+  background: #0a0a0a; border: 1px solid #333; color: #e6e6e6;
+  padding: 10px; font-family: 'Roboto Mono', monospace; font-size: 13px;
+  width: 100%; box-sizing: border-box; transition: border 0.2s;
+}
+input:focus, textarea:focus { outline: none; border-color: #c6a45f; }
+
+/* Seções Visuais (Group Boxes) */
+.evidence-group {
+  border: 1px dashed #333; padding: 15px; background: #151515; position: relative;
+  border-radius: 4px;
+}
+.group-title {
+  position: absolute; top: -10px; left: 10px;
+  background: #111; padding: 0 5px;
+  color: #888; font-size: 10px; font-weight: bold;
+}
+
+/* Upload Buttons */
+.upload-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #222; border: 1px solid #444; color: #aaa;
+  padding: 8px; cursor: pointer; font-size: 12px; transition: all 0.2s;
+}
+.upload-btn:hover { background: #333; border-color: #777; color: #fff; }
+.file-status { font-size: 10px; color: #c6a45f; margin-left: 8px; }
+
+/* Range Slider */
+input[type=range] { width: 100%; accent-color: #b33; margin-top: 5px; }
+
+/* Footer */
+.dossier-footer {
+  background: #161616; padding: 15px 25px;
+  border-top: 1px solid #333; display: flex; justify-content: flex-end; gap: 15px;
+}
+
+.btn-cancel {
+  background: transparent; border: 1px solid #444; color: #888;
+  padding: 8px 16px; cursor: pointer;
+}
+.btn-save {
+  background: #b33; border: none; color: white;
+  padding: 8px 24px; font-weight: bold; cursor: pointer; letter-spacing: 1px;
+}
+.btn-save:hover { background: #d00; box-shadow: 0 0 10px #b33; }
+
+/* Mini Thumb do Preview */
+.image-preview-box {
+  width: 100%; height: 180px;
+  background-color: #000; border: 1px solid #333;
+  margin-top: 8px; background-size: contain; background-repeat: no-repeat; background-position: center;
+  display: flex; align-items: center; justify-content: center; color: #333; font-size: 24px;
+}
+
+/* Make modal wider on very large screens */
+@media (min-width: 1400px) {
+  .modal-dossier { max-width: 1400px; }
+  .dossier-body { padding: 36px; }
+  .image-preview-box { height: 220px; }
+}

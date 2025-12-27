@@ -35,3 +35,7 @@
 .btn-save-uv:hover { background:#8e2de2 }
 .tools button { background:#333; border:1px solid #555; color:#ddd; padding:5px 10px; cursor:pointer }
 .tools button.active { background:#555; border-color:#fff }
+.place-controls { display:flex; gap:12px; align-items:center }
+.place-controls input[type="number"] { background:#0b0b0b; border:1px solid #333; color:#fff; padding:6px; border-radius:4px }
+.place-controls input[type="text"] { background:#0b0b0b; border:1px solid #333; color:#fff; padding:6px; border-radius:4px }
+.place-controls input[type="range"] { accent-color:#b366ff }

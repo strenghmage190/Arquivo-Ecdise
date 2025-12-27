@@ -1,196 +1,360 @@
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import useEscapeClose from './useEscapeClose';
+import React, { useState, useEffect } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
-import { validateImageFile } from '../../utils/fileValidators';
 import UVEditor from '../tools/UVEditor';
-import '../tools/UVEditor.css';
+import './CreateClueModal.css';
+
+import { supabase } from '../../supabaseClient';
+
+async function uploadAudio(file: File, investigationId: string) {
+  const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
+  const { data, error } = await supabase.storage.from('investigation-assets').upload(path, file);
+  if (error) throw error;
+  const { data: publicData } = await supabase.storage.from('investigation-assets').getPublicUrl(path);
+  return (publicData as any)?.publicUrl || null;
+}
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
-  onSaved?: (created?: any) => void;
   initialX?: number;
   initialY?: number;
+  onSaved: (card: any) => void;
 }
 
-export default function CreateClueModal({ isOpen, onClose, investigationId, onSaved, initialX, initialY }: Props) {
+export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [imageUploading, setImageUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
-  // UV / secret layer states
-  const [uvFile, setUvFile] = useState<File | null>(null);
-  const [uvUploading, setUvUploading] = useState(false);
-  const [uvUrl, setUvUrl] = useState<string | null>(null);
-  const [showUvEditor, setShowUvEditor] = useState(false);
+  const [descPublic, setDescPublic] = useState('');
+  const [descHidden, setDescHidden] = useState('');
+  const [tags, setTags] = useState('');
 
-  useEscapeClose(isOpen, onClose);
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [uvFile, setUvFile] = useState<File | null>(null);
+   const [filterFile, setFilterFile] = useState<File | null>(null);
+   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+   const [editorMode, setEditorMode] = useState<'uv' | 'filter' | null>(null);
+
+  const [audioBase, setAudioBase] = useState<File | null>(null);
+  const [audioHidden, setAudioHidden] = useState<File | null>(null);
+  const [freq, setFreq] = useState(50);
+
+   const [isLocked, setIsLocked] = useState(false);
+   const [lockPass, setLockPass] = useState('');
+   const [filterRevealBrightness, setFilterRevealBrightness] = useState(150);
+   const [filterRevealContrast, setFilterRevealContrast] = useState(150);
+   const [filterRevealSaturate, setFilterRevealSaturate] = useState(100);
+
+  const [loading, setLoading] = useState(false);
+
+   // Reset form fields when opening the modal to avoid reusing previous values
+   const resetForm = () => {
+      setTitle('');
+      setDescPublic('');
+      setDescHidden('');
+      setTags('');
+      setImgFile(null);
+      setUvFile(null);
+      setFilterFile(null);
+      setPreviewUrl(null);
+      setEditorMode(null);
+      setAudioBase(null);
+      setAudioHidden(null);
+      setFreq(50);
+      setIsLocked(false);
+      setLockPass('');
+      setFilterRevealBrightness(150);
+      setFilterRevealContrast(150);
+      setFilterRevealSaturate(100);
+   };
+
+   useEffect(() => {
+      if (isOpen) resetForm();
+   }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleFileChange = async (file: File | null) => {
-    if (!file) return;
-    const check = validateImageFile(file);
-    if (!check.ok) {
-      alert(check.reason);
-      return;
-    }
-    setImageUploading(true);
-    try {
-      // build preview and dimensions before upload
-      const reader = new FileReader();
-      reader.onload = () => {
-        const url = String(reader.result || '');
-        setPreviewUrl(url);
-        const img = new Image();
-        img.onload = () => setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
-        img.src = url;
-      };
-      reader.readAsDataURL(file);
-
-      const publicUrl = await uploadInvestigationImage(file, investigationId);
-      if (publicUrl) {
-        setImageUrl(publicUrl);
-        setSelectedFileName(file.name);
-      } else {
-        alert('Erro ao subir imagem.');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Erro ao subir imagem.');
-    } finally {
-      setImageUploading(false);
-    }
-  };
-
-  const handleUvFileChange = async (file: File | null) => {
-    if (!file) return;
-    setUvUploading(true);
-    try {
-      const url = await uploadInvestigationImage(file, investigationId);
-      setUvUrl(url);
-      setUvFile(file);
-    } catch (e) {
-      console.error(e);
-      alert('Erro ao subir imagem UV.');
-    } finally {
-      setUvUploading(false);
-    }
-  };
-
-  const handleSaveFromEditor = async (file: File) => {
-    setUvUploading(true);
-    try {
-      const url = await uploadInvestigationImage(file, investigationId);
-      setUvUrl(url);
-      setShowUvEditor(false);
-    } catch (e) {
-      console.error(e);
-      alert('Erro ao salvar arte UV.');
-    } finally {
-      setUvUploading(false);
-    }
-  };
-
   const handleSave = async () => {
-    if (imageUploading) {
-      alert('Ainda a enviar imagem. Aguarde até concluir o upload antes de salvar.');
-      return;
-    }
-    setSaving(true);
+    if (!title) return alert("A pista precisa de um Título/Código.");
+    setLoading(true);
+
     try {
-      const payload: any = {
+      let imgUrl = null;
+      let uvUrl = null;
+         let filterUrl = null;
+      if (imgFile) imgUrl = await uploadInvestigationImage(imgFile, investigationId);
+         if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
+         if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
+
+      let audUrl = null;
+      let audHidUrl = null;
+      if (audioBase) audUrl = await uploadAudio(audioBase, investigationId);
+      if (audioHidden) audHidUrl = await uploadAudio(audioHidden, investigationId);
+
+         const metadata: any = ({} as any) || {};
+         metadata.image_filter_reveal = {
+            brightness: filterRevealBrightness,
+            contrast: filterRevealContrast,
+            saturate: filterRevealSaturate
+         };
+
+         const payload: any = {
         investigation_id: investigationId,
-        title: title || 'Pista sem título',
-        description_public: description || null,
-        x: (typeof initialX === 'number' ? Math.round(initialX) : 100),
-        y: (typeof initialY === 'number' ? Math.round(initialY) : 100),
-        image_url: imageUrl || undefined,
-        image_uv_url: uvUrl || null,
+        title,
+        description_public: descPublic || null,
+        description_hidden: descHidden || null,
+        x: initialX ?? 100,
+        y: initialY ?? 100,
+        image_url: imgUrl,
+        image_uv_url: uvUrl,
+            image_filter_layer: filterUrl,
+            is_locked: isLocked,
+            lock_password: isLocked ? lockPass : null,
+            metadata,
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        audio_url: audUrl,
+        audio_hidden_url: audHidUrl,
+        audio_target_freq: freq
       };
-      console.debug('CreateClueModal: creating card with payload', payload);
-      const created = await createInvestigationCard(payload);
-      console.debug('CreateClueModal: createInvestigationCard response', created);
-      if (created) {
-        onSaved && onSaved(created);
-        onClose();
-      } else {
-        alert('Resposta inesperada do servidor. Veja o console para detalhes.');
-      }
-    } catch (err: any) {
-      console.error('Falha ao criar pista:', err);
-      const msg = err?.message || String(err);
-      alert('Erro ao salvar pista: ' + msg + '. Veja o console para mais detalhes.');
+
+      const newCard = await createInvestigationCard(payload);
+      onSaved(newCard);
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Falha ao registrar evidência. Verifique conexão.");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const modal = (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: 720, maxWidth: '95vw' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>Registrar Nova Evidência</h3>
-          <button onClick={onClose}>×</button>
+  const handleImgSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setImgFile(e.target.files[0]);
+      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-dossier">
+        <div className="dossier-header">
+           <h2>REGISTRO DE EVIDÊNCIA</h2>
+           <div className="top-actions">
+              <button className="btn-close" onClick={onClose}>&times;</button>
+           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <label>Título</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%' }} />
-            <label>Descrição</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div style={{ width: 320 }}>
-            <label>Anexar Imagem</label>
-            <input type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)} />
-            <div style={{ fontSize: 12 }}>{selectedFileName}</div>
-            {imageUploading && <div style={{ fontSize: 12 }}>Enviando imagem...</div>}
-            {previewUrl && (
-              <div style={{ marginTop: 8 }}>
-                <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, display: 'block' }} />
-                {imageDims && <div style={{ fontSize: 12, color: '#ccc' }}>Dimensões: {imageDims.w}x{imageDims.h}</div>}
+        <div className="dossier-body">
+           <div className="form-row">
+              <div className="col" style={{flex:2}}>
+                 <label>IDENTIFICADOR / NOME DO ARQUIVO</label>
+                 <input autoFocus placeholder="Ex: Diário do Vulto" value={title} onChange={e=>setTitle(e.target.value)} />
               </div>
-            )}
-          </div>
-        </div>
-
-        <div style={{ borderTop: '1px dashed #444', paddingTop: 10, marginTop: 10 }}>
-          <label style={{color: '#b366ff'}}>🔦 Camada Oculta (Luz UV)</label>
-          {imageUrl ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {uvUrl ? <span style={{ color: '#39ff14' }}>✔ Segredo Criado!</span> : <small style={{ color: '#777' }}>Nenhum segredo definido.</small>}
-              <button className="btn-retro" onClick={() => setShowUvEditor(true)} style={{ fontSize: 12, padding: '5px 10px' }}>
-                {uvUrl ? '✏️ EDITAR NOVAMENTE' : '✨ DESENHAR SIGILO / PISTA'}
-              </button>
-              <div style={{ marginLeft: 'auto' }}>
-                <input id="uv-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleUvFileChange(e.target.files ? e.target.files[0] : null)} />
-                <label htmlFor="uv-upload-input" style={{ border: '1px dashed #b366ff', color: '#d8b3ff', padding: '6px 8px', cursor: 'pointer' }}>{uvUrl ? 'Substituir UV' : 'Anexar UV'}</label>
+              <div className="col" style={{flex:1}}>
+                 <label>TAGS (Separar por vírgula)</label>
+                 <input placeholder="Sangue, Oculto, Morte" value={tags} onChange={e=>setTags(e.target.value)} />
               </div>
-            </div>
-          ) : (
-            <small style={{ color: '#b33' }}>Faça upload da imagem principal primeiro.</small>
-          )}
-          {uvUploading && <div style={{ fontSize: 12 }}>Enviando UV...</div>}
+           </div>
+
+           <div className="col">
+              <label>DESCRIÇÃO PRELIMINAR (Visível a Todos)</label>
+              <textarea rows={3} value={descPublic} onChange={e=>setDescPublic(e.target.value)} />
+           </div>
+
+           <div className="col">
+              <label style={{color: '#c6a45f'}}>DADOS OCULTOS / OBSERVAÇÕES DO MESTRE</label>
+              <textarea 
+                 rows={2} 
+                 style={{borderColor:'#c6a45f', background:'#18120a'}}
+                 placeholder="Informações que só aparecem ao inspecionar..."
+                 value={descHidden} 
+                 onChange={e=>setDescHidden(e.target.value)} 
+              />
+           </div>
+
+           <div className="form-row">
+              <div className="col evidence-group">
+                 <span className="group-title">ANEXO VISUAL & UV</span>
+                 
+                 <label>1. IMAGEM PADRÃO</label>
+                 <label className="upload-btn">
+                    📷 SELECIONAR FOTO
+                    <input type="file" accept="image/*" hidden onChange={handleImgSelect} />
+                 </label>
+                 
+                 <div className="image-preview-box" style={{backgroundImage: previewUrl ? `url(${previewUrl})` : 'none'}}>
+                    {!previewUrl && <span style={{fontSize:10, opacity:0.3}}>SEM IMAGEM</span>}
+                 </div>
+
+                 {imgFile && (
+                    <>
+                       <div style={{height:1, background:'#333', margin:'10px 0'}} />
+                       <label style={{color:'#b366ff'}}>2. CAMADA LUZ NEGRA (Efeito UV)</label>
+                       
+                       <div style={{display:'flex', gap:10}}>
+                          <button 
+                             className="upload-btn" 
+                             style={{flex:1, color: editorMode === 'uv' ? '#b366ff' : ''}}
+                                onClick={() => setEditorMode('uv')}
+                          >
+                             🖌️ DESENHAR EFEITO
+                          </button>
+                          
+                          <label className="upload-btn" style={{flex:1}}>
+                             📁 UPLOAD PNG
+                             <input type="file" accept="image/png" hidden onChange={e => setUvFile(e.target.files?.[0] || null)} />
+                          </label>
+                       </div>
+                       {uvFile && <div className="file-status" style={{color:'#b366ff'}}>✓ Camada UV Anexada</div>}
+                    </>
+                 )}
+
+                         {/* CAMADA DE TRATAMENTO (PUZZLE) */}
+                         {imgFile && (
+                              <>
+                                 <div style={{height:1, background:'#333', margin:'10px 0'}} />
+                                 <label style={{color: '#c6a45f'}}>🧪 CAMADA DE TRATAMENTO (Brilho/Contraste)</label>
+                                 <small style={{display:'block', fontSize:10, color:'#888', marginBottom:5}}>
+                                     Aparece quando o jogador manipula os filtros da imagem.
+                                 </small>
+
+                                 <div style={{display:'flex', gap:10}}>
+                                    <button
+                                       className="upload-btn"
+                                       style={{flex:1, color: filterFile ? '#c6a45f' : ''}}
+                                       onClick={() => setEditorMode('filter')}
+                                    >
+                                       🖌️ DESENHAR SEGREDOS
+                                    </button>
+
+                                    <label className="upload-btn" style={{flex:1}}>
+                                       📁 UPLOAD PNG
+                                       <input type="file" accept="image/png" hidden onChange={e => setFilterFile(e.target.files?.[0] || null)} />
+                                    </label>
+                                 </div>
+                                 {filterFile && <div className="file-status" style={{color:'#c6a45f'}}>✓ Anomalia Óptica Anexada</div>}
+                              </>
+                         )}
+
+                               {/* CONFIGURAÇÃO DE REVELAÇÃO DA CAMADA */}
+                               {imgFile && (
+                                  <div style={{marginTop:10, padding:10, border:'1px dashed #333'}}>
+                                     <label style={{color:'#c6a45f'}}>CONFIGURAR A APARIÇÃO (Camada de Tratamento)</label>
+                                     <div style={{display:'flex', gap:10, marginTop:6}}>
+                                          <div style={{flex:1}}>
+                                             <label>Brilho Alvo</label>
+                                             <input type="number" min={0} max={300} value={filterRevealBrightness} onChange={e=>setFilterRevealBrightness(Number(e.target.value))} />
+                                          </div>
+                                          <div style={{flex:1}}>
+                                             <label>Contraste Alvo</label>
+                                             <input type="number" min={0} max={300} value={filterRevealContrast} onChange={e=>setFilterRevealContrast(Number(e.target.value))} />
+                                          </div>
+                                          <div style={{flex:1}}>
+                                             <label>Saturação Alvo</label>
+                                             <input type="number" min={0} max={200} value={filterRevealSaturate} onChange={e=>setFilterRevealSaturate(Number(e.target.value))} />
+                                          </div>
+                                     </div>
+                                     <small style={{color:'#666', fontSize:11}}>Defina os valores que o jogador precisa atingir para que a camada comece a aparecer.</small>
+                                  </div>
+                               )}
+              </div>
+
+              <div className="col evidence-group">
+                 <span className="group-title">EVP & ÁUDIO ESPETRAL</span>
+                 
+                 <label>A. FAIXA DE RUÍDO (Áudio Visível)</label>
+                 <label className="upload-btn">
+                    🎵 ARQUIVO NORMAL
+                    <input type="file" accept="audio/*" hidden onChange={e => setAudioBase(e.target.files?.[0] || null)} />
+                 </label>
+                 {audioBase && <span className="file-status">{audioBase.name}</span>}
+
+                 <div style={{height:1, background:'#333', margin:'10px 0'}} />
+
+                 <label style={{color:'#b33'}}>B. FAIXA ESCONDIDA (Voz/Segredo)</label>
+                 <label className="upload-btn">
+                    👻 ARQUIVO OCULTO
+                    <input type="file" accept="audio/*" hidden onChange={e => setAudioHidden(e.target.files?.[0] || null)} />
+                 </label>
+                 {audioHidden && <span className="file-status">{audioHidden.name}</span>}
+
+                 {audioBase && audioHidden && (
+                    <div style={{marginTop: 15, background:'#000', padding:10, border:'1px solid #333'}}>
+                       <label>FREQUÊNCIA DE SINTONIA: {freq}Hz</label>
+                       <input 
+                          type="range" min="0" max="100" 
+                          value={freq} onChange={e=>setFreq(Number(e.target.value))} 
+                       />
+                       <small style={{color:'#666', fontSize:10}}>
+                          O jogador terá que rodar o dial até esta frequência para ouvir o arquivo B.
+                       </small>
+                    </div>
+                 )}
+              </div>
+
+              <div className="col evidence-group" style={{ borderColor: isLocked ? '#e74c3c' : '#333' }}>
+                 <span className="group-title" style={{ color: isLocked ? '#e74c3c' : '#888' }}>
+                    🔐 CRIPTOGRAFIA / BLOQUEIO
+                 </span>
+
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <input 
+                       type="checkbox" 
+                       id="lock-check" 
+                       style={{ width: 'auto' }}
+                       checked={isLocked}
+                       onChange={e => setIsLocked(e.target.checked)}
+                    />
+                    <label htmlFor="lock-check" style={{ margin: 0, cursor: 'pointer', color: isLocked ? '#e74c3c' : '#888' }}>
+                       ATIVAR BLOQUEIO POR SENHA
+                    </label>
+                 </div>
+
+                 {isLocked && (
+                    <div>
+                       <label style={{color: '#e74c3c'}}>SENHA DE DESBLOQUEIO</label>
+                       <input 
+                          type="text" 
+                          placeholder="Ex: KIAN, 1992, MEDO"
+                          value={lockPass} 
+                          onChange={e => setLockPass(e.target.value)}
+                          style={{ borderColor: '#e74c3c', color: '#e74c3c', fontWeight:'bold' }}
+                       />
+                       <small style={{ color:'#666', fontSize:10 }}>
+                          O jogador verá uma tela de terminal e não terá acesso à imagem/descrição até digitar isso.
+                       </small>
+                    </div>
+                 )}
+              </div>
+
+           </div>
+
         </div>
 
-        {showUvEditor && imageUrl && (
-          <UVEditor baseImageUrl={imageUrl} onSave={handleSaveFromEditor} onClose={() => setShowUvEditor(false)} />
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose} disabled={saving || imageUploading}>Cancelar</button>
-          <button onClick={handleSave} disabled={saving || imageUploading}>{saving ? 'Salvando...' : 'Salvar'}</button>
+        <div className="dossier-footer">
+           <button className="btn-cancel" onClick={onClose}>CANCELAR</button>
+           <button className="btn-save" onClick={handleSave} disabled={loading}>
+              {loading ? 'ARQUIVANDO...' : 'REGISTRAR EVIDÊNCIA'}
+           </button>
         </div>
+
       </div>
+
+      {editorMode && previewUrl && (
+         <div style={{position:'fixed', inset:0, zIndex:11000}}>
+            <UVEditor 
+               baseImageUrl={previewUrl}
+               mode={editorMode || 'uv'}
+               onSave={(file) => { 
+                  if (editorMode === 'uv') setUvFile(file);
+                  if (editorMode === 'filter') setFilterFile(file);
+                  setEditorMode(null);
+               }}
+               onClose={() => setEditorMode(null)}
+            />
+         </div>
+      )}
     </div>
   );
-
-  return createPortal(modal, document.body);
 }

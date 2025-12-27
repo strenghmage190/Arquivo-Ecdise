@@ -31,7 +31,8 @@
 
 /* A Tinta Secreta em si */
 .hidden-ink-layer {
-  filter: drop-shadow(0 0 6px #b366ff) drop-shadow(0 0 12px #b366ff) brightness(1.6) saturate(1.2);
+  /* neutral amplify for any neon color */
+  filter: brightness(1.6) saturate(1.6) contrast(1.2);
   mix-blend-mode: screen;
   animation: uv-flicker 3.6s infinite alternate;
   z-index: 9;
@@ -77,8 +78,10 @@
 }
 
 .secret-ink {
-  filter: drop-shadow(0 0 5px #a100ff) drop-shadow(0 0 10px #7000ff);
-  mix-blend-mode: color-dodge;
+  /* use neutral blend & boosts so any drawn UV color (green/purple/etc.) becomes visible */
+  filter: brightness(1.8) contrast(1.4) saturate(2);
+  mix-blend-mode: screen;
   z-index: 15;
   animation: flicker-hard 4s infinite linear;
+  pointer-events: none;
 }

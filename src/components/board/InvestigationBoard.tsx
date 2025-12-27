@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
+import InviteModal from '../modals/InviteModal';
 import CreateClueModal from '../modals/CreateClueModal';
 import Sketchpad from '../tools/Sketchpad';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
@@ -11,7 +12,7 @@ import Toast from '../../components/ui/Toast';
 import ConspiracyBoard from './ConspiracyBoard';
 import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
-import { organizeByTimeline, organizeByGrid } from '../../utils/layoutAlgorithms';
+import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
@@ -33,6 +34,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [connections, setConnections] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [createModalPos, setCreateModalPos] = useState<{ x: number; y: number } | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
 
@@ -42,6 +44,8 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [isGameMaster, setIsGameMaster] = useState(false);
+  const [playerView, setPlayerView] = useState(false);
+  const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
   const [connectionMode, setConnectionMode] = useState(false);
@@ -64,7 +68,10 @@ export function InvestigationBoard({ investigationId }: Props) {
   const EMBED_EXCALIDRAW_JSON_LIMIT = 8 * 1024; // 8KB
   const [showSharedBoard, setShowSharedBoard] = useState(false);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const [showFinder, setShowFinder] = useState(false);
+  const [showOrganizeMenu, setShowOrganizeMenu] = useState(false);
   const [isOrganizing, setIsOrganizing] = useState(false);
+  const [contextMenu, setContextMenu] = useState<null | { type: 'card' | 'bg'; targetId?: string; x: number; y: number }>(null);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<any>(null);
@@ -220,7 +227,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     initCenter();
     window.addEventListener('resize', initCenter);
     return () => window.removeEventListener('resize', initCenter);
-  }, [cards.length, zoom]);
+  }, [cards.length]);
 
   // Lock page scroll while board is mounted (prevent browser scroll interfering)
   useEffect(() => {
@@ -274,26 +281,30 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
       const d = draggingRef.current;
       if (!d || !d.id) return;
-      // compute movement relative to the corkboard element to avoid global/page offsets
+      // compute movement relative to the corkboard element using world coordinates
       const board = corkboardRef.current?.getBoundingClientRect();
       const screenX = board ? (e.clientX - board.left) : e.clientX;
       const screenY = board ? (e.clientY - board.top) : e.clientY;
-      const dx = (screenX - (d.startScreenX ?? d.startX)) / zoom;
-      const dy = (screenY - (d.startScreenY ?? d.startY)) / zoom;
+      const worldX = origin.x + screenX / zoom;
+      const worldY = origin.y + screenY / zoom;
       // if multiple selected and the dragged id is part of selection, move all selected
       if (selectedIds.length > 0 && selectedIds.includes(d.id)) {
         setLocalPositions((prev) => {
           const next = { ...prev };
           selectedIds.forEach((sid) => {
-            const base = prev[sid] || { x: d.origX, y: d.origY };
-            next[sid] = { x: base.x + dx, y: base.y + dy };
+            const base = (d.origPositions && d.origPositions[sid]) ? d.origPositions[sid] : (prev[sid] || { x: d.origX, y: d.origY });
+            const offset = (d.pointerOffsets && d.pointerOffsets[sid]) ? d.pointerOffsets[sid] : { ox: (d.startWorldX ?? worldX) - base.x, oy: (d.startWorldY ?? worldY) - base.y };
+            next[sid] = { x: worldX - offset.ox, y: worldY - offset.oy };
           });
           return next;
         });
         // schedule saves for all
         selectedIds.forEach((sid) => scheduleDebouncedSave(sid));
       } else {
-        setLocalPositions((prev) => ({ ...prev, [d.id]: { x: d.origX + dx, y: d.origY + dy } }));
+        const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
+        const newX = worldX - offset.ox;
+        const newY = worldY - offset.oy;
+        setLocalPositions((prev) => ({ ...prev, [d.id]: { x: newX, y: newY } }));
         if (d.id) scheduleDebouncedSave(d.id);
       }
       if (connectionMode && connectionStart) setMousePos({ x: e.clientX, y: e.clientY });
@@ -313,9 +324,14 @@ export function InvestigationBoard({ investigationId }: Props) {
       const board = corkboardRef.current?.getBoundingClientRect();
       const screenX = board ? (t.clientX - board.left) : t.clientX;
       const screenY = board ? (t.clientY - board.top) : t.clientY;
-      const dx = (screenX - (d.startScreenX ?? d.startX)) / zoom;
-      const dy = (screenY - (d.startScreenY ?? d.startY)) / zoom;
-      setLocalPositions((prev) => ({ ...prev, [d.id]: { x: d.origX + dx, y: d.origY + dy } }));
+      const worldX = origin.x + screenX / zoom;
+      const worldY = origin.y + screenY / zoom;
+      const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
+      const newX = worldX - offset.ox;
+      const newY = worldY - offset.oy;
+      setLocalPositions((prev) => ({ ...prev, [d.id]: { x: newX, y: newY } }));
+      if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
+      if (d.id) scheduleDebouncedSave(d.id);
       if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
       if (d.id) scheduleDebouncedSave(d.id);
     };
@@ -358,6 +374,34 @@ export function InvestigationBoard({ investigationId }: Props) {
   }, [localPositions]);
 
   const clearSelection = () => setSelectedIds([]);
+
+  const toggleCardStatus = async (cardId: string, status: string, currentTags: string[]) => {
+    // compute newStatus from current cards state to avoid race between setState and API call
+    const existing = cards.find(c => c.id === cardId);
+    const newStatus = (existing?.metadata?.status === status) ? null : status;
+
+    // optimistically update UI
+    setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: newStatus } })));
+
+    try {
+      const updated = await api.updateInvestigationCard(cardId, { metadata: { ...(existing?.metadata || {}), status: newStatus } } as any);
+      console.debug('toggleCardStatus: server response', updated);
+      showToast({ id: `status-${cardId}`, message: `Status atualizado: ${newStatus || 'removido'}` }, 2500);
+      // reload board from server to ensure UI matches canonical state (handles RLS/normalization)
+      try {
+        await loadBoard();
+      } catch (loadErr) {
+        console.warn('toggleCardStatus: loadBoard failed after update', loadErr);
+        // fallback: merge server response into local state
+        setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, ...(updated || {}), metadata: (updated as any)?.metadata || { ...(c.metadata || {}), status: newStatus } })));
+      }
+    } catch (e) {
+      console.error('Erro ao salvar status', e);
+      showToast({ id: `status-err-${cardId}`, message: 'Falha ao salvar status', connectionId: undefined }, 4000);
+      // revert UI change on failure
+      setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: existing?.metadata?.status || null } })));
+    }
+  };
 
   const toggleSelect = (id: string, additive = false) => {
     setSelectedIds((prev) => {
@@ -413,7 +457,7 @@ export function InvestigationBoard({ investigationId }: Props) {
 
     setIsOrganizing(true);
     try {
-      const newLayout = mode === 'timeline' ? organizeByTimeline(cards) : organizeByGrid(cards);
+      const newLayout = mode === 'timeline' ? organizeByTimeline(cards) : organizeByElement(cards);
 
       // Capture previous positions for undo
       const beforePositions = newLayout.map(p => ({ id: p.id, x: (localPositions[p.id]?.x ?? cards.find(c=>c.id===p.id)?.x ?? 0), y: (localPositions[p.id]?.y ?? cards.find(c=>c.id===p.id)?.y ?? 0) }));
@@ -619,13 +663,110 @@ export function InvestigationBoard({ investigationId }: Props) {
     setOrigin({ x: x - viewW / (2 * zoom), y: y - viewH / (2 * zoom) });
   };
 
+  // Helper: open Create Clue modal centered on view
+  const handleCreateClue = () => {
+    setEditingCard(null);
+    const boardRect = corkboardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? window.innerWidth;
+    const viewH = boardRect?.height ?? window.innerHeight;
+    const cx = viewW / 2;
+    const bx = origin.x + cx / zoom;
+    const CARD_W = 220;
+    const CARD_H = 160;
+    setCreateModalPos({ x: Math.round(bx - CARD_W / 2), y: Math.round((viewH / 2) / zoom + origin.y - CARD_H / 2) });
+    setCreateModalOpen(true);
+  };
+
+  // Wheel-based zoom (Ctrl/Cmd + wheel) and scroll-pan when not holding Ctrl
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -e.deltaY;
+        const scaleFactor = 0.05;
+        setZoom(prev => {
+          const newZoom = prev + (delta > 0 ? scaleFactor : -scaleFactor);
+          return Math.min(Math.max(newZoom, 0.1), 3);
+        });
+        return;
+      }
+      e.preventDefault();
+      setOrigin(prev => ({ x: prev.x + e.deltaX / zoom, y: prev.y + e.deltaY / zoom }));
+    };
+
+    const boardEl = corkboardRef.current;
+    if (boardEl) boardEl.addEventListener('wheel', handleWheel, { passive: false });
+    return () => { if (boardEl) boardEl.removeEventListener('wheel', handleWheel as any); };
+  }, [zoom]);
+
   return (
     <div className="investigation-board">
       {/* Back button (kept interactive) */}
       <div style={{ position: 'fixed', left: 20, top: 20, zIndex: 1100 }}>
         <button className="btn-retro" onClick={() => navigate('/')}>← ARQUIVOS</button>
       </div>
-
+      
+      {contextMenu && (() => {
+        const board = corkboardRef.current?.getBoundingClientRect();
+        const left = board ? (board.left + (contextMenu.x - origin.x) * zoom) : 120;
+        const top = board ? (board.top + (contextMenu.y - origin.y) * zoom) : 120;
+        return (
+         <div style={{ position: 'fixed', left, top, zIndex: 11000, background: '#0b0b0d', border: '1px solid #333', padding: 8, borderRadius: 8, color: '#ddd', minWidth: 220 }}>
+          {contextMenu.type === 'card' ? (
+            <>
+             <div style={{ fontWeight: 'bold', marginBottom: 6 }}>GERENCIAR EVIDÊNCIA</div>
+             <div style={{display:'flex', gap:5, padding:'4px 0 8px 0'}}>
+               <button 
+                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'verified', []); setContextMenu(null); }}
+                 style={{flex:1, textAlign:'center', border:'1px solid #27ae60', color:'#2ecc71', fontSize:16, background:'#111', borderRadius:4}}
+                 title="Confirmar Fato"
+               >
+                 ✔
+               </button>
+               <button 
+                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'theory', []); setContextMenu(null); }}
+                 style={{flex:1, textAlign:'center', border:'1px solid #f39c12', color:'#f1c40f', fontSize:16, background:'#111', borderRadius:4}}
+                 title="Marcar como Teoria"
+               >
+                 ?
+               </button>
+               <button 
+                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'false', []); setContextMenu(null); }}
+                 style={{flex:1, textAlign:'center', border:'1px solid #c0392b', color:'#e74c3c', fontSize:16, background:'#111', borderRadius:4}}
+                 title="Descartar / Falso"
+               >
+                 ✖
+               </button>
+             </div>
+             <hr style={{borderColor:'#333', margin:'4px 0'}} />
+             <button onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ddd'}}>🔼 Trazer para Frente</button>
+             <button onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ddd'}}>🔽 Mandar para Trás</button>
+             <hr style={{borderColor:'#333', margin:'4px 0'}} />
+             {canEdit && (
+               <button 
+                 onClick={async () => {
+                   if(window.confirm("Queimar esta evidência permanentemente?")) {
+                     try { await api.deleteInvestigationCard(contextMenu.targetId!); setCards(prev => prev.filter(c => c.id !== contextMenu.targetId)); } catch(e){ console.error(e); }
+                   }
+                   setContextMenu(null);
+                 }}
+                 style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ff4444'}}
+               >
+                 🔥 Queimar Arquivo
+               </button>
+             )}
+            </>
+          ) : (
+            <>
+             <div style={{ fontWeight: 'bold', marginBottom: 6 }}>MESA DE INVESTIGAÇÃO</div>
+             <button onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ddd'}}>+ Nova Pista Aqui</button>
+             <button onClick={() => { handleAutoOrganize('timeline'); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ddd'}}>📅 Organizar Timeline</button>
+             <button onClick={() => { setOrigin({x:0, y:0}); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'#ddd'}}>📍 Resetar Câmera</button>
+            </>
+          )}
+         </div>
+        );
+      })()}
       {/* Floating header — decorative, pointerEvents none so it doesn't block UI */}
       <div style={{ position: 'fixed', top: 20, left: 80, zIndex: 1000, pointerEvents: 'none' }}>
         <div style={{ color: '#444', fontSize: 10, fontWeight: 'bold', marginBottom: 2, letterSpacing: 2 }}>CASO // CONFIDENCIAL</div>
@@ -635,84 +776,109 @@ export function InvestigationBoard({ investigationId }: Props) {
       </div>
 
       <div className="investigation-toolbar">
-        {isGameMaster && (
-          <BoardButton variant="primary" onClick={() => {
-            console.debug('InvestigationBoard: +PISTA clicked');
-            setEditingCard(null);
-            // compute center position in board coordinates
-            const boardRect = corkboardRef.current?.getBoundingClientRect();
-            const viewW = boardRect?.width ?? window.innerWidth;
-            const viewH = boardRect?.height ?? window.innerHeight;
-            const cx = viewW / 2;
-            const cy = viewH / 2;
-            const bx = origin.x + cx / zoom;
-            const by = origin.y + cy / zoom;
-            // position card so its center is at bx,by (card size ~220x160)
-            const CARD_W = 220;
-            const CARD_H = 160;
-            setCreateModalPos({ x: Math.round(bx - CARD_W / 2), y: Math.round(by - CARD_H / 2) });
-            setCreateModalOpen(true);
-          }}>
-            + PISTA
-          </BoardButton>
-        )}
-
-        <BoardButton onClick={() => setConnectionMode(!connectionMode)}>{connectionMode ? 'PARAR' : 'CONECTAR PISTAS'}</BoardButton>
-        {connectionMode && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 8 }}>
-            <select value={connectionType} onChange={(e) => setConnectionType(e.target.value as any)} style={{ background: 'transparent', color: '#e6d9b3', borderRadius: 6, padding: 6 }}>
-              <option value="confirmed">Confirmada</option>
-              <option value="theory">Teoria</option>
-              <option value="mystic">Mística</option>
-            </select>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <div style={{width:1, height:20, background:'#444', margin:'0 10px'}} />
-            <BoardButton onClick={() => handleAutoOrganize('timeline')} disabled={isOrganizing}>
-              {isOrganizing ? '...' : '📅 ORGANIZAR P/ DATA'}
-            </BoardButton>
-              {['#9a2b2b','#ff8a65','#ffd54f','#7fe0ff','#b39ddb','#ffffff'].map((c) => (
-                <div key={c} onClick={() => setConnectionColor(c)} style={{ width: 18, height: 18, borderRadius: 6, background: c, cursor: 'pointer', border: connectionColor === c ? '2px solid #fff' : '1px solid rgba(255,255,255,0.06)' }} />
-              ))}
-            </div>
-            {/* Undo button moved to main toolbar controls */}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <BoardButton onClick={() => undo()} disabled={undoStack.length === 0}>Undo</BoardButton>
-          <BoardButton onClick={() => redo()} disabled={redoStack.length === 0}>Redo</BoardButton>
-          <BoardButton onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}>−</BoardButton>
-          <div style={{ minWidth: 48, textAlign: 'center' }}>{Math.round(zoom * 100)}%</div>
-          <BoardButton onClick={() => setZoom((z) => z + 0.1)}>+</BoardButton>
-          <BoardButton onClick={() => setOrigin({ x: -100, y: -100 })} style={{ marginLeft: 6 }}>RESETAR CÂMERA</BoardButton>
-          <BoardButton onClick={() => setOrigin({ x: 0, y: 0 })} style={{ marginLeft: 6 }}>ORIGEM (0,0)</BoardButton>
-          <BoardButton 
-            onClick={() => setIsUV(!isUV)}
-            style={{ 
-              color: isUV ? '#b366ff' : '#ccc', 
-              borderColor: isUV ? '#b366ff' : '#555',
-              textShadow: isUV ? '0 0 8px #b366ff' : 'none'
-            }}
-          >
-            LUZ UV
-          </BoardButton>
-          <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} />
-          {inspectCard && (
-            <InspectionModal
-              isOpen={!!inspectCard}
-              card={inspectCard}
-              isGameMaster={isGameMaster}
-              onClose={() => setInspectCard(null)}
-              onEdit={() => {
-                setEditingCard(inspectCard);
-                setInspectCard(null);
-                setModalOpen(true);
-              }}
-            />
+        <div className="toolbar-group">
+          {canEdit && (
+            <button className="hud-btn primary" onClick={handleCreateClue} data-tooltip="Criar nova evidência (Apenas Mestre)">+ NOVA PISTA</button>
           )}
-          {/* Rascunho button removed per UX request */}
-          <BoardButton onClick={() => setShowSharedBoard(true)} style={{ marginLeft: 8 }}>🕸️ QUADRO DE CONSPIRAÇÃO</BoardButton>
+
+          {isGameMaster && (
+            <>
+              <div className="toolbar-divider" />
+              <button className="hud-btn icon-only" onClick={() => setInviteOpen(true)} data-tooltip="Convidar jogadores para o caso">✉️</button>
+              <button 
+                 className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
+                 onClick={() => setPlayerView(!playerView)}
+                 data-tooltip={playerView ? "Voltar para Visão do Mestre" : "Simular Visão do Jogador"}
+              >
+                 {playerView ? '🕶️' : '👁️'}
+              </button>
+            </>
+          )}
+
+           <button 
+            className={`hud-btn ${connectionMode ? 'active' : ''}`} 
+            onClick={() => setConnectionMode(!connectionMode)} 
+            data-tooltip="Modo Conexão (Fios)"
+           >
+            <span>🔗</span>
+            {connectionMode ? <span style={{ marginLeft: 6 }}>PARAR</span> : <span style={{ marginLeft: 6 }}>CONECTAR</span>}
+           </button>
+
+           {connectionMode && (
+            <div className="toolbar-group" style={{ animation: 'slideInRight 0.2s', border: '1px solid #444' }}>
+              <button 
+                className="hud-btn icon-only" 
+                onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
+                style={{ opacity: connectionType==='confirmed'?1:0.4, border: connectionType==='confirmed'?'1px solid #c62828':'none' }}
+                data-tooltip="Linha Sólida (Fato)"
+              >
+                <div style={{width:12, height:12, background:'#c62828', borderRadius: '50%'}} />
+              </button>
+
+              <button 
+                className="hud-btn icon-only"
+                onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
+                style={{ opacity: connectionType==='theory'?1:0.4, border: connectionType==='theory'?'1px solid #f9a825':'none' }}
+                data-tooltip="Linha Pontilhada (Teoria)"
+              >
+                <div style={{width:12, height:12, background:'#f9a825', borderRadius: '50%'}} />
+              </button>
+
+              <button 
+                className="hud-btn icon-only" 
+                onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
+                style={{ opacity: connectionType==='mystic'?1:0.4, border: connectionType==='mystic'?'1px solid #7e57c2':'none' }}
+                data-tooltip="Linha Mística (Sobrenatural)"
+              >
+                <div style={{width:12, height:12, background:'#7e57c2', borderRadius: '50%'}} />
+              </button>
+            </div>
+           )}
+
+          <div className="toolbar-sep" />
+
+          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer (Ctrl+Z)">↩</button>
+          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer (Ctrl+Y)">↪</button>
+        </div>
+
+        <div className="toolbar-group">
+          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar Pista por Nome">🔍</button>
+          <div style={{ position: 'relative' }}>
+            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar Pistas">🗂️</button>
+            {showOrganizeMenu && (
+              <div className="dropdown-menu">
+                <div className="dropdown-header">Organizar</div>
+                <button onClick={() => handleAutoOrganize('timeline')}>📅 Organizar por Data</button>
+                <button onClick={() => handleAutoOrganize('grid')}>🧭 Organizar por Elemento</button>
+              </div>
+            )}
+          </div>
+
+          <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} data-tooltip="Alternar Luz UV (Ver pistas ocultas)">🔦</button>
+          <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Abrir Quadro de Conspiração Geral">🕸️</button>
+        </div>
+
+        <div className="toolbar-group" style={{ padding: '0 12px', minWidth: 60, justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, color: '#666' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
         </div>
       </div>
+
+      {/* Modais (mantidos) */}
+      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />
+      <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} />
+      {inspectCard && (
+        <InspectionModal
+          isOpen={!!inspectCard}
+          card={inspectCard}
+          isGameMaster={canEdit}
+          onClose={() => setInspectCard(null)}
+          onEdit={() => {
+            setEditingCard(inspectCard);
+            setInspectCard(null);
+            setModalOpen(true);
+          }}
+        />
+      )}
 
       <div
         ref={corkboardRef}
@@ -731,6 +897,8 @@ export function InvestigationBoard({ investigationId }: Props) {
         onMouseLeave={() => { setGlobalMouse((g) => g ? { ...g, overBoard: false } : null); setOverlayPos((o) => o ? { ...o, over: false } : null); }}
         onMouseDown={(e) => {
           if (e.target === corkboardRef.current || e.target === e.currentTarget) {
+            // close any open context menu when clicking the background
+            setContextMenu(null);
             const board = corkboardRef.current?.getBoundingClientRect();
             if (!board) return;
             const isLeft = e.button === 0;
@@ -751,6 +919,16 @@ export function InvestigationBoard({ investigationId }: Props) {
               return;
             }
           }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const board = corkboardRef.current?.getBoundingClientRect();
+          if (!board) return;
+          const sx = e.clientX - board.left;
+          const sy = e.clientY - board.top;
+          const worldX = origin.x + sx / zoom;
+          const worldY = origin.y + sy / zoom;
+          setContextMenu({ type: 'bg', x: worldX, y: worldY });
         }}
       >
         {marqueeRect && <div className="marquee-rect" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
@@ -777,7 +955,26 @@ export function InvestigationBoard({ investigationId }: Props) {
               const a = getCardCenter(conn.from_card_id);
               const b = getCardCenter(conn.to_card_id);
               if (!a || !b) return null;
-              return <line key={conn.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(220,80,80,0.9)" strokeWidth={3} />;
+              // prefer explicit saved color, otherwise derive from metadata.type
+              const savedColor = (conn.color || (conn.metadata && conn.metadata.color) || null) as string | null;
+              const type = (conn.metadata && conn.metadata.type) || 'confirmed';
+              const stroke = savedColor || (type === 'theory' ? '#f9a825' : type === 'mystic' ? '#7e57c2' : '#c62828');
+              const dash = type === 'theory' ? '6 6' : type === 'mystic' ? '2 6' : undefined;
+              const width = type === 'mystic' ? 2.5 : 3;
+              const cls = `connection-line type-${type}`;
+              return (
+                <line
+                  key={conn.id}
+                  className={cls}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke={stroke}
+                  strokeWidth={width}
+                  strokeDasharray={dash}
+                />
+              );
             })}
             {connectionMode && connectionStart && mousePos && (() => {
               const a = getCardCenter(connectionStart);
@@ -800,7 +997,18 @@ export function InvestigationBoard({ investigationId }: Props) {
               <div
                 key={card.id}
                 className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''}`}
+                data-status={(card as any)?.metadata?.status || ''}
                 style={{ left: pos.x, top: pos.y }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const board = corkboardRef.current?.getBoundingClientRect();
+                  const sx = board ? e.clientX - board.left : 0;
+                  const sy = board ? e.clientY - board.top : 0;
+                  const worldX = origin.x + sx / zoom;
+                  const worldY = origin.y + sy / zoom;
+                  setContextMenu({ type: 'card', targetId: card.id, x: worldX, y: worldY });
+                }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   const additive = e.shiftKey || e.ctrlKey || e.metaKey;
@@ -817,7 +1025,14 @@ export function InvestigationBoard({ investigationId }: Props) {
                   const boardRect = corkboardRef.current?.getBoundingClientRect();
                   const startScreenX = boardRect ? e.clientX - boardRect.left : e.clientX;
                   const startScreenY = boardRect ? e.clientY - boardRect.top : e.clientY;
-                  const next = { id: card.id, startX: e.clientX, startY: e.clientY, startScreenX, startScreenY, origPositions, origX: pos.x, origY: pos.y };
+                  const startWorldX = origin.x + startScreenX / zoom;
+                  const startWorldY = origin.y + startScreenY / zoom;
+                  const pointerOffsets: Record<string, { ox: number; oy: number }> = {};
+                  Object.keys(origPositions).forEach((id) => {
+                    const base = origPositions[id];
+                    pointerOffsets[id] = { ox: startWorldX - base.x, oy: startWorldY - base.y };
+                  });
+                  const next = { id: card.id, startX: e.clientX, startY: e.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets };
                   draggingRef.current = next;
                 }}
                 onClick={async (ev) => {
@@ -843,7 +1058,14 @@ export function InvestigationBoard({ investigationId }: Props) {
                   const boardRect = corkboardRef.current?.getBoundingClientRect();
                   const startScreenX = boardRect ? t.clientX - boardRect.left : t.clientX;
                   const startScreenY = boardRect ? t.clientY - boardRect.top : t.clientY;
-                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, origPositions, origX: pos.x, origY: pos.y };
+                  const startWorldX = origin.x + startScreenX / zoom;
+                  const startWorldY = origin.y + startScreenY / zoom;
+                  const pointerOffsets: Record<string, { ox: number; oy: number }> = {};
+                  Object.keys(origPositions).forEach((id) => {
+                    const base = origPositions[id];
+                    pointerOffsets[id] = { ox: startWorldX - base.x, oy: startWorldY - base.y };
+                  });
+                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets };
                   draggingRef.current = next;
                 }}
                 onDoubleClick={async () => {
@@ -880,6 +1102,8 @@ export function InvestigationBoard({ investigationId }: Props) {
                 }}
               >
                 <div className="card-photo-container">
+                  {/* status marker (top-right) */}
+                  <div className="status-marker" />
                   {
                     (() => {
                       // compute pointer position relative to this card in element pixels
@@ -889,7 +1113,17 @@ export function InvestigationBoard({ investigationId }: Props) {
                         const elScreenY = (pos.y - origin.y) * zoom;
                         pointerLocal = { x: overlayPos.x - elScreenX, y: overlayPos.y - elScreenY, over: overlayPos.over };
                       }
-                      return (
+                      const isLockedForUser = Boolean(card?.is_locked) && !canEdit;
+                      return isLockedForUser ? (
+                        <div className="card-photo" style={{
+                          backgroundImage: 'none',
+                          backgroundColor: '#000',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: '100%', height: '100%'
+                        }}>
+                          <div style={{ color: '#e74c3c', fontSize: 32, textShadow: '0 0 10px red' }}>🔒</div>
+                        </div>
+                      ) : (
                         <MysteryImage baseSrc={card.image_url} hiddenSrc={card.image_uv_url} isUVMode={isUV} pointerLocal={pointerLocal} />
                       );
                     })()
@@ -935,7 +1169,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         }}
       />
 
-      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
+      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />
       {sketchOpen && (
         <Sketchpad
           initialData={sketchInitialData || undefined}

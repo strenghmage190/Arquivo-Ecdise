@@ -26,6 +26,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [imageUrl, setImageUrl] = useState<string | null>(existing?.image_url || null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
+  const [status, setStatus] = useState<string | null>((existing as any)?.metadata?.status || null);
 
   useEscapeClose(open, onClose);
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     setDescriptionHidden(existing?.description_hidden || '');
     setInsights(existing?.insights || []);
     setImageUrl(existing?.image_url || null);
+    setStatus((existing as any)?.metadata?.status || null);
   }, [existing]);
   if (!open) return null;
 
@@ -50,6 +52,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
       insights,
       image_url: imageUrl || undefined,
       tags: [],
+      metadata: { ...(existing as any)?.metadata || {}, status: status || undefined },
     } as any;
 
     try {
@@ -148,6 +151,23 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                 {imageDims && <div style={{ fontSize: 12, color: '#ccc' }}>Dimensões: {imageDims.w}x{imageDims.h}</div>}
               </div>
             )}
+
+            {/* Status control */}
+            <div style={{ marginTop: 12 }}>
+              <label>Status</label>
+              {isGameMaster ? (
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <button type="button" onClick={() => setStatus(status === 'verified' ? null : 'verified')} style={{ padding: '6px 10px', background: status === 'verified' ? '#27ae60' : '#222', color: status === 'verified' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✔ Confirmado</button>
+                  <button type="button" onClick={() => setStatus(status === 'theory' ? null : 'theory')} style={{ padding: '6px 10px', background: status === 'theory' ? '#f1c40f' : '#222', color: status === 'theory' ? '#222' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>? Teoria</button>
+                  <button type="button" onClick={() => setStatus(status === 'false' ? null : 'false')} style={{ padding: '6px 10px', background: status === 'false' ? '#e74c3c' : '#222', color: status === 'false' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✖ Falso</button>
+                </div>
+              ) : (
+                <div style={{ marginTop: 6 }}>
+                  {status ? <span style={{ display: 'inline-block', padding: '6px 10px', borderRadius: 6, background: status === 'verified' ? '#27ae60' : status === 'theory' ? '#f1c40f' : '#e74c3c', color: status === 'theory' ? '#222' : '#fff' }}>{status === 'verified' ? 'Confirmado' : status === 'theory' ? 'Teoria' : 'Falso'}</span> : <span style={{ color: '#bbb' }}>Sem status</span>}
+                </div>
+              )}
+            </div>
+
             <div style={{ marginTop: 8 }}>
               <label>Insights</label>
               {insights.map((ins, i) => (

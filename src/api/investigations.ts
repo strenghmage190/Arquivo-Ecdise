@@ -1,6 +1,30 @@
 import { supabase } from '../supabaseClient';
 import { isValidId } from '../utils/supabaseHelpers';
 
+// Debug helper: perform low-level REST fetch to capture raw PostgREST error body
+async function debugFetchInvestigationsRest() {
+  try {
+    const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
+    const anon = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+    if (!supabaseUrl) return null;
+    const url = `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/investigations?select=*&order=created_at.desc`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
+        Accept: '*/*',
+      },
+    });
+    const text = await res.text();
+    console.error('debugFetchInvestigationsRest', { status: res.status, statusText: res.statusText, body: text });
+    return { status: res.status, body: text };
+  } catch (e) {
+    console.error('debugFetchInvestigationsRest failed', e);
+    return null;
+  }
+}
+
 // --- Types ---
 export interface InvestigationCardInsight {
   id: string;
@@ -34,7 +58,11 @@ export async function fetchInvestigationById(id: string) {
     .select('*')
     .eq('id', id)
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error('fetchInvestigationById error', error);
+    await debugFetchInvestigationsRest();
+    throw error;
+  }
   return data;
 }
 
@@ -73,7 +101,10 @@ export async function createInvestigationCard(card: InvestigationCard) {
     investigation_id: card.investigation_id,
     title: card.title,
     image_uv_url: (card as any).image_uv_url || null,
+    image_filter_layer: (card as any).image_filter_layer || null,
     image_url: card.image_url || null,
+    is_locked: (card as any).is_locked || false,
+    lock_password: (card as any).lock_password || null,
     description_public: card.description_public || null,
     description_hidden: card.description_hidden || null,
     x: card.x ?? 0,
@@ -154,14 +185,17 @@ export async function fetchOrCreateInvestigationForCampaign(campaignId: string) 
 
     if (selErr) {
       console.error('Erro ao buscar investigation para campanha:', selErr);
+      await debugFetchInvestigationsRest();
       throw selErr;
     }
 
     if (existing) return existing;
 
+    const userRes = await supabase.auth.getUser();
+    const currentUserId = userRes.data?.user?.id || null;
     const { data: created, error: insErr } = await supabase
       .from('investigations')
-      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', created_by: (await supabase.auth.getUser()).data.user?.id || null })
+      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', owner_id: currentUserId, created_by: currentUserId })
       .select()
       .single();
 
@@ -183,6 +217,26 @@ export async function fetchInvestigationDetails(id: string) {
     .select('id, title, owner_id')
     .eq('id', id)
     .single();
+  if (error) {
+    console.error('fetchInvestigationDetails error', error);
+    await debugFetchInvestigationsRest();
+    throw error;
+  }
+  return data;
+}
+
+// Create a new investigation and set current user as owner
+export async function createInvestigation(title: string) {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user || null;
+  if (!user) throw new Error('Usuário não autenticado');
+
+  const { data, error } = await supabase
+    .from('investigations')
+    .insert([{ title: title, owner_id: user.id }])
+    .select()
+    .single();
+
   if (error) throw error;
   return data;
 }
