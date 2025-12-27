@@ -1,0 +1,30 @@
+.invite-screen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+}
+.invite-card {
+  text-align: center;
+  padding: 40px;
+  border: 1px solid #b33;
+  max-width: 500px;
+}
+.invite-from {
+  color: #b33;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.btn-accept {
+  background: #b33;
+  color: #fff;
+  border: none;
+  padding: 15px 30px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 18px;
+  margin-top: 20px;
+}

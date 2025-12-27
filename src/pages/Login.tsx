@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useAuth } from '../components/auth/AuthProvider';
 import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,7 +35,6 @@ export default function Login() {
         // Se tiver sessão no retorno, informa usuário e redireciona
         if (res.data?.session) {
           setMsg('Sessão iniciada. Redirecionando...');
-          navigate('/');
         } else {
           // Tenta obter sessão manualmente (caso seja retornada em outra call)
           try {
@@ -40,7 +42,6 @@ export default function Login() {
             console.debug('getSession after signIn', sess);
             if (sess.data?.session) {
               setMsg('Sessão iniciada. Redirecionando...');
-              navigate('/');
             } else {
               setMsg('Resposta inesperada do servidor. Verifique o console (F12).');
               console.warn('signIn no session', res);
@@ -58,6 +59,15 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Pega a rota de retorno que o ProtectedRoute passou
+  const from = (location.state as any)?.from?.pathname || '/';
+
+  useEffect(() => {
+    if (session) {
+      navigate(from, { replace: true });
+    }
+  }, [session, from, navigate]);
 
   return (
     <div className="login-terminal">

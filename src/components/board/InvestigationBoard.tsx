@@ -35,6 +35,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
   const [createModalPos, setCreateModalPos] = useState<{ x: number; y: number } | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
 
@@ -784,7 +785,19 @@ export function InvestigationBoard({ investigationId }: Props) {
           {isGameMaster && (
             <>
               <div className="toolbar-divider" />
-              <button className="hud-btn icon-only" onClick={() => setInviteOpen(true)} data-tooltip="Convidar jogadores para o caso">✉️</button>
+              <button className="hud-btn icon-only" onClick={async () => {
+                 try {
+                   const invite = await api.createInviteLink(investigationId);
+                   if (invite?.invite_code) {
+                     const url = `${window.location.origin}/invite/${invite.invite_code}`;
+                     setInviteLink(url);
+                   }
+                 } catch (e) {
+                   console.error('Falha ao gerar link de convite', e);
+                   alert('Falha ao gerar link de convite');
+                 }
+                 setInviteOpen(true);
+              }} data-tooltip="Convidar jogadores para o caso">✉️</button>
               <button 
                  className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
                  onClick={() => setPlayerView(!playerView)}
@@ -865,7 +878,7 @@ export function InvestigationBoard({ investigationId }: Props) {
 
       {/* Modais (mantidos) */}
       <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />
-      <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} />
+      <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
       {inspectCard && (
         <InspectionModal
           isOpen={!!inspectCard}

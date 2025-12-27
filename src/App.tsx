@@ -1,16 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './components/auth/AuthProvider';
+import { AuthProvider } from './components/auth/AuthProvider';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import InvestigationPage from './pages/Investigation';
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session } = useAuth();
-  if (!session) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-};
+import InvitePage from './pages/Invite';
 
 function App() {
   return (
@@ -36,6 +32,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <InvestigationPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/invite/:inviteCode"
+              element={
+                <ProtectedRoute>
+                  <InvitePage />
                 </ProtectedRoute>
               }
             />

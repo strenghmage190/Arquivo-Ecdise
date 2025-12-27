@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { nanoid } from 'nanoid';
 import { isValidId } from '../utils/supabaseHelpers';
 
 // Debug helper: perform low-level REST fetch to capture raw PostgREST error body
@@ -238,5 +239,26 @@ export async function createInvestigation(title: string) {
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+// --- INVITES ---
+export async function createInviteLink(investigationId: string) {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user || null;
+  if (!user) return null;
+
+  const invite_code = nanoid(10);
+
+  const { data, error } = await supabase
+    .from('investigation_invites')
+    .insert({ investigation_id: investigationId, invite_code, created_by: user.id })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createInviteLink error', error);
+    throw error;
+  }
   return data;
 }

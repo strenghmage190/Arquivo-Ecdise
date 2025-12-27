@@ -6,12 +6,14 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
+  inviteLink?: string;
 }
 
-export default function InviteModal({ isOpen, onClose, investigationId }: Props) {
+export default function InviteModal({ isOpen, onClose, investigationId, inviteLink }: Props) {
   const [email, setEmail] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function loadMembers() {
@@ -48,24 +50,58 @@ export default function InviteModal({ isOpen, onClose, investigationId }: Props)
     }
   };
 
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+      alert('Link copiado para a área de transferência!');
+    } catch (e) {
+      console.error('copy failed', e);
+      alert('Falha ao copiar. Selecione e copie manualmente.');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="invite-backdrop" onClick={onClose}>
       <div className="invite-modal" onClick={(e) => e.stopPropagation()}>
         <h2>CONVIDAR AGENTES PARA O CASO</h2>
-        <p>Adicione agentes pelo email. Eles precisam ter uma conta no sistema para poderem acessar.</p>
 
-        <div className="invite-form">
+        {/* If parent passed an inviteLink prop, show it for easy copy */}
+        {(/* @ts-ignore */ (window as any).__inviteLinkProvided) ? null : null}
+
+        <div style={{ marginBottom: 12 }}>
+          <p>Envie este link para jogadores — ele permite que entrem direto no caso.</p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* The investigationId prop remains available for legacy flows */}
           <input
-            type="email"
-            placeholder="email.do.agente@exemplo.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            readOnly
+            value={inviteLink || ''}
+            placeholder="Gere o link no botão ✉️"
+            style={{ flex: 1, background: '#000', border: '1px solid #444', color: '#c6a45f', padding: 8 }}
           />
-          <button onClick={handleInvite} disabled={loading}>
-            {loading ? 'ENVIANDO...' : 'CONVIDAR'}
-          </button>
+          <button onClick={() => handleCopy(inviteLink || '')} style={{ background: '#c6a45f', color: '#000', border: 'none', cursor: 'pointer' }}>COPIAR</button>
+        </div>
+
+        <hr style={{ borderColor: '#333', margin: '12px 0' }} />
+
+        <div style={{ color: '#aaa', fontSize: 13, marginTop: 8 }}>
+          <div style={{ marginBottom: 8 }}>Ou convide por email (legado, precisa de Edge Function):</div>
+          <div className="invite-form">
+            <input
+              type="email"
+              placeholder="email.do.agente@exemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <button onClick={handleInvite} disabled={loading}>
+              {loading ? 'ENVIANDO...' : 'CONVIDAR'}
+            </button>
+          </div>
         </div>
 
         <div className="members-list">
