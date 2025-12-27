@@ -79,7 +79,7 @@ export default function InvitePage() {
         {status === 'valid' && inviteInfo && (
            <>
              <span className="invite-from">VOCÊ FOI CONVOCADO PELA ORDEM</span>
-             <h1>{inviteInfo.investigation.title}</h1>
+             <h1>{inviteInfo?.investigation?.title || inviteInfo?.title || 'CASO'}</h1>
              <p>Você tem certeza que deseja aceitar esta missão e se juntar à investigação?</p>
              <button className="btn-accept" onClick={handleAccept}>ACEITAR MISSÃO</button>
            </>
