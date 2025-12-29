@@ -85,3 +85,11 @@
   animation: flicker-hard 4s infinite linear;
   pointer-events: none;
 }
+
+/* Visual stamp for cards (CONFIDENCIAL / ÓBITO etc.) */
+.card-stamp {
+  transform-origin: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  -webkit-font-smoothing: antialiased;
+}

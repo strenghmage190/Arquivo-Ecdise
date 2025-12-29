@@ -1,0 +1,24 @@
+.audio-lab-panel {
+  background: #0d0d0f;
+  border: 1px solid #333;
+  border-top: 2px solid #b33;
+  padding: 12px;
+  width: 100%;
+  color: #ccc;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analyzer-section { display:flex; align-items:center; gap:12px }
+.visualizer { display:flex; gap:6px; align-items:flex-end; height:48px }
+.visualizer .bar { width:8px; background:#b33; border-radius:2px }
+.freq-status { font-family: 'Roboto Mono', monospace; font-size:11px; background:#000; border:1px solid #333; padding:4px 8px; color:#c6a45f; margin-left:auto }
+
+.controls-section { display:flex; gap:16px; align-items:center; background:#151515; padding:12px; border-radius:4px }
+.btn-big-play { width:56px; height:56px; border-radius:50%; border:2px solid #555; background:#222; color:#fff; font-weight:900; cursor:pointer }
+.btn-big-play.playing { border-color:#b33; color:#b33; background:#111 }
+.evp-tuner { flex:1; display:flex; flex-direction:column; gap:6px }
+.evp-tuner label { font-size:11px; color:#b33; font-weight:700 }
+.tuner-slider { width:100%; accent-color:#c6a45f }
+.ticks { display:flex; justify-content:space-between; color:#444; font-size:10px }

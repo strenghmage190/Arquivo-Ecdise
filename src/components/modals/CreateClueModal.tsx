@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import UVEditor from '../tools/UVEditor';
+import AudioDecrypter from '../tools/AudioDecrypter';
+import SpectrogramCreator from '../tools/SpectrogramCreator';
 import './CreateClueModal.css';
 
 import { supabase } from '../../supabaseClient';
@@ -37,7 +39,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
   const [audioBase, setAudioBase] = useState<File | null>(null);
   const [audioHidden, setAudioHidden] = useState<File | null>(null);
+   const [audioBasePreview, setAudioBasePreview] = useState<string | null>(null);
+   const [audioHiddenPreview, setAudioHiddenPreview] = useState<string | null>(null);
+   const [showSpectroMaker, setShowSpectroMaker] = useState(false);
+   const [audioHiddenUploadedUrl, setAudioHiddenUploadedUrl] = useState<string | null>(null);
   const [freq, setFreq] = useState(50);
+   const [stamp, setStamp] = useState('');
+   const [externalLink, setExternalLink] = useState('');
 
    const [isLocked, setIsLocked] = useState(false);
    const [lockPass, setLockPass] = useState('');
@@ -59,8 +67,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setPreviewUrl(null);
       setEditorMode(null);
       setAudioBase(null);
+      if (audioBasePreview) { try { URL.revokeObjectURL(audioBasePreview); } catch(e){} }
       setAudioHidden(null);
+      if (audioHiddenPreview) { try { URL.revokeObjectURL(audioHiddenPreview); } catch(e){} }
+      setAudioHiddenUploadedUrl(null);
       setFreq(50);
+      setAudioBasePreview(null);
+      setAudioHiddenPreview(null);
       setIsLocked(false);
       setLockPass('');
       setFilterRevealBrightness(150);
@@ -86,10 +99,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
          if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
 
-      let audUrl = null;
-      let audHidUrl = null;
-      if (audioBase) audUrl = await uploadAudio(audioBase, investigationId);
-      if (audioHidden) audHidUrl = await uploadAudio(audioHidden, investigationId);
+         let audUrl = null;
+         let audHidUrl = null;
+         if (audioBase) audUrl = await uploadAudio(audioBase, investigationId);
+         // if we already uploaded hidden audio via SpectrogramCreator, use that URL
+         if (audioHiddenUploadedUrl) {
+            audHidUrl = audioHiddenUploadedUrl;
+         } else if (audioHidden) {
+            audHidUrl = await uploadAudio(audioHidden, investigationId);
+         }
 
          const metadata: any = ({} as any) || {};
          metadata.image_filter_reveal = {
@@ -97,6 +115,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             contrast: filterRevealContrast,
             saturate: filterRevealSaturate
          };
+           // if spectrogram was uploaded by SpectrogramCreator, save its public URL
+           if (audioHiddenUploadedUrl) metadata.spectrogram_url = audioHiddenUploadedUrl;
+         // optional external link + qr
+         if (externalLink) metadata.external_link = externalLink;
 
          const payload: any = {
         investigation_id: investigationId,
@@ -116,6 +138,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         audio_hidden_url: audHidUrl,
         audio_target_freq: freq
       };
+         // optional stamp text column (if DB has column 'stamp_text')
+         if (stamp) payload.stamp_text = stamp;
 
       const newCard = await createInvestigationCard(payload);
       onSaved(newCard);
@@ -127,6 +151,25 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setLoading(false);
     }
   };
+
+   // handle audio previews
+   const handleAudioBaseSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0] || null;
+      if (f) {
+         setAudioBase(f);
+         try { if (audioBasePreview) URL.revokeObjectURL(audioBasePreview); } catch(e){}
+         setAudioBasePreview(URL.createObjectURL(f));
+      }
+   };
+
+   const handleAudioHiddenSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0] || null;
+      if (f) {
+         setAudioHidden(f);
+         try { if (audioHiddenPreview) URL.revokeObjectURL(audioHiddenPreview); } catch(e){}
+         setAudioHiddenPreview(URL.createObjectURL(f));
+      }
+   };
 
   const handleImgSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -260,35 +303,106 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                )}
               </div>
 
+              <div className="col" style={{flex:0.8}}>
+                 <label>CARIMBO OFICIAL</label>
+                 <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                    {['CONFIDENCIAL', 'ÓBITO', 'ARQUIVADO', 'EVIDÊNCIA', 'ANOMALIA'].map(s => (
+                       <button 
+                          key={s}
+                          onClick={() => setStamp(stamp === s ? '' : s)}
+                          className={stamp === s ? 'btn-stamp active' : 'btn-stamp'}
+                          style={{
+                             fontSize: 11, padding: '6px 10px', 
+                             border: '2px solid', 
+                             borderColor: stamp===s ? '#e74c3c' : '#444',
+                             color: stamp===s ? '#e74c3c' : '#aaa',
+                             fontWeight: '900', background: 'transparent',
+                             transform: stamp===s ? 'rotate(-8deg)' : 'none',
+                             cursor: 'pointer'
+                          }}
+                       >
+                          {s}
+                       </button>
+                    ))}
+                 </div>
+              </div>
+
+              <div className="col evidence-group" style={{minWidth:220}}>
+                 <span className="group-title">LINK EXTERNO / QR</span>
+                 <label>URL EXTERNA (Youtube / Drive / Site)</label>
+                 <input placeholder="https://..." value={externalLink} onChange={e=>setExternalLink(e.target.value)} />
+                 <div style={{display:'flex', gap:10, alignItems:'center', marginTop:6}}>
+                    <button className="upload-btn" onClick={() => { if (externalLink) window.open(externalLink, '_blank'); }}>
+                       🔗 ABRIR LINK
+                    </button>
+                    <div style={{flex:1}}>
+                       <small style={{color:'#888'}}>Gere um QR abaixo para players escanearem com o celular.</small>
+                    </div>
+                 </div>
+
+                 {externalLink && (
+                    <div style={{marginTop:10, display:'flex', gap:12, alignItems:'center'}}>
+                       <div className="qr-preview">
+                          <img alt="qr" src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(externalLink)}`} />
+                       </div>
+                       <div style={{flex:1}}>
+                          <label style={{fontSize:12, color:'#c6a45f'}}>URL SALVA</label>
+                          <div style={{fontSize:12, color:'#ddd', wordBreak:'break-all'}}>{externalLink}</div>
+                       </div>
+                    </div>
+                 )}
+              </div>
+
               <div className="col evidence-group">
                  <span className="group-title">EVP & ÁUDIO ESPETRAL</span>
                  
                  <label>A. FAIXA DE RUÍDO (Áudio Visível)</label>
                  <label className="upload-btn">
                     🎵 ARQUIVO NORMAL
-                    <input type="file" accept="audio/*" hidden onChange={e => setAudioBase(e.target.files?.[0] || null)} />
+                    <input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} />
                  </label>
                  {audioBase && <span className="file-status">{audioBase.name}</span>}
 
                  <div style={{height:1, background:'#333', margin:'10px 0'}} />
 
                  <label style={{color:'#b33'}}>B. FAIXA ESCONDIDA (Voz/Segredo)</label>
-                 <label className="upload-btn">
-                    👻 ARQUIVO OCULTO
-                    <input type="file" accept="audio/*" hidden onChange={e => setAudioHidden(e.target.files?.[0] || null)} />
-                 </label>
+                 <div style={{display:'flex', gap:10}}>
+                    <label className="upload-btn" style={{flex:1}}>
+                       👻 UPLOAD ARQUIVO
+                       <input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} />
+                    </label>
+                    <button
+                       className="upload-btn"
+                       style={{flex:1, borderColor: '#b33', color:'#b33'}}
+                       onClick={() => setShowSpectroMaker(true)}
+                    >
+                       📝 TEXTO → ÁUDIO
+                    </button>
+                 </div>
                  {audioHidden && <span className="file-status">{audioHidden.name}</span>}
 
-                 {audioBase && audioHidden && (
-                    <div style={{marginTop: 15, background:'#000', padding:10, border:'1px solid #333'}}>
-                       <label>FREQUÊNCIA DE SINTONIA: {freq}Hz</label>
-                       <input 
-                          type="range" min="0" max="100" 
-                          value={freq} onChange={e=>setFreq(Number(e.target.value))} 
+                 {audioBasePreview && audioHiddenPreview && (
+                    <div style={{ marginTop: 15, padding: 10, background: '#0a0a0a', border: '1px solid #333' }}>
+                       <label style={{color: '#c6a45f', marginBottom: 10}}>🎛️ CALIBRAGEM DE FREQUÊNCIA</label>
+                       <AudioDecrypter 
+                          baseAudio={audioBasePreview}
+                          hiddenAudio={audioHiddenPreview}
+                          targetFreq={freq}
                        />
-                       <small style={{color:'#666', fontSize:10}}>
-                          O jogador terá que rodar o dial até esta frequência para ouvir o arquivo B.
-                       </small>
+
+                       <div style={{ marginTop: 15, paddingTop: 10, borderTop: '1px dashed #333' }}>
+                          <label>DEFINIR FREQUÊNCIA ALVO: {freq}Hz</label>
+                          <input 
+                             type="range" min="0" max="100" 
+                             value={freq} 
+                             onChange={e => setFreq(Number(e.target.value))} 
+                             style={{accentColor: '#c6a45f'}}
+                          />
+                          <p style={{fontSize: 10, color:'#666'}}>
+                             Mova o slider acima para definir onde o segredo estará.
+                             Teste no player acima se a mistura está boa.
+                          </p>
+                       </div>
                     </div>
                  )}
               </div>
@@ -354,6 +468,27 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                onClose={() => setEditorMode(null)}
             />
          </div>
+      )}
+      {showSpectroMaker && (
+            <div style={{position:'fixed', inset:0, zIndex:12000}}>
+               <SpectrogramCreator
+                  investigationId={investigationId}
+                  onSave={(file) => {
+                     // attach to hidden audio slot (local file)
+                     try { if (audioHiddenPreview) URL.revokeObjectURL(audioHiddenPreview); } catch(e){}
+                     setAudioHidden(file);
+                     setAudioHiddenPreview(URL.createObjectURL(file));
+                     setShowSpectroMaker(false);
+                  }}
+                  onUploadComplete={(publicUrl) => {
+                     // store uploaded public url so handleSave uses it
+                     setAudioHiddenUploadedUrl(publicUrl);
+                     setAudioHiddenPreview(publicUrl);
+                     setShowSpectroMaker(false);
+                  }}
+                  onClose={() => setShowSpectroMaker(false)}
+               />
+            </div>
       )}
     </div>
   );

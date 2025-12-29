@@ -1201,6 +1201,39 @@ export function InvestigationBoard({ investigationId }: Props) {
                 <div className="card-photo-container">
                   {/* status marker (top-right) */}
                   <div className="status-marker" />
+                  {card.stamp_text && (
+                    <div className="card-stamp" style={{
+                      position: 'absolute', top: 20, right: 10,
+                      color: '#c0392b', border: '3px solid #c0392b',
+                      padding: '2px 8px', fontSize: 16, fontWeight: 900,
+                      fontFamily: 'Black Ops One, cursive', transform: 'rotate(-15deg)',
+                      opacity: 0.85, pointerEvents: 'none', zIndex: 50, mixBlendMode: 'multiply'
+                    }}>
+                      {card.stamp_text}
+                    </div>
+                  )}
+                  {/* Spectrogram download if present in metadata */}
+                  {(() => {
+                    const spectroUrl = (card && ((card.metadata && card.metadata.spectrogram_url) || (card.spectrogram_url))) || null;
+                    if (!spectroUrl) return null;
+                    return (
+                      <a
+                        href={spectroUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={`spectrogram_${card.id}.wav`}
+                        style={{
+                          position: 'absolute', top: 10, left: 10,
+                          zIndex: 60, background: 'rgba(10,10,10,0.9)',
+                          border: '1px solid #333', color: '#c6a45f', padding: '6px 8px',
+                          borderRadius: 4, fontSize: 12, textDecoration: 'none',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.6)'
+                        }}
+                      >
+                        🎧 WAV
+                      </a>
+                    );
+                  })()}
                   {
                     (() => {
                       // compute pointer position relative to this card in element pixels

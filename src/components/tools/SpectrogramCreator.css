@@ -1,0 +1,16 @@
+.spectro-creator-overlay {
+  position: fixed; inset: 0; z-index: 13000; display:flex; align-items:center; justify-content:center;
+  background: rgba(0,0,0,0.7);
+}
+.spectro-box {
+  width: 520px; max-width: 96%; background: #0b0b0b; border:1px solid #222; padding: 18px; border-radius:6px; color:#ddd;
+}
+.sp-header { font-weight:900; color:#c6a45f; margin-bottom:8px; }
+.sp-workspace { margin-bottom:12px; }
+.sp-controls { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+.btn-retro { background:#222; border:1px solid #444; color:#ddd; padding:8px 12px; cursor:pointer }
+.preview-player { flex:1 }
+.sp-workspace small{display:block}
+.sp-footer { display:flex; justify-content:space-between; }
+.btn-cancel { background:transparent; border:none; color:#888 }
+.btn-confirm { background:#b33; color:#fff; border:none; padding:8px 12px; cursor:pointer }

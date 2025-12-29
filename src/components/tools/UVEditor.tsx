@@ -19,6 +19,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }:
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
   const [imageScale, setImageScale] = useState(1);
+  const [censorMode, setCensorMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Layers support: placed texts/images (editable)
   const [layers, setLayers] = useState<any[]>([]);
@@ -142,9 +143,15 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }:
       octx.shadowBlur = 0;
     } else {
       octx.globalCompositeOperation = 'source-over';
-      octx.strokeStyle = color;
-      octx.shadowColor = mode === 'filter' ? 'rgba(255,255,255,0.9)' : color;
-      octx.shadowBlur = mode === 'filter' ? 8 : 15;
+      // if censor mode is active, draw flat black with no blur for redaction bars
+      if (censorMode) {
+        octx.strokeStyle = '#000000';
+        octx.shadowBlur = 0;
+      } else {
+        octx.strokeStyle = color;
+        octx.shadowColor = mode === 'filter' ? 'rgba(255,255,255,0.9)' : color;
+        octx.shadowBlur = mode === 'filter' ? 8 : 15;
+      }
     }
     setIsDrawing(true);
     // immediately reflect on main canvas
@@ -342,6 +349,16 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }:
           </div>
           <div className="tools">
             <button onClick={() => setTool('erase')} className={tool === 'erase' ? 'active' : ''}>🗑️ Borracha</button>
+            <button onClick={() => {
+              // toggle censor mode
+              const next = !censorMode;
+              setCensorMode(next);
+              if (next) {
+                setColor('#000000');
+                setTool('draw');
+                setBrushSize(20);
+              }
+            }} className={censorMode ? 'active' : ''}>🟥 Modo Censura</button>
             <button onClick={() => { setTool('placeText'); }} className={tool === 'placeText' ? 'active' : ''}>🅰️ Inserir Texto</button>
             <button onClick={() => { fileInputRef.current?.click(); }} className={tool === 'placeImage' ? 'active' : ''}>🖼️ Inserir Imagem</button>
             <button onClick={clearCanvas}>⚡ Limpar Tudo</button>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
 import HackingTerminal from '../tools/HackingTerminal';
 import AudioDecrypter from '../tools/AudioDecrypter';
+import AudioLab from '../tools/AudioLab';
 import './InspectionModal.css';
 
 interface Props {
@@ -33,6 +34,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
+  const [showAudio, setShowAudio] = useState(false);
   const [localThermal, setLocalThermal] = useState(false);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
@@ -94,7 +96,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               </div>
               <div className="actions">
                 {card.audio_url && <span style={{fontSize:12, color:'#b33', marginRight:8}}>🔊 ÁUDIO ANEXADO</span>}
-
+                {card.audio_url && (
+                  <button
+                    className={`btn-uv-toggle ${showAudio ? 'active' : ''}`}
+                    style={{ borderColor: showAudio ? '#c6a45f' : '#555', color: showAudio ? '#c6a45f' : '#aaa', marginRight:8 }}
+                    onClick={() => setShowAudio(!showAudio)}
+                  >
+                    {showAudio ? 'DESLIGAR ESCUTA' : '📻 INVESTIGAR ÁUDIO'}
+                  </button>
+                )}
                 <button onClick={() => setShowFilters(!showFilters)} className={`btn-uv-toggle ${showFilters ? 'active' : ''}`}>
                   🧪 TRATAR IMAGEM
                 </button>
@@ -184,13 +194,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               )}
 
               {card.audio_url && (
-                <div className="audio-overlay-panel">
-                  <AudioDecrypter
-                    baseAudio={card.audio_url}
-                    hiddenAudio={card.audio_hidden_url}
-                    targetFreq={card.audio_target_freq || 50}
-                  />
-                </div>
+                showAudio ? (
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50, boxShadow: '0 -5px 20px rgba(0,0,0,0.8)' }}>
+                    <AudioLab
+                      baseSrc={card.audio_url}
+                      hiddenSrc={card.audio_hidden_url}
+                      targetFreq={card.audio_target_freq || 50}
+                    />
+                  </div>
+                ) : (
+                  <div className="audio-overlay-panel">
+                    <AudioDecrypter
+                      baseAudio={card.audio_url}
+                      hiddenAudio={card.audio_hidden_url}
+                      targetFreq={card.audio_target_freq || 50}
+                    />
+                  </div>
+                )
               )}
             </div>
 
