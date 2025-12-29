@@ -108,18 +108,27 @@ export function MysteryImage({
 
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
-  if (revealTarget && (revealTarget.brightness || revealTarget.contrast || revealTarget.saturate)) {
+  // Mostra camada de tratamento com tolerância ajustável.
+  // Se houver um `revealTarget` explícito, calcula quão próximo os filtros atuais estão do alvo.
+  if (revealTarget !== null && typeof revealTarget === 'object') {
     const rb = revealTarget.brightness ?? 100;
     const rc = revealTarget.contrast ?? 100;
     const rs = revealTarget.saturate ?? 100;
     const closeness = Math.abs(filters.brightness - rb) + Math.abs(filters.contrast - rc) + Math.abs(filters.saturate - rs);
-    // quanto mais próximo do alvo, maior a opacidade. 0 = totalmente diferente, 0 quando closeness >= THRESH
-    const THRESH = 50; // ajuste de sensibilidade
+    // quanto menor o closeness, maior a opacidade. Aumentamos THRESH para evitar "não aparecer" em casos comuns.
+    const THRESH = 250; // sensibilidade aumentada
     hiddenLayerOpacity = Math.max(0, Math.min(1, 1 - (closeness / THRESH)));
   } else {
+    // Quando não há alvo definido, mostramos a camada proporcionalmente à alteração em relação a 100%.
     const distortionLevel = Math.abs(filters.brightness - 100) + Math.abs(filters.contrast - 100) + Math.abs(filters.saturate - 100);
-    hiddenLayerOpacity = Math.min(1, distortionLevel / 50);
+    hiddenLayerOpacity = Math.min(1, distortionLevel / 100);
   }
+
+  // Debug temporário: ajuda a identificar por que a camada pode permanecer invisível
+  try {
+    // eslint-disable-next-line no-console
+    console.debug('MysteryImage debug', { filters, revealTarget, hiddenLayerOpacity });
+  } catch (e) {}
 
   return (
     <div
