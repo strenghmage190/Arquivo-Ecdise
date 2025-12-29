@@ -50,8 +50,11 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [playerView, setPlayerView] = useState(false);
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
-  const [touchMode, setTouchMode] = useState<'pan' | 'interact'>('pan');
+  const isMobileDevice = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
   const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
+  const selectedIdsRef = useRef<string[]>([]);
+
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
@@ -71,6 +74,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   // localPositions used while dragging to avoid frequent re-fetches
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
   const [sketchOpen, setSketchOpen] = useState(false);
   const [sketchInitialData, setSketchInitialData] = useState<any | null>(null);
   const [editingSketchId, setEditingSketchId] = useState<string | null>(null);
@@ -90,6 +94,13 @@ export function InvestigationBoard({ investigationId }: Props) {
   const draggingRef = useRef<any>(null);
   const panningRef = useRef<any>(null);
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+  // Ref mirror of localPositions to avoid stale closures inside global listeners
+  const localPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const saveQueueRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    localPositionsRef.current = localPositions;
+  }, [localPositions]);
 
   const loadBoard = async () => {
     try {
@@ -185,6 +196,32 @@ export function InvestigationBoard({ investigationId }: Props) {
     loadBoard();
   }, [investigationId]);
 
+  // Emergency spread: detect stacked cards (at origin) and disperse them into a grid
+  useEffect(() => {
+    if (!cards || cards.length === 0) return;
+    const nextLocal = { ...localPositions };
+    let changed = false;
+
+    (cards || []).forEach((card: any, index: number) => {
+      const currentX = typeof card.x === 'number' ? card.x : 0;
+      const currentY = typeof card.y === 'number' ? card.y : 0;
+
+      if ((currentX < 10 && currentY < 10) || !nextLocal[card.id]) {
+        const col = index % 4;
+        const row = Math.floor(index / 4);
+        const newX = 150 + (col * 250);
+        const newY = 150 + (row * 300);
+        nextLocal[card.id] = { x: newX, y: newY };
+        changed = true;
+        // persist to server (fire-and-forget)
+        api.updateInvestigationCard(card.id, { x: newX, y: newY }).catch((e) => console.warn('despegar card failed', e));
+      }
+    });
+
+    if (changed) setLocalPositions(nextLocal);
+    // run when cards change
+  }, [cards]);
+
   // Check whether current user is the owner (Game Master)
   useEffect(() => {
     let mounted = true;
@@ -217,47 +254,83 @@ export function InvestigationBoard({ investigationId }: Props) {
   }, [createModalOpen]);
 
   // Persist on global mouseup (finish drag / pan)
-  const handleGlobalMouseUp = async (e: MouseEvent) => {
+  const forceSaveCard = async (id: string) => {
+    if (!id) return;
+    // cancel pending debounce
+    if (saveTimeouts.current[id]) {
+      clearTimeout(saveTimeouts.current[id] as any);
+      saveTimeouts.current[id] = null;
+    }
+    // prevent duplicate saves
+    if (saveQueueRef.current.has(id)) return;
+    saveQueueRef.current.add(id);
+    try {
+      const currentPos = localPositionsRef.current[id];
+      if (currentPos) {
+        console.debug('forceSaveCard saving', id, currentPos);
+        await api.updateInvestigationCard(id, { x: Math.round(currentPos.x), y: Math.round(currentPos.y) } as any);
+      }
+    } catch (e) {
+      console.error('Erro ao salvar posição:', e);
+    } finally {
+      saveQueueRef.current.delete(id);
+    }
+  };
+
+  const handleGlobalMouseUp = (e?: MouseEvent) => {
+    // finalize panning
     if (panningRef.current) {
       panningRef.current = null;
+      document.body.style.cursor = 'default';
       return;
     }
+
+    // finalize marquee selection
+    if (marqueeStartRef.current) {
+      marqueeStartRef.current = null;
+      setMarqueeRect(null);
+      return;
+    }
+
+    // finalize card dragging and persist positions
     if (draggingRef.current) {
       const d = draggingRef.current;
+      const id = d.id;
+      if (id) {
+        // determine ids to save (group vs single)
+        const idsToSave = (selectedIds && selectedIds.includes(id)) ? [...selectedIds] : [id];
+        // push undo using original positions if available and current ref positions
+        const changes: any[] = [];
+        const origs: Record<string, { x: number; y: number }> = d.origPositions || (d.origX !== undefined ? { [d.id]: { x: d.origX, y: d.origY } } : {});
+        for (const sid of idsToSave) {
+          const pos = localPositionsRef.current[sid];
+          // cancel debounce
+          const to = saveTimeouts.current[sid];
+          if (to) { clearTimeout(to as any); saveTimeouts.current[sid] = null; }
+          if (pos) {
+            changes.push({ id: sid, from: origs[sid] || { x: 0, y: 0 }, to: { x: Math.round(pos.x), y: Math.round(pos.y) } });
+          }
+        }
+        if (changes.length) {
+          pushUndo({ type: 'move', payload: { changes } });
+          // persist all
+          idsToSave.forEach(sid => forceSaveCard(sid));
+        }
+      }
       draggingRef.current = null;
-      const origs: Record<string, { x: number; y: number }> = d.origPositions || (d.origX !== undefined ? { [d.id]: { x: d.origX, y: d.origY } } : {});
-      const affected = Object.keys(origs);
-      const changes: any[] = [];
-      for (const aid of affected) {
-        const pos = localPositions[aid];
-        // cancel debounce
-        const to = saveTimeouts.current[aid];
-        if (to) {
-          clearTimeout(to as any);
-          saveTimeouts.current[aid] = null;
-        }
-        if (pos) {
-          changes.push({ id: aid, from: origs[aid], to: { x: Math.round(pos.x), y: Math.round(pos.y) } });
-        }
-      }
-      if (changes.length) {
-        // push move action
-        pushUndo({ type: 'move', payload: { changes } });
-        // persist all
-        for (const c of changes) {
-          try { await api.updateCard(c.id, { x: c.to.x, y: c.to.y }); } catch (err) { console.error('Falha ao salvar posição do card', err); }
-        }
-      }
     }
   };
 
   useEffect(() => {
     window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-    // intentionally not adding cards to deps; loadBoard will refresh positions
-    // and the update handler persists the final position
+    window.addEventListener('touchend', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('touchend', handleGlobalMouseUp);
+    };
+    // intentionally not adding localPositions to deps to avoid recreating listeners
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [investigationId]);
+  }, [investigationId, selectedIds]);
 
   // Marquee: start on shift+mousedown on background, update on move, finalize on mouseup
   const startMarquee = (e: MouseEvent) => {
@@ -368,10 +441,11 @@ export function InvestigationBoard({ investigationId }: Props) {
       const worldX = origin.x + screenX / zoom;
       const worldY = origin.y + screenY / zoom;
       // if multiple selected and the dragged id is part of selection, move all selected
-      if (selectedIds.length > 0 && selectedIds.includes(d.id)) {
+      const sel = selectedIdsRef.current || [];
+      if (sel.length > 0 && sel.includes(d.id)) {
         setLocalPositions((prev) => {
           const next = { ...prev };
-          selectedIds.forEach((sid) => {
+          sel.forEach((sid) => {
             const base = (d.origPositions && d.origPositions[sid]) ? d.origPositions[sid] : (prev[sid] || { x: d.origX, y: d.origY });
             const offset = (d.pointerOffsets && d.pointerOffsets[sid]) ? d.pointerOffsets[sid] : { ox: (d.startWorldX ?? worldX) - base.x, oy: (d.startWorldY ?? worldY) - base.y };
             next[sid] = { x: worldX - offset.ox, y: worldY - offset.oy };
@@ -379,7 +453,7 @@ export function InvestigationBoard({ investigationId }: Props) {
           return next;
         });
         // schedule saves for all
-        selectedIds.forEach((sid) => scheduleDebouncedSave(sid));
+        sel.forEach((sid) => scheduleDebouncedSave(sid));
       } else {
         const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
         const newX = worldX - offset.ox;
@@ -933,6 +1007,27 @@ export function InvestigationBoard({ investigationId }: Props) {
 
           <div className="toolbar-sep" />
 
+          <button
+            className="hud-btn"
+            onClick={() => {
+              // Force grid unstack
+              const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
+              cards.forEach((c, i) => {
+                const col = i % 5;
+                const row = Math.floor(i / 5);
+                const x = 100 + col * 260;
+                const y = 100 + row * 300;
+                newPos[c.id] = { x, y };
+                api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
+              });
+              setLocalPositions(newPos);
+              setOrigin({ x: -50, y: -50 });
+            }}
+            title="Forçar Separação de Cartas"
+          >
+            🔢 DESEMPILHAR
+          </button>
+
           <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer (Ctrl+Z)">↩</button>
           <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer (Ctrl+Y)">↪</button>
         </div>
@@ -1100,7 +1195,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                 key={card.id}
                   className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''}`}
                   data-status={(card as any)?.metadata?.status || ''}
-                  style={{ left: pos.x, top: pos.y, pointerEvents: touchMode === 'pan' ? 'none' : 'auto' }}
+                  style={{ left: pos.x, top: pos.y, pointerEvents: (isMobileDevice && touchMode === 'pan') ? 'none' : 'auto' }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1114,8 +1209,18 @@ export function InvestigationBoard({ investigationId }: Props) {
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   const additive = e.shiftKey || e.ctrlKey || e.metaKey;
-                  if (!connectionMode) toggleSelect(card.id, additive);
-                  const affected = (selectedIds.length > 0 && selectedIds.includes(card.id)) ? selectedIds : [card.id];
+                  // compute the new selection synchronously so dragging uses the intended set
+                  let newSelected: string[] = [];
+                  if (!connectionMode) {
+                    if (additive) {
+                      if (selectedIds.includes(card.id)) newSelected = selectedIds.filter(s => s !== card.id);
+                      else newSelected = [...selectedIds, card.id];
+                    } else {
+                      newSelected = [card.id];
+                    }
+                    setSelectedIds(newSelected);
+                  }
+                  const affected = (newSelected.length > 0 && newSelected.includes(card.id)) ? newSelected : [card.id];
                   const origPositions: Record<string, { x: number; y: number }> = {};
                   affected.forEach((id) => {
                     const p = localPositions[id] || (() => {
@@ -1148,7 +1253,10 @@ export function InvestigationBoard({ investigationId }: Props) {
                 }}
                 onTouchStart={(ev) => {
                   const t = ev.touches[0];
-                  const affected = (selectedIds.length > 0 && selectedIds.includes(card.id)) ? selectedIds : [card.id];
+                  // On touch, default to selecting this card (no modifier keys)
+                  const newSelected = [card.id];
+                  setSelectedIds(newSelected);
+                  const affected = [card.id];
                   const origPositions: Record<string, { x: number; y: number }> = {};
                   affected.forEach((id) => {
                     const p = localPositions[id] || (() => {

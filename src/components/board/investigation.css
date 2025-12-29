@@ -807,3 +807,76 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
   .board-back-btn { padding: 6px 8px; }
 }
 
+/* --- OVERRIDES: CARD LAYOUT SHIELD --- */
+/* Ensures buttons sit at footer, card has min height and image area doesn't collapse */
+.card-node {
+  position: absolute !important;
+  width: 220px !important;
+  min-height: 260px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: #f0f0f0 !important;
+  border: 1px solid #d4d4d4 !important;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.4) !important;
+  padding: 8px 8px 0 8px !important;
+  border-radius: 2px !important;
+  transform: rotate(0deg) !important;
+  user-select: none !important;
+  z-index: 10 !important;
+  transition: box-shadow 0.2s, transform 0.1s !important;
+}
+.card-node:hover { z-index: 100 !important; box-shadow: 5px 8px 20px rgba(0,0,0,0.5) !important; border-color: #999 !important; }
+.card-node.selected { outline: 2px solid #b33 !important; z-index: 99 !important; }
+
+.card-photo {
+  width: 100% !important;
+  height: 140px !important;
+  background-color: #111 !important;
+  background-size: cover !important;
+  background-position: center !important;
+  border: 1px solid #ccc !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
+}
+
+.card-title {
+  font-family: 'Courier New', monospace !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  margin: 10px 0 !important;
+  color: #333 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.quick-actions, .quick-actions-bar {
+  margin-top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 4px !important;
+  border-top: 1px dashed #ccc !important;
+  background: transparent !important;
+}
+
+.qa-btn {
+  width: 28px !important;
+  height: 28px !important;
+  background: #fff !important;
+  border: 1px solid #999 !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  color: #555 !important;
+  transition: all 0.1s !important;
+}
+.qa-btn:hover { transform: scale(1.1) !important; background: #eee !important; }
+.qa-btn.mark-true:hover, .qa-btn.active-true { border-color: #27ae60 !important; color: #27ae60 !important; background: #eafaf1 !important; }
+.qa-btn.mark-false:hover, .qa-btn.active-false { border-color: #c0392b !important; color: #c0392b !important; background: #fadbd8 !important; }
+.qa-btn-folder { border-color: #f39c12 !important; color: #f39c12 !important; }
+
