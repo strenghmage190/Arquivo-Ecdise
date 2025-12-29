@@ -148,20 +148,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ) : (
           <>
             <div className="inspect-visual-area" style={{ position: 'relative' }}>
-              {card.image_url ? (
-                <MysteryImage
-                  baseSrc={card.image_url}
-                  hiddenSrc={card.image_uv_url}
-                  filterLayerSrc={card.image_filter_layer}
-                  filters={{ brightness, contrast, saturate: saturation }}
-                  revealTarget={card?.metadata?.image_filter_reveal}
-                  isUVMode={localUV}
-                  fit="contain"
-                  className="large-evidence-img"
-                  style={{ height: '100%', width: '100%', background: '#0a0a0a' }}
-                />
-              ) : (
-                <div className="no-image-placeholder">SEM REGISTRO VISUAL</div>
+              {!showAudio && (
+                (card.image_url ? (
+                  <MysteryImage
+                    baseSrc={card.image_url}
+                    hiddenSrc={card.image_uv_url}
+                    filterLayerSrc={card.image_filter_layer}
+                    filters={{ brightness, contrast, saturate: saturation }}
+                    revealTarget={card?.metadata?.image_filter_reveal}
+                    isUVMode={localUV}
+                    fit="contain"
+                    className="large-evidence-img"
+                    style={{ height: '100%', width: '100%', background: '#0a0a0a' }}
+                  />
+                ) : (
+                  <div className="no-image-placeholder">SEM REGISTRO VISUAL</div>
+                ))
               )}
 
               {showFilters && (

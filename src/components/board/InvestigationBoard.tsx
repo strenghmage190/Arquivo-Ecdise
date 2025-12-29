@@ -53,6 +53,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const isMobileDevice = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
   const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
   const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const selectedIdsRef = useRef<string[]>([]);
 
   const canEdit = isGameMaster && !playerView;
@@ -1424,7 +1425,75 @@ export function InvestigationBoard({ investigationId }: Props) {
         </div>
       </div>
 
-      <CreateClueModal
+          {/* --- HUD EXCLUSIVO PARA CELULAR --- */}
+          <div className="mobile-hud">
+         
+            {/* 1. SELETOR DE MODO (Sempre visível para alternar rápido) */}
+            <div className="mobile-modes">
+              <button 
+                className={`mode-btn ${touchMode === 'pan' ? 'active' : ''}`} 
+                onClick={() => setTouchMode('pan')}
+                title="Mover Câmera"
+              >
+                🖐️
+              </button>
+              <button 
+                className={`mode-btn ${touchMode === 'interact' ? 'active' : ''}`} 
+                onClick={() => setTouchMode('interact')}
+                title="Mover/Selecionar Pistas"
+              >
+                👆
+              </button>
+            </div>
+
+            {/* 2. MENU EXPANSÍVEL (HUB) */}
+            <div className="mobile-fab-container">
+              {/* O Menu que abre para cima */}
+              {mobileMenuOpen && (
+                <div className="mobile-fab-menu">
+                  {/* Grupo Criação */}
+                  {isGameMaster && (
+                    <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
+                      <span>📝</span> NOVA PISTA
+                    </button>
+                  )}
+                  
+                  {/* Grupo Ferramentas */}
+                  <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
+                    <span>🔗</span> {connectionMode ? 'PARAR' : 'CONECTAR'}
+                  </button>
+                  
+                  <button onClick={() => setShowFinder(true)} className="fab-item">
+                    <span>🔍</span> BUSCAR
+                  </button>
+
+                  <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
+                    <span>🔦</span> LUZ UV
+                  </button>
+
+                  <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
+                    <span>🎯</span> LOCALIZAR
+                  </button>
+                  
+                  <div className="fab-divider"></div>
+                  
+                  <button onClick={() => setMobileMenuOpen(false)} className="fab-item close">
+                    FECHAR X
+                  </button>
+                </div>
+              )}
+
+              {/* O Botão Principal (Gatilho) */}
+              <button 
+                className={`main-fab-trigger ${mobileMenuOpen ? 'open' : ''}`} 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? '✖' : '☰'}
+              </button>
+            </div>
+          </div>
+
+          <CreateClueModal
         isOpen={createModalOpen}
         investigationId={investigationId}
         onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}

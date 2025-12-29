@@ -35,29 +35,65 @@ export default function AudioLab({ baseSrc, hiddenSrc, targetFreq = 50, external
     }
   }, [externalBaseId, externalHiddenId]);
 
-  // Setup WebAudio analyser
+  // Setup WebAudio analyser when players are available
   useEffect(() => {
-    if (!basePlayer.current) return;
-    const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
-    const ctx = new AudioCtx();
-    audioCtxRef.current = ctx;
+    let ctx: AudioContext | null = null;
+    let baseSource: MediaElementAudioSourceNode | null = null;
+    let hiddenSource: MediaElementAudioSourceNode | null = null;
+    let analyser: AnalyserNode | null = null;
+    let cancelled = false;
 
-    const source = ctx.createMediaElementSource(basePlayer.current);
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 2048;
-    analyserRef.current = analyser;
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
+    const init = () => {
+      if (cancelled) return;
+      if (!basePlayer.current) {
+        // try again shortly until the ref is attached
+        setTimeout(init, 50);
+        return;
+      }
 
-    startDrawing();
+      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
+      ctx = new AudioCtx();
+      audioCtxRef.current = ctx;
+
+      try {
+        baseSource = ctx.createMediaElementSource(basePlayer.current as HTMLMediaElement);
+      } catch (e) {
+        baseSource = null;
+      }
+
+      if (hiddenPlayer.current) {
+        try {
+          hiddenSource = ctx.createMediaElementSource(hiddenPlayer.current as HTMLMediaElement);
+        } catch (e) {
+          hiddenSource = null;
+        }
+      }
+
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyserRef.current = analyser;
+
+      // Connect sources -> analyser -> destination
+      if (baseSource) baseSource.connect(analyser);
+      if (hiddenSource) hiddenSource.connect(analyser);
+      analyser.connect(ctx.destination);
+
+      startDrawing();
+    };
+
+    init();
 
     return () => {
+      cancelled = true;
       stopDrawing();
-      try { analyser.disconnect(); source.disconnect(); } catch (e) {}
-      try { ctx.close(); } catch (e) {}
+      try { analyser?.disconnect(); } catch (e) {}
+      try { baseSource?.disconnect(); hiddenSource?.disconnect(); } catch (e) {}
+      try { ctx?.close(); } catch (e) {}
+      audioCtxRef.current = null;
+      analyserRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePlayer.current]);
+    // re-init when srcs change
+  }, [baseSrc, hiddenSrc]);
 
   // drawing loop
   const startDrawing = () => {
