@@ -14,6 +14,24 @@
 
 body { margin: 0; background: var(--bg-dark); }
 
+/* --- MOBILE RESET --- */
+html, body {
+  overscroll-behavior: none;
+  touch-action: none;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+.investigation-board {
+  width: 100dvw;
+  
+  /* Mobile floating FABs to toggle pan vs interact */
+  .mobile-controls { display: none; }
+  height: 100dvh;
+  touch-action: none;
+}
+
 /* --- 1. O AMBIENTE (Infinite Canvas) --- */
 .investigation-board {
   /* --- CORREÇÃO DE LAYOUT: TELA CHEIA REAL --- */

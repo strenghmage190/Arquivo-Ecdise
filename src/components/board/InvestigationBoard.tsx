@@ -49,6 +49,8 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [playerView, setPlayerView] = useState(false);
+  // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
+  const [touchMode, setTouchMode] = useState<'pan' | 'interact'>('pan');
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
@@ -974,6 +976,8 @@ export function InvestigationBoard({ investigationId }: Props) {
             setInspectCard(null);
             setModalOpen(true);
           }}
+          externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
+          externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
         />
       )}
 
@@ -1091,11 +1095,11 @@ export function InvestigationBoard({ investigationId }: Props) {
             const isSelected = selectedIds.includes(card.id);
             const isNew = lastCreatedId === card.id;
             return (
-              <div
+                <div
                 key={card.id}
-                className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''}`}
-                data-status={(card as any)?.metadata?.status || ''}
-                style={{ left: pos.x, top: pos.y }}
+                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''}`}
+                  data-status={(card as any)?.metadata?.status || ''}
+                  style={{ left: pos.x, top: pos.y, pointerEvents: touchMode === 'pan' ? 'none' : 'auto' }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1253,8 +1257,13 @@ export function InvestigationBoard({ investigationId }: Props) {
                         }}>
                           <div style={{ color: '#e74c3c', fontSize: 32, textShadow: '0 0 10px red' }}>🔒</div>
                         </div>
-                      ) : (
-                        <MysteryImage baseSrc={card.image_url} hiddenSrc={card.image_uv_url} isUVMode={isUV} pointerLocal={pointerLocal} />
+                        ) : (
+                        <>
+                          <MysteryImage baseSrc={card.image_url} hiddenSrc={card.image_uv_url} isUVMode={isUV} pointerLocal={pointerLocal} />
+                          {/* Hidden audio elements so AudioLab can attach to them externally */}
+                          <audio id={`card-base-${card.id}`} src={card.audio_url || (card.metadata && card.metadata.spectrogram_url) || ''} crossOrigin="anonymous" style={{ display: 'none' }} />
+                          {card.audio_hidden_url && <audio id={`card-hidden-${card.id}`} src={card.audio_hidden_url} crossOrigin="anonymous" style={{ display: 'none' }} />}
+                        </>
                       );
                     })()
                   }
@@ -1272,6 +1281,12 @@ export function InvestigationBoard({ investigationId }: Props) {
               </div>
             );
           })}
+
+          {/* Mobile-only floating controls to switch touch mode */}
+          <div className="mobile-controls" aria-hidden={false}>
+            <button className={`fab-btn ${touchMode === 'pan' ? 'active' : ''}`} onClick={() => setTouchMode('pan')}>🖐️ MOVER CÂMERA</button>
+            <button className={`fab-btn ${touchMode === 'interact' ? 'active' : ''}`} onClick={() => setTouchMode('interact')}>👆 MOVER PISTAS</button>
+          </div>
         </div>
       </div>
 

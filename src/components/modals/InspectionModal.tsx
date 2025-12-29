@@ -12,9 +12,11 @@ interface Props {
   card: any;
   onEdit?: () => void;
   isGameMaster: boolean;
+  externalBaseId?: string;
+  externalHiddenId?: string;
 }
 
-export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameMaster }: Props) {
+export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameMaster, externalBaseId, externalHiddenId }: Props) {
   const isCardLocked = (c: any) => {
     const v = c?.is_locked;
     if (v === true || v === 1) return true;
@@ -200,6 +202,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       baseSrc={card.audio_url}
                       hiddenSrc={card.audio_hidden_url}
                       targetFreq={card.audio_target_freq || 50}
+                      externalBaseId={externalBaseId}
+                      externalHiddenId={externalHiddenId}
                     />
                   </div>
                 ) : (

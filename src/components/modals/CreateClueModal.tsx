@@ -109,7 +109,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             audHidUrl = await uploadAudio(audioHidden, investigationId);
          }
 
-         const metadata: any = ({} as any) || {};
+         const metadata: any = {};
          metadata.image_filter_reveal = {
             brightness: filterRevealBrightness,
             contrast: filterRevealContrast,
