@@ -51,6 +51,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [playerView, setPlayerView] = useState(false);
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
   const [touchMode, setTouchMode] = useState<'pan' | 'interact'>('pan');
+  const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
@@ -1273,6 +1274,19 @@ export function InvestigationBoard({ investigationId }: Props) {
                       {card.description_public && <div className="card-desc">{card.description_public}</div>}
                     </div>
 
+                    <div className="quick-actions">
+                      <button
+                        className="qa-btn"
+                        title="Abrir"
+                        onClick={(e) => { e.stopPropagation(); try { const center = getCardCenter(card.id); if (center) panToPosition(center.x, center.y); } catch {} setInspectCard(card); }}
+                      >📂</button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className={`qa-btn mark-true ${((card?.metadata || {})?.status === 'verified') ? 'active-true' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'verified', []); }}>✔</button>
+                        <button className={`qa-btn mark-theory ${((card?.metadata || {})?.status === 'theory') ? 'active-theory' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'theory', []); }}>?</button>
+                        <button className={`qa-btn mark-false ${((card?.metadata || {})?.status === 'false') ? 'active-false' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'false', []); }}>✖</button>
+                      </div>
+                    </div>
+
                     <div style={{
                       position:'absolute', top: -10, left: '50%', transform:'translateX(-50%)',
                       width: 20, height: 40, background: '#888', borderRadius: 10, zIndex: 5,
@@ -1284,9 +1298,21 @@ export function InvestigationBoard({ investigationId }: Props) {
 
           {/* Mobile-only floating controls to switch touch mode */}
           <div className="mobile-controls" aria-hidden={false}>
-            <button className={`fab-btn ${touchMode === 'pan' ? 'active' : ''}`} onClick={() => setTouchMode('pan')}>🖐️ MOVER CÂMERA</button>
-            <button className={`fab-btn ${touchMode === 'interact' ? 'active' : ''}`} onClick={() => setTouchMode('interact')}>👆 MOVER PISTAS</button>
+            <button className={`fab-btn ${touchMode === 'pan' ? 'active' : ''}`} onClick={() => {
+              setTouchMode('pan');
+              setTouchModeNotice('🖐️ MODO: MOVER CÂMERA');
+              setTimeout(() => setTouchModeNotice(null), 1400);
+            }}>🖐️ MOVER CÂMERA</button>
+            <button className={`fab-btn ${touchMode === 'interact' ? 'active' : ''}`} onClick={() => {
+              setTouchMode('interact');
+              setTouchModeNotice('👆 MODO: MOVER PISTAS');
+              setTimeout(() => setTouchModeNotice(null), 1400);
+            }}>👆 MOVER PISTAS</button>
           </div>
+
+          {touchModeNotice && (
+            <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
+          )}
         </div>
       </div>
 
