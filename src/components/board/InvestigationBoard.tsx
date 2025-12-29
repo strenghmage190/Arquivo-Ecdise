@@ -6,6 +6,9 @@ import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
 import CreateClueModal from '../modals/CreateClueModal';
 import Sketchpad from '../tools/Sketchpad';
+import BootScreen from '../layout/BootScreen';
+import TerminalSearch from './TerminalSearch';
+import { playAudio } from '../../utils/audio';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import { supabase } from '../../supabaseClient';
 import Toast from '../../components/ui/Toast';
@@ -49,6 +52,9 @@ export function InvestigationBoard({ investigationId }: Props) {
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
+  // Sistema de boot C.R.I.S.: controla a exibição da tela de inicialização
+  // Sempre iniciar com o boot-screen ativo para exibir a animação a cada carga
+  const [systemReady, setSystemReady] = useState<boolean>(false);
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -73,6 +79,9 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [showOrganizeMenu, setShowOrganizeMenu] = useState(false);
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [contextMenu, setContextMenu] = useState<null | { type: 'card' | 'bg'; targetId?: string; x: number; y: number }>(null);
+  
+  // Terminal search feedback
+  const [terminalMessage, setTerminalMessage] = useState<string | null>(null);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<any>(null);
@@ -99,6 +108,73 @@ export function InvestigationBoard({ investigationId }: Props) {
       setConnections(connData || []);
     } catch (e) {
       console.error('Erro ao carregar quadro', e);
+    }
+  };
+
+  // Terminal / ARG search: reveals a hidden card based on keyword_unlock (exact or ilike)
+  const handleTerminalSearch = async (query: string) => {
+    setTerminalMessage(null);
+    const q = query.trim();
+    if (!q) {
+      setTerminalMessage('Digite uma palavra-chave válida');
+      return;
+    }
+
+    try {
+      // Fetch candidate cards for this investigation and filter client-side
+      const { data, error } = await supabase
+        .from('investigation_cards')
+        .select('*')
+        .eq('investigation_id', investigationId)
+        .limit(300);
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        setTerminalMessage('Nenhum arquivo disponível nesta investigação.');
+        try { playAudio('/sounds/error_buzz.mp3'); } catch {}
+        return;
+      }
+
+      const lowered = q.toLowerCase();
+      const found = data.find((row: any) => {
+        // check explicit column if present
+        if (row.keyword_unlock && String(row.keyword_unlock).toLowerCase().includes(lowered)) return true;
+        // check inside metadata JSON if present
+        const meta = row.metadata || (row.data && row.data.metadata) || null;
+        try {
+          if (meta) {
+            const km = typeof meta === 'string' ? (() => { try { return JSON.parse(meta); } catch { return null; } })() : meta;
+            const key = km && (km.keyword_unlock || km.keyword || km.key);
+            if (key && String(key).toLowerCase().includes(lowered)) return true;
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+        return false;
+      });
+
+      if (!found) {
+        setTerminalMessage('Nenhum arquivo encontrado.');
+        try { playAudio('/sounds/error_buzz.mp3'); } catch {}
+        return;
+      }
+      // compute center position
+      const centerX = origin.x + (window.innerWidth / 2) / zoom;
+      const centerY = origin.y + (window.innerHeight / 2) / zoom;
+
+      // Reveal the card and place near center
+      await api.updateInvestigationCard(found.id, { visibility: 'visible', x: Math.round(centerX), y: Math.round(centerY) } as any);
+      try { playAudio('/sounds/success_chime.mp3'); } catch {}
+      try { playAudio('/sounds/paper_drop.mp3'); } catch {}
+      setTerminalMessage(`ARQUIVO RECUPERADO: "${found.title || found.id}"`);
+      // mark to animate on next render
+      setLastCreatedId(found.id);
+      await loadBoard();
+      // clear highlight after a few seconds
+      setTimeout(() => setLastCreatedId(null), 4200);
+    } catch (err: any) {
+      console.error('TerminalSearch error', err);
+      setTerminalMessage('Erro ao buscar no servidor');
     }
   };
 
@@ -700,13 +776,23 @@ export function InvestigationBoard({ investigationId }: Props) {
     return () => { if (boardEl) boardEl.removeEventListener('wheel', handleWheel as any); };
   }, [zoom]);
 
+  if (!systemReady) {
+    return <BootScreen onComplete={() => setSystemReady(true)} />;
+  }
+
   return (
     <div className="investigation-board">
-      {/* Back button (kept interactive) */}
-      <div style={{ position: 'fixed', left: 20, top: 20, zIndex: 1100 }}>
-        <button className="btn-retro" onClick={() => navigate('/')}>← ARQUIVOS</button>
-      </div>
-      
+      {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
+      <header className="investigation-header">
+        <div className="header-left">
+          <button className="board-back-btn" onClick={() => navigate('/')}>← ARQUIVOS</button>
+        </div>
+        <div className="header-center">
+          <div className="case-meta">CASO // CONFIDENCIAL</div>
+          <h1 className="case-title">{caseTitle}</h1>
+        </div>
+        <div className="header-right" />
+      </header>
       {contextMenu && (() => {
         const board = corkboardRef.current?.getBoundingClientRect();
         const left = board ? (board.left + (contextMenu.x - origin.x) * zoom) : 120;
@@ -768,13 +854,7 @@ export function InvestigationBoard({ investigationId }: Props) {
          </div>
         );
       })()}
-      {/* Floating header — decorative, pointerEvents none so it doesn't block UI */}
-      <div style={{ position: 'fixed', top: 20, left: 80, zIndex: 1000, pointerEvents: 'none' }}>
-        <div style={{ color: '#444', fontSize: 10, fontWeight: 'bold', marginBottom: 2, letterSpacing: 2 }}>CASO // CONFIDENCIAL</div>
-        <h1 style={{ color: '#fff', fontSize: 32, margin: 0, fontFamily: "'Special Elite', cursive", textTransform: 'uppercase', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
-          ASDASD
-        </h1>
-      </div>
+      {/* Header moved to dedicated element above */}
 
       <div className="investigation-toolbar">
         <div className="toolbar-group">
@@ -875,6 +955,10 @@ export function InvestigationBoard({ investigationId }: Props) {
           <span style={{ fontSize: 11, color: '#666' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
         </div>
       </div>
+
+      {showFinder && (
+        <TerminalSearch onSearch={handleTerminalSearch} onClose={() => { setShowFinder(false); setTerminalMessage(null); }} />
+      )}
 
       {/* Modais (mantidos) */}
       <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />

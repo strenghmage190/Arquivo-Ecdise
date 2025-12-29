@@ -1,0 +1,26 @@
+.terminal-search {
+  position: fixed;
+  right: 24px;
+  top: 120px;
+  width: 360px;
+  background: rgba(4,4,6,0.92);
+  color: #c6a45f;
+  border: 1px solid rgba(198,164,95,0.08);
+  padding: 12px;
+  border-radius: 8px;
+  z-index: 12050;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.terminal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.term-title { font-weight:700; font-size:12px; color:#e6d9b3; }
+.term-close { background:transparent; border:none; color:#888; cursor:pointer; }
+
+.term-form { display:flex; flex-direction:column; gap:8px; }
+.term-label { font-size:12px; color:#9b8f6a; }
+.term-input { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); color:#fff; padding:8px; border-radius:6px; }
+.term-actions { display:flex; gap:8px; }
+.term-go { background:#b33; border:none; color:#fff; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.term-cancel { background:transparent; border:1px solid rgba(255,255,255,0.03); color:#c6a45f; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.term-message { color:#ffb3b3; font-size:12px; margin-top:4px; }
