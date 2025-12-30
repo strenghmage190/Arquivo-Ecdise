@@ -19,14 +19,34 @@ export default function AudioDecrypter({ baseAudio, hiddenAudio, targetFreq = 50
     if (isPlaying) {
       baseRef.current?.pause();
       hiddenRef.current?.pause();
-    } else {
-      baseRef.current?.play();
-      if (hiddenRef.current) {
-        hiddenRef.current.currentTime = baseRef.current?.currentTime || 0;
-        hiddenRef.current.play();
-      }
+      setIsPlaying(false);
+      return;
     }
-    setIsPlaying(!isPlaying);
+
+    // Play and handle promise (browser autoplay policies)
+    const base = baseRef.current;
+    const hid = hiddenRef.current;
+    if (!base) return;
+    const p = base.play();
+    if (p && typeof p.then === 'function') {
+      p.then(() => {
+        // sync hidden
+        if (hid) {
+          try { hid.currentTime = base.currentTime; } catch (e) {}
+          hid.play().catch(() => {});
+        }
+        setIsPlaying(true);
+      }).catch((err) => {
+        console.error('Audio play failed:', err);
+        setIsPlaying(false);
+      });
+    } else {
+      // older browsers
+      try {
+        if (hid) { try { hid.currentTime = base.currentTime; hid.play(); } catch (e) {} }
+        setIsPlaying(true);
+      } catch (e) { setIsPlaying(false); }
+    }
   };
 
   useEffect(() => {
@@ -37,12 +57,12 @@ export default function AudioDecrypter({ baseAudio, hiddenAudio, targetFreq = 50
     }
     setSignalStrength(Math.round(clarity * 100));
 
-    if (baseRef.current && hiddenRef.current) {
+    if (baseRef.current) {
+      baseRef.current.volume = Math.max(0.05, 1 - clarity * 0.8);
+    }
+    if (hiddenRef.current) {
       hiddenRef.current.volume = clarity;
-      baseRef.current.volume = Math.max(0.2, 1 - clarity);
-      try {
-        hiddenRef.current.currentTime = baseRef.current.currentTime;
-      } catch (e) {}
+      try { hiddenRef.current.currentTime = baseRef.current?.currentTime || 0; } catch (e) {}
     }
   }, [frequency, targetFreq]);
 
@@ -86,8 +106,8 @@ export default function AudioDecrypter({ baseAudio, hiddenAudio, targetFreq = 50
         </div>
       </div>
 
-      <audio ref={baseRef} src={baseAudio} loop />
-      <audio ref={hiddenRef} src={hiddenAudio} loop />
+      <audio ref={baseRef} src={baseAudio} loop crossOrigin="anonymous" />
+      <audio ref={hiddenRef} src={hiddenAudio} loop crossOrigin="anonymous" />
     </div>
   );
 }

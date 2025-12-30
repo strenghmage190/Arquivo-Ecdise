@@ -1,24 +1,126 @@
+/* Container Principal (A Caixa Preta) */
 .audio-lab-panel {
-  background: #0d0d0f;
-  border: 1px solid #333;
-  border-top: 2px solid #b33;
-  padding: 12px;
-  width: 100%;
-  color: #ccc;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 220px; /* Altura fixa para não variar */
+  
+  background-color: #0b0b0e;
+  border-top: 2px solid #b33; /* Linha vermelha no topo */
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.9);
+  z-index: 500;
+  
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  padding: 0;
+  font-family: 'Roboto Mono', monospace;
+  overflow: hidden;
 }
 
-.analyzer-section { display:flex; align-items:center; gap:12px }
-.visualizer { display:flex; gap:6px; align-items:flex-end; height:48px }
-.visualizer .bar { width:8px; background:#b33; border-radius:2px }
-.freq-status { font-family: 'Roboto Mono', monospace; font-size:11px; background:#000; border:1px solid #333; padding:4px 8px; color:#c6a45f; margin-left:auto }
+/* --- PARTE 1: VISUALIZADOR (TELA DE CIMA) --- */
+.analyzer-section {
+  flex: 1; /* Ocupa o espaço que sobrar */
+  background-color: #000;
+  background-image: 
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+    linear-gradient(90deg, rgba(50, 200, 50, 0.03), rgba(0, 255, 0, 0.03));
+  background-size: 100% 2px, 20px 100%; /* Grid fake */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #333;
+}
 
-.controls-section { display:flex; gap:16px; align-items:center; background:#151515; padding:12px; border-radius:4px }
-.btn-big-play { width:56px; height:56px; border-radius:50%; border:2px solid #555; background:#222; color:#fff; font-weight:900; cursor:pointer }
-.btn-big-play.playing { border-color:#b33; color:#b33; background:#111 }
-.evp-tuner { flex:1; display:flex; flex-direction:column; gap:6px }
-.evp-tuner label { font-size:11px; color:#b33; font-weight:700 }
-.tuner-slider { width:100%; accent-color:#c6a45f }
-.ticks { display:flex; justify-content:space-between; color:#444; font-size:10px }
+/* Informações sobrepostas na tela (Cantos) */
+.screen-info-left {
+  position: absolute; top: 10px; left: 10px;
+  font-size: 10px; color: #b33; font-weight: bold;
+}
+.screen-info-right {
+  position: absolute; top: 10px; right: 10px; text-align: right;
+}
+.signal-status {
+  font-size: 10px; display: block; font-weight: bold;
+  text-shadow: 0 0 5px currentColor;
+}
+
+/* O Canvas do AudioAnalyzer deve preencher tudo */
+.audio-lab-panel canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* --- PARTE 2: CONTROLES (BASE DE BAIXO) --- */
+.controls-section {
+  height: 80px;
+  background: #151518;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 25px;
+}
+
+/* Botão PLAY GRANDE */
+.btn-big-play {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  background: #222;
+  border: 2px solid #555;
+  color: #fff;
+  font-size: 10px; font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 10px #000;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-big-play:hover { border-color: #fff; transform: scale(1.05); }
+.btn-big-play.playing {
+  border-color: #b33; color: #b33; background: #1a0a0a;
+  box-shadow: 0 0 15px rgba(187, 51, 51, 0.4);
+}
+
+/* Área do Slider (Tuner) */
+.evp-tuner {
+  flex: 1; /* Ocupa o meio todo */
+  display: flex; flex-direction: column; justify-content: center;
+}
+
+.tuner-label {
+  font-size: 10px; color: #b33; letter-spacing: 1px; margin-bottom: 8px; font-weight: bold;
+  display: flex; justify-content: space-between;
+}
+
+/* Slider Customizado */
+.tuner-slider {
+  -webkit-appearance: none;
+  width: 100%; height: 8px;
+  background: #000; border: 1px solid #444; border-radius: 4px;
+  outline: none; cursor: crosshair;
+}
+.tuner-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px; height: 24px;
+  background: #c6a45f;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  cursor: grab;
+  box-shadow: 0 0 10px rgba(198, 164, 95, 0.6);
+  margin-top: -8px; /* Centralizar no trilho (24/2 - 8) */
+}
+
+.tuner-ruler {
+  display: flex; justify-content: space-between;
+  margin-top: 4px; color: #444; font-size: 8px;
+}
+
+/* Botões Extras na Direita */
+.extra-tools {
+  display: flex; gap: 5px;
+}
+.tool-mini-btn {
+  background: #222; border: 1px solid #444; color: #888;
+  padding: 6px 10px; font-size: 10px; cursor: pointer; border-radius: 4px;
+}
+.tool-mini-btn:hover { color: #fff; border-color: #666; }
+.tool-mini-btn.active { color: #b33; border-color: #b33; background: rgba(187,51,51,0.1); }

@@ -1,233 +1,377 @@
-/* --- FUNDO E CENTRALIZAÇÃO --- */
+/* =========================================
+   1. ESTRUTURA GERAL (THE GRID)
+   ========================================= */
+.inspect-file {
+  background-color: #0d0d0d;
+  border: 1px solid #333;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px #222;
+  border-radius: 4px;
+}
+
+/* Backdrop and sizing to ensure modal is visible and centered */
 .inspect-backdrop {
   position: fixed;
-  inset: 0; /* Substitui top/left/right/bottom: 0 */
-  width: 100%;
-  min-height: 100dvh; /* usa dynamic viewport height para ignorar barras do navegador */
-  
-  background-color: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(5px);
-  z-index: 20000; /* Garante que fique ACIMA de tudo */
-  
-  /* Centralização Flexbox Rígida */
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  
-  animation: fadeInBackdrop 0.3s ease-out;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  padding: 20px;
 }
 
-/* --- JANELA DO MODAL --- */
 .inspect-file {
-  position: relative;
-  /* Largura responsiva: 90% da tela, máximo de 1200px */
-  width: 90%;
-  max-width: 1200px;
-  
-  /* Altura Fixa Segura: 85% da tela para deixar margem em cima e embaixo */
-  height: 85%;
-  max-height: 90vh;
-  
-  background-color: #0a0a0a;
-  border: 1px solid #333;
-  border-radius: 4px;
-  box-shadow: 0 0 50px rgba(0,0,0,0.9);
-  
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Nada vaza pra fora */
-  
-  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  width: min(1100px, 98%);
+  height: min(80vh, 820px);
+  display: grid;
+  grid-template-rows: 50px 1fr auto;
+  overflow: auto; /* allow modal to scroll when content exceeds height */
+  -webkit-overflow-scrolling: touch;
 }
 
-/* --- ESTRUTURA INTERNA --- */
+/* Custom scrollbar for the modal to match app visual (dark theme) */
+.inspect-file {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(120,120,120,0.45) transparent;
+}
+.inspect-file::-webkit-scrollbar { width: 12px; }
+.inspect-file::-webkit-scrollbar-track { background: transparent; }
+.inspect-file::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(120,120,120,0.14), rgba(120,120,120,0.36));
+  border-radius: 8px;
+  border: 3px solid transparent; /* spacing to create inset effect */
+  background-clip: padding-box;
+}
+.inspect-file::-webkit-scrollbar-thumb:hover { background: rgba(160,160,160,0.45); }
 
-/* 1. Header (Topo) */
-.inspect-header {
-  height: 60px;
-  min-height: 60px; /* Evita esmagar */
-  background: #111;
-  border-bottom: 1px solid #333;
+
+/* Visual area: center content and prevent sliders/images from overflowing */
+.inspect-visual-area {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  flex-shrink: 0; /* Não encolhe */
+  justify-content: center;
+  background: #050505;
+  position: relative;
+  min-height: 340px;
+  /* allow HUD panels to overflow above the visual area so tools (decoder, etc.) are fully visible */
+  overflow: visible;
 }
 
+.inspect-visual-area .large-evidence-img,
+.inspect-visual-area canvas,
+.inspect-visual-area img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Header mais fino e técnico */
+.inspect-header {
+  height: 50px;
+  background: #111;
+  border-bottom: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px;
+}
+
+/* O "Rótulo" da evidência no topo */
+.meta-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
 .case-stamp {
-  font-family: 'Courier New', monospace;
-  color: #b33;
-  font-weight: bold;
-  border: 1px solid #b33;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 10px;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+.chat-contact {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #d1d5db;
+  background: rgba(10,10,10,0.6);
   padding: 4px 8px;
-  font-size: 11px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.ev-id {
+  font-size: 14px;
+  font-weight: bold;
+  color: #b33;
   letter-spacing: 2px;
 }
 
-.actions { display: flex; gap: 12px; align-items: center; }
+/* --- FUNDO E ESTRUTURA --- */
+.inspect-backdrop {
+  position: fixed; inset: 0;
+  background-color: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(8px);
+  z-index: 20000;
+  display: flex; align-items: center; justify-content: center;
+}
 
-/* 2. Área Visual (Meio) */
-.inspect-visual-area {
-  flex: 1; /* Ocupa todo o espaço sobrando */
-  position: relative;
+.inspect-file {
+  width: 90vw; height: 85vh;
+  max-width: 1300px;
+  max-height: 95vh;
   background-color: #050505;
-  background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
-  background-size: 20px 20px;
-  overflow: hidden; 
+  border: 1px solid #333;
+  box-shadow: 0 0 60px rgba(0,0,0,1);
+  display: flex; flex-direction: column;
+  border-radius: 6px;
+  overflow: auto; /* enable scrolling inside the modal */
+  -webkit-overflow-scrolling: touch;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* --- HEADER (Menu Superior) --- */
+
+.inspect-header {
+  height: 55px; background: #0a0a0a; border-bottom: 1px solid #333;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 16px; flex-shrink: 0; gap: 12px;
+  flex-wrap: nowrap; /* force single-line layout */
+}
+
+/* Ensure header items lay out in a single row and do not overflow into the visual area */
+.inspect-header { position: relative; z-index: 120; }
+.inspect-header .meta-info {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  flex: 1 1 auto; /* allow meta to take remaining space but shrink if needed */
+  min-width: 0; /* enable text truncation */
+  overflow: hidden;
+}
+.inspect-header .meta-info .case-stamp { flex: 0 0 auto; color: #888; font-size: 11px; }
+.inspect-header .meta-info .type-tag { flex: 0 0 auto; margin-left: 6px; font-size: 11px; }
+.inspect-header .meta-info .chat-contact {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 220px); /* reserve space for actions */
 }
 
-/* Classe auxiliar se usar <img> direta, mas o MysteryImage cuida disso */
-.large-evidence-img {
-  width: 100%;
-  height: 100%;
-}
-
-.no-image-placeholder { 
-  color: #444; 
-  font-family: monospace; 
-  letter-spacing: 2px; 
-}
-
-/* 3. Detalhes (Rodapé) */
-.inspect-details {
-  /* Altura fixa para o rodapé */
-  height: 180px; 
-  min-height: 180px; 
-  flex-shrink: 0;
-  
-  background: #161616;
-  border-top: 1px solid #333;
-  padding: 20px;
-  
+.inspect-header .actions {
   display: flex;
-  gap: 20px;
-  color: #ddd;
+  gap: 6px;
+  align-items: center;
+  flex: 0 0 auto; /* keep actions from growing */
+  min-width: 0;
 }
 
-.text-col { 
-  flex: 1; 
-  overflow-y: auto; /* Scroll apenas no texto */
-  padding-right: 10px;
-}
+/* Slightly reduce header button padding so more items fit on one line */
+.inspect-header .btn-tool-tab { padding: 6px 8px; font-size: 11px; }
 
-.text-col h2 {
-  margin: 0 0 10px 0;
-  font-family: 'Courier New', monospace;
-  font-size: 24px;
-  color: #fff;
-  border-bottom: 1px dashed #333;
-  padding-bottom: 8px;
+/* ====== Header visual consistency ====== */
+.inspect-header {
+  font-family: 'Roboto Mono', monospace;
+  color: #d8d8d8;
 }
-
-.public-desc {
-  font-family: 'Verdana', sans-serif;
-  color: #bbb;
-  line-height: 1.5;
-  font-size: 14px;
-  white-space: pre-wrap;
+.inspect-header .meta-info .case-stamp {
+  text-transform: uppercase;
+  color: #7b7b7b;
+  font-weight: 600;
+  letter-spacing: 1px;
 }
-
-.gm-note {
-  margin-top: 15px;
-  padding: 10px;
-  background: rgba(198,164,95,0.08);
-  border-left: 2px solid #c6a45f;
-  color: #c6a45f;
+.inspect-header .meta-info .chat-contact {
+  background: transparent; /* remove pill background to match header text */
+  color: #e6e6e6;
+  font-weight: 600;
+  padding: 0; margin: 0;
   font-size: 13px;
 }
-
-/* Botões */
-.btn-uv-toggle {
-  background: transparent;
-  border: 1px solid #b366ff;
-  color: #b366ff;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-family: monospace;
-  transition: all 0.2s;
+.inspect-header .meta-info .type-tag {
+  background: rgba(255,255,255,0.02);
+  color: #9ee7c8;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
 }
-.btn-uv-toggle:hover, .btn-uv-toggle.active {
-  background: #b366ff;
-  color: #000;
-  box-shadow: 0 0 15px #b366ff;
+.inspect-header .actions .btn-tool-tab {
+  background: transparent; color: #cfcfcf; padding: 6px 8px; font-size: 12px; border-radius: 4px;
 }
+.inspect-header .actions .btn-tool-tab.active-green { color: #00ffaa; }
 
-.btn-edit-ref {
-  background: #333;
-  color: #aaa;
-  border: 1px solid #555;
-  padding: 8px 16px;
-  cursor: pointer;
-}
-.btn-edit-ref:hover { border-color: #fff; color: #fff; }
-
-.btn-close {
-  background: none; border: none; 
-  color: #666; font-size: 24px; cursor: pointer;
-}
-.btn-close:hover { color: #fff; }
-
-/* Animações */
-@keyframes fadeInBackdrop { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modalSlideUp { 
-  from { opacity: 0; transform: scale(0.95) translateY(20px); } 
-  to { opacity: 1; transform: scale(1) translateY(0); } 
+/* Reduce gap so items fit in one line on narrow screens */
+@media (max-width: 900px) {
+  .inspect-header { padding: 0 12px; }
+  .inspect-header .meta-info .chat-contact { font-size: 12px; max-width: calc(100% - 180px); }
+  .inspect-header .actions .btn-tool-tab { padding: 6px 6px; font-size: 11px; }
 }
 
-/* Responsividade (Telas menores) */
-@media (max-height: 700px) {
-  .inspect-file { height: 95%; width: 95%; }
-  .inspect-details { height: 140px; min-height: 140px; padding: 15px; }
-  .text-col h2 { font-size: 18px; }
+/* Make sure the visual area sits below the header and doesn't overlap */
+.inspect-visual-area { margin-top: 0; z-index: 10; }
+
+/* Ensure header appears above any floating HUDs and that its buttons don't wrap */
+.inspect-header { position: relative; z-index: 80; }
+.actions { align-items: center; flex-wrap: nowrap; }
+.btn-tool-tab { white-space: nowrap; line-height: 1.1; }
+
+.meta-info { display: flex; flex-direction: column; }
+.ev-id { color: #b33; font-weight: bold; letter-spacing: 2px; font-size: 14px; }
+.case-stamp { color: #666; font-size: 10px; }
+
+/* Menu de Botões */
+.actions { display: flex; gap: 4px; background: #000; padding: 4px; border-radius: 4px; border: 1px solid #222; }
+
+.btn-tool-tab {
+  background: transparent; border: none; color: #888;
+  padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer;
+  border-radius: 2px; transition: all 0.2s; text-transform: uppercase;
+  font-family: 'Roboto Mono', monospace;
+}
+.btn-tool-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+/* Cores de Ativo */
+.btn-tool-tab.active-green { color: #00ffaa; background: rgba(0, 255, 170, 0.15); box-shadow: inset 0 0 5px rgba(0, 255, 170, 0.2); }
+.btn-tool-tab.active-purple { color: #b366ff; background: rgba(179, 102, 255, 0.15); box-shadow: inset 0 0 5px rgba(179, 102, 255, 0.2); }
+.btn-tool-tab.active-blue { color: #00ccff; background: rgba(0, 204, 255, 0.15); box-shadow: inset 0 0 5px rgba(0, 204, 255, 0.2); }
+
+.btn-close-modal {
+  background: transparent; border: none; color: #444; font-size: 24px; cursor: pointer; margin-left: 15px;
+}
+.btn-close-modal:hover { color: #fff; }
+
+/* --- ÁREA VISUAL PRINCIPAL --- */
+.inspect-visual-area {
+  flex: 1; /* Ocupa todo o espaço sobrando */
+  position: relative; /* Para os HUDs flutuarem aqui dentro */
+  background: #000;
+  overflow: hidden; 
+  display: flex; align-items: center; justify-content: center;
 }
 
-/* Filters overlay */
-.filters-overlay-panel {
-  position: absolute;
-  top: 12px; right: 12px;
-  width: 320px;
-  background: linear-gradient(180deg, rgba(20,20,20,0.95), rgba(12,12,12,0.9));
-  border: 1px solid #333;
+/* --- PAINÉIS FLUTUANTES (HUD) --- */
+/* Isso conserta o layout quebrado da primeira foto */
+.tools-hud-panel {
+  position: fixed; /* fixed so it's not clipped by modal's scroll container */
+  top: 96px; /* below modal header */
+  right: 28px;
+  width: 300px;
+  max-width: calc(35vw);
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  background: rgba(12, 12, 12, 0.98);
+  border: 1px solid #444;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.95);
   padding: 14px;
-  z-index: 50;
-  backdrop-filter: blur(6px) saturate(1.2);
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  border-radius: 6px;
+  z-index: 1400; /* sit above modal and other UI */
+  animation: slideInRight 0.18s ease-out;
 }
+
+@keyframes slideInRight { from{opacity:0; transform:translateX(20px);} to{opacity:1; transform:translateX(0);} }
+
+.hud-title {
+  color: #fff; font-size: 11px; font-weight: bold; border-bottom: 1px solid #333;
+  padding-bottom: 8px; margin-bottom: 15px; letter-spacing: 1px;
+}
+
+/* --- SLIDERS CUSTOMIZADOS (Correção das Barras Brancas) --- */
+.control-row { margin-bottom: 10px; }
+.control-row label {
+  display: flex; justify-content: space-between;
+  color: #aaa; font-size: 10px; margin-bottom: 6px; font-weight: bold;
+}
+
+/* Remove estilo padrão feio do navegador */
+/* Compact filter controls */
 .filter-row { margin-bottom: 10px; }
-.filter-row label { display:block; font-size:13px; color:#e6d9bf; margin-bottom:8px; font-weight:700; }
-.filter-controls{ display:flex; gap:8px; align-items:center; }
-.filter-range { flex: 1; height: 28px; accent-color:#c6a45f; }
-.filter-range::-webkit-slider-thumb{ width:16px; height:16px; border-radius:50%; background:#ffd27a; border:2px solid #c68b3a; }
-.filter-number { width:64px; background:#0e0e0e; color:#fff; border:1px solid #2b2b2b; padding:6px 8px; border-radius:6px; font-size:13px; text-align:center; }
-.btn-reset-filters { width:100%; background:#222; border:1px solid #444; color:#fff; cursor:pointer; padding:8px; font-size:13px; border-radius:6px; margin-top:6px; }
+.filter-controls { display:flex; gap:8px; align-items:center; }
+.filter-range { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: #222; border-radius: 4px; cursor: pointer; }
+.filter-range:focus { outline: none; }
+.filter-range::-webkit-slider-runnable-track { height:6px; background:#222; border-radius:4px; }
+.filter-range::-moz-range-track { height:6px; background:#222; border-radius:4px; }
+.filter-range::-webkit-slider-thumb { -webkit-appearance:none; height:12px; width:12px; border-radius:50%; background:#00ffaa; margin-top:-3px; box-shadow:0 0 6px rgba(0,255,170,0.28); border:2px solid rgba(255,255,255,0.04); }
+.filter-range::-moz-range-thumb { height:12px; width:12px; border-radius:50%; background:#00ffaa; border:2px solid rgba(255,255,255,0.04); }
 
-/* Audio panel at bottom of visual area */
-.audio-overlay-panel {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.9);
-  border-top: 1px solid #b33;
-  z-index: 60;
-  padding: 8px 12px;
+.filter-number { width:64px; background:#0b0b0b; color:#ddd; border:1px solid #222; padding:6px 8px; border-radius:4px; text-align:center; font-size:13px; }
+.filter-number:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,204,255,0.06); }
+/* remove number input spinners */
+input[type=number].filter-number::-webkit-outer-spin-button, input[type=number].filter-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearance: textfield; appearance: textfield; }
+
+/* Botão Reset */
+.btn-reset {
+  width: 100%; background: #222; border: 1px solid #444; color: #fff;
+  padding: 8px; font-size: 10px; cursor: pointer; font-weight: bold;
+  text-transform: uppercase; margin-top: 5px;
+}
+.btn-reset:hover { background: #333; border-color: #666; }
+
+/* --- CONTROLES FORENSE (Canais RGB) --- */
+.forensic-controls { display: flex; gap: 5px; }
+.btn-channel {
+  flex: 1; background: #111; border: 1px solid #333; color: #666;
+  padding: 8px 0; font-size: 10px; cursor: pointer; font-weight: bold;
+}
+/* Cores Ativas */
+.btn-channel.active { color: #fff; border-color: #888; }
+.btn-channel.red.active { background: rgba(255,0,0,0.1); border-color: #f00; color: #f00; }
+.btn-channel.green.active { background: rgba(0,255,0,0.1); border-color: #0f0; color: #0f0; }
+.btn-channel.blue.active { background: rgba(0,0,255,0.1); border-color: #08f; color: #08f; }
+
+/* --- RODAPÉ --- */
+.inspect-details {
+  /* Use a percentage of the modal height so the visual area stays visible
+     and the details/footer can shrink/grow. Children will scroll internally. */
+  height: 35%; /* visual area keeps ~65% */
+  min-height: 200px;
+  max-height: 420px;
+  background: #111;
+  border-top: 1px solid #333;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+  overflow: hidden; /* prevent children from overflowing the modal */
 }
 
-/* Thermal overlay (visual effect only) */
-.thermal-overlay {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 55;
-  mix-blend-mode: screen;
-  background: linear-gradient(120deg, rgba(255,80,0,0.08), rgba(255,220,0,0.06), rgba(10,120,255,0.04));
-  filter: saturate(1.6) contrast(1.1) blur(0.6px);
+/* Left column inside the details that holds description and metadata. It scrolls */
+.text-col {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 15px;
+  scrollbar-width: thin;
+  scrollbar-color: #333 #000;
 }
+.text-col::-webkit-scrollbar { width: 6px; }
+.text-col::-webkit-scrollbar-track { background: #000; }
+.text-col::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+.metadata-box {
+  margin-top: 20px;
+  background: #080808;
+  border: 1px solid #333;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  color: #888;
+}
+.metadata-box h4 {
+  color: #b33; margin: 0 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px;
+  font-size: 10px; text-transform: uppercase;
+}
+
+.desc-title {
+  color: #c6a45f; font-weight: bold; font-size: 11px; letter-spacing: 1px;
+  margin-bottom: 5px; display: block;
+}
+.text-col h2 { color: #f2f2f2; margin: 0 0 10px 0; font-family: 'Special Elite'; font-size: 22px; }
+.public-desc { color: #999; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.btn-edit-ref { 
+  background: #1a1a1f; border: 1px solid #444; color: #888; padding: 8px 16px; 
+  cursor: pointer; font-size: 11px; height: fit-content; 
+}
+.btn-edit-ref:hover { color: #fff; border-color: #777; }
+
 

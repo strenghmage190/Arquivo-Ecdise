@@ -73,6 +73,20 @@ export async function fetchInvestigationById(id: string) {
   return data;
 }
 
+export async function updateInvestigation(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('investigations')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('updateInvestigation error', error);
+    throw error;
+  }
+  return data;
+}
+
 // Backwards-compatible alias
 export const getInvestigationById = fetchInvestigationById;
 
@@ -124,17 +138,31 @@ export async function createInvestigationCard(card: InvestigationCard) {
     tags: card.tags || [],
     insights: card.insights || [],
     metadata: (card as any).metadata || {},
+    chat_data: (card as any).chat_data || null,
+    chat_contact_name: (card as any).chat_contact_name || null,
   };
-  const { data, error } = await supabase
-    .from('investigation_cards')
-    .insert(payload)
-    .select()
-    .single();
-  if (error) {
-    console.error('Erro ao criar card:', error);
-    throw error;
+  try {
+    // debug: log payload shape being sent to Supabase
+    // eslint-disable-next-line no-console
+    console.debug('createInvestigationCard: payload', payload);
+    const { data, error } = await supabase
+      .from('investigation_cards')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Erro ao criar card:', error);
+      throw error;
+    }
+    // eslint-disable-next-line no-console
+    console.debug('createInvestigationCard: response', data);
+    return data;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('createInvestigationCard unexpected error', err);
+    throw err;
   }
-  return data;
 }
 
 export async function updateCard(id: string, updates: any) {
@@ -233,6 +261,53 @@ export async function fetchInvestigationDetails(id: string) {
     throw error;
   }
   return data;
+}
+
+// --- NOTES (Sticky Post-its) ---
+export async function fetchNotes(investigationId: string) {
+  const { data, error } = await supabase
+    .from('investigation_notes')
+    .select('*')
+    .eq('investigation_id', investigationId);
+  if (error) {
+    console.error('fetchNotes error', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createNote(investigationId: string, payload: any) {
+  const body = {
+    investigation_id: investigationId,
+    content: payload.content || null,
+    color: payload.color || '#f1c40f',
+    x: payload.x ?? 100,
+    y: payload.y ?? 100,
+  };
+  const { data, error } = await supabase.from('investigation_notes').insert(body).select().single();
+  if (error) {
+    console.error('createNote error', error);
+    throw error;
+  }
+  return data;
+}
+
+export async function updateNote(id: string, updates: any) {
+  const { data, error } = await supabase.from('investigation_notes').update(updates).eq('id', id).select().single();
+  if (error) {
+    console.error('updateNote error', error);
+    throw error;
+  }
+  return data;
+}
+
+export async function deleteNote(id: string) {
+  const { error } = await supabase.from('investigation_notes').delete().eq('id', id);
+  if (error) {
+    console.error('deleteNote error', error);
+    throw error;
+  }
+  return true;
 }
 
 // Create a new investigation and set current user as owner

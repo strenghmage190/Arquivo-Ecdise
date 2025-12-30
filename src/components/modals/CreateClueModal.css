@@ -12,6 +12,64 @@
   display: flex; flex-direction: column;
 }
 
+/* Container de Abas no Topo */
+.tabs-header {
+  display: flex;
+  background: linear-gradient(180deg,#0e0e10, #0c0c0e);
+  border-bottom: 1px solid #222;
+  gap: 6px; padding: 6px;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 14px;
+  background: transparent;
+  color: #bdbdbd;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.12s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tab-btn:hover { color: #aaa; background: #161616; }
+
+.tab-btn.active {
+  color: #111;
+  background: #c6a45f;
+  box-shadow: 0 6px 18px rgba(198,164,95,0.12);
+}
+
+.tab-content {
+  padding: 20px;
+  height: 60vh;
+  overflow-y: auto;
+  background: #111;
+}
+
+.field-block {
+  margin-bottom: 20px;
+  background: #151515;
+  padding: 15px;
+  border: 1px solid #222;
+  border-radius: 4px;
+}
+.field-title {
+  color: #c6a45f;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: block;
+  letter-spacing: 1px;
+  border-bottom: 1px dashed #333;
+  padding-bottom: 5px;
+}
+
 /* Header: Estilo Ficha Policial */
 .dossier-header {
   background: #1a1a1f; padding: 15px 25px; border-bottom: 2px solid #b33;
@@ -36,8 +94,8 @@
 
 /* Inputs Modernos */
 label {
-  font-size: 11px; font-weight: bold; color: #b33; text-transform: uppercase;
-  letter-spacing: 1px; margin-bottom: 6px; display: block;
+  font-size: 12px; font-weight: 600; color: #cfcfcf; text-transform: none;
+  letter-spacing: 0.4px; margin-bottom: 6px; display: block;
 }
 
 input[type="text"], textarea, input[type="range"], input {
@@ -80,11 +138,12 @@ input:focus, textarea:focus { outline: none; border-color: #c6a45f; }
 
 /* Upload Buttons */
 .upload-btn {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: #222; border: 1px solid #444; color: #aaa;
-  padding: 8px; cursor: pointer; font-size: 12px; transition: all 0.2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  background: linear-gradient(180deg,#1a1a1a,#141414); border: 1px solid #2b2b2b; color: #ddd;
+  padding: 8px 10px; cursor: pointer; font-size: 13px; transition: all 0.12s ease;
+  border-radius: 6px;
 }
-.upload-btn:hover { background: #333; border-color: #777; color: #fff; }
+.upload-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
 .file-status { font-size: 10px; color: #c6a45f; margin-left: 8px; }
 
 /* Range Slider */
@@ -96,15 +155,94 @@ input[type=range] { width: 100%; accent-color: #b33; margin-top: 5px; }
   border-top: 1px solid #333; display: flex; justify-content: flex-end; gap: 15px;
 }
 
+/* Standardizar selects, checkboxes e radios usados no modal */
+select {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  color: #e6e6e6;
+  padding: 8px 10px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+  appearance: none;
+}
+
+/* Custom styled checkboxes & radios to match modal theme */
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 8px 0 0;
+  border: 1px solid #333;
+  background: #0a0a0a;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+input[type="checkbox"] { border-radius: 4px; }
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]::after,
+input[type="radio"]::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: all 0.12s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: linear-gradient(180deg,#c6a45f,#a9803a);
+  border-color: #c6a45f;
+  box-shadow: 0 6px 14px rgba(198,164,95,0.12);
+}
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  color: #111;
+  font-weight: 800;
+  font-size: 12px;
+  opacity: 1;
+}
+
+input[type="radio"]:checked {
+  border-color: #c6a45f;
+  background: linear-gradient(180deg,#1f1f1f,#0b0b0b);
+}
+input[type="radio"]:checked::after {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c6a45f;
+  opacity: 1;
+}
+
+input[type="checkbox"]:hover, input[type="radio"]:hover { border-color: #c6a45f; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid rgba(198,164,95,0.12); outline-offset: 2px; }
+
+/* Align labels that wrap inline inputs */
+label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Make file inputs compact when shown (text next to upload button) */
+.file-status { display: inline-flex; align-items: center; gap: 8px; }
+
+
 .btn-cancel {
   background: transparent; border: 1px solid #444; color: #888;
   padding: 8px 16px; cursor: pointer;
 }
 .btn-save {
-  background: #b33; border: none; color: white;
-  padding: 8px 24px; font-weight: bold; cursor: pointer; letter-spacing: 1px;
+  background: linear-gradient(180deg,#c6a45f,#a9803a); border: none; color: #111;
+  padding: 8px 22px; font-weight: 800; cursor: pointer; letter-spacing: 0.6px; border-radius: 6px;
 }
-.btn-save:hover { background: #d00; box-shadow: 0 0 10px #b33; }
+.btn-save:hover { filter: brightness(1.03); box-shadow: 0 8px 28px rgba(198,164,95,0.14); }
 
 /* Mini Thumb do Preview */
 .image-preview-box {

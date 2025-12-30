@@ -27,6 +27,11 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
   const [status, setStatus] = useState<string | null>((existing as any)?.metadata?.status || null);
+  // Chat editor states (allow editing chat_data when editing a card)
+  const [chatEditorOpen, setChatEditorOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<any[] | null>(null);
+  const [newMsgText, setNewMsgText] = useState('');
+  const [newMsgSender, setNewMsgSender] = useState<'me'|'them'>('them');
 
   useEscapeClose(open, onClose);
   useEffect(() => {
@@ -36,6 +41,15 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     setInsights(existing?.insights || []);
     setImageUrl(existing?.image_url || null);
     setStatus((existing as any)?.metadata?.status || null);
+    // initialize chat editor with existing chat data if present
+    try {
+      const ex: any = existing as any;
+      if (ex) {
+        if (ex.chat_data && Array.isArray(ex.chat_data)) setChatMessages(ex.chat_data);
+        else if (ex.metadata && ex.metadata.chat_data && Array.isArray(ex.metadata.chat_data)) setChatMessages(ex.metadata.chat_data);
+        else setChatMessages(null);
+      }
+    } catch (e) { setChatMessages(null); }
   }, [existing]);
   if (!open) return null;
 
@@ -55,7 +69,27 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
       metadata: { ...(existing as any)?.metadata || {}, status: status || undefined },
     } as any;
 
+    // Preserve existing chat data/contact if present to avoid accidental deletion when editing
     try {
+      const existingAny = existing as any;
+      if (existingAny) {
+        if (existingAny.chat_data && !payload.chat_data) payload.chat_data = existingAny.chat_data;
+        if (existingAny.chat_contact_name && !payload.chat_contact_name) payload.chat_contact_name = existingAny.chat_contact_name;
+        // Also ensure metadata retains any embedded chat_data for backwards-compatibility
+        payload.metadata = payload.metadata || {};
+        if (existingAny.metadata && existingAny.metadata.chat_data && !payload.metadata.chat_data) payload.metadata.chat_data = existingAny.metadata.chat_data;
+        if (existingAny.metadata && existingAny.metadata.chat_contact_name && !payload.metadata.chat_contact_name) payload.metadata.chat_contact_name = existingAny.metadata.chat_contact_name;
+      }
+    } catch (e) { /* ignore */ }
+
+    try {
+      // include chat editor data in payload if provided
+      if (chatMessages && Array.isArray(chatMessages) && chatMessages.length > 0) {
+        payload.chat_data = chatMessages;
+        // preserve explicit contact name if present in metadata
+        if (!payload.chat_contact_name && (existing as any)?.chat_contact_name) payload.chat_contact_name = (existing as any).chat_contact_name;
+      }
+
       if (existing && existing.id) {
         const updated = await updateInvestigationCard(existing.id!, payload);
         onSaved && onSaved(updated);
@@ -135,6 +169,42 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             <textarea value={descriptionPublic} onChange={(e) => setDescriptionPublic(e.target.value)} style={{ width: '100%', border: !isGameMaster ? 'none' : undefined }} disabled={!isGameMaster} />
             <label>Descrição Oculta</label>
             <textarea value={descriptionHidden} onChange={(e) => setDescriptionHidden(e.target.value)} style={{ width: '100%', border: !isGameMaster ? 'none' : undefined }} disabled={!isGameMaster} />
+
+            {/* Chat editor (only for game masters) */}
+            {isGameMaster && (
+              <div style={{ marginTop: 12, borderTop: '1px solid #222', paddingTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong>📱 Chat / Mensagens</strong>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => setChatEditorOpen(s => !s)} style={{ padding: '4px 8px' }}>{chatEditorOpen ? 'Fechar' : 'Editar'}</button>
+                  </div>
+                </div>
+                {chatEditorOpen && (
+                  <div>
+                    <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #333', padding: 8, marginBottom: 8 }}>
+                      {(!chatMessages || chatMessages.length === 0) && <div style={{ color: '#777', fontSize: 13 }}>Nenhuma mensagem.</div>}
+                      {chatMessages && chatMessages.map((m, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                          <div style={{ flex: 1, background: m.sender === 'me' ? '#053' : '#111', color: '#fff', padding: '6px 8px', borderRadius: 6 }}>
+                            <div style={{ fontSize: 12, opacity: 0.8 }}>{m.text || m.message || m.body || ''}</div>
+                            <div style={{ fontSize: 10, color: '#bbb', marginTop: 4 }}>{m.time || ''}</div>
+                          </div>
+                          <button type="button" onClick={() => setChatMessages(prev => (prev || []).filter((_, idx) => idx !== i))}>Remover</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <select value={newMsgSender} onChange={e => setNewMsgSender(e.target.value as any)} style={{ width: 100 }}>
+                        <option value="them">Contato</option>
+                        <option value="me">Eu</option>
+                      </select>
+                      <input placeholder="Digite a mensagem..." value={newMsgText} onChange={e => setNewMsgText(e.target.value)} style={{ flex: 1 }} onKeyDown={e => { if (e.key === 'Enter') { const nm = newMsgText.trim(); if (!nm) return; const toAdd = { sender: newMsgSender, text: nm, time: new Date().toLocaleTimeString().slice(0,5), type: 'text' }; setChatMessages(prev => [...(prev || []), toAdd]); setNewMsgText(''); } }} />
+                      <button type="button" onClick={() => { const nm = newMsgText.trim(); if (!nm) return; const toAdd = { sender: newMsgSender, text: nm, time: new Date().toLocaleTimeString().slice(0,5), type: 'text' }; setChatMessages(prev => [...(prev || []), toAdd]); setNewMsgText(''); }} style={{ padding: '6px 10px' }}>ADD</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div style={{ width: 320 }}>
             <label>Imagem (opcional)</label>

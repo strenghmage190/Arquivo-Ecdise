@@ -1,0 +1,45 @@
+.audio-forge-panel {
+  background: linear-gradient(180deg,#0b0b0b,#111);
+  border: 1px solid #222;
+  padding: 18px;
+  border-radius: 8px;
+  width: min(920px, 96%);
+  color: #e6e6e6;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.7);
+}
+
+.af-title { color: #c6a45f; margin: 0 0 12px 0; font-family: 'VT323', monospace; }
+
+.af-file-row { display:flex; align-items:center; gap:12px; margin-bottom:12px }
+.af-file-input { color: #ddd }
+.af-loaded { color: #9fe39f; font-size:13px }
+
+.af-tools-row { display:flex; gap:10px; margin-bottom:14px }
+
+.hud-btn {
+  background: linear-gradient(180deg,#161616,#0e0e0e);
+  border: 1px solid #2b2b2b;
+  color: #ddd;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight:700;
+}
+.hud-btn.primary {
+  background: linear-gradient(180deg,#c6a45f,#a9803a);
+  color: #111;
+  box-shadow: 0 6px 18px rgba(198,164,95,0.12);
+}
+
+.af-actions { display:flex; gap:10px; align-items:center }
+.af-process {
+  background: linear-gradient(180deg,#c6a45f,#a9803a);
+  color: #111; border: none; padding: 8px 14px; border-radius: 6px; font-weight:800; cursor:pointer
+}
+.af-process:disabled { opacity: 0.6; cursor: not-allowed }
+.af-cancel { background: transparent; border: 1px solid #333; color:#ccc; padding:8px 12px; border-radius:6px }
+
+.af-preview { margin-top:12px; background:#0b0b0b; padding:10px; border:1px solid #222; border-radius:6px }
+
+/* Centering helper when used inside a full-screen overlay */
+.audio-forge-portal-wrap { display:flex; align-items:center; justify-content:center; padding:24px; }

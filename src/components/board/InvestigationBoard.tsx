@@ -17,6 +17,10 @@ import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
+import StickyNote from '../tools/StickyNote';
+import DoomsdayClock from '../ui/DoomsdayClock';
+import SystemTerminal from '../tools/SystemTerminal';
+import UniversalDecoder from '../tools/UniversalDecoder';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -35,6 +39,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -48,6 +53,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [isGameMaster, setIsGameMaster] = useState(false);
+  const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
   const [playerView, setPlayerView] = useState(false);
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
   const isMobileDevice = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
@@ -58,6 +64,8 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [decoderOpen, setDecoderOpen] = useState(false);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
   // Sistema de boot C.R.I.S.: controla a exibição da tela de inicialização
   // Sempre iniciar com o boot-screen ativo para exibir a animação a cada carga
@@ -92,7 +100,23 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [terminalMessage, setTerminalMessage] = useState<string | null>(null);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef<any>(null);
+  // draggingRef stores info about the currently dragged card(s)
+  const draggingRef = useRef<{
+    id: string;
+    // for single-card quick anchor
+    offsetX?: number;
+    offsetY?: number;
+    hasMoved?: boolean;
+    startX?: number;
+    startY?: number;
+    // legacy fields kept for multi-select support
+    origPositions?: Record<string, { x: number; y: number }>;
+    pointerOffsets?: Record<string, { ox: number; oy: number }>;
+    origX?: number;
+    origY?: number;
+    startWorldX?: number;
+    startWorldY?: number;
+  } | null>(null);
   const panningRef = useRef<any>(null);
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
   // Ref mirror of localPositions to avoid stale closures inside global listeners
@@ -103,14 +127,26 @@ export function InvestigationBoard({ investigationId }: Props) {
     localPositionsRef.current = localPositions;
   }, [localPositions]);
 
+  // Convert screen pixel coordinates to board/world coordinates considering zoom and origin
+  const getBoardPoint = (screenX: number, screenY: number) => {
+    const rect = corkboardRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: (screenX - rect.left) / zoom + origin.x,
+      y: (screenY - rect.top) / zoom + origin.y,
+    };
+  };
+
   const loadBoard = async () => {
     try {
-      const [cData, connData] = await Promise.all([
+      const [cData, connData, notesData] = await Promise.all([
         api.fetchCards(investigationId),
         connApi.fetchConnections(investigationId),
+        api.fetchNotes(investigationId),
       ]);
       console.debug('InvestigationBoard.loadBoard: fetched cards', cData);
       setCards(cData || []);
+      setNotes(notesData || []);
       // initialize localPositions for cards
       setLocalPositions((prev) => {
         const next = { ...prev };
@@ -197,6 +233,94 @@ export function InvestigationBoard({ investigationId }: Props) {
     loadBoard();
   }, [investigationId]);
 
+  // Realtime subscriptions: notes, cards, and investigation (doomsday clock)
+  useEffect(() => {
+    if (!investigationId) return;
+    const channels: any[] = [];
+
+    try {
+      // Notes channel
+      const notesChannel = supabase.channel(`notes:${investigationId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'investigation_notes', filter: `investigation_id=eq.${investigationId}` }, (payload) => {
+          try {
+            const ev = payload.eventType;
+            const row: any = payload.new || payload.old;
+            if (ev === 'INSERT') {
+              setNotes((prev: any[]) => {
+                if (prev.find((n: any) => n.id === row.id)) return prev;
+                return [...prev, row];
+              });
+            } else if (ev === 'UPDATE') {
+              setNotes((prev: any[]) => prev.map((n: any) => n.id === row.id ? row : n));
+            } else if (ev === 'DELETE') {
+              setNotes((prev: any[]) => prev.filter((n: any) => n.id !== row.id));
+            }
+          } catch (e) { console.error('notes realtime handler error', e); }
+        })
+        .subscribe();
+      channels.push(notesChannel);
+
+      // Cards channel: refresh cards on any change (simpler)
+      const cardsChannel = supabase.channel(`cards:${investigationId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'investigation_cards', filter: `investigation_id=eq.${investigationId}` }, (payload) => {
+          try {
+            const ev = payload.eventType;
+            const newRow: any = payload.new;
+            const oldRow: any = payload.old;
+            if (ev === 'INSERT' && newRow) {
+              setCards((prev: any[]) => {
+                if (prev.find((c: any) => c.id === newRow.id)) return prev;
+                return [...prev, newRow];
+              });
+              setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
+                if (prev[newRow.id]) return prev;
+                return { ...prev, [newRow.id]: { x: newRow.x ?? 100, y: newRow.y ?? 100 } };
+              });
+            } else if (ev === 'UPDATE' && newRow) {
+              setCards((prev: any[]) => prev.map((c: any) => c.id === newRow.id ? newRow : c));
+              setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
+                const has = prev[newRow.id] || { x: newRow.x ?? 100, y: newRow.y ?? 100 };
+                const nx = (newRow.x !== undefined && newRow.x !== null) ? newRow.x : has.x;
+                const ny = (newRow.y !== undefined && newRow.y !== null) ? newRow.y : has.y;
+                return { ...prev, [newRow.id]: { x: nx, y: ny } };
+              });
+            } else if (ev === 'DELETE' && oldRow) {
+              setCards((prev: any[]) => prev.filter((c: any) => c.id !== oldRow.id));
+              setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
+                const next = { ...prev };
+                delete next[oldRow.id];
+                return next;
+              });
+            }
+          } catch (e) { console.error('cards realtime handler error', e); }
+        })
+        .subscribe();
+      channels.push(cardsChannel);
+
+      // Investigation channel (watch for doomsday_clock updates)
+      const invChannel = supabase.channel(`investigation:${investigationId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'investigations', filter: `id=eq.${investigationId}` }, (payload) => {
+          try {
+            const row: any = payload.new;
+            if (row && row.doomsday_clock) {
+              const ms = new Date(row.doomsday_clock).getTime();
+              if (Number.isFinite(ms)) setDoomsdayTarget(ms);
+            }
+          } catch (e) { console.error('investigation realtime handler', e); }
+        })
+        .subscribe();
+      channels.push(invChannel);
+    } catch (e) {
+      console.error('Failed to create realtime channels', e);
+    }
+
+    return () => {
+      try {
+        channels.forEach(ch => { try { ch.unsubscribe(); } catch (e) {} });
+      } catch (e) { }
+    };
+  }, [investigationId]);
+
   // Emergency spread: detect stacked cards (at origin) and disperse them into a grid
   useEffect(() => {
     if (!cards || cards.length === 0) return;
@@ -230,11 +354,18 @@ export function InvestigationBoard({ investigationId }: Props) {
       try {
         const { data } = await supabase.auth.getUser();
         const user = data?.user || null;
-        const details = await api.fetchInvestigationDetails(investigationId);
+        const details = await api.fetchInvestigationById(investigationId);
         if (!mounted) return;
         setCaseTitle(details?.title || 'CASO');
         if (user && details && details.owner_id === user.id) setIsGameMaster(true);
         else setIsGameMaster(false);
+        // read doomsday clock if present
+        if (details && details.doomsday_clock) {
+          try {
+            const ms = new Date(details.doomsday_clock).getTime();
+            setDoomsdayTarget(Number.isFinite(ms) ? ms : null);
+          } catch { setDoomsdayTarget(null); }
+        } else setDoomsdayTarget(null);
       } catch (err) {
         console.error('Erro ao verificar permissões', err);
       }
@@ -435,6 +566,14 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
       const d = draggingRef.current;
       if (!d || !d.id) return;
+      // Deadzone: ignore tiny mouse jitter to avoid interfering with double-clicks
+      if (!d.hasMoved) {
+        const sx = d.startX ?? e.clientX;
+        const sy = d.startY ?? e.clientY;
+        const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
+        if (dist < 5) return; // still a click, not a drag
+        d.hasMoved = true;
+      }
       // compute movement relative to the corkboard element using world coordinates
       const board = corkboardRef.current?.getBoundingClientRect();
       const screenX = board ? (e.clientX - board.left) : e.clientX;
@@ -476,6 +615,14 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
       const d = draggingRef.current;
       if (!d || !d.id) return;
+      // Deadzone for touch as well
+      if (!d.hasMoved) {
+        const sx = d.startX ?? t.clientX;
+        const sy = d.startY ?? t.clientY;
+        const dist = Math.hypot(t.clientX - sx, t.clientY - sy);
+        if (dist < 5) return;
+        d.hasMoved = true;
+      }
       const board = corkboardRef.current?.getBoundingClientRect();
       const screenX = board ? (t.clientX - board.left) : t.clientX;
       const screenY = board ? (t.clientY - board.top) : t.clientY;
@@ -756,6 +903,19 @@ export function InvestigationBoard({ investigationId }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [undoStack, redoStack, selectedIds]);
 
+  // Global terminal hotkey: `~` or Ctrl+K
+  useEffect(() => {
+    const tHandler = (e: KeyboardEvent) => {
+      const key = e.key || '';
+      if ((key === '`' || key === '~') || (e.ctrlKey && key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        setTerminalOpen((s) => !s);
+      }
+    };
+    window.addEventListener('keydown', tHandler);
+    return () => window.removeEventListener('keydown', tHandler);
+  }, []);
+
   // Spacebar panning support: hold Space to pan (like Figma)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -911,7 +1071,14 @@ export function InvestigationBoard({ investigationId }: Props) {
                <button 
                  onClick={async () => {
                    if(window.confirm("Queimar esta evidência permanentemente?")) {
-                     try { await api.deleteInvestigationCard(contextMenu.targetId!); setCards(prev => prev.filter(c => c.id !== contextMenu.targetId)); } catch(e){ console.error(e); }
+                     try {
+                       await api.deleteInvestigationCard(contextMenu.targetId!);
+                       // reload board to refresh cards and connections (avoid orphaned connections in UI)
+                       await loadBoard();
+                     } catch(e){
+                       console.error(e);
+                       alert('Erro ao apagar pista. Veja o console.');
+                     }
                    }
                    setContextMenu(null);
                  }}
@@ -974,6 +1141,8 @@ export function InvestigationBoard({ investigationId }: Props) {
             <span>🔗</span>
             {connectionMode ? <span style={{ marginLeft: 6 }}>PARAR</span> : <span style={{ marginLeft: 6 }}>CONECTAR</span>}
            </button>
+
+             <button className="hud-btn" onClick={() => setDecoderOpen(true)} data-tooltip="Abrir Decodificador">🔐 DECODIFICADOR</button>
 
            {connectionMode && (
             <div className="toolbar-group" style={{ animation: 'slideInRight 0.2s', border: '1px solid #444' }}>
@@ -1048,12 +1217,40 @@ export function InvestigationBoard({ investigationId }: Props) {
 
           <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} data-tooltip="Alternar Luz UV (Ver pistas ocultas)">🔦</button>
           <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Abrir Quadro de Conspiração Geral">🕸️</button>
+          <button className="hud-btn" onClick={async () => {
+            try {
+              const boardRect = corkboardRef.current?.getBoundingClientRect();
+              const viewW = boardRect?.width ?? window.innerWidth;
+              const viewH = boardRect?.height ?? window.innerHeight;
+              const cx = viewW / 2;
+              const bx = origin.x + cx / zoom;
+              const by = origin.y + (viewH / 2) / zoom;
+              const newNote = await api.createNote(investigationId, { content: '', color: '#f1c40f', x: Math.round(bx), y: Math.round(by) });
+              setNotes(prev => [...prev, newNote]);
+            } catch (e) {
+              console.error('create note failed', e);
+              alert('Falha ao criar nota.');
+            }
+          }} data-tooltip="Adicionar Post-it">🗒️ POST-IT</button>
         </div>
 
         <div className="toolbar-group" style={{ padding: '0 12px', minWidth: 60, justifyContent: 'center' }}>
           <span style={{ fontSize: 11, color: '#666' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
         </div>
       </div>
+
+      {/* Doomsday clock (scene timer) */}
+      <DoomsdayClock targetTime={doomsdayTarget} isGameMaster={isGameMaster} onUpdate={async (minutesDelta: number) => {
+        try {
+          if (!doomsdayTarget) return;
+          const newMs = doomsdayTarget + minutesDelta * 60 * 1000;
+          // update server
+          await api.updateInvestigation(investigationId, { doomsday_clock: new Date(newMs).toISOString() });
+          setDoomsdayTarget(newMs);
+        } catch (e) {
+          console.error('failed to update doomsday', e);
+        }
+      }} />
 
       {showFinder && (
         <TerminalSearch onSearch={handleTerminalSearch} onClose={() => { setShowFinder(false); setTerminalMessage(null); }} />
@@ -1209,6 +1406,8 @@ export function InvestigationBoard({ investigationId }: Props) {
                 }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
+                  // only begin drag on primary (left) mouse button
+                  if (e.button !== 0) return;
                   const additive = e.shiftKey || e.ctrlKey || e.metaKey;
                   // compute the new selection synchronously so dragging uses the intended set
                   let newSelected: string[] = [];
@@ -1240,8 +1439,11 @@ export function InvestigationBoard({ investigationId }: Props) {
                     const base = origPositions[id];
                     pointerOffsets[id] = { ox: startWorldX - base.x, oy: startWorldY - base.y };
                   });
-                  const next = { id: card.id, startX: e.clientX, startY: e.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets };
-                  draggingRef.current = next;
+                    // compute anchor offset for the primary card so it sticks to the cursor precisely
+                    const primaryOffsetX = startWorldX - pos.x;
+                    const primaryOffsetY = startWorldY - pos.y;
+                    const next = { id: card.id, startX: e.clientX, startY: e.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false } as any;
+                    draggingRef.current = next;
                 }}
                 onClick={async (ev) => {
                   ev.stopPropagation();
@@ -1276,10 +1478,16 @@ export function InvestigationBoard({ investigationId }: Props) {
                     const base = origPositions[id];
                     pointerOffsets[id] = { ox: startWorldX - base.x, oy: startWorldY - base.y };
                   });
-                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets };
+                  const primaryOffsetX = startWorldX - pos.x;
+                  const primaryOffsetY = startWorldY - pos.y;
+                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false } as any;
                   draggingRef.current = next;
                 }}
-                onDoubleClick={async () => {
+                onDoubleClick={async (e) => {
+                  // prevent the double-click from leaving an active drag/pan
+                  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                  draggingRef.current = null;
+                  panningRef.current = null;
                   // if the card contains excalidraw JSON URL or data, open Sketchpad with it
                   try {
                     const meta = card?.metadata || {};
@@ -1358,16 +1566,41 @@ export function InvestigationBoard({ investigationId }: Props) {
                         pointerLocal = { x: overlayPos.x - elScreenX, y: overlayPos.y - elScreenY, over: overlayPos.over };
                       }
                       const isLockedForUser = Boolean(card?.is_locked) && !canEdit;
-                      return isLockedForUser ? (
-                        <div className="card-photo" style={{
-                          backgroundImage: 'none',
-                          backgroundColor: '#000',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          width: '100%', height: '100%'
-                        }}>
-                          <div style={{ color: '#e74c3c', fontSize: 32, textShadow: '0 0 10px red' }}>🔒</div>
-                        </div>
-                        ) : (
+                      const person = card && card.metadata && (card.metadata.person || null);
+                      if (isLockedForUser) {
+                        return (
+                          <div className="card-photo" style={{
+                            backgroundImage: 'none',
+                            backgroundColor: '#000',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '100%', height: '100%'
+                          }}>
+                            <div style={{ color: '#e74c3c', fontSize: 32, textShadow: '0 0 10px red' }}>🔒</div>
+                          </div>
+                        );
+                      }
+
+                      if (person) {
+                        // Person-style card
+                        return (
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8 }}>
+                            <div style={{ width: 140, height: 140, backgroundImage: person.photo ? `url(${person.photo})` : `url(${card.image_url || ''})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: person.status === 'DEAD' ? 'grayscale(1) contrast(1.1)' : 'none', border: '2px solid #222', boxShadow: '0 6px 18px rgba(0,0,0,0.6)' }} />
+                            <div style={{ color: '#ddd', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <div style={{ fontSize: 16, fontWeight: 800 }}>{person.name || card.title}</div>
+                              <div style={{ fontSize: 12, color: '#aaa' }}>{person.occupation || card.description_public}</div>
+                              <div style={{ marginTop: 8 }}>
+                                <span style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4, background: person.status === 'DEAD' ? '#3a0b0b' : '#113322', color: '#fff' }}>{person.status || 'DESCONHECIDO'}</span>
+                              </div>
+                            </div>
+                            {person.status === 'DEAD' && (
+                              <div style={{ position: 'absolute', top: 10, left: 10, transform: 'rotate(-18deg)', color: '#c0392b', fontWeight: 900, fontSize: 22, opacity: 0.9 }}>ÓBITO</div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // default image + audio behavior
+                      return (
                         <>
                           <MysteryImage baseSrc={card.image_url} hiddenSrc={card.image_uv_url} isUVMode={isUV} pointerLocal={pointerLocal} />
                           {/* Hidden audio elements so AudioLab can attach to them externally */}
@@ -1404,6 +1637,33 @@ export function InvestigationBoard({ investigationId }: Props) {
               </div>
             );
           })}
+
+          {/* Sticky notes layer */}
+          {notes.map((note) => (
+            <div key={`note-${note.id}`} style={{ position: 'absolute', left: note.x, top: note.y, pointerEvents: 'auto' }}>
+              <StickyNote
+                note={note}
+                onUpdate={async (id: string, content: string) => {
+                  try {
+                    const updated = await api.updateNote(id, { content });
+                    setNotes(prev => prev.map(n => n.id === id ? updated : n));
+                  } catch (e) { console.error('updateNote failed', e); }
+                }}
+                onMove={async (id: string, x: number, y: number) => {
+                  try {
+                    const updated = await api.updateNote(id, { x, y });
+                    setNotes(prev => prev.map(n => n.id === id ? updated : n));
+                  } catch (e) { console.error('moveNote failed', e); }
+                }}
+                onDelete={async (id: string) => {
+                  try {
+                    await api.deleteNote(id);
+                    setNotes(prev => prev.filter(n => n.id !== id));
+                  } catch (e) { console.error('deleteNote failed', e); }
+                }}
+              />
+            </div>
+          ))}
 
           {/* Mobile-only floating controls to switch touch mode */}
           <div className="mobile-controls" aria-hidden={false}>
@@ -1583,6 +1843,25 @@ export function InvestigationBoard({ investigationId }: Props) {
       )}
       {showSharedBoard && (
         <ConspiracyBoard investigationId={investigationId} onClose={() => setShowSharedBoard(false)} />
+      )}
+      <SystemTerminal
+        isOpen={terminalOpen}
+        onClose={() => setTerminalOpen(false)}
+        cards={cards}
+        onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
+      />
+      {decoderOpen && (
+        <div style={{ position: 'fixed', right: 20, top: 80, width: 560, height: '72vh', zIndex: 12000, background: '#0b0b0d', border: '1px solid #333', padding: 12, borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ color: '#c6a45f', fontWeight: 700 }}>DECODIFICADOR UNIVERSAL</div>
+            <div>
+              <button className="hud-btn" onClick={() => setDecoderOpen(false)}>✖ Fechar</button>
+            </div>
+          </div>
+          <div style={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
+            <UniversalDecoder />
+          </div>
+        </div>
       )}
       <div className="toast-container">
         {toast && (

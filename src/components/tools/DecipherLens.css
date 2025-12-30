@@ -1,0 +1,54 @@
+.text-container {
+  position: relative;
+  background: linear-gradient(180deg,#efe7d6,#ece0c8);
+  color: #111;
+  padding: 28px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 180px;
+  border: 1px solid rgba(198,164,95,0.7);
+  border-radius: 6px;
+}
+
+.real-layer {
+  margin: 0;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  padding: 28px;
+  z-index: 12;
+  pointer-events: none;
+  color: #111;
+  font-weight: 600;
+}
+
+.cipher-layer {
+  position: relative;
+  padding: 28px;
+  margin: 0;
+  background: transparent;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  color: #5b2b2b;
+  z-index: 8;
+  text-transform: uppercase;
+}
+
+.lens-ring {
+  position: absolute;
+  border: 3px solid rgba(198,164,95,0.95);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(198,164,95,0.12), inset 0 0 14px rgba(0,0,0,0.18);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  backdrop-filter: blur(4px) saturate(1.1);
+  z-index: 20;
+}
+
+.btn-lens {
+  background: #0f0f10; color: #f5ecd8; border: 1px solid rgba(198,164,95,0.9);
+  padding: 6px 12px; cursor: pointer; margin-bottom: 10px; font-weight: 700; border-radius: 6px;
+}
+.btn-lens.active { background: rgba(198,164,95,0.95); color: #111; }
+
+.btn-lens:focus { outline: 2px solid rgba(198,164,95,0.25); }

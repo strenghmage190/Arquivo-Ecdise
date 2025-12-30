@@ -308,6 +308,19 @@ export default function InvestigationBoard() {
         >
           <div style={{ fontSize: 14, fontWeight: 600 }}>{card.title}</div>
           <div style={{ fontSize: 12, color: '#9ca3af' }}>{card.description_public}</div>
+          {(() => {
+            const meta = card.metadata && typeof card.metadata === 'object' ? card.metadata : (typeof card.metadata === 'string' ? (() => { try { return JSON.parse(card.metadata); } catch { return {}; } })() : {});
+            const chatList = card.chat_data || meta?.chat_data || meta?.chat || null;
+            if (chatList && Array.isArray(chatList) && chatList.length > 0) {
+              return (
+                <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ background: '#0b1220', border: '1px solid #223', padding: '4px 6px', borderRadius: 6, fontSize: 12, color: '#c6a45f' }}>💬</div>
+                  <div style={{ fontSize: 12, color: '#d1d5db', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(chatList[0]?.text || '').slice(0, 64)}</div>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
       ))}
 

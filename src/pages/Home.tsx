@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import './Home.css';
+import Desktop from '../components/layout/Desktop';
+import SystemTerminal from '../components/tools/SystemTerminal';
 
 export default function Home() {
   const navigate = useNavigate();
   const [cases, setCases] = useState<any[]>([]);
+  const [terminalOpen, setTerminalOpen] = useState(false);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -44,7 +47,9 @@ export default function Home() {
   }
 
   return (
-    <div className="home-screen" style={{ background: '#1a1a1a', minHeight: '100vh', padding: 40, color: '#e0e0e0', fontFamily: 'Courier Prime, monospace' }}>
+    <div className="home-screen" style={{ background: '#0d0d0d', minHeight: '100vh', padding: 40, color: '#e0e0e0', fontFamily: 'Courier Prime, monospace' }}>
+      <Desktop cases={cases} />
+      <button onClick={() => setTerminalOpen(true)} style={{ position: 'fixed', bottom: 20, left: 20, background: 'transparent', color: '#33ff33', border: '1px solid #333', padding: '8px 10px', cursor: 'pointer' }}>C.R.I.S_CONSOLE.EXE</button>
       <button onClick={handleLogout} style={{ position: 'fixed', top: 20, right: 20, background: '#b33', color: '#fff', border: 'none', padding: '10px 14px', cursor: 'pointer', borderRadius: 4, zIndex: 60 }}>
         SAIR DO SISTEMA
       </button>
@@ -96,6 +101,14 @@ export default function Home() {
           </div>
         ))}
       </div>
+      {terminalOpen && (
+        <SystemTerminal
+          isOpen={terminalOpen}
+          onClose={() => setTerminalOpen(false)}
+          cards={cases}
+          onOpenCard={(c: any) => { if (c && c.id) navigate(`/case/${String(c.id).split(':')[0]}`); }}
+        />
+      )}
     </div>
   );
 }

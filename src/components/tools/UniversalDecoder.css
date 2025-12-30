@@ -1,0 +1,23 @@
+.decoder-station {
+  background: #0d0d0f;
+  border: 1px solid #33ff33;
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+.decoder-tabs { display: flex; background: #000; overflow-x: auto; }
+.decoder-tabs button {
+  padding: 10px 15px; border: none; background: #000; color: #008f11;
+  font-weight: bold; border-right: 1px solid #111; border-bottom: 2px solid #000;
+  cursor: pointer;
+}
+.decoder-tabs button.active { background: #002200; color: #33ff33; border-bottom: 2px solid #33ff33; }
+.decoder-tabs button.special { color: #daa520; }
+.decoder-tabs button.special.active { background: #1a1500; border-bottom-color: #daa520; }
+
+.decoder-body { padding: 20px; }
+.decoder-input { width: 100%; height: 80px; background: #111; border: 1px dashed #444; color: #ccc; padding: 10px; font-family: monospace; margin-bottom: 10px; }
+.output-screen { background: #000; border: 1px solid #222; padding: 15px; color: #33ff33; white-space: pre-wrap; min-height: 100px; max-height: 300px; overflow-y: auto; }
+.decoder-params { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; color: #aaa; }
+.decoder-params input { background: #111; border: 1px solid #444; color: #fff; padding: 5px; width: 100px; }
