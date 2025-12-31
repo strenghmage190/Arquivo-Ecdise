@@ -68,17 +68,31 @@ export default function SpectrogramCreator({ onGenerateBuffer, onClose }: Props)
     try {
       // Caso o Mestre tenha escolhido gerar QR, tente gerar para o canvas oculto primeiro
       if (generateQr && qrUrl) {
-        // try dynamic import of 'qrcode' to draw to qrCanvas
+        // Fallback: use a QR image generation service to avoid bundling a dependency.
         try {
-          const qrcodeMod: any = await import('qrcode');
           const qrC = qrCanvasRef.current;
           if (qrC) {
-            await qrcodeMod.toCanvas(qrC, qrUrl, { margin: 1, width: Math.min(300, qrC.width) });
-            // redraw main canvas draws qrCanvas in useEffect
+            await new Promise<void>((resolve, reject) => {
+              const img = new Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                try {
+                  const qc = qrC.getContext('2d');
+                  if (!qc) return reject(new Error('QR canvas context')); 
+                  qc.clearRect(0,0,qrC.width,qrC.height);
+                  qc.drawImage(img, 0, 0, qrC.width, qrC.height);
+                  resolve();
+                } catch (e) { reject(e); }
+              };
+              img.onerror = (e) => reject(e);
+              const size = Math.max(200, Math.min(400, qrC.width));
+              img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrUrl)}`;
+            });
+            // main canvas will pick up the qrCanvas in the draw effect
           }
         } catch (e) {
-          console.warn('QR generation failed - make sure `qrcode` is installed', e);
-          alert('Não foi possível gerar o QR (dependência ausente). Instale `qrcode` para usar esta função.');
+          console.warn('QR generation failed (image API)', e);
+          alert('Não foi possível gerar o QR via serviço externo.');
         }
       }
 

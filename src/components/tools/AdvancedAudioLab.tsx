@@ -287,15 +287,15 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
             <button onClick={() => setShowOverlaySpectrogram(v => !v)} className="adv-btn toggle">{showOverlaySpectrogram ? 'OCULTAR CAMADA OCULTA' : 'MOSTRAR CAMADA OCULTA'}</button>
             <button onClick={() => {
                 try {
-                  const ws = wavesurfer.current;
+                  const ws = wavesurfer.current as any;
                   if (!ws || !ws.regions) return;
-                  const list = Object.values(ws.regions.list || {});
-                  const region = list[0];
+                  const list = Object.values((ws.regions && ws.regions.list) || {}) as any[];
+                  const region = list[0] as any;
                   if (!region) return;
                   // play region (looping was enabled on create)
-                  try { region.play(); } catch(e) { ws.play(region.start, region.end); }
+                  try { if (typeof region.play === 'function') region.play(); else ws.play(region.start, region.end); } catch(e) { ws.play(region.start, region.end); }
                   // seek to region start to center
-                  try { ws.seekTo(region.start / (ws.getDuration() || 1)); } catch(e) {}
+                  try { ws.seekTo((region.start || 0) / (ws.getDuration() || 1)); } catch(e) {}
                 } catch(e) { console.warn(e); }
             }} className="adv-btn">🔍 Zoom na Seleção</button>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 8, color: '#ccc' }}>
