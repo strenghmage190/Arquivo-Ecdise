@@ -1,27 +1,48 @@
 import React from 'react';
 import './PhoneViewer.css';
 
-export default function PhoneViewer({ chatData, contactName }: any) {
-  const displayChat = Array.isArray(chatData) ? chatData : [];
+interface PhoneMessage {
+   sender?: string;
+   text?: string;
+   message?: string;
+   body?: string;
+   payload?: any;
+   content?: any;
+   image_url?: string;
+   image?: string;
+   media?: { url?: string; src?: string } | null;
+   photo?: string;
+   time?: string;
+   caption?: string;
+   [k: string]: any;
+}
 
-  const resolveText = (msg: any) => {
-    if (!msg) return '';
-    if (typeof msg === 'string') return msg;
-    if (typeof msg.text === 'string') return msg.text;
-    if (typeof msg.message === 'string') return msg.message;
-    if (typeof msg.body === 'string') return msg.body;
-    if (typeof msg.payload === 'string') return msg.payload;
-    if (msg.payload && typeof msg.payload === 'object') return msg.payload.text ?? msg.payload.message ?? '';
-    if (typeof msg.content === 'string') return msg.content;
-    if (msg.content && typeof msg.content === 'object') {
-      if (Array.isArray(msg.content)) {
-        const pieces = msg.content.map((c: any) => (typeof c === 'string' ? c : (c?.text ?? c?.message ?? ''))).filter(Boolean);
-        return pieces.join('\n');
+interface PhoneViewerProps {
+   chatData?: PhoneMessage[] | null;
+   contactName?: string | null;
+}
+
+export default function PhoneViewer({ chatData, contactName }: PhoneViewerProps): React.ReactElement {
+   const displayChat = Array.isArray(chatData) ? chatData as PhoneMessage[] : [];
+
+   const resolveText = (msg?: PhoneMessage | string | null) => {
+      if (!msg) return '';
+      if (typeof msg === 'string') return msg;
+      if (typeof msg.text === 'string') return msg.text;
+      if (typeof msg.message === 'string') return msg.message;
+      if (typeof msg.body === 'string') return msg.body;
+      if (typeof msg.payload === 'string') return msg.payload;
+      if (msg.payload && typeof msg.payload === 'object') return msg.payload.text ?? msg.payload.message ?? '';
+      if (typeof msg.content === 'string') return msg.content;
+      if (msg.content && typeof msg.content === 'object') {
+         if (Array.isArray(msg.content)) {
+            const pieces = msg.content.map((c: any) => (typeof c === 'string' ? c : (c?.text ?? c?.message ?? ''))).filter(Boolean);
+            return pieces.join('\n');
+         }
+         return msg.content.text ?? msg.content.message ?? '';
       }
-      return msg.content.text ?? msg.content.message ?? '';
-    }
-    return '';
-  };
+      return '';
+   };
 
   return (
     <div className="phone-mockup-wrapper">
@@ -37,7 +58,7 @@ export default function PhoneViewer({ chatData, contactName }: any) {
           </div>
 
           <div className="chat-body">
-             {displayChat.length > 0 ? displayChat.map((msg: any, i: number) => {
+             {displayChat.length > 0 ? displayChat.map((msg: PhoneMessage, i: number) => {
                 const text = resolveText(msg);
                 const imageUrl = msg.image_url || msg.image || msg.media?.url || msg.media?.src || msg.photo;
                 return (

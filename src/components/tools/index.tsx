@@ -1,5 +1,10 @@
 import React from 'react';
 
-export function BoardButton({ children, onClick }: any) {
+interface BoardButtonProps {
+  onClick?: () => void;
+  children?: React.ReactNode;
+}
+
+export function BoardButton({ children, onClick }: BoardButtonProps): React.ReactElement {
   return <button onClick={onClick}>{children}</button>;
 }

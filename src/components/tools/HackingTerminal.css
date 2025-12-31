@@ -53,3 +53,73 @@
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
 .term-hint { margin-top: 12px; color: #bdb; font-size: 12px; }
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+  --nexus-blue: #00f3ff;
+  --nexus-dark: #05080a;
+  --nexus-glass: rgba(0, 243, 255, 0.05);
+  --nexus-glitch: #ff003c;
+}
+
+* { box-sizing: border-box; }
+
+.nexus-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--nexus-blue);
+  font-family: 'Share Tech Mono', monospace;
+  background-color: var(--nexus-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+.server-grid-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background-image: linear-gradient(rgba(0,243,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,243,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 0;
+  filter: blur(2px);
+}
+
+.archivist-avatar { z-index: 2; display:flex; flex-direction:column; align-items:center; margin-bottom:12px; }
+.waveform { display:flex; gap:6px; align-items:end; height:28px; }
+.bar { width:4px; height:60%; background:var(--nexus-blue); box-shadow:0 0 10px var(--nexus-blue); animation:wave 1s infinite ease-in-out; }
+.bar:nth-child(2) { animation-delay:0.08s; }
+.bar:nth-child(3) { animation-delay:0.16s; }
+.bar:nth-child(4) { animation-delay:0.24s; }
+.bar:nth-child(5) { animation-delay:0.32s; }
+@keyframes wave { 0%,100% { transform: scaleY(0.5); opacity:0.5 } 50% { transform: scaleY(1); opacity:1 } }
+.status-text { font-size:0.78rem; letter-spacing:2px; margin-top:8px; opacity:0.8; text-shadow:0 0 5px var(--nexus-blue); }
+
+.glass-console {
+  width: 86%; max-width: 880px; height: 60vh; background: rgba(5,8,10,0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,243,255,0.12);
+  box-shadow: 0 0 30px rgba(0,243,255,0.06);
+  display:flex; flex-direction:column; position:relative; z-index:1; overflow:hidden; border-radius:6px;
+}
+
+.console-output { flex:1; padding:18px; overflow-y:auto; font-size:1rem; color:#cfeff0; }
+.log-entry { margin-bottom:10px; }
+.log-entry.system { color:#7fb6bb; font-size:0.9rem; }
+.log-entry.archivist { color:#fff; text-shadow:0 0 6px var(--nexus-blue); border-left:2px solid var(--nexus-blue); padding-left:10px; }
+.log-entry.user { color:#9aa; text-align:right; opacity:0.9; }
+.log-entry.glitch { color:var(--nexus-glitch); text-shadow: 2px 0 var(--nexus-blue), -2px 0 yellow; font-weight:bold; }
+
+.console-input-wrapper { padding:14px; border-top:1px solid rgba(0,243,255,0.06); background: rgba(0,243,255,0.02); display:flex; align-items:center; }
+.input-prefix { color:var(--nexus-blue); margin-right:10px; }
+#nexus-input { flex:1; background:transparent; border:none; color:#fff; font-family:inherit; font-size:1rem; outline:none; }
+.scanline { width:2px; height:28px; margin-left:12px; background: linear-gradient(180deg, rgba(255,255,255,0.2), rgba(0,0,0,0)); opacity:0.6; }
+
+/* futuristic scrollbar */
+ .console-output::-webkit-scrollbar { width:7px; }
+ .console-output::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(0,243,255,0.6), rgba(0,243,255,0.2)); border-radius:4px; }
+
+.glitch-effect { animation:glitch 0.4s steps(2,end) infinite; }
+@keyframes glitch { 0%{transform:translateX(0)}25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-1px)}100%{transform:translateX(0)} }
+
+.term-hint { margin-top:10px; color:#9fb; font-size:12px }

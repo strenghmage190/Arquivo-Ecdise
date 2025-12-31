@@ -15,6 +15,8 @@ import Toast from '../../components/ui/Toast';
 import ConspiracyBoard from './ConspiracyBoard';
 import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
+import './EvidenceCard.css';
+import EvidenceCard from './EvidenceCard';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
 import StickyNote from '../tools/StickyNote';
@@ -47,11 +49,17 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [createModalPos, setCreateModalPos] = useState<{ x: number; y: number } | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
 
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.9);
   const [isUV, setIsUV] = useState(false);
   const [globalMouse, setGlobalMouse] = useState<{ clientX: number; clientY: number; overBoard: boolean } | null>(null);
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
+
+  // Refs to hold latest zoom and origin for global listeners (avoid stale closures)
+  const zoomRef = useRef(zoom);
+  const originRef = useRef(origin);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { originRef.current = origin; }, [origin]);
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
   const [playerView, setPlayerView] = useState(false);
@@ -106,6 +114,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     // for single-card quick anchor
     offsetX?: number;
     offsetY?: number;
+    isDragging?: boolean;
     hasMoved?: boolean;
     startX?: number;
     startY?: number;
@@ -128,12 +137,13 @@ export function InvestigationBoard({ investigationId }: Props) {
   }, [localPositions]);
 
   // Convert screen pixel coordinates to board/world coordinates considering zoom and origin
-  const getBoardPoint = (screenX: number, screenY: number) => {
-    const rect = corkboardRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
+  const getWorldPosition = (clientX: number, clientY: number) => {
+    const board = corkboardRef.current?.getBoundingClientRect();
+    if (!board) return { x: 0, y: 0 };
+    // (Mouse - board.left) / zoom + origin
     return {
-      x: (screenX - rect.left) / zoom + origin.x,
-      y: (screenY - rect.top) / zoom + origin.y,
+      x: (clientX - board.left) / zoomRef.current + originRef.current.x,
+      y: (clientY - board.top) / zoomRef.current + originRef.current.y,
     };
   };
 
@@ -480,7 +490,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   useEffect(() => {
     const initCenter = () => {
       try {
-        // if we have cards, center on their bounding box
+        // if we have cards, center on their bounding box and compute a fit zoom
         if (cards && cards.length > 0) {
           let minX = Infinity;
           let minY = Infinity;
@@ -498,12 +508,20 @@ export function InvestigationBoard({ investigationId }: Props) {
           const boardRect = corkboardRef.current?.getBoundingClientRect();
           const viewW = boardRect?.width ?? window.innerWidth;
           const viewH = boardRect?.height ?? window.innerHeight;
+          const boxW = Math.max(1, maxX - minX);
+          const boxH = Math.max(1, maxY - minY);
+          const padding = 240; // give some breathing room so cards are not at the edges
+          const fitZoomW = viewW / (boxW + padding);
+          const fitZoomH = viewH / (boxH + padding);
+          const fitZoom = Math.min(3, Math.max(0.2, Math.min(fitZoomW, fitZoomH)));
+          // Do NOT change the current zoom automatically — only adjust origin so cards are centered
+          const currentZoom = zoomRef.current ?? zoom;
           const centerX = (minX + maxX) / 2;
           const centerY = (minY + maxY) / 2;
-          setOrigin({ x: centerX - viewW / (2 * zoom), y: centerY - viewH / (2 * zoom) });
+          setOrigin({ x: centerX - viewW / (2 * currentZoom), y: centerY - viewH / (2 * currentZoom) });
           return;
         }
-        // otherwise default to a small negative origin near 0,0 to avoid huge off-screen offsets
+        // otherwise place origin near 0,0 and keep the current zoom
         setOrigin({ x: -100, y: -100 });
       } catch (err) {
         console.warn('initCenter failed', err);
@@ -638,14 +656,47 @@ export function InvestigationBoard({ investigationId }: Props) {
       if (d.id) scheduleDebouncedSave(d.id);
     };
 
+    // replace with global listeners that read latest zoom/origin via refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Global mouse/touch handler using refs to avoid stale closures
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // 1. Panning
+      if (panningRef.current) {
+        const dx = (e.clientX - panningRef.current.startX) / zoomRef.current;
+        const dy = (e.clientY - panningRef.current.startY) / zoomRef.current;
+        setOrigin({ x: panningRef.current.originX - dx, y: panningRef.current.originY - dy });
+      }
+
+      // 2. Dragging
+      if (draggingRef.current && draggingRef.current.isDragging) {
+        const d = draggingRef.current as any;
+        const worldNow = getWorldPosition(e.clientX, e.clientY);
+        const nextX = worldNow.x - (d.offsetX || 0);
+        const nextY = worldNow.y - (d.offsetY || 0);
+        setLocalPositions(prev => ({ ...prev, [d.id]: { x: nextX, y: nextY } }));
+        // schedule save (debounced)
+        if (d.id) scheduleDebouncedSave(d.id);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (draggingRef.current) {
+        try { forceSaveCard((draggingRef.current as any).id); } catch (e) {}
+        draggingRef.current = null;
+      }
+      panningRef.current = null;
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false } as any);
+    window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove as any);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoom, connectionMode, connectionStart]);
+  }, []);
 
   // finalize marquee on mouseup
   useEffect(() => {
@@ -992,6 +1043,31 @@ export function InvestigationBoard({ investigationId }: Props) {
     setCreateModalOpen(true);
   };
 
+  // Zoom helpers: centralize math and use refs to avoid stale closures
+  const zoomBy = useCallback((delta: number) => {
+    setZoom((prev) => {
+      const candidate = prev + delta;
+      const newZoom = Math.min(Math.max(candidate, 0.1), 3);
+      const boardRect = corkboardRef.current?.getBoundingClientRect();
+      const originNow = originRef.current;
+      if (boardRect && originNow) {
+        const centerX = originNow.x + (boardRect.width / 2) / prev;
+        const centerY = originNow.y + (boardRect.height / 2) / prev;
+        const newOriginX = centerX - (boardRect.width / 2) / newZoom;
+        const newOriginY = centerY - (boardRect.height / 2) / newZoom;
+        setOrigin({ x: newOriginX, y: newOriginY });
+      }
+      return newZoom;
+    });
+  }, []);
+
+  const zoomIn = useCallback(() => zoomBy(0.1), [zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(-0.1), [zoomBy]);
+  const resetZoom = useCallback(() => {
+    setZoom(1);
+    setOrigin({ x: 0, y: 0 });
+  }, []);
+
   // Wheel-based zoom (Ctrl/Cmd + wheel) and scroll-pan when not holding Ctrl
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
@@ -999,9 +1075,23 @@ export function InvestigationBoard({ investigationId }: Props) {
         e.preventDefault();
         const delta = -e.deltaY;
         const scaleFactor = 0.05;
+        // compute new zoom and adjust origin so zoom centers on mouse pointer
+        const boardRect = corkboardRef.current?.getBoundingClientRect();
+        const pointerX = e.clientX;
+        const pointerY = e.clientY;
         setZoom(prev => {
-          const newZoom = prev + (delta > 0 ? scaleFactor : -scaleFactor);
-          return Math.min(Math.max(newZoom, 0.1), 3);
+          const candidate = prev + (delta > 0 ? scaleFactor : -scaleFactor);
+          const newZoom = Math.min(Math.max(candidate, 0.1), 3);
+          if (boardRect) {
+            // world coords under pointer before zoom
+            const worldX = origin.x + (pointerX - boardRect.left) / prev;
+            const worldY = origin.y + (pointerY - boardRect.top) / prev;
+            // adjust origin so the same world point stays under the pointer after zoom
+            const newOriginX = worldX - (pointerX - boardRect.left) / newZoom;
+            const newOriginY = worldY - (pointerY - boardRect.top) / newZoom;
+            setOrigin({ x: newOriginX, y: newOriginY });
+          }
+          return newZoom;
         });
         return;
       }
@@ -1234,8 +1324,11 @@ export function InvestigationBoard({ investigationId }: Props) {
           }} data-tooltip="Adicionar Post-it">🗒️ POST-IT</button>
         </div>
 
-        <div className="toolbar-group" style={{ padding: '0 12px', minWidth: 60, justifyContent: 'center' }}>
-          <span style={{ fontSize: 11, color: '#666' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
+        <div className="toolbar-group" style={{ padding: '0 12px', minWidth: 140, justifyContent: 'center', gap: 8, alignItems: 'center' }}>
+          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir Zoom">−</button>
+          <span style={{ fontSize: 11, color: '#666', minWidth: 70, textAlign: 'center' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
+          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar Zoom">+</button>
+          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Resetar Zoom">⟲</button>
         </div>
       </div>
 
@@ -1257,13 +1350,13 @@ export function InvestigationBoard({ investigationId }: Props) {
       )}
 
       {/* Modais (mantidos) */}
-      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />
+      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
       <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
       {inspectCard && (
         <InspectionModal
           isOpen={!!inspectCard}
           card={inspectCard}
-          isGameMaster={canEdit}
+          isGameMaster={isGameMaster}
           onClose={() => setInspectCard(null)}
           onEdit={() => {
             setEditingCard(inspectCard);
@@ -1420,30 +1513,28 @@ export function InvestigationBoard({ investigationId }: Props) {
                     }
                     setSelectedIds(newSelected);
                   }
+
+                  // Convert click to world coordinates using zoom/origin refs
+                  const worldMouse = getWorldPosition(e.clientX, e.clientY);
+                  const cardX = localPositions[card.id]?.x ?? card.x ?? pos.x;
+                  const cardY = localPositions[card.id]?.y ?? card.y ?? pos.y;
+
+                  // Save origPositions for any affected selection (keeps multi-select behavior)
                   const affected = (newSelected.length > 0 && newSelected.includes(card.id)) ? newSelected : [card.id];
                   const origPositions: Record<string, { x: number; y: number }> = {};
                   affected.forEach((id) => {
                     const p = localPositions[id] || (() => {
                       const found = cards.find((cc) => cc.id === id);
-                      return found ? { x: found.x || 100, y: found.y || 100 } : { x: pos.x, y: pos.y };
+                      return found ? { x: found.x || 100, y: found.y || 100 } : { x: cardX, y: cardY };
                     })();
                     origPositions[id] = { x: p.x, y: p.y };
                   });
-                  const boardRect = corkboardRef.current?.getBoundingClientRect();
-                  const startScreenX = boardRect ? e.clientX - boardRect.left : e.clientX;
-                  const startScreenY = boardRect ? e.clientY - boardRect.top : e.clientY;
-                  const startWorldX = origin.x + startScreenX / zoom;
-                  const startWorldY = origin.y + startScreenY / zoom;
-                  const pointerOffsets: Record<string, { ox: number; oy: number }> = {};
-                  Object.keys(origPositions).forEach((id) => {
-                    const base = origPositions[id];
-                    pointerOffsets[id] = { ox: startWorldX - base.x, oy: startWorldY - base.y };
-                  });
-                    // compute anchor offset for the primary card so it sticks to the cursor precisely
-                    const primaryOffsetX = startWorldX - pos.x;
-                    const primaryOffsetY = startWorldY - pos.y;
-                    const next = { id: card.id, startX: e.clientX, startY: e.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false } as any;
-                    draggingRef.current = next;
+
+                  // Anchor offset: where the mouse hit relative to the card
+                  const offsetX = worldMouse.x - cardX;
+                  const offsetY = worldMouse.y - cardY;
+
+                  draggingRef.current = { id: card.id, offsetX, offsetY, isDragging: true, origPositions } as any;
                 }}
                 onClick={async (ev) => {
                   ev.stopPropagation();
@@ -1520,120 +1611,41 @@ export function InvestigationBoard({ investigationId }: Props) {
                   setInspectCard(card);
                 }}
               >
-                <div className="card-photo-container">
-                  {/* status marker (top-right) */}
-                  <div className="status-marker" />
-                  {card.stamp_text && (
-                    <div className="card-stamp" style={{
-                      position: 'absolute', top: 20, right: 10,
-                      color: '#c0392b', border: '3px solid #c0392b',
-                      padding: '2px 8px', fontSize: 16, fontWeight: 900,
-                      fontFamily: 'Black Ops One, cursive', transform: 'rotate(-15deg)',
-                      opacity: 0.85, pointerEvents: 'none', zIndex: 50, mixBlendMode: 'multiply'
-                    }}>
-                      {card.stamp_text}
-                    </div>
-                  )}
-                  {/* Spectrogram download if present in metadata */}
-                  {(() => {
-                    const spectroUrl = (card && ((card.metadata && card.metadata.spectrogram_url) || (card.spectrogram_url))) || null;
-                    if (!spectroUrl) return null;
-                    return (
-                      <a
-                        href={spectroUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download={`spectrogram_${card.id}.wav`}
-                        style={{
-                          position: 'absolute', top: 10, left: 10,
-                          zIndex: 60, background: 'rgba(10,10,10,0.9)',
-                          border: '1px solid #333', color: '#c6a45f', padding: '6px 8px',
-                          borderRadius: 4, fontSize: 12, textDecoration: 'none',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.6)'
-                        }}
-                      >
-                        🎧 WAV
-                      </a>
-                    );
-                  })()}
-                  {
-                    (() => {
-                      // compute pointer position relative to this card in element pixels
-                      let pointerLocal = undefined as undefined | { x: number; y: number; over: boolean };
-                      if (overlayPos && overlayPos.over) {
-                        const elScreenX = (pos.x - origin.x) * zoom; // px inside board rect
-                        const elScreenY = (pos.y - origin.y) * zoom;
-                        pointerLocal = { x: overlayPos.x - elScreenX, y: overlayPos.y - elScreenY, over: overlayPos.over };
-                      }
-                      const isLockedForUser = Boolean(card?.is_locked) && !canEdit;
-                      const person = card && card.metadata && (card.metadata.person || null);
-                      if (isLockedForUser) {
-                        return (
-                          <div className="card-photo" style={{
-                            backgroundImage: 'none',
-                            backgroundColor: '#000',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: '100%', height: '100%'
-                          }}>
-                            <div style={{ color: '#e74c3c', fontSize: 32, textShadow: '0 0 10px red' }}>🔒</div>
-                          </div>
-                        );
-                      }
-
-                      if (person) {
-                        // Person-style card
-                        return (
-                          <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8 }}>
-                            <div style={{ width: 140, height: 140, backgroundImage: person.photo ? `url(${person.photo})` : `url(${card.image_url || ''})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: person.status === 'DEAD' ? 'grayscale(1) contrast(1.1)' : 'none', border: '2px solid #222', boxShadow: '0 6px 18px rgba(0,0,0,0.6)' }} />
-                            <div style={{ color: '#ddd', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <div style={{ fontSize: 16, fontWeight: 800 }}>{person.name || card.title}</div>
-                              <div style={{ fontSize: 12, color: '#aaa' }}>{person.occupation || card.description_public}</div>
-                              <div style={{ marginTop: 8 }}>
-                                <span style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4, background: person.status === 'DEAD' ? '#3a0b0b' : '#113322', color: '#fff' }}>{person.status || 'DESCONHECIDO'}</span>
-                              </div>
-                            </div>
-                            {person.status === 'DEAD' && (
-                              <div style={{ position: 'absolute', top: 10, left: 10, transform: 'rotate(-18deg)', color: '#c0392b', fontWeight: 900, fontSize: 22, opacity: 0.9 }}>ÓBITO</div>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      // default image + audio behavior
-                      return (
-                        <>
-                          <MysteryImage baseSrc={card.image_url} hiddenSrc={card.image_uv_url} isUVMode={isUV} pointerLocal={pointerLocal} />
-                          {/* Hidden audio elements so AudioLab can attach to them externally */}
-                          <audio id={`card-base-${card.id}`} src={card.audio_url || (card.metadata && card.metadata.spectrogram_url) || ''} crossOrigin="anonymous" style={{ display: 'none' }} />
-                          {card.audio_hidden_url && <audio id={`card-hidden-${card.id}`} src={card.audio_hidden_url} crossOrigin="anonymous" style={{ display: 'none' }} />}
-                        </>
-                      );
-                    })()
-                  }
+                <div style={{ width: 280 }}>
+                  <EvidenceCard
+                    id={card.id}
+                    image={card.image_url}
+                    hiddenSrc={card.image_uv_url}
+                    title={card.title}
+                    isUV={isUV}
+                    status={(card?.metadata || {})?.status || null}
+                    locked={Boolean(
+                      card?.is_locked === true || card?.is_locked === 1 || (typeof card?.is_locked === 'string' && ['true','t','1'].includes(String(card.is_locked).toLowerCase())) || card?.lock_password
+                    )}
+                    isGameMaster={isGameMaster}
+                    hasRecord={Boolean(card?.metadata && (card.metadata.type === 'person' || card.metadata.person || card.metadata.person_meta))}
+                    fileType={
+                      card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)) ? 'video' :
+                      (card?.metadata && (card.metadata.audio || card.metadata.audio_url)) ? 'audio' :
+                      card?.image_url ? 'image' : 'text'
+                    }
+                    hasUV={Boolean(card?.image_uv_url)}
+                    hasHiddenAudio={Boolean(card?.audio_hidden_url || (card?.metadata && (card.metadata.audio_hidden_url || card.metadata.audio_hidden)))}
+                    hasAudio={Boolean(card?.audio_url || (card?.metadata && (card.metadata.audio || card.metadata.audio_url)))}
+                    hasVideo={Boolean(card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)))}
+                    hasChat={Boolean(card?.chat_data || (card?.metadata && (card.metadata.chat_data || card.metadata.chat)))}
+                    hasThermal={Boolean(card?.metadata && card.metadata.thermal)}
+                    hasStamp={Boolean(card?.stamp_text || (card?.metadata && card.metadata.stamp_text))}
+                    hasExternalLink={Boolean(card?.metadata && card.metadata.external_link)}
+                    onToggleStatus={async (newStatus) => {
+                      // map directly to existing toggle function
+                      try {
+                        await toggleCardStatus(card.id, newStatus as any, []);
+                      } catch (e) { console.error('toggle from EvidenceCard failed', e); }
+                    }}
+                    onOpen={() => { try { const center = getCardCenter(card.id); if (center) panToPosition(center.x, center.y); } catch {} setInspectCard(card); }}
+                  />
                 </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '0 4px' }}>
-                      <div className="card-title">{card.title}</div>
-                      {card.description_public && <div className="card-desc">{card.description_public}</div>}
-                    </div>
-
-                    <div className="quick-actions">
-                      <button
-                        className="qa-btn"
-                        title="Abrir"
-                        onClick={(e) => { e.stopPropagation(); try { const center = getCardCenter(card.id); if (center) panToPosition(center.x, center.y); } catch {} setInspectCard(card); }}
-                      >📂</button>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className={`qa-btn mark-true ${((card?.metadata || {})?.status === 'verified') ? 'active-true' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'verified', []); }}>✔</button>
-                        <button className={`qa-btn mark-theory ${((card?.metadata || {})?.status === 'theory') ? 'active-theory' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'theory', []); }}>?</button>
-                        <button className={`qa-btn mark-false ${((card?.metadata || {})?.status === 'false') ? 'active-false' : ''}`} onClick={(e) => { e.stopPropagation(); toggleCardStatus(card.id, 'false', []); }}>✖</button>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      position:'absolute', top: -10, left: '50%', transform:'translateX(-50%)',
-                      width: 20, height: 40, background: '#888', borderRadius: 10, zIndex: 5,
-                      boxShadow: '1px 1px 3px rgba(0,0,0,0.5)'
-                    }} />
               </div>
             );
           })}
@@ -1777,7 +1789,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         }}
       />
 
-      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={canEdit} />
+      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
       {sketchOpen && (
         <Sketchpad
           initialData={sketchInitialData || undefined}

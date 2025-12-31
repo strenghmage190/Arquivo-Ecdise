@@ -10,7 +10,7 @@ interface Props {
   onClose: () => void;
   investigationId: string;
   existing?: InvestigationCard;
-  onSaved?: (card: any) => void;
+  onSaved?: (card?: Record<string, any> | null) => void;
   isGameMaster?: boolean;
 }
 
@@ -194,7 +194,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                       ))}
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <select value={newMsgSender} onChange={e => setNewMsgSender(e.target.value as any)} style={{ width: 100 }}>
+                      <select value={newMsgSender} onChange={e => setNewMsgSender(e.target.value as 'me' | 'them')} style={{ width: 100 }}>
                         <option value="them">Contato</option>
                         <option value="me">Eu</option>
                       </select>

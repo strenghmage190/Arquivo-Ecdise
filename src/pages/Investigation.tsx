@@ -27,37 +27,49 @@ export default function Investigation() {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0a0a0a', color: '#fff', fontFamily: 'monospace'
-      }}>
-        <div className="loading-spinner" />
-        <h2 style={{marginTop: 20, color: '#b33', letterSpacing: 2}}>ACESSANDO ARQUIVOS DA ORDEM...</h2>
-        <p style={{color: '#555'}}>Aguarde, calibrando a Membrana...</p>
+      <div className="nexus-page" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>
+        <div style={{textAlign:'center'}}>
+          <div className="loading-spinner" />
+          <h2 style={{marginTop:16, color:'var(--nexus-blue)', letterSpacing:2}}>ACESSANDO ARQUIVOS DA ORDEM...</h2>
+          <p style={{color:'var(--muted)'}}>Aguarde, calibrando a Membrana...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0a0a0a', color: '#fff', fontFamily: 'monospace'
-      }}>
-        <h2 style={{color: '#b33'}}>ACESSO NEGADO</h2>
-        <p style={{color: '#555'}}>{error}</p>
-        <button onClick={() => navigate('/')} style={{ marginTop: 12, padding: '8px 12px', background: '#b33', color: '#fff', border: 'none', cursor: 'pointer' }}>Voltar</button>
+      <div className="nexus-page" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>
+        <div style={{textAlign:'center', color:'var(--nexus-blue)'}}>
+          <h2 style={{color:'var(--nexus-glitch)'}}>ACESSO NEGADO</h2>
+          <p style={{color:'var(--muted)'}}>{error}</p>
+          <button onClick={() => navigate('/')} className="btn-cancel" style={{marginTop:12}}>Voltar</button>
+        </div>
       </div>
     );
   }
 
-  if (!investigation) return <div className="container">Caso não encontrado.</div>;
+  if (!investigation) return <div className="nexus-page"><div className="container">Caso não encontrado.</div></div>;
 
   return (
-    <div className="container">
-      <h1>{investigation.title}</h1>
-      <p>{investigation.description}</p>
-      <InvestigationBoard investigationId={id as string} />
+    <div className="nexus-page container">
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+        <div>
+          <h1 style={{margin:0, color:'#dff'}}>{investigation.title}</h1>
+          <div style={{color:'var(--muted)', fontSize:13}}>{new Date(investigation.created_at).toLocaleString()}</div>
+        </div>
+        <div>
+          <button className="btn-cancel" onClick={() => navigate('/')}>← ARQUIVOS</button>
+        </div>
+      </div>
+
+      <div style={{marginTop:18}}>
+        <p style={{color:'var(--muted)'}}>{investigation.description}</p>
+      </div>
+
+      <div style={{marginTop:20}}>
+        <InvestigationBoard investigationId={id as string} />
+      </div>
     </div>
   );
 }

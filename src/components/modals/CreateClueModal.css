@@ -79,187 +79,66 @@
   font-family: 'Special Elite', cursive; color: #f2f2f2; font-size: 22px; margin: 0;
   letter-spacing: 1px;
 }
-.top-actions .btn-close {
-  background: none; border: none; color: #666; font-size: 24px; cursor: pointer;
-}
-.top-actions .btn-close:hover { color: #fff; }
+/* nexus styles moved to global stylesheet; top-level rules below */
 
-/* Corpo do Formulário */
-.dossier-body {
-  padding: 30px; color: #ddd; display: flex; flex-direction: column; gap: 22px;
-}
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,8,10,0.75); backdrop-filter: blur(6px);
+    z-index: 10000; display: flex; align-items: center; justify-content: center;
+  }
 
-.form-row { display: flex; gap: 24px; flex-wrap: wrap; }
-.col { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 15px; }
+  .modal-dossier {
+    width: 94%; max-width: 1200px;
+    max-height: 92vh; overflow-y: auto;
+    background: rgba(5,8,10,0.55); border: 1px solid rgba(0,243,255,0.08);
+    border-radius: 8px; box-shadow: 0 10px 60px rgba(0,0,0,0.85);
+    display: flex; flex-direction: column; color:#dff; font-family: 'Share Tech Mono', monospace;
+  }
 
-/* Inputs Modernos */
-label {
-  font-size: 12px; font-weight: 600; color: #cfcfcf; text-transform: none;
-  letter-spacing: 0.4px; margin-bottom: 6px; display: block;
-}
+  .tabs-header {
+    display: flex; gap:8px; padding:8px; background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0)); border-bottom:1px solid rgba(0,243,255,0.04);
+  }
+  .tab-btn { flex:1; padding:10px 12px; background:transparent; color:var(--muted); border:none; border-radius:6px; cursor:pointer; font-weight:700; }
+  .tab-btn.active { color:#051018; background:var(--nexus-blue); box-shadow: 0 8px 28px rgba(0,243,255,0.06); }
 
-input[type="text"], textarea, input[type="range"], input {
-  background: #0a0a0a; border: 1px solid #333; color: #e6e6e6;
-  padding: 10px; font-family: 'Roboto Mono', monospace; font-size: 13px;
-  width: 100%; box-sizing: border-box; transition: border 0.2s;
-}
-input:focus, textarea:focus { outline: none; border-color: #c6a45f; }
+  .tab-content { padding:18px; height:60vh; overflow:auto; }
+  .field-block { margin-bottom:18px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.06)); padding:12px; border-radius:6px; border:1px solid rgba(0,243,255,0.03); }
+  .field-title { color:var(--nexus-blue); font-size:11px; font-weight:700; margin-bottom:8px; display:block; }
 
-/* Seções Visuais (Group Boxes) */
-.evidence-group {
-  border: 1px dashed #333; padding: 15px; background: #151515; position: relative;
-  border-radius: 4px;
-}
+  .dossier-body { padding: 20px; color:#dff; display:flex; flex-direction:column; gap:16px; }
+  .form-row { display:flex; gap:16px; flex-wrap:wrap; }
+  .col { flex:1; min-width:240px; display:flex; flex-direction:column; gap:12px; }
 
-/* Espaçamento entre grupos para melhor leitura */
-.evidence-group { margin-bottom: 20px; }
+  label { font-size:12px; color:var(--muted); margin-bottom:6px; display:block; }
+  input[type="text"], textarea, input[type="range"], input { background: transparent; border:1px solid rgba(255,255,255,0.03); color:#eaf; padding:10px; font-family:inherit; font-size:13px; width:100%; box-sizing:border-box; }
+  input:focus, textarea:focus { outline: none; border-color: var(--nexus-blue); box-shadow: 0 0 10px rgba(0,243,255,0.06); }
 
-/* Botões de carimbo */
-.btn-stamp {
-  background: transparent;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.04);
-  padding: 6px 10px;
-  font-family: 'Special Elite', cursive;
-  cursor: pointer;
-  transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-.btn-stamp:hover { transform: translateY(-2px); }
-.btn-stamp.active {
-  border-color: #e74c3c;
-  color: #e74c3c;
-  box-shadow: 0 6px 18px rgba(199,44,44,0.12);
-}
-.group-title {
-  position: absolute; top: -10px; left: 10px;
-  background: #111; padding: 0 5px;
-  color: #888; font-size: 10px; font-weight: bold;
-}
+  .evidence-group { border:1px dashed rgba(0,243,255,0.03); padding:12px; background: rgba(255,255,255,0.01); border-radius:6px; }
 
-/* Upload Buttons */
-.upload-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  background: linear-gradient(180deg,#1a1a1a,#141414); border: 1px solid #2b2b2b; color: #ddd;
-  padding: 8px 10px; cursor: pointer; font-size: 13px; transition: all 0.12s ease;
-  border-radius: 6px;
-}
-.upload-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
-.file-status { font-size: 10px; color: #c6a45f; margin-left: 8px; }
+  .btn-stamp { background:transparent; border-radius:4px; border:1px solid rgba(255,255,255,0.03); padding:6px 10px; cursor:pointer; }
+  .btn-stamp.active { border-color: var(--nexus-glitch); color: var(--nexus-glitch); box-shadow: 0 8px 18px rgba(255,0,60,0.06); }
 
-/* Range Slider */
-input[type=range] { width: 100%; accent-color: #b33; margin-top: 5px; }
+  .upload-btn { display:inline-flex; align-items:center; gap:8px; background: rgba(0,0,0,0.2); border:1px solid rgba(0,243,255,0.04); color:var(--nexus-blue); padding:8px 10px; border-radius:6px; cursor:pointer; }
+  .upload-btn:hover { transform: translateY(-2px); }
+  .file-status { font-size:11px; color:var(--nexus-blue); margin-left:8px; }
 
-/* Footer */
-.dossier-footer {
-  background: #161616; padding: 15px 25px;
-  border-top: 1px solid #333; display: flex; justify-content: flex-end; gap: 15px;
-}
+  input[type=range] { width:100%; accent-color: var(--nexus-blue); }
 
-/* Standardizar selects, checkboxes e radios usados no modal */
-select {
-  background: #0a0a0a;
-  border: 1px solid #333;
-  color: #e6e6e6;
-  padding: 8px 10px;
-  font-family: 'Roboto Mono', monospace;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 4px;
-  appearance: none;
-}
+  .dossier-footer { background: rgba(0,0,0,0.06); padding:12px 18px; border-top:1px solid rgba(0,243,255,0.03); display:flex; justify-content:flex-end; gap:12px; }
 
-/* Custom styled checkboxes & radios to match modal theme */
-input[type="checkbox"], input[type="radio"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  display: inline-block;
-  vertical-align: middle;
-  margin: 0 8px 0 0;
-  border: 1px solid #333;
-  background: #0a0a0a;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
+  select { background: transparent; border:1px solid rgba(255,255,255,0.03); color:#eaf; padding:8px 10px; border-radius:6px; }
 
-input[type="checkbox"] { border-radius: 4px; }
-input[type="radio"] { border-radius: 50%; }
+  input[type="checkbox"], input[type="radio"] { width:18px; height:18px; appearance:none; border:1px solid rgba(255,255,255,0.03); background:transparent; border-radius:4px; position:relative; cursor:pointer; }
+  input[type="checkbox"]:checked { background: var(--nexus-blue); border-color: var(--nexus-blue); }
+  input[type="radio"] { border-radius:50%; }
+  input[type="radio"]:checked { background: var(--nexus-blue); border-color: var(--nexus-blue); }
 
-input[type="checkbox"]::after,
-input[type="radio"]::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0.7);
-  opacity: 0;
-  transition: all 0.12s ease;
-}
+  label.inline { display:inline-flex; align-items:center; gap:8px; }
 
-input[type="checkbox"]:checked {
-  background: linear-gradient(180deg,#c6a45f,#a9803a);
-  border-color: #c6a45f;
-  box-shadow: 0 6px 14px rgba(198,164,95,0.12);
-}
-input[type="checkbox"]:checked::after {
-  content: '✓';
-  color: #111;
-  font-weight: 800;
-  font-size: 12px;
-  opacity: 1;
-}
+  .btn-cancel { background: transparent; border:1px solid rgba(255,255,255,0.03); color:var(--muted); padding:8px 14px; border-radius:6px; }
+  .btn-save { background: linear-gradient(180deg,var(--nexus-blue), rgba(0,243,255,0.6)); border:none; color:#051018; padding:8px 18px; font-weight:800; border-radius:6px; }
 
-input[type="radio"]:checked {
-  border-color: #c6a45f;
-  background: linear-gradient(180deg,#1f1f1f,#0b0b0b);
-}
-input[type="radio"]:checked::after {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #c6a45f;
-  opacity: 1;
-}
+  .image-preview-box { width:100%; height:180px; background: rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.02); margin-top:8px; background-size:contain; background-position:center; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.06); }
+  .qr-preview { width:110px; height:110px; background: rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; }
 
-input[type="checkbox"]:hover, input[type="radio"]:hover { border-color: #c6a45f; }
-input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid rgba(198,164,95,0.12); outline-offset: 2px; }
-
-/* Align labels that wrap inline inputs */
-label { display: inline-flex; align-items: center; gap: 8px; }
-
-/* Make file inputs compact when shown (text next to upload button) */
-.file-status { display: inline-flex; align-items: center; gap: 8px; }
-
-
-.btn-cancel {
-  background: transparent; border: 1px solid #444; color: #888;
-  padding: 8px 16px; cursor: pointer;
-}
-.btn-save {
-  background: linear-gradient(180deg,#c6a45f,#a9803a); border: none; color: #111;
-  padding: 8px 22px; font-weight: 800; cursor: pointer; letter-spacing: 0.6px; border-radius: 6px;
-}
-.btn-save:hover { filter: brightness(1.03); box-shadow: 0 8px 28px rgba(198,164,95,0.14); }
-
-/* Mini Thumb do Preview */
-.image-preview-box {
-  width: 100%; height: 180px;
-  background-color: #000; border: 1px solid #333;
-  margin-top: 8px; background-size: contain; background-repeat: no-repeat; background-position: center;
-  display: flex; align-items: center; justify-content: center; color: #333; font-size: 24px;
-}
-
-.qr-preview {
-  width: 110px; height: 110px; background: #0b0b0b; border: 1px solid #222; display:flex; align-items:center; justify-content:center;
-}
-.qr-preview img { width: 100%; height: 100%; object-fit: contain; display:block }
-
-/* Make modal wider on very large screens */
-@media (min-width: 1400px) {
-  .modal-dossier { max-width: 1400px; }
-  .dossier-body { padding: 36px; }
-  .image-preview-box { height: 220px; }
-}
+  @media (min-width:1400px) { .modal-dossier{ max-width:1400px } .dossier-body{ padding:28px } .image-preview-box{ height:220px } }

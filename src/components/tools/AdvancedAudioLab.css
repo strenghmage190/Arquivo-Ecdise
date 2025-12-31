@@ -1,0 +1,29 @@
+.advanced-audio-root { background:#0a0a0a; border:1px solid #333; padding:12px }
+.advanced-controls { display:flex; gap:12px; align-items:center; margin-top:12px }
+.adv-btn { background:#222; border:1px solid #444; color:#fff; padding:6px 12px; cursor:pointer }
+.adv-btn.toggle { background:#333 }
+.adv-time { margin-left:auto; font-family:monospace; color:#00ffaa; font-weight:700 }
+
+/* Spectrogram layout: base is full width, overlay sits absolutely on top */
+#advanced-spectrogram-base { position: relative; z-index: 10; }
+#advanced-spectrogram-base canvas { width: 100% !important; height: 150px !important; display: block; }
+#advanced-spectrogram-overlay { z-index: 20; pointer-events: none; opacity: 1; }
+#advanced-spectrogram-overlay canvas { height: 150px !important; display: block; }
+
+/* allow overlay to be semi-transparent if needed (user can toggle) */
+.spectrogram-overlay-hidden { opacity: 0.0 !important; }
+
+/* overlay highlight styling */
+.spectrogram-overlay-highlight {
+	box-shadow: inset 0 0 0 2px rgba(0, 255, 170, 0.06), 0 6px 20px rgba(0, 255, 170, 0.03);
+	border-left: 2px solid rgba(0,255,170,0.06);
+}
+
+/* small tweaks for the opacity slider inside controls */
+.advanced-controls input[type=range] { width: 140px; }
+.advanced-controls label { font-size: 12px; }
+
+/* make overlay canvas visually stronger for inspection */
+#advanced-spectrogram-overlay { mix-blend-mode: screen; filter: contrast(1.2) brightness(1.05) saturate(1.15); }
+#advanced-spectrogram-overlay canvas { mix-blend-mode: screen; filter: contrast(1.2) brightness(1.05) saturate(1.15); }
+#advanced-spectrogram-overlay.grabbing { cursor: grabbing; }

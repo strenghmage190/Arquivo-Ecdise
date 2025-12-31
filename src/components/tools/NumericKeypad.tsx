@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 
-export default function NumericKeypad({ code, onUnlock }: any) {
-  const [input, setInput] = useState('');
+interface NumericKeypadProps {
+  code: string | number;
+  onUnlock?: () => void;
+}
+
+export default function NumericKeypad({ code, onUnlock }: NumericKeypadProps) {
+  const [input, setInput] = useState<string>('');
   const [status, setStatus] = useState<'locked' | 'error' | 'success'>('locked');
 
   const handlePress = (num: string) => {
@@ -11,7 +16,7 @@ export default function NumericKeypad({ code, onUnlock }: any) {
   };
 
   const handleEnter = () => {
-    if (input === code) {
+    if (input === String(code)) {
       setStatus('success');
       setTimeout(() => { onUnlock && onUnlock(); }, 500);
     } else {

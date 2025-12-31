@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-interface Props {
+interface ChannelIsolatorProps {
   imageSrc: string;
   className?: string;
   style?: React.CSSProperties;
@@ -12,8 +12,8 @@ export default function ChannelIsolator({
   className = '',
   style = {},
   activeChannel = 'all'
-}: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+}: ChannelIsolatorProps): React.ReactElement {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const cvs = canvasRef.current;
@@ -22,8 +22,8 @@ export default function ChannelIsolator({
     if (!ctx) return;
 
     const img = new Image();
-    img.src = imageSrc;
     img.crossOrigin = 'anonymous';
+    img.src = imageSrc;
 
     img.onload = () => {
       cvs.width = img.width;

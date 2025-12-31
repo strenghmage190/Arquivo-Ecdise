@@ -15,7 +15,7 @@ export async function imageToAudioBuffer(
   const audioBuffer = ctx.createBuffer(1, totalSamples, sampleRate);
   const channelData = audioBuffer.getChannelData(0);
 
-  const imgCtx = canvas.getContext('2d');
+  const imgCtx = canvas.getContext('2d', { willReadFrequently: true });
   if (!imgCtx) throw new Error('Canvas 2D context not available');
   const imgData = imgCtx.getImageData(0, 0, canvas.width, canvas.height);
   const width = canvas.width;

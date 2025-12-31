@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './StickyNote.css';
 
+interface StickyNoteData {
+  id: string;
+  x?: number;
+  y?: number;
+  content?: string;
+  color?: string;
+}
+
 interface Props {
-  note: any;
+  note: StickyNoteData;
   onUpdate: (id: string, content: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onDelete: (id: string) => void;
@@ -17,10 +25,17 @@ export default function StickyNote({ note, onUpdate, onMove, onDelete }: Props) 
   useEffect(() => { setLocalContent(note.content || ''); }, [note.content]);
 
   useEffect(() => {
-    const handleMove = (e: any) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!dragging) return;
-      const clientX = (e as any).clientX ?? ((e as any).touches && (e as any).touches[0]?.clientX);
-      const clientY = (e as any).clientY ?? ((e as any).touches && (e as any).touches[0]?.clientY);
+      let clientX: number | undefined;
+      let clientY: number | undefined;
+      if ('clientX' in e) {
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
+      } else if ((e as TouchEvent).touches && (e as TouchEvent).touches.length > 0) {
+        clientX = (e as TouchEvent).touches[0].clientX;
+        clientY = (e as TouchEvent).touches[0].clientY;
+      }
       if (clientX == null || clientY == null) return;
       const board = ref.current?.offsetParent as HTMLElement | null;
       if (!board) return;
@@ -31,13 +46,13 @@ export default function StickyNote({ note, onUpdate, onMove, onDelete }: Props) 
     };
 
     const handleUp = () => setDragging(false);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('touchmove', handleMove, { passive: false } as any);
+    window.addEventListener('mousemove', handleMove as EventListener);
+    window.addEventListener('touchmove', handleMove as EventListener, { passive: false });
     window.addEventListener('mouseup', handleUp);
     window.addEventListener('touchend', handleUp);
     return () => {
       window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('touchmove', handleMove as any);
+      window.removeEventListener('touchmove', handleMove as EventListener);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchend', handleUp);
     };
@@ -45,8 +60,16 @@ export default function StickyNote({ note, onUpdate, onMove, onDelete }: Props) 
 
   const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
-    const clientX = (e as any).clientX ?? ((e as any).touches && (e as any).touches[0]?.clientX);
-    const clientY = (e as any).clientY ?? ((e as any).touches && (e as any).touches[0]?.clientY);
+    let clientX: number | undefined;
+    let clientY: number | undefined;
+    const ev = e as unknown as MouseEvent | TouchEvent;
+    if ('clientX' in ev) {
+      clientX = (ev as MouseEvent).clientX;
+      clientY = (ev as MouseEvent).clientY;
+    } else if ((ev as TouchEvent).touches && (ev as TouchEvent).touches.length > 0) {
+      clientX = (ev as TouchEvent).touches[0].clientX;
+      clientY = (ev as TouchEvent).touches[0].clientY;
+    }
     const board = ref.current?.offsetParent as HTMLElement | null;
     if (!board || clientX == null || clientY == null) return;
     const rect = board.getBoundingClientRect();

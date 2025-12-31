@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import InvestigationPage from './pages/Investigation';
 import InvitePage from './pages/Invite';
+import SystemOverlays from './components/ui/SystemOverlays';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             />
           </Routes>
         </div>
+          <SystemOverlays />
       </BrowserRouter>
     </AuthProvider>
   );

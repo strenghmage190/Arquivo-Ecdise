@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './SystemTerminal.css';
 
-export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: any) {
+interface SystemTerminalProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  cards?: Array<any>;
+  onOpenCard?: (card: any) => void;
+}
+
+export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: SystemTerminalProps) {
   const [history, setHistory] = useState<string[]>(['C.R.I.S. TERMINAL [VERSÃO 4.0.2]', 'DIGITE "HELP" PARA AJUDA.']);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement | null>(null);

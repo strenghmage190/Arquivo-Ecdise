@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
 import HackingTerminal from '../tools/HackingTerminal';
-import AudioDecrypter from '../tools/AudioDecrypter';
-import AudioLab from '../tools/AudioLab';
+import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import ChannelIsolator from '../tools/ChannelIsolator';
 import HexViewer from '../tools/HexViewer';
 import PhoneViewer from '../tools/PhoneViewer';
+import CCTVPlayer from '../tools/CCTVPlayer';
 import DecipherLens from '../tools/DecipherLens';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import './InspectionModal.css';
 import { supabase } from '../../supabaseClient';
+import { uploadInvestigationFile } from '../../utils/storage';
+import { updateInvestigationCard } from '../../api/investigations';
 
 interface Props {
   isOpen: boolean;
@@ -43,7 +45,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
-  const [showAudio, setShowAudio] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [fullscreenOnlyTreatment, setFullscreenOnlyTreatment] = useState(false);
+  // audio handled as a visual mode tab now
   const [localThermal, setLocalThermal] = useState(false);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
@@ -73,23 +77,37 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
   const [puzzleSolved, setPuzzleSolved] = useState(false);
   const fileRef = React.useRef<HTMLDivElement | null>(null);
+  const thermalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
   const [serverCard, setServerCard] = useState<any | null>(null);
   const [showMoreTools, setShowMoreTools] = useState(false);
+  const [videoUploadingInspection, setVideoUploadingInspection] = useState(false);
+  // Novo estado: expande a área de áudio (modo "cinema")
+  const [audioExpanded, setAudioExpanded] = useState(false);
 
   // Controle de qual ferramenta visual está ativa
   // 'image' | 'phone' | 'forense' | ...
-  const getInitialMode = () => {
-     if (card?.metadata?.type === 'phone' || card?.metadata?.chat_data) return 'phone';
-     return 'image';
-  };
-  const [visualMode, setVisualMode] = useState(getInitialMode());
+  const [visualMode, setVisualMode] = useState<string>('image');
 
   // Atualiza o modo visual quando o cartão muda (garante que PhoneViewer apareça se houver chat)
   React.useEffect(() => {
-    setVisualMode(getInitialMode());
+    try {
+      if (card?.metadata?.type === 'phone' || card?.metadata?.chat_data) setVisualMode('phone');
+      else if (card?.video_url) setVisualMode('video');
+      else if ((card?.audio_url || (card?.metadata && (card.metadata.audio || card.metadata.audio_url))) && !card?.image_url) setVisualMode('audio');
+      else setVisualMode('image');
+    } catch (e) { setVisualMode('image'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card]);
+
+  // Se o usuário mudar de aba visual ou fechar o modal, assegura que o modo de áudio expandido seja resetado
+  React.useEffect(() => {
+    if (!isOpen && audioExpanded) setAudioExpanded(false);
+  }, [isOpen, audioExpanded]);
+
+  React.useEffect(() => {
+    if (visualMode !== 'audio' && audioExpanded) setAudioExpanded(false);
+  }, [visualMode, audioExpanded]);
 
   // initialize localThermal from card metadata when card changes
   React.useEffect(() => {
@@ -117,6 +135,97 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   }, [isOpen]);
 
+  // Render thermal canvas when enabled
+  React.useEffect(() => {
+    const canvas = thermalCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    if (!localThermal) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    // Use the visible base image for thermal rendering; fall back to UV-only layer if base missing
+    const imgSrc = (card && (card.image_url || card.image_uv_url)) || null;
+    if (!imgSrc) return;
+
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = imgSrc;
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const visual = fileRef.current?.querySelector('.inspect-visual-area') as HTMLElement | null;
+        // Use intrinsic image resolution for canvas backing store to preserve aspect ratio and detail
+        const naturalW = img.naturalWidth || img.width || 1024;
+        const naturalH = img.naturalHeight || img.height || 768;
+        canvas.width = Math.max(1, naturalW);
+        canvas.height = Math.max(1, naturalH);
+        // Ensure canvas element scales to fit the visual container without distorting
+        try {
+          canvas.style.maxWidth = '100%';
+          canvas.style.maxHeight = '100%';
+          canvas.style.width = 'auto';
+          canvas.style.height = '100%';
+          canvas.style.left = '50%';
+          canvas.style.top = '50%';
+          canvas.style.transform = 'translate(-50%, -50%)';
+        } catch (e) {}
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        // IRONBOW mapping (tactical thermal palette)
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          const val = (r + g + b) / 3; // 0..255
+
+          let red = 0, green = 0, blue = 0;
+
+          if (val < 85) {
+            // 0-85: Preto -> Roxo escuro
+            const t = val / 85; // 0..1
+            red = Math.round((t * 70));
+            green = 0;
+            blue = Math.round((t * 100));
+          } else if (val < 170) {
+            // 86-170: Roxo -> Vermelho/Vermelho forte
+            const t = (val - 85) / 85; // 0..1
+            red = Math.round(70 + (t * (255 - 70)));
+            green = 0;
+            blue = Math.round(100 - (t * 100));
+          } else {
+            // 171-255: Vermelho -> Amarelo -> Branco
+            const t = (val - 170) / 85; // 0..1
+            red = 255;
+            green = Math.round(t * 255);
+            blue = Math.round(t * 255);
+          }
+
+          // clamp and write back
+          data[i] = Math.max(0, Math.min(255, red));
+          data[i + 1] = Math.max(0, Math.min(255, green));
+          data[i + 2] = Math.max(0, Math.min(255, blue));
+          // keep alpha untouched (data[i+3])
+        }
+        ctx.putImageData(imageData, 0, 0);
+        ctx.globalCompositeOperation = 'lighter';
+        const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        grad.addColorStop(0, 'rgba(255,80,20,0.06)');
+        grad.addColorStop(1, 'rgba(255,255,255,0.02)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';
+      } catch (e) {
+        // ignore
+      }
+    };
+    return () => { cancelled = true; };
+  }, [localThermal, card]);
+
   // Lock body scroll while the modal is open and focus the modal for accessibility
   React.useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -133,6 +242,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     if (!isOpen || !(card || serverCard)) return null;
 
     const currentCard = serverCard || card;
+
+    const cardLocked = isCardLocked(currentCard);
+    const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
 
     // Renderizador inteligente da Área Visual
     const renderVisualContent = () => {
@@ -177,20 +289,185 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         );
       }
 
+      // If shredded, show puzzle
+      if (currentCard.is_shredded) {
+        return (
+          <ShredderPuzzle
+            imgSrc={currentCard.image_url}
+            rows={currentCard.metadata?.shred_rows || 1}
+            cols={currentCard.metadata?.shred_cols || 8}
+            onSolved={() => setPuzzleSolved(true)}
+            isGameMaster={isGameMaster}
+          />
+        );
+      }
+
       // visualMode === 'image'
+      if (visualMode === 'video' && currentCard.video_url) {
+        // Handlers to replace/remove video attached to this card
+        const handleReplaceVideo = async (file: File) => {
+          try {
+            if (!currentCard || !currentCard.investigation_id) return alert('Investigation id ausente');
+            setVideoUploadingInspection(true);
+            const ext = file.name.split('.').pop() || 'mp4';
+            const publicUrl = await uploadInvestigationFile(file, currentCard.investigation_id, ext);
+            if (!publicUrl) throw new Error('Falha ao enviar vídeo');
+            const updated = await updateInvestigationCard(currentCard.id, { video_url: publicUrl });
+            setServerCard(updated);
+          } catch (err) {
+            console.error('Erro substituindo vídeo', err);
+            alert('Falha ao substituir vídeo');
+          } finally {
+            setVideoUploadingInspection(false);
+          }
+        };
+
+        const handleRemoveVideo = async () => {
+          try {
+            if (!currentCard) return;
+            if (!confirm('Remover vídeo anexado deste cartão?')) return;
+            setVideoUploadingInspection(true);
+            const updated = await updateInvestigationCard(currentCard.id, { video_url: null });
+            setServerCard(updated);
+          } catch (err) {
+            console.error('Erro removendo vídeo', err);
+            alert('Falha ao remover vídeo');
+          } finally {
+            setVideoUploadingInspection(false);
+          }
+        };
+
+        return (
+          <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#000'}}>
+            <CCTVPlayer src={currentCard.video_url} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
+          </div>
+        );
+      }
+
+      // audio visual mode
+      if (visualMode === 'audio') {
+        const meta = (currentCard.metadata && typeof currentCard.metadata === 'object')
+          ? currentCard.metadata
+          : (typeof currentCard.metadata === 'string' ? (() => { try { return JSON.parse(currentCard.metadata); } catch { return {}; } })() : {});
+        const audioSrc = currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+        const audioHidden = currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
+        const audioFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
+
+        if (!audioSrc) {
+          return (<div style={{ color:'#ccc', padding:20 }}>Nenhum arquivo de áudio encontrado para esta evidência.</div>);
+        }
+
+        return (
+          <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'stretch', justifyContent:'flex-start', background:'#000', padding:20, boxSizing:'border-box'}}>
+            <div style={{marginBottom:12, display:'flex', alignItems:'center', gap:12}}>
+              <div style={{color:'#ccc', fontSize:13}}>Clique em ▶ para reproduzir; use o painel abaixo para análise avançada.</div>
+            </div>
+            <div style={{flex:1, minHeight:220}}>
+              <AdvancedAudioLab 
+                baseSrc={String(audioSrc)}
+                hiddenSrc={audioHidden ? String(audioHidden) : undefined}
+                triggerTime={meta?.audio_config?.trigger_time}
+              />
+            </div>
+          </div>
+        );
+      }
+
       if (currentCard.image_url) {
         return (
-          <MysteryImage
-            baseSrc={currentCard.image_url}
-            hiddenSrc={currentCard.image_uv_url}
-            filterLayerSrc={currentCard.image_filter_layer}
-            filters={{ brightness, contrast, saturate: saturation }}
-            isUVMode={localUV}
-            fit="contain"
-            className="large-evidence-img"
-            style={{ height: '100%', width: '100%' }}
-            forensicChannel={forensicChannel}
-          />
+          <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
+            <div className="grid-overlay" aria-hidden />
+
+            {(() => {
+              // safe-parse metadata.image_filter_reveal which may be stored as object or JSON string
+              let reveal: any = null;
+              try {
+                const m = currentCard.metadata && typeof currentCard.metadata === 'object'
+                  ? currentCard.metadata
+                  : (typeof currentCard.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
+                reveal = m?.image_filter_reveal ?? null;
+              } catch (e) { reveal = null; }
+              return (
+                <>
+                  <MysteryImage
+                    baseSrc={currentCard.image_url}
+                    hiddenSrc={currentCard.image_uv_url}
+                    filterLayerSrc={currentCard.image_filter_layer}
+                    filters={{ brightness, contrast, saturate: saturation }}
+                    revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                    isUVMode={localUV}
+                    fit="contain"
+                    className="large-evidence-img"
+                    style={{ height: '100%', width: '100%' }}
+                    forensicChannel={forensicChannel}
+                  />
+                  {fullscreenOpen && createPortal(
+                    <div style={{position:'fixed', inset:0, zIndex:30000, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column'}} onClick={() => setFullscreenOpen(false)}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:12}} onClick={(e)=>e.stopPropagation()}>
+                        <div style={{color:'#fff'}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,6)}</div>
+                        <div style={{display:'flex', gap:8}}>
+                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setLocalUV(prev=>!prev); }}>{localUV? 'UV ON':'UV OFF'}</button>
+                          <button className={`btn-tool-tab ${localThermal ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setLocalThermal(prev=>!prev); }}>{localThermal ? 'TERMAL ON' : 'TERMAL'}</button>
+                          <button className={`btn-tool-tab ${forensicMode !== 'none' ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setForensicMode(prev => prev === 'channel' ? 'none' : 'channel'); }}>{forensicMode !== 'none' ? 'FORENSE ON' : 'FORENSE'}</button>
+                          <select value={forensicChannel} onChange={e=>setForensicChannel(e.target.value as any)} style={{marginLeft:6}} onClick={e=>e.stopPropagation()}>
+                            <option value="all">ALL</option>
+                            <option value="r">R</option>
+                            <option value="g">G</option>
+                            <option value="b">B</option>
+                          </select>
+                          <button className={`btn-tool-tab ${fullscreenOnlyTreatment ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setFullscreenOnlyTreatment(prev=>!prev); }}>{fullscreenOnlyTreatment ? 'TRATAR SÓ NA EXPANSÃO' : 'TRATAR NA TELA'}</button>
+                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setBrightness(100); setContrast(100); setSaturation(100); }}>RESET</button>
+                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setFullscreenOpen(false); }}>FECHAR</button>
+                        </div>
+                      </div>
+                      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
+                        <div style={{width:'90%', height:'90%', position:'relative'}}>
+                          <MysteryImage
+                            baseSrc={currentCard.image_url}
+                            hiddenSrc={currentCard.image_uv_url}
+                            filterLayerSrc={currentCard.image_filter_layer}
+                            filters={{ brightness, contrast, saturate: saturation }}
+                            revealSettings={reveal}
+                            isUVMode={localUV}
+                            fit="contain"
+                            className="large-evidence-img"
+                            style={{ height: '100%', width: '100%' }}
+                            forensicChannel={forensicChannel}
+                          />
+                          {localThermal && (
+                            <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
+                          )}
+                        </div>
+                      </div>
+                      <div style={{padding:12, display:'flex', gap:12, alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
+                        <label style={{color:'#fff'}}>BRILHO {brightness}%</label>
+                        <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} />
+                        <label style={{color:'#fff'}}>CONTRASTE {contrast}%</label>
+                        <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} />
+                        <label style={{color:'#fff'}}>SAT {saturation}%</label>
+                        <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} />
+                      </div>
+                    </div>, document.body)}
+                </>
+              );
+            })()}
+
+            {localThermal && !fullscreenOpen && (
+              <div className="thermal-overlay" aria-hidden>
+                <canvas className="thermal-canvas" ref={thermalCanvasRef} />
+              </div>
+            )}
+
+            <div className="ui-corners" aria-hidden />
+
+            {localThermal && (
+              <div className="thermal-scale" aria-hidden>
+                <span className="temp-high">42°C</span>
+                <div className="gradient-bar" />
+                <span className="temp-low">12°C</span>
+              </div>
+            )}
+          </div>
         );
       }
 
@@ -309,7 +586,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const modal = (
     <div className="inspect-backdrop" onClick={onClose}>
       <div
-        className="inspect-file"
+        className={`inspect-file ${audioExpanded ? 'audio-expanded' : ''}`}
         ref={fileRef}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -323,21 +600,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             <>
               <div className="meta-info">
                 <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
+                {cardLocked && (
+                  <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}>🔒</span>
+                )}
+                {hasRecord && (
+                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
+                )}
                 {currentCard.metadata?.type && <span className="type-tag">{currentCard.metadata.type}</span>}
                 {contactNameInferred && (
                   <span className="chat-contact">{contactNameInferred}</span>
                 )}
 
-                {/* Toggle buttons when both an image and chat data are present */}
-                {card.image_url && _headerChatList && _headerChatList.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                      <button className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} onClick={() => setVisualMode('image')}>FOTO</button>
-                      <button className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} onClick={() => setVisualMode('phone')}>CHATS</button>
-                    </div>
-                )}
+                {/* Toggle buttons for available media types */}
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    {card.image_url && <button className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} onClick={() => setVisualMode('image')}>FOTO</button>}
+                    {currentCard.video_url && <button className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} onClick={() => setVisualMode('video')}>VÍDEO</button>}
+                    {currentCard.audio_url && <button className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} onClick={() => setVisualMode('audio')}>ÁUDIO</button>}
+                    {_headerChatList && _headerChatList.length > 0 && <button className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} onClick={() => setVisualMode('phone')}>CHATS</button>}
+                </div>
               </div>
               <div className="actions">
-                {card.audio_url && <span style={{fontSize:12, color:'#b33', marginRight:8}}>🔊 ÁUDIO ANEXADO</span>}
+                <button className="btn-tool-tab" title="Expandir imagem" onClick={(e)=>{ e.stopPropagation(); setFullscreenOpen(true); }}>🔍 EXPANDIR</button>
 
                 <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}>🧪 TRATAMENTO</button>
 
@@ -355,7 +638,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   {showMoreTools && (
                     <div style={{ position: 'absolute', right: 0, top: '100%', background: '#111', border: '1px solid #222', padding: 8, zIndex: 200, minWidth: 200 }} onClick={e => e.stopPropagation()}>
                       {card.audio_url && (
-                          <button type="button" className={`btn-tool-tab ${showAudio ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setShowAudio(!showAudio); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
+                          <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
                         )}
                         <button type="button" className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setLocalThermal(!localThermal); setShowMoreTools(false); }}>🌡️ TERMAL</button>
                         <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
@@ -367,6 +650,17 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
 
                 {/* Phone open/close button removed per request */}
+
+                {/* Botão para expandir/compactar a visualização de áudio (Modo Cinema) */}
+                {visualMode === 'audio' && (
+                  <button
+                    className={`btn-tool-tab ${audioExpanded ? 'active-green' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setAudioExpanded(prev => !prev); }}
+                    title="Ocultar detalhes para focar no espectrograma"
+                  >
+                    {audioExpanded ? 'COMPACTAR' : 'EXPANDIR ÁUDIO'}
+                  </button>
+                )}
 
                 <button className="btn-close-modal" onClick={onClose}>&times;</button>
               </div>
@@ -381,7 +675,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         {/* debug overlay removed */}
 
         {/* --- CONTEÚDO PRINCIPAL --- */}
-        {!isUnlocked ? (
+        {!(isUnlocked || isGameMaster) ? (
           <div style={{ flex: 1, display: 'flex', background: '#000' }}>
             <HackingTerminal
               correctPassword={card.lock_password}
@@ -392,7 +686,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ) : (
           <React.Fragment>
             <div className="inspect-visual-area" style={{ position: 'relative' }}>
-              {!showAudio && renderVisualContent()}
+              {renderVisualContent()}
               {visualMode === 'phone' && (
                 <button
                   onClick={() => setShowPhoneDetails(s => !s)}
@@ -469,30 +763,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
               )}
 
-              {localThermal && (
-                <div className="thermal-overlay" aria-hidden />
+              {forensicMode === 'lens' && (
+                <div className="tools-hud-panel">
+                  <div className="hud-title">🧿 TRADUZIR</div>
+                  <div style={{ width: '100%' }}>
+                    <DecipherLens realText={currentCard.metadata?.real_text} cipherText={currentCard.metadata?.cipher_text} />
+                  </div>
+                </div>
               )}
 
-              {card.audio_url && (
-                showAudio ? (
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50, boxShadow: '0 -6px 28px rgba(0,0,0,0.9)' }}>
-                    <AudioLab
-                      baseSrc={card.audio_url}
-                      hiddenSrc={card.audio_hidden_url}
-                      targetFreq={card.audio_target_freq || 50}
-                      externalBaseId={externalBaseId}
-                      externalHiddenId={externalHiddenId}
-                    />
-                  </div>
-                ) : (
-                  <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-30%)', zIndex: 60 }}>
-                    <AudioDecrypter baseAudio={card.audio_url} hiddenAudio={card.audio_hidden_url} targetFreq={card.audio_target_freq || 50} />
-                  </div>
-                )
-              )}
+              
+
+              {/* audio is displayed via the 'audio' visual mode/tab now */}
             </div>
 
-            {visualMode !== 'phone' && (
+            {visualMode !== 'phone' && !audioExpanded && (
               <div className="inspect-details">
            
            {/* Coluna com SCROLL automático */}
@@ -562,7 +847,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               {card.metadata?.type === 'person' && (
                  <div style={{padding:10, background:'#222', border:'1px solid #444', textAlign:'center', fontSize:10}}>
                     STATUS: <br/>
-                    <strong style={{color:'#2ecc71', fontSize:14}}>VIVO</strong>
+                    <strong style={{
+                      color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
+                      fontSize:14
+                    }}>
+                      {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
+                    </strong>
                  </div>
               )}
            </div>
@@ -630,7 +920,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       {card.metadata?.type === 'person' && (
                         <div style={{padding:10, background:'#222', border:'1px solid #444', textAlign:'center', fontSize:10}}>
                           STATUS: <br/>
-                          <strong style={{color:'#2ecc71', fontSize:14}}>VIVO</strong>
+                          <strong style={{
+                            color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
+                            fontSize:14
+                          }}>
+                            {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
+                          </strong>
                         </div>
                       )}
                     </div>

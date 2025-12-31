@@ -1,0 +1,7 @@
+.waveform-player-root { background: #0a0a0a; border: 1px solid #333; padding: 12px; }
+.waveform-canvas { border-bottom: 1px solid #222; }
+.waveform-controls { display:flex; gap:12px; align-items:center; margin-top:12px; background:#111; padding:8px; border-radius:4px; }
+.wave-btn { background:#222; border:1px solid #444; color:#fff; padding:6px 12px; cursor:pointer; }
+.wave-zoom { display:flex; align-items:center; gap:8px; flex:1; }
+.zoom-label { font-size:11px; color:#888 }
+.wave-time { font-family:monospace; color:#00ffaa; font-weight:700 }

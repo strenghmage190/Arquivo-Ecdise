@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import './AudioForge.css';
+import SpectrogramCreator from './SpectrogramCreator';
+import { bufferToWav } from '../../utils/audioGenerator';
 
 interface Props {
   onSave: (processedFile: File) => void;
   onClose: () => void;
+  // optional: a spectrogram audio URL (blob or public) to mix into the base
+  spectrogramUrl?: string | null;
+  // trigger time (seconds) when spectrogram should start
+  triggerTime?: number;
 }
 
 function makeDistortionCurve(amount: number) {
@@ -18,52 +24,9 @@ function makeDistortionCurve(amount: number) {
   return curve;
 }
 
-// Convert AudioBuffer to WAV Blob
-function bufferToWav(abuffer: AudioBuffer, len: number) {
-  const numOfChan = abuffer.numberOfChannels;
-  const length = len * numOfChan * 2 + 44;
-  const buffer = new ArrayBuffer(length);
-  const view = new DataView(buffer);
 
-  function writeString(view: DataView, offset: number, string: string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
 
-  const sampleRate = abuffer.sampleRate;
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + len * 2, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numOfChan, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numOfChan * 2, true);
-  view.setUint16(32, numOfChan * 2, true);
-  view.setUint16(34, 16, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, len * 2, true);
-
-  let offset = 44;
-  const interleaved = new Float32Array(len * numOfChan);
-  for (let ch = 0; ch < numOfChan; ch++) {
-    const data = abuffer.getChannelData(ch);
-    for (let i = 0; i < len; i++) {
-      interleaved[i * numOfChan + ch] = data[i] || 0;
-    }
-  }
-
-  for (let i = 0; i < interleaved.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, interleaved[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-
-  return new Blob([view], { type: 'audio/wav' });
-}
-
-export default function AudioForge({ onSave, onClose }: Props) {
+export default function AudioForge({ onSave, onClose, spectrogramUrl, triggerTime }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -71,6 +34,10 @@ export default function AudioForge({ onSave, onClose }: Props) {
   const [useReverb, setUseReverb] = useState(false);
   const [useDistortion, setUseDistortion] = useState(false);
   const [processing, setProcessing] = useState(false);
+  // NOVO: buffer gerado pelo SpectrogramCreator
+  const [spectrogramBuffer, setSpectrogramBuffer] = useState<AudioBuffer | null>(null);
+  const [showSpectroMaker, setShowSpectroMaker] = useState(false);
+  const [triggerTimeState, setTriggerTimeState] = useState<number>(0); // Em que segundo injetar
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -135,12 +102,68 @@ export default function AudioForge({ onSave, onClose }: Props) {
     last.connect(offline.destination);
     src.start(0);
     const rendered = await offline.startRendering();
-    const wav = bufferToWav(rendered, rendered.length);
+
+    // if there is a spectrogram buffer provided by the SpectrogramCreator, MIXA PRIMEIRO
+    let finalRendered: AudioBuffer = rendered;
+    try {
+      if (spectrogramBuffer) {
+        const mixed = await mixAudio(rendered, spectrogramBuffer, triggerTimeState);
+        if (mixed) finalRendered = mixed;
+      } else if (spectrogramUrl) {
+        try {
+          const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const resp = await fetch(spectrogramUrl);
+          const ab = await resp.arrayBuffer();
+          const spectroBuffer = await ac.decodeAudioData(ab.slice(0));
+          const trig = Number(triggerTime || 0);
+          const mixed = await mixAudio(rendered, spectroBuffer, trig);
+          if (mixed) finalRendered = mixed;
+        } catch (e) {
+          console.warn('Failed to mix spectrogram audio', e);
+        }
+      }
+    } catch (e) {}
+
+    const wav = bufferToWav(finalRendered, finalRendered.length);
     const url = URL.createObjectURL(wav);
     setPreviewUrl(url);
     setProcessing(false);
     const outFile = new File([wav], `forged_${Date.now()}.wav`, { type: 'audio/wav' });
     return outFile;
+  };
+
+  // Mix two AudioBuffers: place spectroBuffer starting at triggerTime (seconds)
+  const mixAudio = async (baseBuffer: AudioBuffer, spectroBuffer: AudioBuffer, triggerSec = 0): Promise<AudioBuffer | null> => {
+    try {
+      const sampleRate = baseBuffer.sampleRate;
+      const baseDuration = baseBuffer.duration;
+      const spectroDuration = spectroBuffer.duration;
+      const newDuration = Math.max(baseDuration, triggerSec + spectroDuration);
+      const numChannels = Math.max(baseBuffer.numberOfChannels, spectroBuffer.numberOfChannels);
+      const offline = new OfflineAudioContext(numChannels, Math.ceil(newDuration * sampleRate), sampleRate);
+
+      // base source
+      const srcBase = offline.createBufferSource();
+      srcBase.buffer = baseBuffer;
+      srcBase.connect(offline.destination);
+
+      // spectro source and low gain
+      const srcSpec = offline.createBufferSource();
+      srcSpec.buffer = spectroBuffer;
+      const gain = offline.createGain();
+      gain.gain.value = 0.05;
+      srcSpec.connect(gain);
+      gain.connect(offline.destination);
+
+      srcBase.start(0);
+      srcSpec.start(triggerSec);
+
+      const rendered = await offline.startRendering();
+      return rendered;
+    } catch (e) {
+      console.error('mixAudio error', e);
+      return null;
+    }
   };
 
   return (
@@ -157,6 +180,26 @@ export default function AudioForge({ onSave, onClose }: Props) {
         <button onClick={() => setUseReverb(s => !s)} className={`hud-btn ${useReverb ? 'primary' : ''}`}>🏟️ REVERB</button>
       </div>
 
+      <div style={{marginTop: 20}}>
+        <label style={{color:'#b33'}}>Sinal Oculto (Espectrograma)</label>
+        <button onClick={() => setShowSpectroMaker(true)}>📝 TEXTO → ÁUDIO (ESPECTRO)</button>
+        {spectrogramBuffer && (
+          <div style={{color:'lime'}}>
+            ✓ Sinal de Espectro carregado. Injetar em:
+            <input type="number" value={triggerTimeState} onChange={e=>setTriggerTimeState(Number(e.target.value))} style={{width:50}}/> s
+          </div>
+        )}
+      </div>
+
+      {showSpectroMaker && (
+        <SpectrogramCreator 
+          onClose={() => setShowSpectroMaker(false)}
+          onGenerateBuffer={(buffer) => {
+            setSpectrogramBuffer(buffer);
+          }}
+        />
+      )}
+
       <div className="af-actions">
         <button className="af-process" onClick={async () => {
             const processed = await processAudio();
@@ -169,7 +212,13 @@ export default function AudioForge({ onSave, onClose }: Props) {
       {previewUrl && (
         <div className="af-preview">
           <label>PRÉVIA</label>
-          <audio src={previewUrl} controls style={{ width: '100%' }} />
+          <audio
+            src={previewUrl}
+            controls
+            controlsList="nodownload noplaybackrate noremoteplayback"
+            onContextMenu={(e) => e.preventDefault()}
+            style={{ width: '100%' }}
+          />
         </div>
       )}
     </div>

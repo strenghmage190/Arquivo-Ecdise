@@ -64,7 +64,24 @@
   background-image: url('https://grainy-gradients.vercel.app/noise.svg');
   opacity: 0.15;
   pointer-events: none;
-  z-index: 20;
+  z-index: 200; /* sit above main image for UV effects */
+}
+
+/* forensic canvas overlay for channel isolation */
+.forensic-canvas {
+  position: absolute;
+  /* center the canvas and allow it to scale while preserving aspect ratio */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen; /* overlay visual */
+  opacity: 0.9;
+  z-index: 205;
 }
 
 .uv-lens-flare {
@@ -72,7 +89,7 @@
   top: 0; left: 0;
   width: 100%; height: 100%;
   pointer-events: none;
-  z-index: 30;
+  z-index: 210;
   mix-blend-mode: overlay;
   transition: opacity 0.2s ease-out;
 }
@@ -81,7 +98,7 @@
   /* use neutral blend & boosts so any drawn UV color (green/purple/etc.) becomes visible */
   filter: brightness(1.8) contrast(1.4) saturate(2);
   mix-blend-mode: screen;
-  z-index: 15;
+  z-index: 220;
   animation: flicker-hard 4s infinite linear;
   pointer-events: none;
 }
@@ -92,4 +109,31 @@
   text-transform: uppercase;
   letter-spacing: 2px;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient Blur background and main image styles */
+.bg-blur {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(20px) brightness(0.35);
+  transform: scale(1.06); /* avoid visible edges when blurred */
+  pointer-events: none;
+  z-index: 0;
+}
+
+.main-evidence {
+  position: relative;
+  z-index: 20;
+  max-width: 95%;
+  max-height: 95%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: auto;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.04);
 }

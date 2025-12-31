@@ -1,0 +1,243 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Fira+Code:wght@400;700&display=swap');
+
+:root{
+  --nexus-blue: #00f3ff;
+  --nexus-dark: #05080a;
+  --nexus-glass: rgba(0,243,255,0.04);
+  --nexus-glitch: #ff003c;
+  --muted: #9aa6ab;
+}
+
+html,body,#root{ height:100%; }
+body{ background:var(--nexus-dark); color:var(--nexus-blue); font-family: 'Share Tech Mono', monospace; margin:0; }
+
+.nexus-page{ padding:40px; min-height:100vh; box-sizing:border-box; }
+
+.nexus-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.nexus-title{ color:#cfeff0; font-size:28px; letter-spacing:2px; border-bottom:2px solid rgba(255,0,0,0.08); padding-bottom:8px; }
+
+.case-grid{ margin-top:30px; display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px; }
+.case-new-card{ border:2px dashed rgba(255,255,255,0.06); height:180px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:6px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); }
+.case-new-card span{ color:var(--nexus-blue); font-size:20px; }
+
+.case-card{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2)); border:1px solid rgba(0,243,255,0.06); padding:18px; height:180px; display:flex; flex-direction:column; justify-content:space-between; border-radius:6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); cursor:pointer; }
+.case-card .meta{ font-size:12px; color:var(--muted); }
+.case-card h2{ margin:0; color:#dff; font-size:18px; }
+
+.cris-button{ position:fixed; bottom:20px; left:20px; background:transparent; color:var(--nexus-blue); border:1px solid rgba(0,243,255,0.12); padding:8px 10px; cursor:pointer; z-index:60; border-radius:4px; }
+
+.logout-btn{ position:fixed; top:20px; right:20px; background:#b33; color:#fff; border:none; padding:10px 14px; cursor:pointer; border-radius:4px; z-index:60; }
+
+/* subtle holographic grid */
+.server-grid-bg { position:fixed; inset:0; z-index:-1; background-image: linear-gradient(rgba(0,243,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,243,255,0.02) 1px, transparent 1px); background-size:40px 40px; filter: blur(1px); }
+
+/* small responsive tweaks */
+@media (max-width:600px){ .nexus-title{ font-size:20px } .case-grid{ grid-template-columns: 1fr; } }
+
+/* OS Window styles (retro + nexus accents) */
+.os-window {
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 640px; height: 420px;
+  background: rgba(5,8,10,0.6);
+  border: 1px solid rgba(0,243,255,0.06);
+  box-shadow: 12px 12px 0 rgba(0,0,0,0.6);
+  display: flex; flex-direction: column; z-index: 1000; font-family: 'Share Tech Mono', monospace; border-radius:6px;
+  animation: openWindow 150ms ease-out;
+}
+@keyframes openWindow { from { transform: translate(-50%,-48%) scale(0.98); opacity:0 } to { transform: translate(-50%,-50%) scale(1); opacity:1 } }
+.os-titlebar { background: linear-gradient(90deg, rgba(0,20,30,0.6), rgba(0,40,60,0.6)); color: var(--nexus-blue); padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-weight:700; border-bottom:1px solid rgba(0,243,255,0.03); }
+.os-content { flex:1; padding:14px; overflow:auto; color:var(--muted); }
+.os-btn-close { background: rgba(255,255,255,0.04); border: none; color: var(--nexus-blue); width:26px; height:24px; cursor:pointer; border-radius:4px; }
+.file-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:16px; }
+.file-item { display:flex; flex-direction:column; align-items:center; cursor:pointer; text-align:center; }
+.file-item .file-icon { font-size:40px; margin-bottom:6px; filter: drop-shadow(0 0 6px rgba(0,243,255,0.06)); }
+.file-item .file-name { font-size:12px; color:var(--nexus-blue); padding:4px 6px; border-radius:4px; }
+.file-item:hover .file-name { background: rgba(0,243,255,0.06); }
+.os-statusbar { background: rgba(0,0,0,0.45); padding:6px 10px; font-size:12px; color:var(--muted); border-top:1px solid rgba(0,243,255,0.02); }
+
+/* System overlays: integrity monitor, cursor, background data, audio mute button */
+.system-monitor {
+  position: relative; top: auto; right: auto; width: 220px; font-size: 0.78rem; color: var(--nexus-blue); text-align: right; z-index:1200;
+  margin: 0;
+}
+.system-monitor .label { font-size: 10px; color: var(--muted); letter-spacing:1px; }
+.bar-container { width: 100%; height: 5px; background: rgba(255,255,255,0.03); margin:6px 0; border-radius:3px; overflow:hidden; }
+.fill { width: 99%; height:100%; background: var(--nexus-blue); box-shadow: 0 0 8px var(--nexus-blue); transition: width 0.25s, background 0.2s; }
+.fill.danger { background: var(--nexus-glitch); box-shadow: 0 0 12px var(--nexus-glitch); }
+.system-monitor .value { font-weight:700; font-size:12px; color:#eaf; }
+
+#custom-cursor {
+  width:30px;
+  height:30px;
+  border:1px solid var(--nexus-blue);
+  position:fixed;
+  top:0;
+  left:0;
+  pointer-events:none;
+  z-index:2147483647;
+  border-radius:50%;
+  transform: translate(-50%,-50%) scale(1);
+  transition: transform 0.08s linear;
+  will-change: transform;
+  user-select:none;
+  display: block;
+  background: rgba(0,0,0,0.12);
+}
+#custom-cursor::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--nexus-blue);
+}
+
+/* Active state when hovering clickable elements */
+#custom-cursor.active { border-color: var(--nexus-glitch); box-shadow: 0 0 12px var(--nexus-glitch); }
+#custom-cursor.active::after { background: var(--nexus-glitch); }
+
+/* pressed state handled in JS by reducing scale via render loop */
+#custom-cursor.pressed { opacity: 0.95; }
+
+.audio-mute-btn { background: rgba(0,0,0,0.5); border:1px solid rgba(0,243,255,0.06); color:var(--nexus-blue); padding:8px 10px; border-radius:6px; z-index:1200; cursor:pointer; }
+
+.background-data { position: fixed; top: 50%; transform: translateY(-50%); color: var(--nexus-blue); opacity: 0.05; font-size: 10px; line-height: 12px; pointer-events: none; white-space: pre; font-family: monospace; z-index: 0; }
+
+/* Toggle hiding native cursor only when overlay enables it */
+.use-custom-cursor html, .use-custom-cursor body, .use-custom-cursor .app-container {
+  cursor: none !important;
+}
+.use-custom-cursor button, .use-custom-cursor a, .use-custom-cursor input, .use-custom-cursor textarea, .use-custom-cursor select, .use-custom-cursor label {
+  cursor: none !important;
+}
+
+/* Use custom cursor: hide native cursor globally and force custom cursor everywhere */
+html, body, .app-container {
+  cursor: none !important;
+}
+button, a, input, textarea, select, label {
+  cursor: none !important;
+}
+
+/* Nuclear option: ensure no native cursor anywhere */
+* { cursor: none !important; }
+
+/* HUD: top status bar grouping audio, integrity and logout */
+.nexus-hud {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 72px;
+  padding: 10px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(to bottom, rgba(5,8,10,0.95), rgba(5,8,10,0));
+  z-index: 2000;
+  box-sizing: border-box;
+}
+.hud-left { display:flex; align-items:center; gap:12px; }
+.hud-right { display:flex; align-items:center; gap:24px; }
+
+/* make system monitor flow inside HUD instead of fixed */
+.system-monitor { position: relative; top: auto; right: auto; width: 220px; margin: 0; }
+
+.btn-logout { background: rgba(255, 0, 60, 0.08); border: 1px solid #ff003c; color: #ff003c; padding: 8px 14px; font-family: 'Share Tech Mono', monospace; cursor: pointer; border-radius:6px; }
+.btn-logout:hover { background: #ff003c; color: black; box-shadow: 0 0 15px #ff003c; }
+
+/* push main app content below the HUD */
+.app-container { padding-top: 88px; box-sizing: border-box; }
+
+/* ensure titles are not absolute (prevents overlap with HUD) */
+h1, h2, .page-title { position: relative; margin-bottom: 18px; z-index: 1; }
+
+/* Files Grid / Cards */
+.files-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:18px; }
+.file-card { background: rgba(10,15,20,0.85); border:1px solid rgba(255,255,255,0.03); padding:12px; cursor:pointer; position:relative; overflow:hidden; border-radius:8px; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.file-card:hover { transform: translateY(-6px); border-color: rgba(0,243,255,0.12); box-shadow: 0 8px 30px rgba(0,243,255,0.03); }
+.file-card img.file-thumb { width:100%; height:120px; object-fit:cover; border-radius:6px; display:block; margin-bottom:8px; }
+.file-card .file-info h3 { margin:0; font-size:14px; color:#dff; }
+.file-card .tag { background: rgba(0,243,255,0.06); color:var(--nexus-blue); padding:4px 6px; font-size:11px; border:1px solid rgba(0,243,255,0.06); border-radius:4px; }
+.file-card.locked { opacity:0.8; border-style:dashed; }
+.file-card.locked .lock-icon { position:absolute; top:10px; right:10px; font-size:22px; }
+.file-card.corrupted { animation: glitch 1.2s infinite; border-color: var(--nexus-glitch); }
+.glitch-overlay { position:absolute; inset:0; background: linear-gradient(90deg, rgba(255,0,60,0.02), transparent); mix-blend-mode:hard-light; pointer-events:none; }
+@keyframes glitch { 0%{transform:translateY(0)}20%{transform:translateY(-2px)}40%{transform:translateY(0)}60%{transform:translateY(2px)}80%{transform:translateY(0)}100%{transform:translateY(0)} }
+
+/* Remote dashboard */
+.remote-dashboard { display:grid; grid-template-columns: 1fr 320px; gap:16px; }
+.map-panel { background: rgba(0,0,0,0.25); padding:12px; border-radius:6px; border:1px solid rgba(0,243,255,0.03); }
+.map-container { position:relative; height:220px; background: linear-gradient(180deg,#071018,#001018); border-radius:6px; overflow:hidden; }
+.world-map { position:relative; width:100%; height:100%; }
+.map-pin { width:10px; height:10px; background:var(--nexus-blue); border-radius:50%; position:absolute; box-shadow:0 0 8px var(--nexus-blue); animation:pulse 2s infinite; cursor:pointer; }
+.map-pin.danger { background:var(--nexus-glitch); box-shadow:0 0 14px var(--nexus-glitch); animation:pulse-fast 1s infinite; }
+@keyframes pulse { 0%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}100%{transform:scale(1);opacity:1} }
+@keyframes pulse-fast { 0%{transform:scale(1);opacity:1}50%{transform:scale(2);opacity:.4}100%{transform:scale(1);opacity:1} }
+.cctv-panel { background: rgba(0,0,0,0.25); padding:12px; border-radius:6px; border:1px solid rgba(0,243,255,0.03); }
+.camera-feed { position:relative; margin-bottom:10px; }
+.cam-label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+.cam-image { width:100%; height:110px; background:linear-gradient(180deg,#0b1112,#001010); border-radius:6px; box-shadow: inset 0 0 40px rgba(0,0,0,0.4); }
+.static-overlay { position:absolute; inset:auto 0 0 0; height:110px; width:100%; top:28px; background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs='); opacity:0.18; pointer-events:none; mix-blend-mode:overlay; }
+.rec-dot { position:absolute; top:8px; right:10px; background:rgba(0,0,0,0.4); padding:4px 6px; border-radius:4px; font-size:12px; }
+.world-map.jump-scare { box-shadow: inset 0 0 120px rgba(255,0,60,0.12); }
+
+
+/* ===== HUD fixed layout overrides (added to fix broken header / button defaults) ===== */
+.nexus-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  padding: 0 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to bottom, #050505 80%, transparent);
+  z-index: 1000;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+}
+
+.hud-left { display:flex; gap:20px; align-items:center; }
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #558b91;
+  font-size: 22px;
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-btn:hover { background: rgba(0, 243, 255, 0.08); color: #00f3ff; border-color: #00f3ff; box-shadow: 0 0 15px rgba(0,243,255,0.22); transform: translateY(-2px); }
+
+.hud-right { display:flex; align-items:center; gap:30px; }
+
+.system-monitor { text-align: right; width: 180px; }
+.system-monitor .label { font-size: 0.7rem; color: #558b91; margin-bottom: 2px; }
+.system-monitor .bar-container { height: 4px; background: #333; width: 100%; border-radius: 4px; overflow: hidden; }
+.system-monitor .fill { background: #00f3ff; height: 100%; box-shadow: 0 0 10px #00f3ff; transition: width 0.2s ease; }
+.system-monitor .value { font-size: 0.8rem; color: #eaf; font-weight: 700; }
+
+.btn-logout { background: transparent; border: 1px solid #ff003c; color: #ff003c; padding: 8px 20px; font-family: monospace; font-weight: bold; cursor: pointer; transition: 0.18s; border-radius:6px; }
+.btn-logout:hover { background: #ff003c; color: black; box-shadow: 0 0 20px #ff003c; }
+
+/* push content down so HUD does not overlap page content */
+.content-wrapper { padding-top: 120px; padding-left: 40px; padding-right: 40px; box-sizing: border-box; }
+
+/* ensure nav buttons don't inherit browser default styling */
+.nav-btn, .btn-logout { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+
+
+

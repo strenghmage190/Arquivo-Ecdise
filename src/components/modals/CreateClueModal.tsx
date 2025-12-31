@@ -1,10 +1,14 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
-import { uploadInvestigationImage } from '../../utils/storage';
+import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import UVEditor from '../tools/UVEditor';
 import AudioDecrypter from '../tools/AudioDecrypter';
-import SpectrogramCreator from '../tools/SpectrogramCreator';
+import { bufferToWav } from '../../utils/audioGenerator';
+import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import AudioForge from '../tools/AudioForge';
+import AudioMixer from '../tools/AudioMixer';
 import GlitchMaker from '../tools/GlitchMaker';
 import PhoneViewer from '../tools/PhoneViewer';
 import './CreateClueModal.css';
@@ -12,7 +16,7 @@ import DiegeticWindow from '../ui/DiegeticWindow';
 
 import { supabase } from '../../supabaseClient';
 
-async function uploadAudio(file: File, investigationId: string) {
+async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
   const { data, error } = await supabase.storage.from('investigation-assets').upload(path, file);
   if (error) throw error;
@@ -21,12 +25,19 @@ async function uploadAudio(file: File, investigationId: string) {
 }
 
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  investigationId: string;
-  initialX?: number;
-  initialY?: number;
-  onSaved: (card: any) => void;
+   isOpen: boolean;
+   onClose: () => void;
+   investigationId: string;
+   initialX?: number;
+   initialY?: number;
+   onSaved: (card: Record<string, any>) => void;
+}
+
+type ChatSender = 'me' | 'them' | 'system' | string;
+interface EditingChatMessage {
+   sender: ChatSender;
+   type: string;
+   text: string;
 }
 
 export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
@@ -36,18 +47,49 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
   const [tags, setTags] = useState('');
 
   const [imgFile, setImgFile] = useState<File | null>(null);
+   const [videoFile, setVideoFile] = useState<File | null>(null);
+   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+   const [videoUploading, setVideoUploading] = useState<boolean>(false);
+   const [videoUrlInput, setVideoUrlInput] = useState<string>('');
   const [uvFile, setUvFile] = useState<File | null>(null);
    const [filterFile, setFilterFile] = useState<File | null>(null);
-   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+      const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+      const [filterPreviewUrl, setFilterPreviewUrl] = useState<string | null>(null);
+      const [filterTransform, setFilterTransform] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+      const [filterInitialImage, setFilterInitialImage] = useState<File | null>(null);
    const [editorMode, setEditorMode] = useState<'uv' | 'filter' | null>(null);
 
    const [audioBase, setAudioBase] = useState<File | null>(null);
   const [audioHidden, setAudioHidden] = useState<File | null>(null);
    const [audioBasePreview, setAudioBasePreview] = useState<string | null>(null);
    const [audioHiddenPreview, setAudioHiddenPreview] = useState<string | null>(null);
-   const [showSpectroMaker, setShowSpectroMaker] = useState(false);
+   
    const [audioHiddenUploadedUrl, setAudioHiddenUploadedUrl] = useState<string | null>(null);
   const [freq, setFreq] = useState(50);
+   const [triggerTime, setTriggerTime] = useState<number>(0);
+
+   const handleAudioBaseSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (audioBasePreview) {
+         try { URL.revokeObjectURL(audioBasePreview); } catch (err) {}
+      }
+      const url = URL.createObjectURL(file);
+      setAudioBase(file);
+      setAudioBasePreview(url);
+   };
+
+   const handleAudioHiddenSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (audioHiddenPreview) {
+         try { URL.revokeObjectURL(audioHiddenPreview); } catch (err) {}
+      }
+      const url = URL.createObjectURL(file);
+      setAudioHidden(file);
+      setAudioHiddenPreview(url);
+   };
    const [stamp, setStamp] = useState('');
    const [externalLink, setExternalLink] = useState('');
 
@@ -59,19 +101,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
       const [showGlitchMaker, setShowGlitchMaker] = useState(false);
+      const [showMixer, setShowMixer] = useState(false);
            const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra'>('geral');
 
            // Chat / Phone viewer states
            const [showChatEditor, setShowChatEditor] = useState(false);
-           const [chatJson, setChatJson] = useState('');
-           const [chatData, setChatData] = useState<any[] | null>(null);
-           const [chatContactName, setChatContactName] = useState('Desconhecido');
-            const [editingChatList, setEditingChatList] = useState<Array<{sender:string; type:string; text:string}>>([]);
+           const [chatJson, setChatJson] = useState<string>('');
+           const [chatData, setChatData] = useState<EditingChatMessage[] | null>(null);
+           const [chatContactName, setChatContactName] = useState<string>('Desconhecido');
+            const [editingChatList, setEditingChatList] = useState<EditingChatMessage[]>([]);
 
             useEffect(() => {
                if (showChatEditor) {
                   if (chatData && Array.isArray(chatData)) {
-                     setEditingChatList(chatData.map((m: any) => ({ sender: m.sender || 'me', type: m.type || 'text', text: m.text || '' })));
+                     setEditingChatList(chatData.map((m: any) => ({ sender: (m.sender || 'me') as ChatSender, type: m.type || 'text', text: m.text || '' })));
                   } else {
                      setEditingChatList([{ sender: 'me', type: 'text', text: '' }]);
                   }
@@ -110,8 +153,18 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       // files / previews
       setImgFile(null);
+      setVideoFile(null);
+      try { if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
+      setVideoPreviewUrl(null);
+      setVideoUrl(null);
+      setVideoUploading(false);
+      setVideoUrlInput('');
       setUvFile(null);
       setFilterFile(null);
+      try { if (filterPreviewUrl) URL.revokeObjectURL(filterPreviewUrl); } catch (e) {}
+      setFilterPreviewUrl(null);
+      setFilterTransform(null);
+      setFilterInitialImage(null);
       setPreviewUrl(null);
       setEditorMode(null);
 
@@ -124,7 +177,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setFreq(50);
       setAudioBasePreview(null);
       setAudioHiddenPreview(null);
-      setShowSpectroMaker(false);
 
       // basic flags
       setIsLocked(false);
@@ -174,7 +226,85 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (isOpen) resetForm();
    }, [isOpen]);
 
-   if (!isOpen) return null;
+   // Helper: sanitize metadata to ensure it's JSON-serializable before sending to server
+   const sanitizeForMetadata = (input: any, maxDepth = 6) => {
+      const seen = new WeakSet();
+      const sanitize = (val: any, depth: number): any => {
+         if (depth <= 0) return null;
+         if (val === null || val === undefined) return null;
+         if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+         if (val instanceof Date) return val.toISOString();
+         if (val instanceof File || (typeof File !== 'undefined' && val && val.constructor && val.constructor.name === 'File')) {
+            return { __file: true, name: val.name, size: val.size, type: val.type };
+         }
+         if (Array.isArray(val)) return val.map(v => sanitize(v, depth - 1));
+         if (typeof val === 'object') {
+            if (seen.has(val)) return null; // circular
+            seen.add(val);
+            const out: any = {};
+            for (const k of Object.keys(val)) {
+               try {
+                  out[k] = sanitize((val as any)[k], depth - 1);
+               } catch (e) {
+                  out[k] = null;
+               }
+            }
+            return out;
+         }
+         // fallback: stringify small values
+         try { return String(val); } catch { return null; }
+      };
+      return sanitize(input, maxDepth);
+   };
+
+      // Hooks that must always be declared in the same order.
+      // Move interactive hooks here (before any early returns) so React's
+      // hook ordering is preserved and we avoid "Rendered more hooks" errors.
+
+      // when a filterFile is set, create a preview URL and set a default transform
+      useEffect(() => {
+         if (!filterFile) return;
+         try { if (filterPreviewUrl) URL.revokeObjectURL(filterPreviewUrl); } catch (e) {}
+         const url = URL.createObjectURL(filterFile);
+         setFilterPreviewUrl(url);
+         // default: center overlay covering 50% width/height
+         setFilterTransform({ left: 25, top: 25, width: 50, height: 50 });
+         return () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+      }, [filterFile]);
+
+      // drag / resize refs (must be a hook)
+      const draggingRef = React.useRef<{ mode: 'move' | 'resize' | null; startX: number; startY: number; startTransform?: any } | null>(null);
+
+      useEffect(() => {
+         const onMove = (e: MouseEvent) => {
+            if (!draggingRef.current || !filterTransform || !previewUrl) return;
+            const rect = document.querySelector('.image-edit-canvas') as HTMLElement | null;
+            if (!rect) return;
+            const bounds = rect.getBoundingClientRect();
+            const start = draggingRef.current;
+            if (start.mode === 'move') {
+               const dx = e.clientX - start.startX;
+               const dy = e.clientY - start.startY;
+               const newLeft = ((start.startTransform.left / 100) * bounds.width + dx) / bounds.width * 100;
+               const newTop = ((start.startTransform.top / 100) * bounds.height + dy) / bounds.height * 100;
+               setFilterTransform({ ...filterTransform, left: Math.max(0, Math.min(100 - filterTransform.width, newLeft)), top: Math.max(0, Math.min(100 - filterTransform.height, newTop)) });
+            } else if (start.mode === 'resize') {
+               const dx = e.clientX - start.startX;
+               const dy = e.clientY - start.startY;
+               const deltaPctW = (dx / bounds.width) * 100;
+               const deltaPctH = (dy / bounds.height) * 100;
+               const newW = Math.max(5, Math.min(100 - start.startTransform.left, start.startTransform.width + deltaPctW));
+               const newH = Math.max(5, Math.min(100 - start.startTransform.top, start.startTransform.height + deltaPctH));
+               setFilterTransform({ ...filterTransform, width: newW, height: newH });
+            }
+         };
+         const onUp = () => { draggingRef.current = null; };
+         window.addEventListener('mousemove', onMove);
+         window.addEventListener('mouseup', onUp);
+         return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+      }, [filterPreviewUrl, filterTransform, previewUrl]);
+
+      if (!isOpen) return null;
 
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");
@@ -187,6 +317,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (imgFile) imgUrl = await uploadInvestigationImage(imgFile, investigationId);
          if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
          if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
+             // Prefer video URL input if provided, otherwise use uploaded video URL (uploaded on select). If user selected but upload didn't complete,
+             // attempt a fallback upload here.
+                   let finalVideoUrl: string | null = videoUrlInput || videoUrl || null;
+                   if (!finalVideoUrl && videoFile) {
+                      try {
+                         finalVideoUrl = await uploadInvestigationFile(videoFile, investigationId, videoFile.name.split('.').pop() || 'mp4');
+                      } catch (e) {
+                         console.error('Video upload failed on save', e);
+                         finalVideoUrl = null;
+                      }
+                   }
 
          let audUrl = null;
          let audHidUrl = null;
@@ -198,7 +339,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             audHidUrl = await uploadAudio(audioHidden, investigationId);
          }
 
-             const metadata: any = {};
+             const metadata: Record<string, any> = {};
              metadata.image_filter_reveal = {
                   brightness: filterRevealBrightness,
                   contrast: filterRevealContrast,
@@ -216,14 +357,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 if (fakeMeta.gps) metadata.gps_coords = fakeMeta.gps;
                 if (fakeMeta.owner) metadata.device_owner = fakeMeta.owner;
              }
-             // if spectrogram was uploaded by SpectrogramCreator, save its public URL
-             if (audioHiddenUploadedUrl) metadata.spectrogram_url = audioHiddenUploadedUrl;
+            // spectrograms are stored via `audio_hidden_url` only; do not add to metadata
              // optional external link + qr
              if (externalLink) metadata.external_link = externalLink;
             // thermal metadata flag
             if (thermalEnabled) metadata.thermal = true;
+            // audio playback config: time (seconds) when hidden track should be triggered
+            if (typeof triggerTime !== 'undefined') {
+               metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
+            }
 
-         const payload: any = {
+         // sanitize metadata to avoid sending unserializable objects
+         const cleanMetadata = sanitizeForMetadata(metadata);
+
+         const payload: Record<string, any> = {
         investigation_id: investigationId,
         title,
         description_public: descPublic || null,
@@ -233,39 +380,41 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         image_url: imgUrl,
         image_uv_url: uvUrl,
             image_filter_layer: filterUrl,
+            image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
             lock_password: isLocked ? lockPass : null,
             metadata,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         audio_url: audUrl,
         audio_hidden_url: audHidUrl,
+            video_url: finalVideoUrl,
         audio_target_freq: freq
       };
 
-                // attach chat data if present. If user edited messages but didn't click "Salvar Chat",
+               // attach chat data if present. If user edited messages but didn't click "Salvar Chat",
                 // prefer the transient editing list so creations don't lose messages.
-                const finalChatData = chatData ?? (editingChatList && editingChatList.length > 0 ? editingChatList : null);
-                const finalChatContact = chatContactName || (personName || null);
+                const finalChatData: EditingChatMessage[] | null = chatData ?? (editingChatList && editingChatList.length > 0 ? editingChatList : null);
+                const finalChatContact: string | null = chatContactName || (personName || null);
                 if (finalChatData) {
                    payload.chat_data = finalChatData;
                    // save contact name alongside chat for preview in card
                    if (finalChatContact) payload.chat_contact_name = finalChatContact;
                    // also store into metadata for backwards-compatibility
                    payload.metadata = payload.metadata || {};
-                   payload.metadata.chat_data = finalChatData;
+                   payload.metadata.chat_data = sanitizeForMetadata(finalChatData);
                    payload.metadata.chat_contact_name = finalChatContact || null;
                 }
 
          // attach person dossier metadata
-         if (isPerson) {
+          if (isPerson) {
              payload.metadata = payload.metadata || {};
-             payload.metadata.person = {
-                name: personName || title,
-                dob: personDob || null,
-                status: personStatus || 'UNKNOWN',
-                occupation: personOccupation || null,
-             };
-         }
+             payload.metadata.person = sanitizeForMetadata({
+               name: personName || title,
+               dob: personDob || null,
+               status: personStatus || 'UNKNOWN',
+               occupation: personOccupation || null,
+             });
+          }
             // shredded document fields
             if (isShredded) {
                payload.is_shredded = true;
@@ -282,7 +431,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             // eslint-disable-next-line no-console
             console.debug('CreateClueModal: sending payload', { chat_data: payload.chat_data, chat_contact_name: payload.chat_contact_name, metadata_sample: payload.metadata ? Object.keys(payload.metadata).slice(0,6) : null });
          } catch (e) {}
-         const newCard = await createInvestigationCard(payload);
+         const newCard = await createInvestigationCard(payload as any);
       onSaved(newCard);
       onClose();
     } catch (error) {
@@ -293,31 +442,53 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
     }
   };
 
-   // handle audio previews
-   const handleAudioBaseSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0] || null;
-      if (f) {
-         setAudioBase(f);
-         try { if (audioBasePreview) URL.revokeObjectURL(audioBasePreview); } catch(e){}
-         setAudioBasePreview(URL.createObjectURL(f));
-      }
-   };
-
-   const handleAudioHiddenSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0] || null;
-      if (f) {
-         setAudioHidden(f);
-         try { if (audioHiddenPreview) URL.revokeObjectURL(audioHiddenPreview); } catch(e){}
-         setAudioHiddenPreview(URL.createObjectURL(f));
-      }
-   };
-
   const handleImgSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       setImgFile(e.target.files[0]);
-      setPreviewUrl(URL.createObjectURL(e.target.files[0]));
+         setPreviewUrl(URL.createObjectURL(e.target.files[0]));
     }
   };
+
+   const onOverlayMouseDown = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!filterTransform) return;
+      // draggingRef is defined above (hook order preserved)
+      draggingRef.current = { mode: 'move', startX: e.clientX, startY: e.clientY, startTransform: { ...filterTransform } };
+   };
+
+   const onHandleMouseDown = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!filterTransform) return;
+      draggingRef.current = { mode: 'resize', startX: e.clientX, startY: e.clientY, startTransform: { ...filterTransform } };
+   };
+
+   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0] || null;
+      if (!f) return;
+      setVideoFile(f);
+      try { if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
+      const localUrl = URL.createObjectURL(f);
+      setVideoPreviewUrl(localUrl);
+
+      // Upload immediately
+      (async () => {
+         try {
+            setVideoUploading(true);
+            const ext = f.name.split('.').pop() || 'mp4';
+            const publicUrl = await uploadInvestigationFile(f, investigationId, ext);
+            if (publicUrl) {
+               setVideoUrl(publicUrl);
+            } else {
+               alert('Falha ao enviar vídeo');
+            }
+         } catch (err) {
+            console.error('Video upload failed', err);
+            alert('Falha ao enviar vídeo');
+         } finally {
+            setVideoUploading(false);
+         }
+      })();
+   };
 
    return (
     <div className="modal-overlay">
@@ -463,8 +634,59 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               <>
                 <div className="field-block">
                    <span className="field-title">1. IMAGEM PRINCIPAL</span>
-                   <label className="upload-btn">📷 SELECIONAR FOTO<input type="file" accept="image/*" hidden onChange={handleImgSelect} /></label>
-                   <div className="image-preview-box" style={{backgroundImage: previewUrl ? `url(${previewUrl})` : 'none'}}>{!previewUrl && <span style={{fontSize:10, opacity:0.3}}>SEM IMAGEM</span>}</div>
+                      <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                         <label className="upload-btn">📷 SELECIONAR FOTO<input type="file" accept="image/*" hidden onChange={handleImgSelect} /></label>
+                         <label className="upload-btn">🎬 SELECIONAR VÍDEO<input type="file" accept="video/*" hidden onChange={handleVideoSelect} /></label>
+                         {videoUploading && <span style={{color:'#c6a45f', fontSize:12}}>Enviando vídeo...</span>}
+                      </div>
+                      <div style={{marginTop:8}}>
+                         <label>OU URL DO VÍDEO (YouTube, Vimeo, etc.)</label>
+                         <input value={videoUrlInput} onChange={e=>setVideoUrlInput(e.target.value)} placeholder="https://..." />
+                      </div>
+                            <div className="image-preview-box" style={{backgroundImage: previewUrl ? `url(${previewUrl})` : 'none'}}>
+                                 {!previewUrl && <span style={{fontSize:10, opacity:0.3}}>SEM IMAGEM</span>}
+                                 {previewUrl && (
+                                    <div className="image-edit-canvas" style={{position:'relative', width:'100%', height:'100%', backgroundImage: `url(${previewUrl})`, backgroundSize:'contain', backgroundPosition:'center', backgroundRepeat:'no-repeat'}}>
+                                       {filterPreviewUrl && filterTransform && (
+                                          <div
+                                             className="filter-overlay"
+                                             onMouseDown={onOverlayMouseDown}
+                                             style={{
+                                                position:'absolute',
+                                                left:`${filterTransform.left}%`,
+                                                top:`${filterTransform.top}%`,
+                                                width:`${filterTransform.width}%`,
+                                                height:`${filterTransform.height}%`,
+                                                  backgroundImage:`url(${filterPreviewUrl})`,
+                                                backgroundSize:'cover',
+                                                backgroundPosition:'center',
+                                                border:'2px dashed rgba(198,164,95,0.9)',
+                                                boxSizing:'border-box',
+                                                cursor:'move',
+                                                zIndex: 30,
+                                                pointerEvents: 'auto'
+                                             }}
+                                          >
+                                             <div style={{position:'absolute', right:6, top:6, zIndex:40, display:'flex', gap:6}}>
+                                                <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); }}>Remover</button>
+                                             </div>
+                                             <div
+                                                onMouseDown={onHandleMouseDown}
+                                                style={{position:'absolute', right:4, bottom:4, width:18, height:18, background:'rgba(0,0,0,0.4)', borderRadius:3, cursor:'nwse-resize', zIndex:40}}
+                                             />
+                                          </div>
+                                       )}
+                                    </div>
+                                 )}
+                            </div>
+                      {videoPreviewUrl && (
+                         <div style={{marginTop:8}}>
+                            <small style={{color:'#c6a45f'}}>Pré-visualização de vídeo:</small>
+                            <div style={{marginTop:6}}>
+                              <video src={videoPreviewUrl} controls style={{maxWidth:'100%', maxHeight:160, display:'block', background:'#000'}} />
+                            </div>
+                         </div>
+                      )}
                 </div>
 
                 {imgFile && (
@@ -481,6 +703,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         <span className="field-title" style={{color:'#3498db'}}>3. TRATAMENTO (BRILHO/CONTRASTE)</span>
                         <p style={{fontSize:10, color:'#aaa'}}>Segredos que aparecem ao estourar a imagem.</p>
                         <button onClick={()=>setEditorMode('filter')} className="upload-btn">🖌️ DESENHAR CAMADA</button>
+                           <button onClick={() => setShowGlitchMaker(true)} className="upload-btn" style={{ marginLeft: 8 }}>⚡ GLITCH FX</button>
                         <div style={{marginTop:10, background:'#000', padding:5}}>
                            <label style={{fontSize:9}}>GATILHOS (BRILHO / CONTRASTE / SAT)</label>
                            <div style={{display:'flex', gap:5}}>
@@ -501,35 +724,63 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               </>
             )}
 
-            {activeTab === 'audio' && (
-              <div className="field-block">
-                 <span className="field-title">EVP & ÁUDIO ESPETRAL</span>
-                 <label>A. FAIXA DE RUÍDO (Áudio Visível)</label>
-                 <label className="upload-btn">🎵 ARQUIVO NORMAL<input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} /></label>
-                 {audioBase && <span className="file-status">{audioBase.name}</span>}
-                 <div style={{height:1, background:'#333', margin:'10px 0'}} />
-                 <label style={{color:'#b33'}}>B. FAIXA ESCONDIDA (Voz/Segredo)</label>
-                 <div style={{display:'flex', gap:10}}>
-                    <label className="upload-btn" style={{flex:1}}>👻 UPLOAD ARQUIVO<input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} /></label>
-                    <button className="upload-btn" style={{flex:1}} onClick={() => setShowAudioForgeFor('hidden')}>🛠️ FORJA DE FX</button>
-                    <button className="upload-btn" style={{flex:1, borderColor: '#b33', color:'#b33'}} onClick={() => setShowSpectroMaker(true)}>📝 TEXTO → ÁUDIO</button>
-                 </div>
-                 {audioHidden && <span className="file-status">{audioHidden.name}</span>}
-                 {audioBasePreview && audioHiddenPreview && (
-                    <div style={{ marginTop: 15, padding: 10, background: '#0a0a0a', border: '1px solid #333' }}>
-                       <label style={{color: '#c6a45f', marginBottom: 10}}>🎛️ CALIBRAGEM DE FREQUÊNCIA</label>
-                       {/* Preview Compacto: escala para que o painel não quebre o modal */}
-                       <div style={{ transform: 'scale(0.78)', transformOrigin: 'top left', width: '128%', overflow: 'hidden' }}>
-                         <AudioDecrypter baseAudio={audioBasePreview} hiddenAudio={audioHiddenPreview} targetFreq={freq} />
-                       </div>
-                       <div style={{ marginTop: 15, paddingTop: 10, borderTop: '1px dashed #333' }}>
-                          <label>DEFINIR FREQUÊNCIA ALVO: {freq}Hz</label>
-                          <input type="range" min="0" max="100" value={freq} onChange={e => setFreq(Number(e.target.value))} style={{accentColor: '#c6a45f'}} />
-                       </div>
-                    </div>
-                 )}
-              </div>
-            )}
+                  {activeTab === 'audio' && (
+                     <div className="form-row">
+                        <div className="col">
+                           <div className="evidence-group">
+                              <span className="group-title">CAMADA A: ÁUDIO AMBIENTE</span>
+                              <label>Este é o som principal que o jogador ouve (ex: música, chiado).</label>
+                              <div style={{display:'flex', gap:10}}>
+                                 <label className="upload-btn" style={{flex:1}}>
+                                    📂 SELECIONAR ARQUIVO (MP3/WAV)
+                                    <input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} />
+                                 </label>
+                                 <button className="upload-btn" onClick={() => setShowMixer(true)}>🎛️ ABRIR ESTAÇÃO DE MIXAGEM</button>
+                              </div>
+                              {audioBase && <span className="file-status">{audioBase.name}</span>}
+                           </div>
+
+                           <div className="evidence-group" style={{borderColor: audioHidden ? '#c6a45f' : '#333'}}>
+                              <span className="group-title" style={{color:'#c6a45f'}}>CAMADA B: SINAL OCULTO (EVP)</span>
+                              <label>Este é o segredo. Pode ser uma voz ou um som com imagem (espectrograma).</label>
+                              <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+                                 <label className="upload-btn" style={{flex:1}}>
+                                    📂 UPLOAD DE ÁUDIO
+                                    <input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} />
+                                 </label>
+                                 <button className="upload-btn" onClick={() => setShowAudioForgeFor('hidden')}>🛠️ FORJA DE FX</button>
+                                
+                              </div>
+                              {audioHidden && <span className="file-status">{audioHidden.name}</span>}
+                           </div>
+
+                           {audioBase && audioHidden && (
+                              <div className="evidence-group" style={{borderColor:'#b33'}}>
+                                 <span className="group-title" style={{color:'#b33'}}>CONFIGURAÇÃO DO ENIGMA</span>
+                                 <div className="evp-config-row">
+                                    <label>FREQUÊNCIA ALVO (0 a 100)</label>
+                                    <input type="range" min="0" max="100" value={freq} onChange={e => setFreq(Number(e.target.value))} style={{accentColor:'#b33', flex:1}} />
+                                    <span>{freq} Hz</span>
+                                 </div>
+                                 <small style={{color:'#666'}}>O jogador precisará mover o dial até esta frequência para ouvir/ver o Sinal Oculto.</small>
+                              </div>
+                           )}
+                        </div>
+
+                        <div className="col">
+                           <div className="evidence-group" style={{height:'100%'}}>
+                              <span className="group-title">PAINEL DE TESTE (Como o Jogador Verá)</span>
+                              {audioBasePreview ? (
+                                 <div style={{width:'100%', height:'100%', minHeight:300, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                    <AdvancedAudioLab baseSrc={audioBasePreview} hiddenSrc={audioHiddenPreview} targetFreq={freq} triggerTime={triggerTime} onTriggerChange={setTriggerTime} />
+                                 </div>
+                              ) : (
+                                 <div style={{textAlign:'center', color:'#444', padding:'50px 0', fontSize:12}}>Selecione um áudio ambiente para iniciar o teste.</div>
+                              )}
+                           </div>
+                        </div>
+                     </div>
+                  )}
 
             {activeTab === 'cifra' && (
               <div className="field-block">
@@ -571,6 +822,22 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            </button>
         </div>
 
+      {showMixer && (
+         <AudioMixer
+            baseAudioFile={audioBase || undefined}
+            onClose={() => setShowMixer(false)}
+            onSave={(mixedFile: File, trig: number) => {
+               // Attach mixed file as base audio
+               setAudioBase(mixedFile);
+               try { if (audioBasePreview) URL.revokeObjectURL(audioBasePreview); } catch(e){}
+               const u = URL.createObjectURL(mixedFile);
+               setAudioBasePreview(u);
+               setTriggerTime(trig);
+               setShowMixer(false);
+            }}
+         />
+      )}
+
       </DiegeticWindow>
 
       {editorMode && previewUrl && (
@@ -579,44 +846,29 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               <UVEditor 
                  baseImageUrl={previewUrl}
                  mode={editorMode || 'uv'}
+                 initialImageFile={editorMode === 'filter' ? filterInitialImage : undefined}
                  onSave={(file) => { 
                     if (editorMode === 'uv') setUvFile(file);
                     if (editorMode === 'filter') setFilterFile(file);
                     setEditorMode(null);
+                    setFilterInitialImage(null);
                  }}
-                 onClose={() => setEditorMode(null)}
+                 onClose={() => { setEditorMode(null); setFilterInitialImage(null); }}
               />
             </div>
          </div>
       )}
-      {showSpectroMaker && (
-            <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
-               <div style={{width:'min(1200px,96%)'}}>
-                 <SpectrogramCreator
-                    investigationId={investigationId}
-                    onSave={(file) => {
-                       try { if (audioHiddenPreview) URL.revokeObjectURL(audioHiddenPreview); } catch(e){}
-                       setAudioHidden(file);
-                       setAudioHiddenPreview(URL.createObjectURL(file));
-                       setShowSpectroMaker(false);
-                    }}
-                    onUploadComplete={(publicUrl) => {
-                       setAudioHiddenUploadedUrl(publicUrl);
-                       setAudioHiddenPreview(publicUrl);
-                       setShowSpectroMaker(false);
-                    }}
-                    onClose={() => setShowSpectroMaker(false)}
-                 />
-               </div>
-            </div>
-      )}
+      
       {showGlitchMaker && (
             <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
                <div style={{width:'min(1000px,96%)'}}>
                  <GlitchMaker
                     onSave={(file) => {
+                       // keep file and open UVEditor (filter mode) so user can place/resize the layer
                        setFilterFile(file);
+                       setFilterInitialImage(file);
                        setShowGlitchMaker(false);
+                       setEditorMode('filter');
                     }}
                     onClose={() => setShowGlitchMaker(false)}
                  />
@@ -628,6 +880,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
             <div style={{ width: 'min(940px,96%)' }}>
                <AudioForge
+                  spectrogramUrl={audioHiddenPreview}
+                  triggerTime={triggerTime}
                   onClose={() => setShowAudioForgeFor(null)}
                   onSave={(file) => {
                      if (showAudioForgeFor === 'hidden') {

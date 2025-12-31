@@ -6,9 +6,10 @@ interface UVEditorProps {
   onSave: (file: File) => void;
   onClose: () => void;
   mode?: 'uv' | 'filter';
+  initialImageFile?: File | null;
 }
 
-export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }: UVEditorProps) {
+export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', initialImageFile }: UVEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState(mode === 'filter' ? '#ffffff' : '#b366ff');
@@ -45,8 +46,36 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }:
       drawingOffscreen.current.height = canvas.height;
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // if an initial image file (e.g. glitch) was provided, add it as an image layer centered
+      if (initialImageFile) {
+        const url = URL.createObjectURL(initialImageFile);
+        const img2 = new Image();
+        img2.crossOrigin = 'anonymous';
+        img2.src = url;
+        img2.onload = () => {
+          try {
+            const id = `layer-${Date.now()}`;
+            const naturalW = img2.naturalWidth || img2.width || 100;
+            const scaleToFit = Math.min(1, canvas.width / naturalW, canvas.height / (img2.naturalHeight || img2.height || 100));
+            setLayers(prev => [...prev, { id, type: 'image', x: canvas.width / 2, y: canvas.height / 2, img: img2, scale: scaleToFit }]);
+            setSelectedLayer(id);
+            redrawAll();
+          } catch (e) {
+            // ignore
+          }
+        };
+        // cleanup object url when component unmounts
+        const cleanup = () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+        // schedule cleanup on unmount
+        (canvas as any).__initialImageCleanup = cleanup;
+      }
     };
-  }, [baseImageUrl]);
+    return () => {
+      // revoke any initial image url
+      const cleanup = (canvasRef.current as any)?.__initialImageCleanup;
+      if (cleanup && typeof cleanup === 'function') cleanup();
+    };
+  }, [baseImageUrl, initialImageFile]);
 
   // redraw main canvas from offscreen drawing + layers
   const redrawAll = () => {

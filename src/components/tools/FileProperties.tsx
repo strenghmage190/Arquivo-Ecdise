@@ -1,6 +1,11 @@
 import React from 'react';
 
-export default function FileProperties({ metaData, filename }: { metaData?: any; filename?: string }) {
+interface FilePropertiesProps {
+  metaData?: Record<string, any>;
+  filename?: string;
+}
+
+export default function FileProperties({ metaData, filename }: FilePropertiesProps) {
   const gps = metaData?.gps_coords || metaData?.gps || '';
   return (
     <div style={{ background: '#e0e0e0', color: '#000', padding: 10, fontFamily: 'Arial', fontSize: 12, width: 320, border: '1px solid #999', boxShadow: '5px 5px 15px rgba(0,0,0,0.5)' }}>

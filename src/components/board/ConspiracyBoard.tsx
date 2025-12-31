@@ -24,6 +24,7 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
       const [boardData, cardsData] = await Promise.all([fetchConspiracyBoard(investigationId), fetchCards(investigationId)]);
       if (!mounted) return;
       setCards(cardsData || []);
+      // If excalidraw API is already available, hydrate immediately.
       if (boardData && excalidrawAPI && excalidrawAPI.updateScene) {
         try {
           excalidrawAPI.updateScene({ elements: boardData.elements || [], appState: boardData.appState || {} });
@@ -40,6 +41,31 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
     load();
     return () => { mounted = false; };
   }, [investigationId]);
+
+  // If excalidraw API becomes available after initial load, ensure we hydrate the scene
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    let mounted = true;
+    async function hydrate() {
+      try {
+        const boardData = await fetchConspiracyBoard(investigationId);
+        if (!mounted || !boardData) return;
+        try {
+          excalidrawAPI.updateScene({ elements: boardData.elements || [], appState: boardData.appState || {} });
+          if (boardData.files && excalidrawAPI.addFiles) {
+            const files: any[] = Object.values(boardData.files || {});
+            if (files.length) excalidrawAPI.addFiles(files);
+          }
+        } catch (e) {
+          console.warn('failed to hydrate excalidraw scene on api ready', e);
+        }
+      } catch (e) {
+        console.error('hydrate conspiracy board failed', e);
+      }
+    }
+    hydrate();
+    return () => { mounted = false; };
+  }, [excalidrawAPI, investigationId]);
 
   // realtime subscription for remote updates
   useEffect(() => {

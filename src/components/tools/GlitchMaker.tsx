@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 
-interface Props { onSave: (f: File) => void; onClose: () => void; }
+interface GlitchMakerProps { onSave: (f: File) => void; onClose: () => void; }
 
-export default function GlitchMaker({ onSave, onClose }: Props) {
+export default function GlitchMaker({ onSave, onClose }: GlitchMakerProps): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState<boolean>(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -15,14 +15,14 @@ export default function GlitchMaker({ onSave, onClose }: Props) {
     setLoaded(false);
   };
 
-  const drawImage = (img: HTMLImageElement) => {
+  const drawImage = (img: HTMLImageElement): void => {
     const c = canvasRef.current; if (!c) return;
     c.width = img.width; c.height = img.height;
     const ctx = c.getContext('2d'); if (!ctx) return;
     ctx.drawImage(img, 0, 0);
   };
 
-  const applyGlitch = () => {
+  const applyGlitch = (): void => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext('2d'); if (!ctx) return;
     const w = c.width; const h = c.height;
@@ -49,7 +49,7 @@ export default function GlitchMaker({ onSave, onClose }: Props) {
     ctx.putImageData(id, 0, 0);
   };
 
-  const saveResult = async () => {
+  const saveResult = async (): Promise<void> => {
     const c = canvasRef.current; if (!c) return;
     return new Promise<void>((resolve) => {
       c.toBlob((blob) => {

@@ -41,6 +41,7 @@ export interface InvestigationCard {
   investigation_id: string;
   title: string;
   image_uv_url?: string | null;
+  video_url?: string | null;
   image_url?: string | null;
   description_public?: string | null;
   description_hidden?: string | null;
@@ -122,6 +123,7 @@ export async function createInvestigationCard(card: InvestigationCard) {
     investigation_id: card.investigation_id,
     title: card.title,
     image_uv_url: (card as any).image_uv_url || null,
+    video_url: (card as any).video_url || null,
     image_filter_layer: (card as any).image_filter_layer || null,
     image_url: card.image_url || null,
     audio_url: (card as any).audio_url || null,

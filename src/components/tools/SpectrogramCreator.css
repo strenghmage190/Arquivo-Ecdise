@@ -1,16 +1,52 @@
 .spectro-creator-overlay {
-  position: fixed; inset: 0; z-index: 13000; display:flex; align-items:center; justify-content:center;
-  background: rgba(0,0,0,0.7);
+  position: fixed; inset: 0; z-index: 15000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
 }
+
 .spectro-box {
-  width: 520px; max-width: 96%; background: #0b0b0b; border:1px solid #222; padding: 18px; border-radius:6px; color:#ddd;
+  width: 500px;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ddd;
+  box-shadow: 0 10px 40px #000;
 }
-.sp-header { font-weight:900; color:#c6a45f; margin-bottom:8px; }
-.sp-workspace { margin-bottom:12px; }
-.sp-controls { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
-.btn-retro { background:#222; border:1px solid #444; color:#ddd; padding:8px 12px; cursor:pointer }
-.preview-player { flex:1 }
-.sp-workspace small{display:block}
-.sp-footer { display:flex; justify-content:space-between; }
-.btn-cancel { background:transparent; border:none; color:#888 }
-.btn-confirm { background:#b33; color:#fff; border:none; padding:8px 12px; cursor:pointer }
+
+.sp-header {
+  padding: 12px;
+  font-weight: bold; color: #b33;
+  border-bottom: 1px solid #333;
+}
+
+.sp-workspace { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+
+.text-preview {
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  height: 100px;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+}
+
+label { font-size: 10px; color: #888; text-transform: uppercase; }
+input[type=text] {
+  background: #000; border: 1px solid #555; color: #fff;
+  padding: 12px; font-size: 18px; text-align: center;
+}
+input[type=range] { width: 100%; accent-color: #b33; }
+
+.sp-divider { height: 1px; background: #333; margin: 10px 0; }
+.sp-row { display: flex; flex-direction: column; gap: 5px; }
+
+.sp-footer {
+  display: flex; justify-content: flex-end; gap: 15px;
+  padding: 15px;
+  background: #1a1a1f;
+  border-top: 1px solid #333;
+}
+.btn-cancel, .btn-confirm { background: none; border: 1px solid #444; color: #888; padding: 8px 16px; cursor: pointer; }
+.btn-confirm { background: #b33; color: #fff; border-color: #b33; font-weight: bold; }

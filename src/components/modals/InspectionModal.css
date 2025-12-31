@@ -52,7 +52,7 @@
   justify-content: center;
   background: #050505;
   position: relative;
-  min-height: 340px;
+  min-height: 520px; /* increase baseline so video gets more vertical room */
   /* allow HUD panels to overflow above the visual area so tools (decoder, etc.) are fully visible */
   overflow: visible;
 }
@@ -122,9 +122,9 @@
   background-color: #050505;
   border: 1px solid #333;
   box-shadow: 0 0 60px rgba(0,0,0,1);
-  display: flex; flex-direction: column;
+  display: grid; grid-template-rows: auto 1fr auto; /* header / content / footer */
   border-radius: 6px;
-  overflow: auto; /* enable scrolling inside the modal */
+  overflow: hidden; /* nothing may escape the modal bounds */
   -webkit-overflow-scrolling: touch;
   font-family: 'Roboto Mono', monospace;
 }
@@ -132,10 +132,10 @@
 /* --- HEADER (Menu Superior) --- */
 
 .inspect-header {
-  height: 55px; background: #0a0a0a; border-bottom: 1px solid #333;
+  height: 48px; background: #0a0a0a; border-bottom: 1px solid #333;
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 16px; flex-shrink: 0; gap: 12px;
-  flex-wrap: nowrap; /* force single-line layout */
+  flex-wrap: wrap; /* allow actions to wrap onto additional lines when needed */
 }
 
 /* Ensure header items lay out in a single row and do not overflow into the visual area */
@@ -165,10 +165,13 @@
   align-items: center;
   flex: 0 0 auto; /* keep actions from growing */
   min-width: 0;
+  flex-wrap: wrap; /* allow buttons to wrap inside the actions box */
+  max-width: 48%; /* reserve room for meta-info while keeping actions contained */
+  box-sizing: border-box;
 }
 
-/* Slightly reduce header button padding so more items fit on one line */
-.inspect-header .btn-tool-tab { padding: 6px 8px; font-size: 11px; }
+/* Make header buttons larger for easier tapping */
+.inspect-header .btn-tool-tab { padding: 10px 12px; font-size: 13px; }
 
 /* ====== Header visual consistency ====== */
 .inspect-header {
@@ -197,7 +200,7 @@
   font-weight: 700;
 }
 .inspect-header .actions .btn-tool-tab {
-  background: transparent; color: #cfcfcf; padding: 6px 8px; font-size: 12px; border-radius: 4px;
+  background: transparent; color: #cfcfcf; padding: 8px 10px; font-size: 13px; border-radius: 6px;
 }
 .inspect-header .actions .btn-tool-tab.active-green { color: #00ffaa; }
 
@@ -210,6 +213,28 @@
 
 /* Make sure the visual area sits below the header and doesn't overlap */
 .inspect-visual-area { margin-top: 0; z-index: 10; }
+
+/* Ensure the visual/content area is a rigid compartment that cannot overflow the modal */
+.inspect-file > .inspect-visual-area,
+.inspect-file > .evidence-display-area {
+  overflow: hidden; /* prevent children from escaping */
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/* If PhoneViewer or other mockups are rendered, make them scroll internally */
+.inspect-file .phone-mockup-wrapper,
+.inspect-file .phone-mockup,
+.inspect-file .chat-body {
+  max-height: 100%;
+  overflow: hidden;
+}
+.inspect-file .phone-mockup .chat-body { overflow-y: auto; }
+
+/* Buttons/actions container should not push outside modal; allow wrapping inside its box */
+.inspect-header .actions { box-sizing: border-box; }
 
 /* Ensure header appears above any floating HUDs and that its buttons don't wrap */
 .inspect-header { position: relative; z-index: 80; }
@@ -224,12 +249,16 @@
 .actions { display: flex; gap: 4px; background: #000; padding: 4px; border-radius: 4px; border: 1px solid #222; }
 
 .btn-tool-tab {
-  background: transparent; border: none; color: #888;
-  padding: 6px 12px; font-size: 11px; font-weight: bold; cursor: pointer;
-  border-radius: 2px; transition: all 0.2s; text-transform: uppercase;
+  background: transparent; border: none; color: #d0d0d0;
+  padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+  border-radius: 6px; transition: all 0.14s ease; text-transform: uppercase;
   font-family: 'Roboto Mono', monospace;
+  min-height: 40px; /* touch-friendly target */
+  min-width: 48px; /* reduce min width so many buttons fit */
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
 }
-.btn-tool-tab:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.btn-tool-tab:hover { color: #fff; background: rgba(255,255,255,0.06); transform: translateY(-1px); }
 
 /* Cores de Ativo */
 .btn-tool-tab.active-green { color: #00ffaa; background: rgba(0, 255, 170, 0.15); box-shadow: inset 0 0 5px rgba(0, 255, 170, 0.2); }
@@ -248,6 +277,126 @@
   background: #000;
   overflow: hidden; 
   display: flex; align-items: center; justify-content: center;
+  min-height: 0; /* importante para o flex funcionar e permitir scroll interno quando necessário */
+  transition: all 0.28s ease; /* animação suave ao expandir/contrair */
+}
+
+/* Quando o áudio está expandido, permita scroll interno na área visual para que o usuário
+   consiga rolar/abaixar o espectrograma se ele for maior que a altura disponível. */
+.inspect-file.audio-expanded .inspect-visual-area {
+  overflow: auto;
+  align-items: flex-start; /* alinhar topo para permitir rolagem "para baixo" */
+  padding: 12px 20px; /* um pouco de espaçamento interno para conforto */
+}
+
+/* ===== Evidence display area: Mesa de Luz (Grid Tecnológico) ===== */
+.evidence-display-area {
+  width: 100%;
+  height: auto; /* let content determine height while still respecting min/max */
+  min-height: 40vh;
+  max-height: 72vh;
+  background-color: #050505; /* Fundo base */
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px; /* Tamanho do grid */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #222;
+  box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+  overflow: auto; /* allow internal scrolling for large media */
+}
+
+.evidence-display-area img,
+.evidence-display-area canvas {
+  max-width: 98%;
+  max-height: 98%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.04);
+  display: block;
+}
+
+/* --- THERMAL / TACTICAL UI --- */
+.evidence-display-area.termal-mode { position: relative; }
+
+.thermal-scale {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 80%;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 60;
+  font-family: 'Roboto Mono', monospace;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.8rem;
+}
+
+.thermal-scale .temp-high, .thermal-scale .temp-low {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+}
+
+.gradient-bar {
+  width: 12px;
+  height: 100%;
+  border: 1px solid #444;
+  margin: 6px 0;
+  background: linear-gradient(to top,
+    black 0%,
+    purple 25%,
+    red 50%,
+    orange 75%,
+    white 100%
+  );
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.6);
+}
+
+.ui-corners {
+  position: absolute;
+  top: 20px; left: 20px; right: 20px; bottom: 20px;
+  pointer-events: none;
+  z-index: 55;
+}
+.ui-corners::before, .ui-corners::after {
+  content: ""; position: absolute;
+  width: 20px; height: 20px;
+  border-color: rgba(0, 243, 255, 0.45);
+  border-style: solid;
+  transition: all 0.3s;
+}
+.ui-corners::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.ui-corners::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+/* Scanlines to unify background and image */
+.evidence-display-area.termal-mode::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.08) 50%);
+  background-size: 100% 4px;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+@media (max-width: 900px) {
+  .evidence-display-area { height: 50vh; }
+}
+
+/* On shorter viewports, reduce the visual area's minimum to avoid overflow */
+@media (max-height: 720px) {
+  .inspect-visual-area { min-height: 40vh; }
 }
 
 /* --- PAINÉIS FLUTUANTES (HUD) --- */
@@ -301,12 +450,51 @@ input[type=number].filter-number::-webkit-outer-spin-button, input[type=number].
 input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearance: textfield; appearance: textfield; }
 
 /* Botão Reset */
-.btn-reset {
-  width: 100%; background: #222; border: 1px solid #444; color: #fff;
-  padding: 8px; font-size: 10px; cursor: pointer; font-weight: bold;
-  text-transform: uppercase; margin-top: 5px;
+.btn-reset, .btn-reset-filters {
+  display: inline-block; background: transparent; border: 1px solid rgba(255,255,255,0.06); color: #d6d6d6;
+  padding: 6px 10px; font-size: 12px; cursor: pointer; font-weight: 700;
+  text-transform: uppercase; margin-top: 6px; border-radius: 6px; transition: all .14s ease;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.6) inset;
 }
-.btn-reset:hover { background: #333; border-color: #666; }
+.btn-reset:hover, .btn-reset-filters:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.12); color: #fff; transform: translateY(-1px); }
+
+/* Thermal overlay styling: canvas-based mapping rendered into .thermal-canvas */
+.thermal-overlay {
+  position: absolute; inset: 0; pointer-events: none; z-index: 22; display: block;
+  mix-blend-mode: screen; /* blend with underlying image for warmth */
+}
+.thermal-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 80%, rgba(255,120,60,0.06), transparent 10%), radial-gradient(ellipse at 80% 20%, rgba(255,220,120,0.04), transparent 12%);
+  pointer-events: none;
+}
+.thermal-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  display: block;
+  image-rendering: auto;
+  filter: contrast(1.18) saturate(1.2) brightness(1.02) blur(0.35px);
+  z-index: 22;
+  /* Subtle CRT / sensor glow to sell the thermal effect */
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.6);
+}
+
+/* Optional light grain overlay to make thermal feel realistic */
+.thermal-canvas::after {
+  content: '';
+  pointer-events: none;
+  position: absolute; inset: 0;
+  background-image: url('https://grainy-gradients.vercel.app/noise.svg');
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
 
 /* --- CONTROLES FORENSE (Canais RGB) --- */
 .forensic-controls { display: flex; gap: 5px; }
@@ -322,17 +510,17 @@ input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearanc
 
 /* --- RODAPÉ --- */
 .inspect-details {
-  /* Use a percentage of the modal height so the visual area stays visible
-     and the details/footer can shrink/grow. Children will scroll internally. */
-  height: 35%; /* visual area keeps ~65% */
-  min-height: 200px;
-  max-height: 420px;
+  /* Reduce the vertical footprint of the details area so the visual/video
+     area gets more space. Details remain scrollable when content is large. */
+  height: auto;
+  min-height: 90px;
+  max-height: 22vh; /* smaller than before to prioritize the video */
   background: #111;
   border-top: 1px solid #333;
-  padding: 20px;
+  padding: 12px; /* slightly reduced padding */
   display: flex;
-  gap: 20px;
-  overflow: hidden; /* prevent children from overflowing the modal */
+  gap: 12px;
+  overflow: auto; /* allow details to scroll internally */
 }
 
 /* Left column inside the details that holds description and metadata. It scrolls */
@@ -373,5 +561,31 @@ input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearanc
   cursor: pointer; font-size: 11px; height: fit-content; 
 }
 .btn-edit-ref:hover { color: #fff; border-color: #777; }
+
+/* --- HEADER FLEX FIXES (override earlier fixed header/rows) --- */
+/* 1. Allow header to grow when toolbar wraps into multiple lines */
+.inspect-file { grid-template-rows: auto 1fr auto !important; }
+
+/* 2. Let header size itself and wrap tools onto next line when needed */
+.inspect-header {
+  height: auto !important;
+  min-height: 55px;
+  padding: 10px 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 3. Ensure visual area stays below the header and doesn't overlap */
+.inspect-visual-area {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* 4. If tools hud is fixed, avoid it sitting under the header on small screens */
+.tools-hud-panel {
+  top: auto !important;
+  margin-top: 10px;
+}
 
 
