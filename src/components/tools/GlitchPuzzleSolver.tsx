@@ -86,9 +86,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
   const [shift, setShift] = useState(resolvedConfig.start_shift ?? 50);
   const [chroma, setChroma] = useState(resolvedConfig.start_chromatic ?? 50);
   
-  // Debounced values para performance (evita 100+ re-renders por segundo)
-  const [debouncedFreq, setDebouncedFreq] = useState(freq);
-  const [debouncedShift, setDebouncedShift] = useState(shift);
+  // ✅ FIXED: Removido shadowing - apenas debouncedConfig agora (estados desnecessários removidos)
   const [debouncedConfig, setDebouncedConfig] = useState({ freq, shift, chroma });
   
   const [aligned, setAligned] = useState(alreadySolved || false);
@@ -106,6 +104,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
     return () => clearTimeout(timer);
   }, [freq, shift, chroma]);
   
+  // ✅ FIXED: Agora são apenas constantes derivadas (não shadowing de estados)
   const debouncedFreq = debouncedConfig.freq;
   const debouncedShift = debouncedConfig.shift;
   const debouncedChroma = debouncedConfig.chroma;

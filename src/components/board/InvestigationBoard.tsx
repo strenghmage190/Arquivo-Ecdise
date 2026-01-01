@@ -25,6 +25,7 @@ import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import GlitchMaker from '../tools/GlitchMaker';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
+import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -490,12 +491,14 @@ export function InvestigationBoard({ investigationId }: Props) {
   // Realtime subscriptions: notes, cards, and investigation (doomsday clock)
   useEffect(() => {
     if (!investigationId) return;
+    let mounted = true;
     const channels: any[] = [];
 
     try {
       // Notes channel
       const notesChannel = supabase.channel(`notes:${investigationId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'investigation_notes', filter: `investigation_id=eq.${investigationId}` }, (payload) => {
+          if (!mounted) return;
           try {
             const ev = payload.eventType;
             const row: any = payload.new || payload.old;
@@ -517,6 +520,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       // Cards channel: refresh cards on any change (simpler)
       const cardsChannel = supabase.channel(`cards:${investigationId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'investigation_cards', filter: `investigation_id=eq.${investigationId}` }, (payload) => {
+          if (!mounted) return;
           try {
             const ev = payload.eventType;
             const newRow: any = payload.new;
@@ -554,6 +558,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       // Investigation channel (watch for doomsday_clock updates)
       const invChannel = supabase.channel(`investigation:${investigationId}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'investigations', filter: `id=eq.${investigationId}` }, (payload) => {
+          if (!mounted) return;
           try {
             const row: any = payload.new;
             if (row && row.doomsday_clock) {
@@ -569,6 +574,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     }
 
     return () => {
+      mounted = false;
       Object.values(saveTimeouts.current).forEach(timeout => {
         if (timeout) clearTimeout(timeout as any);
       });
@@ -719,16 +725,11 @@ export function InvestigationBoard({ investigationId }: Props) {
     }
   };
 
-  useEffect(() => {
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    window.addEventListener('touchend', handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
-      window.removeEventListener('touchend', handleGlobalMouseUp);
-    };
-    // intentionally not adding localPositions to deps to avoid recreating listeners
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [investigationId, selectedIds]);
+  // ✅ MIGRADO: useGlobalMouseEvents - sem recreação de listeners
+  useGlobalMouseEvents({
+    onMouseUp: handleGlobalMouseUp,
+    onTouchEnd: handleGlobalMouseUp as any
+  });
 
   // Marquee: start on shift+mousedown on background, update on move, finalize on mouseup
   const startMarquee = (e: MouseEvent) => {
@@ -946,6 +947,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       panningRef.current = null;
     };
 
+    // MANTIDO: mousemove precisa ser nativo para performance (rafId)
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
@@ -954,30 +956,35 @@ export function InvestigationBoard({ investigationId }: Props) {
     };
   }, []);
 
-  // finalize marquee on mouseup
-  useEffect(() => {
-    const up = (e: MouseEvent) => {
+  // MIGRADO: finalize marquee on mouseup usando hook centralizado
+  useGlobalMouseEvents({
+    onMouseUp: () => {
       if (marqueeStartRef.current) {
         marqueeStartRef.current = null;
         // leave selection as-is; hide marquee overlay
         setTimeout(() => setMarqueeRect(null), 10);
       }
-    };
-    window.addEventListener('mouseup', up);
-    return () => window.removeEventListener('mouseup', up);
-  }, []);
+    }
+  });
 
   const scheduleDebouncedSave = useCallback((id: string) => {
     const existing = saveTimeouts.current[id];
     if (existing) return; // already scheduled
+    // Mutex: prevent duplicate concurrent saves
+    if (saveQueueRef.current.has(id)) return;
+    
     saveTimeouts.current[id] = setTimeout(async () => {
       try {
         const pos = localPositions[id];
-        if (pos) await api.updateCard(id, { x: Math.round(pos.x), y: Math.round(pos.y) });
+        if (pos) {
+          saveQueueRef.current.add(id);
+          await api.updateCard(id, { x: Math.round(pos.x), y: Math.round(pos.y) });
+        }
       } catch (err) {
         console.error('Debounced save failed', err);
       } finally {
         saveTimeouts.current[id] = null;
+        saveQueueRef.current.delete(id);
       }
     }, 600);
   }, [localPositions]);

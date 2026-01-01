@@ -394,12 +394,34 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); };
    }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl]);
    
+   // ✅ Final cleanup on unmount: revoga todas as URLs rastreadas
    useEffect(() => {
       return () => {
-         urlsRef.current.forEach((u) => { try { URL.revokeObjectURL(u); } catch (err) {} });
+         urlsRef.current.forEach((u) => { 
+            try { 
+               URL.revokeObjectURL(u); 
+            } catch (err) {
+               console.warn('URL revoke error on unmount:', err);
+            }
+         });
          urlsRef.current.clear();
       };
    }, []);
+
+   // ✅ Cleanup quando modal fecha: evita vazamento de URLs em caso de close rápido
+   useEffect(() => {
+      if (!isOpen) {
+         // Revoga imediatamente todas as URLs quando modal fecha
+         urlsRef.current.forEach((u) => {
+            try {
+               URL.revokeObjectURL(u);
+            } catch (err) {
+               console.warn('URL revoke error on modal close:', err);
+            }
+         });
+         urlsRef.current.clear();
+      }
+   }, [isOpen]);
 
    // Helper: sanitize metadata to ensure it's JSON-serializable before sending to server
    const sanitizeForMetadata = (input: any, maxDepth = 6) => {

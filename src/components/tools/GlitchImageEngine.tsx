@@ -47,7 +47,7 @@ function buildSeeds(seedKey: string): SliceSeed[] {
   return seeds;
 }
 
-const GlitchImageEngineComponent = ({
+const GlitchImageEngineComponent: React.FC<GlitchImageEngineProps> = ({
   imageUrl,
   targetFrequency,
   targetShift,
@@ -59,7 +59,7 @@ const GlitchImageEngineComponent = ({
   className,
   height = 320,
   onResolved,
-}: GlitchImageEngineProps): React.ReactElement {
+}) => {
   const seeds = useMemo(() => buildSeeds(imageUrl || 'glitch'), [imageUrl]);
   const freqDelta = Math.abs(playerFrequency - targetFrequency);
   const shiftDelta = Math.abs(playerShift - targetShift);
@@ -171,7 +171,7 @@ const GlitchImageEngineComponent = ({
       </div>
     </div>
   );
-});
+};
 
 // React.memo para evitar re-renders quando props não mudam
 export const GlitchImageEngine = React.memo(GlitchImageEngineComponent, (prevProps, nextProps) => {

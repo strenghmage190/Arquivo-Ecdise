@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { eventManager } from '../../utils/EventManager';
 import { audioManager } from '../../utils/AudioManager';
+import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
+
+// ✅ Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
+let systemOverlaysInstanceCount = 0;
 
 export default function SystemOverlays() {
   const integrityRef = useRef<HTMLDivElement | null>(null);
@@ -10,9 +14,24 @@ export default function SystemOverlays() {
   const location = useLocation();
   const navigate = useNavigate();
   const [hideHeader, setHideHeader] = useState(false);
+  const instanceIdRef = useRef<number>(-1);
 
-  // ✅ Listen for modal open/close events via EventManager
+  // ✅ Registra instância única ao montar
   useEffect(() => {
+    systemOverlaysInstanceCount++;
+    instanceIdRef.current = systemOverlaysInstanceCount;
+    const isFirstInstance = instanceIdRef.current === 1;
+    
+    return () => {
+      systemOverlaysInstanceCount--;
+    };
+  }, []);
+
+  // ✅ Listen for modal open/close events via EventManager (apenas a primeira instância)
+  useEffect(() => {
+    const isFirstInstance = instanceIdRef.current === 1;
+    if (!isFirstInstance) return; // Evita duplicatas
+    
     const unsubscribeOpen = eventManager.on('modal:opened', () => setHideHeader(true));
     const unsubscribeClose = eventManager.on('modal:closed', () => setHideHeader(false));
     const unsubscribeHeaderToggle = eventManager.on('header:toggle', (show: boolean) => setHideHeader(!show));
@@ -53,8 +72,11 @@ export default function SystemOverlays() {
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
-  // ✅ Custom cursor tracking (sem duplicatas, com cleanup garantido)
+  // ✅ MIGRADO: Custom cursor tracking usando hook centralizado
   useEffect(() => {
+    const isFirstInstance = instanceIdRef.current === 1;
+    if (!isFirstInstance) return; // Evita duplicatas de cursor
+    
     let rafId: number | null = null;
     const cursor = cursorRef.current;
     if (!cursor) return;
@@ -69,61 +91,56 @@ export default function SystemOverlays() {
       cursor.style.transform = `translate(-50%,-50%) scale(${scale})`;
     };
 
-    const onMove = (e: MouseEvent) => {
-      if (!cursor) return;
+    // Initial render
+    rafId = requestAnimationFrame(render);
+
+    // ✅ MIGRADO: Hook centralizado gerencia eventos de mouse
+    const cleanup = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+
+    return cleanup;
+  }, []);
+
+  // ✅ Hook para gerenciar eventos globais de mouse
+  useGlobalMouseEvents({
+    onMouseMove: (e) => {
+      const cursor = cursorRef.current;
+      const isFirstInstance = instanceIdRef.current === 1;
+      if (!cursor || !isFirstInstance) return;
       cursor.style.left = `${e.clientX}px`;
       cursor.style.top = `${e.clientY}px`;
       cursor.style.display = 'block';
       cursor.style.opacity = '1';
-    };
-
-    const onDown = () => {
-      isPressed = true;
-      if (cursor) cursor.classList.add('pressed');
-      render();
-    };
-
-    const onUp = () => {
-      isPressed = false;
-      if (cursor) cursor.classList.remove('pressed');
-      render();
-    };
-
-    const hoverToggle = (e: Event) => {
-      if (!cursor) return;
+    },
+    onMouseDown: () => {
+      const cursor = cursorRef.current;
+      const isFirstInstance = instanceIdRef.current === 1;
+      if (!cursor || !isFirstInstance) return;
+      cursor.classList.add('pressed');
+    },
+    onMouseUp: () => {
+      const cursor = cursorRef.current;
+      const isFirstInstance = instanceIdRef.current === 1;
+      if (!cursor || !isFirstInstance) return;
+      cursor.classList.remove('pressed');
+    },
+    onMouseOver: (e) => {
+      const cursor = cursorRef.current;
+      const isFirstInstance = instanceIdRef.current === 1;
+      if (!cursor || !isFirstInstance) return;
       const tgt = e.target as HTMLElement | null;
       const interactive = tgt && tgt.closest && (
         tgt.closest('button, a, input[type="button"], input[type="submit"], .clickable, [role="button"], [onclick], [tabindex]')
       );
       
       if (interactive) {
-        isActive = true;
         cursor.classList.add('active');
       } else {
-        isActive = false;
         cursor.classList.remove('active');
       }
-      render();
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseover', hoverToggle);
-    window.addEventListener('mouseout', hoverToggle);
-    window.addEventListener('mousedown', onDown);
-    window.addEventListener('mouseup', onUp);
-
-    // Initial render
-    rafId = requestAnimationFrame(render);
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseover', hoverToggle);
-      window.removeEventListener('mouseout', hoverToggle);
-      window.removeEventListener('mousedown', onDown);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, []);
+    }
+  });
 
   // ✅ Decode-effect delegation (com Set para cleanup correto)
   useEffect(() => {

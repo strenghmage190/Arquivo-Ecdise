@@ -60,10 +60,10 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
             if (files.length) excalidrawAPI.addFiles(files);
           }
         } catch (e) {
-          console.warn('failed to hydrate excalidraw scene on api ready', e);
+          if (mounted) console.warn('failed to hydrate excalidraw scene on api ready', e);
         }
       } catch (e) {
-        console.error('hydrate conspiracy board failed', e);
+        if (mounted) console.error('hydrate conspiracy board failed', e);
       }
     }
     hydrate();
@@ -80,6 +80,7 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
         table: 'investigations', 
         filter: `id=eq.${investigationId}` 
       }, (payload: any) => {
+        if (!mounted) return;
         const newData = payload.new?.conspiracy_board_data;
         if (!newData) return;
         
@@ -94,6 +95,7 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
     const pendingUpdateRef = React.useRef<any>(null);
     
     const unsubscribe = eventManager.on('conspiracy:remote-update', (newData: any) => {
+      if (!mounted) return;
       if (isSyncing) {
         console.warn('[ConspiracyBoard] Sync in progress, queuing update');
         pendingUpdateRef.current = newData;
@@ -102,16 +104,16 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
       setRemoteUpdate(newData);
     });
     
-    useEffect(() => {
-      if (!isSyncing && pendingUpdateRef.current) {
-        const pending = pendingUpdateRef.current;
-        pendingUpdateRef.current = null;
-        setRemoteUpdate(pending);
-      }
-    }, [isSyncing]);
+    // Processa fila de updates pendentes após sync finalizar
+    if (!isSyncing && pendingUpdateRef.current && mounted) {
+      const pending = pendingUpdateRef.current;
+      pendingUpdateRef.current = null;
+      setRemoteUpdate(pending);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      mounted = false;
+      try { supabase.removeChannel(channel); } catch (e) {}
       unsubscribe();
     };
   }, [investigationId, isSyncing]);

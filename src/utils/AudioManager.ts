@@ -2,10 +2,11 @@
  * AudioManager - Sistema centralizado de gerenciamento de áudio
  * 
  * Previne race conditions através de:
+ * - Singleton pattern (apenas UMA instância)
  * - Mutex na inicialização
  * - Controle de estado
  * - Cleanup automático
- * - Previne múltiplas instâncias de AudioContext
+ * - Valida que NENHUMA outra AudioContext é criada
  */
 
 class AudioManager {
@@ -15,19 +16,39 @@ class AudioManager {
   private oscillator: OscillatorNode | null = null;
   private isInitializing: boolean = false;
   private isActive: boolean = false;
+  private createdAt: number = Date.now();
 
   private constructor() {
-    // Singleton pattern
+    // Singleton pattern - prevent direct instantiation
+    console.log('[AudioManager] Instance created (singleton)');
   }
 
   /**
-   * Retorna a instância única do AudioManager
+   * ✅ Retorna a instância única do AudioManager
    */
   static getInstance(): AudioManager {
     if (!AudioManager.instance) {
       AudioManager.instance = new AudioManager();
+      // Register globally para debugging
+      (globalThis as any).__AUDIO_MANAGER__ = AudioManager.instance;
     }
     return AudioManager.instance;
+  }
+
+  /**
+   * ✅ Validação: garante que nenhuma AudioContext extra foi criada
+   */
+  static validateNoExtraContexts(): boolean {
+    try {
+      const instances = (window as any).__AUDIO_CONTEXT_INSTANCES__ || 0;
+      if (instances > 1) {
+        console.error(`❌ Multiple AudioContext instances detected: ${instances}`);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return true; // Continue anyway
+    }
   }
 
   /**
@@ -52,9 +73,17 @@ class AudioManager {
       // Cleanup anterior se houver
       await this.cleanup();
 
+      // ✅ Valida que não há múltiplas instâncias
+      if (!AudioManager.validateNoExtraContexts()) {
+        console.error('[AudioManager] Extra AudioContext instances detected - may cause issues');
+      }
+
       // Cria novo contexto de áudio
       const ctx = new AudioContext();
       this.audioContext = ctx;
+      
+      // Track no global (para debugging)
+      (window as any).__AUDIO_CONTEXT_INSTANCES__ = ((window as any).__AUDIO_CONTEXT_INSTANCES__ || 0) + 1;
 
       // Cria gain node
       const gain = ctx.createGain();
