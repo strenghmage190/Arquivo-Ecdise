@@ -79,22 +79,25 @@ body{ background:var(--nexus-dark); color:var(--nexus-blue); font-family: 'Share
 .system-monitor .value { font-weight:700; font-size:12px; color:#eaf; }
 
 #custom-cursor {
+  display: none !important; /* Cursor customizado desabilitado */
+}
+/* Código anterior do cursor mantido apenas para referência, mas desabilitado
+#custom-cursor {
   width:30px;
   height:30px;
   border:1px solid var(--nexus-blue);
   position:fixed;
-  top:0;
-  left:0;
   pointer-events:none;
   z-index:2147483647;
   border-radius:50%;
-  transform: translate(-50%,-50%) scale(1);
-  transition: transform 0.08s linear;
   will-change: transform;
   user-select:none;
   display: block;
   background: rgba(0,0,0,0.12);
 }
+*/
+/* Cursor customizado desabilitado - usando cursor nativo do sistema */
+/* 
 #custom-cursor::after {
   content: '';
   position: absolute;
@@ -108,35 +111,18 @@ body{ background:var(--nexus-dark); color:var(--nexus-blue); font-family: 'Share
   box-shadow: 0 0 6px var(--nexus-blue);
 }
 
-/* Active state when hovering clickable elements */
 #custom-cursor.active { border-color: var(--nexus-glitch); box-shadow: 0 0 12px var(--nexus-glitch); }
 #custom-cursor.active::after { background: var(--nexus-glitch); }
 
-/* pressed state handled in JS by reducing scale via render loop */
 #custom-cursor.pressed { opacity: 0.95; }
+*/
 
 .audio-mute-btn { background: rgba(0,0,0,0.5); border:1px solid rgba(0,243,255,0.06); color:var(--nexus-blue); padding:8px 10px; border-radius:6px; z-index:1200; cursor:pointer; }
 
 .background-data { position: fixed; top: 50%; transform: translateY(-50%); color: var(--nexus-blue); opacity: 0.05; font-size: 10px; line-height: 12px; pointer-events: none; white-space: pre; font-family: monospace; z-index: 0; }
 
-/* Toggle hiding native cursor only when overlay enables it */
-.use-custom-cursor html, .use-custom-cursor body, .use-custom-cursor .app-container {
-  cursor: none !important;
-}
-.use-custom-cursor button, .use-custom-cursor a, .use-custom-cursor input, .use-custom-cursor textarea, .use-custom-cursor select, .use-custom-cursor label {
-  cursor: none !important;
-}
-
-/* Use custom cursor: hide native cursor globally and force custom cursor everywhere */
-html, body, .app-container {
-  cursor: none !important;
-}
-button, a, input, textarea, select, label {
-  cursor: none !important;
-}
-
-/* Nuclear option: ensure no native cursor anywhere */
-* { cursor: none !important; }
+/* Cursor nativo do sistema habilitado */
+/* Todas as regras de cursor: none removidas para usar cursor normal */
 
 /* HUD: top status bar grouping audio, integrity and logout */
 .nexus-hud {

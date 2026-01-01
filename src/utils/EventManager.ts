@@ -82,17 +82,7 @@ class EventManager {
 
     const event = this.events[eventName];
 
-    // Se já está processando, adiciona à fila para evitar race conditions
-    if (event.isProcessing) {
-      event.handlers.forEach(handler => {
-        event.queue.push({ handler, args });
-      });
-      return;
-    }
-
-    event.isProcessing = true;
-
-    // Executa todos os handlers registrados
+    // Executa todos os handlers registrados diretamente (sem fila para performance)
     event.handlers.forEach(handler => {
       try {
         handler(...args);
@@ -100,11 +90,6 @@ class EventManager {
         console.error(`[EventManager] Error in handler for '${eventName}':`, error);
       }
     });
-
-    event.isProcessing = false;
-
-    // Processa eventos enfileirados
-    this.processQueue(eventName);
   }
 
   /**

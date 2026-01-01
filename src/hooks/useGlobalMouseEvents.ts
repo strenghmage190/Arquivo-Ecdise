@@ -90,8 +90,20 @@ export function useGlobalMouseEvents(handlers: MouseEventHandlers) {
  * Inicializa os listeners nativos e repassa para o EventManager
  */
 export function setupGlobalMouseListeners() {
+  let rafId: number | null = null;
+  let lastMouseEvent: MouseEvent | null = null;
+
   const handleMouseMove = (e: MouseEvent) => {
-    eventManager.emitDebounced('global:mousemove', 16, e); // 60fps max
+    lastMouseEvent = e;
+    
+    if (rafId === null) {
+      rafId = requestAnimationFrame(() => {
+        if (lastMouseEvent) {
+          eventManager.emit('global:mousemove', lastMouseEvent);
+        }
+        rafId = null;
+      });
+    }
   };
 
   const handleMouseDown = (e: MouseEvent) => {
@@ -111,11 +123,11 @@ export function setupGlobalMouseListeners() {
   };
 
   const handleMouseOver = (e: MouseEvent) => {
-    eventManager.emitDebounced('global:mouseover', 50, e);
+    eventManager.emit('global:mouseover', e);
   };
 
   const handleMouseOut = (e: MouseEvent) => {
-    eventManager.emitDebounced('global:mouseout', 50, e);
+    eventManager.emit('global:mouseout', e);
   };
 
   window.addEventListener('mousemove', handleMouseMove, { passive: true });

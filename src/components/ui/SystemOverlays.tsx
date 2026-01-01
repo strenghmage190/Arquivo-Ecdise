@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { eventManager } from '../../utils/EventManager';
 import { audioManager } from '../../utils/AudioManager';
-import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 
 // ✅ Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
 let systemOverlaysInstanceCount = 0;
@@ -10,7 +9,6 @@ let systemOverlaysInstanceCount = 0;
 export default function SystemOverlays() {
   const integrityRef = useRef<HTMLDivElement | null>(null);
   const integrityTextRef = useRef<HTMLDivElement | null>(null);
-  const cursorRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const [hideHeader, setHideHeader] = useState(false);
@@ -72,76 +70,6 @@ export default function SystemOverlays() {
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
-  // ✅ MIGRADO: Custom cursor tracking usando hook centralizado
-  useEffect(() => {
-    const isFirstInstance = instanceIdRef.current === 1;
-    if (!isFirstInstance) return; // Evita duplicatas de cursor
-    
-    let rafId: number | null = null;
-    const cursor = cursorRef.current;
-    if (!cursor) return;
-
-    let isActive = false;
-    let isPressed = false;
-
-    const render = () => {
-      if (!cursor) return;
-      let scale = isActive ? 1.12 : 1;
-      if (isPressed) scale *= 0.85;
-      cursor.style.transform = `translate(-50%,-50%) scale(${scale})`;
-    };
-
-    // Initial render
-    rafId = requestAnimationFrame(render);
-
-    // ✅ MIGRADO: Hook centralizado gerencia eventos de mouse
-    const cleanup = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-
-    return cleanup;
-  }, []);
-
-  // ✅ Hook para gerenciar eventos globais de mouse
-  useGlobalMouseEvents({
-    onMouseMove: (e) => {
-      const cursor = cursorRef.current;
-      const isFirstInstance = instanceIdRef.current === 1;
-      if (!cursor || !isFirstInstance) return;
-      cursor.style.left = `${e.clientX}px`;
-      cursor.style.top = `${e.clientY}px`;
-      cursor.style.display = 'block';
-      cursor.style.opacity = '1';
-    },
-    onMouseDown: () => {
-      const cursor = cursorRef.current;
-      const isFirstInstance = instanceIdRef.current === 1;
-      if (!cursor || !isFirstInstance) return;
-      cursor.classList.add('pressed');
-    },
-    onMouseUp: () => {
-      const cursor = cursorRef.current;
-      const isFirstInstance = instanceIdRef.current === 1;
-      if (!cursor || !isFirstInstance) return;
-      cursor.classList.remove('pressed');
-    },
-    onMouseOver: (e) => {
-      const cursor = cursorRef.current;
-      const isFirstInstance = instanceIdRef.current === 1;
-      if (!cursor || !isFirstInstance) return;
-      const tgt = e.target as HTMLElement | null;
-      const interactive = tgt && tgt.closest && (
-        tgt.closest('button, a, input[type="button"], input[type="submit"], .clickable, [role="button"], [onclick], [tabindex]')
-      );
-      
-      if (interactive) {
-        cursor.classList.add('active');
-      } else {
-        cursor.classList.remove('active');
-      }
-    }
-  });
-
   // ✅ Decode-effect delegation (com Set para cleanup correto)
   useEffect(() => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
@@ -185,18 +113,6 @@ export default function SystemOverlays() {
     // Note: audio remains disabled by default; no UI control for sensors
     return () => {
       audioManager.cleanup();
-    };
-  }, []);
-
-  // Apply a document-level class so we only hide native cursor when overlay is active
-  useEffect(() => {
-    try {
-      document.documentElement.classList.add('use-custom-cursor');
-    } catch (e) {
-      // ignore (SSR or test environments)
-    }
-    return () => {
-      try { document.documentElement.classList.remove('use-custom-cursor'); } catch (e) {}
     };
   }, []);
 
@@ -252,8 +168,6 @@ export default function SystemOverlays() {
           )}
         </div>
       </header>
-
-      <div id="custom-cursor" ref={cursorRef} />
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
       <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />

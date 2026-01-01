@@ -5,7 +5,7 @@ import App from './App';
 import './index.css';
 import './styles/nexus.css';
 import './styles/animations.css';
-import { setupGlobalMouseListeners } from './hooks/useGlobalMouseEvents';
+// import { setupGlobalMouseListeners } from './hooks/useGlobalMouseEvents'; // Desabilitado - cursor customizado removido
 import { validatePolyfills, logValidationResults } from './utils/validatePolyfills';
 
 // ✅ Valida polyfills na inicialização
@@ -18,8 +18,8 @@ if (!polyfillValidation.success) {
   }
 }
 
-// ✅ Inicializa listeners globais UMA VEZ
-setupGlobalMouseListeners();
+// ❌ Desabilitado: Cursor customizado removido - usando cursor nativo
+// setupGlobalMouseListeners();
 
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
