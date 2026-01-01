@@ -535,6 +535,11 @@ export function InvestigationBoard({ investigationId }: Props) {
     return () => { mounted = false; };
   }, [investigationId]);
 
+  // Modo de visualização padrão: jogadores veem playerView, GM vê GM view
+  useEffect(() => {
+    setPlayerView(!isGameMaster);
+  }, [isGameMaster]);
+
   // Debug: show cards when loaded
   useEffect(() => { console.debug('InvestigationBoard: cards changed', cards); }, [cards]);
 
@@ -1795,9 +1800,9 @@ export function InvestigationBoard({ investigationId }: Props) {
                       card?.image_url ? 'image' : 'text'
                     }
                     cardType={
+                      (card?.is_locked || card?.lock_password) ? 'encrypted' :
                       card?.metadata?.type === 'glitch_puzzle' ? 'glitch' :
                       card?.metadata?.type === 'mega_clue' ? 'mega-clue' :
-                      (card?.is_locked || card?.lock_password) ? 'encrypted' :
                       'normal'
                     }
                     hasRecord={Boolean(card?.metadata && (card.metadata.type === 'person' || card.metadata.person || card.metadata.person_meta))}

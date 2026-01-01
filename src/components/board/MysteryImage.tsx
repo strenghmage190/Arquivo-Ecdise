@@ -244,7 +244,7 @@ export function MysteryImage({
     >
       {/* Background decorative blur (fills sides with color from the image) - optional */}
       {baseSrc && !isUVMode && ambientBlur && (
-        <img src={baseSrc} className="bg-blur" alt="" />
+        <img src={baseSrc} className="bg-blur" alt="" loading="lazy" />
       )}
       {/* Base image always rendered as background layer (keeps layout stable) */}
       <div style={{ ...filterStyle, backgroundImage: bgImage, position: 'absolute', inset: 0 }} />
@@ -298,7 +298,13 @@ export function MysteryImage({
 
       {/* Main visible image (on top) - hidden when performing canvas forensic channel work */}
       {baseSrc && forensicChannel === 'all' && !isUVMode && (
-        <img src={baseSrc} className="main-evidence" alt="evidence" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10 }} />
+        <img
+          src={baseSrc}
+          className="main-evidence"
+          alt="evidence"
+          loading="lazy"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10 }}
+        />
       )}
 
       {!isUVMode && hasSecret && fit !== 'contain' && <div style={{ position: 'absolute', bottom: 2, right: 4, opacity: 0.6, fontSize: 12 }}>🟣</div>}
