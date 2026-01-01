@@ -1,180 +1,237 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { imageToAudioBuffer } from '../../utils/audioGenerator';
-import './SpectrogramCreator.css';
+import React, { useState, useRef, useEffect } from 'react';
+import RealTimeSpectrogram from './RealTimeSpectrogram';
 
-interface Props {
-  // Retorna o buffer de áudio puro, sem arquivo
-  onGenerateBuffer: (buffer: AudioBuffer) => void;
-  onClose: () => void;
+function bufferToWav(abuffer: AudioBuffer): Blob {
+  const numOfChan = abuffer.numberOfChannels;
+  const length = abuffer.length;
+  const sampleRate = abuffer.sampleRate;
+  const bytesPerSample = 2;
+  const blockAlign = numOfChan * bytesPerSample;
+  const bufferLength = 44 + length * blockAlign;
+  const buffer = new ArrayBuffer(bufferLength);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + length * blockAlign, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numOfChan, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, length * blockAlign, true);
+  let offset = 44;
+  const channels: Float32Array[] = [];
+  for (let i = 0; i < numOfChan; i++) channels.push(abuffer.getChannelData(i));
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < numOfChan; ch++) {
+      let sample = channels[ch][i];
+      sample = Math.max(-1, Math.min(1, sample));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+  return new Blob([view], { type: 'audio/wav' });
 }
 
-export default function SpectrogramCreator({ onGenerateBuffer, onClose }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [text, setText] = useState('SOCORRO');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [fontSize, setFontSize] = useState(60);
-  const [duration, setDuration] = useState(3);
-  const [minFreq, setMinFreq] = useState(4000);
-  const [maxFreq, setMaxFreq] = useState(12000);
-  const [generateQr, setGenerateQr] = useState(false);
-  const [qrUrl, setQrUrl] = useState('');
-  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
+type Props = { onGenerated?: (wavBlob: Blob, buffer?: AudioBuffer) => void };
 
-  // Desenhar o texto (ou QR) no canvas escondido com pré-processamento para melhorar contraste/espessura
+export default function SpectrogramCreator({ onGenerated }: Props) {
+  const [text, setText] = useState('VITE ROCKS');
+  const [progress, setProgress] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+
   useEffect(() => {
-    const cvs = canvasRef.current;
-    if (!cvs) return;
-    const ctx = cvs.getContext('2d');
+    return () => {
+      try { if (workerRef.current) { workerRef.current.terminate(); workerRef.current = null; } } catch {}
+    };
+  }, []);
+
+  const generate = async () => {
+    setProgress(0);
+    setIsGenerating(true);
+
+    const fontSize = 64;
+    const pxPerChar = 22;
+    const width = Math.max(64, Math.ceil((text.length || 1) * pxPerChar));
+    const height = 96;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Fundo preto
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-    // Max Sharpening / pixel-art style
-    ctx.imageSmoothingEnabled = false; // desliga suavização
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fontSize}px "Lucida Console", "Courier New", monospace`;
-    ctx.textAlign = 'center';
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${Math.floor(fontSize * 0.6)}px monospace`;
     ctx.textBaseline = 'middle';
+    ctx.fillText(text, 2, height / 2);
 
-    if (generateQr && qrCanvasRef.current && qrUrl) {
-      // se QR for pedido, desenha o QR gerado no canvas (gerado separadamente)
-      try {
-        const qrC = qrCanvasRef.current;
-        ctx.drawImage(qrC, 0, 0, cvs.width, cvs.height);
-      } catch (e) {
-        console.warn('QR draw failed', e);
-      }
-      return;
+    const sendW = Math.max(32, Math.floor(width * 0.5));
+    const sendH = Math.max(16, Math.floor(height * 0.5));
+    const tmp = document.createElement('canvas');
+    tmp.width = sendW; tmp.height = sendH;
+    const tctx = tmp.getContext('2d');
+    if (!tctx) return;
+    tctx.imageSmoothingEnabled = false;
+    tctx.drawImage(canvas, 0, 0, width, height, 0, 0, sendW, sendH);
+    const imageData = tctx.getImageData(0, 0, sendW, sendH);
+
+    if (!workerRef.current) {
+      workerRef.current = new Worker(new URL('../../utils/textSynthWorker.ts', import.meta.url), { type: 'module' });
     }
+    const worker = workerRef.current;
 
-    // A MÁGICA: desenha uma aura para engrossar bordas e depois o centro nítido
-    ctx.shadowColor = '#fff';
-    ctx.shadowBlur = 5;
-    ctx.fillText(text.toUpperCase(), cvs.width / 2, cvs.height / 2);
+    const DURATION_PER_PIXEL = 0.2;
+    const MIN_FREQ = 1000;
+    const MAX_FREQ = 12000;
+    const SAMPLE_RATE = 44100;
 
-    // Núcleo nítido
-    ctx.shadowBlur = 0;
-    ctx.fillText(text.toUpperCase(), cvs.width / 2, cvs.height / 2);
-  }, [text, fontSize, generateQr, qrUrl]);
-
-  const handleGenerate = async () => {
-    const cvs = canvasRef.current;
-    if (!cvs) return;
-    setIsProcessing(true);
-
-    try {
-      // Caso o Mestre tenha escolhido gerar QR, tente gerar para o canvas oculto primeiro
-      if (generateQr && qrUrl) {
-        // Fallback: use a QR image generation service to avoid bundling a dependency.
+    const onMessage = (ev: MessageEvent) => {
+      const d = ev.data as any;
+      if (d.cmd === 'progress') {
+        requestAnimationFrame(() => setProgress(d.percent || 0));
+        } else if (d.cmd === 'result') {
         try {
-          const qrC = qrCanvasRef.current;
-          if (qrC) {
-            await new Promise<void>((resolve, reject) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.onload = () => {
-                try {
-                  const qc = qrC.getContext('2d');
-                  if (!qc) return reject(new Error('QR canvas context')); 
-                  qc.clearRect(0,0,qrC.width,qrC.height);
-                  qc.drawImage(img, 0, 0, qrC.width, qrC.height);
-                  resolve();
-                } catch (e) { reject(e); }
-              };
-              img.onerror = (e) => reject(e);
-              const size = Math.max(200, Math.min(400, qrC.width));
-              img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrUrl)}`;
-            });
-            // main canvas will pick up the qrCanvas in the draw effect
-          }
+          const arr = new Float32Array(d.samples);
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const ab = ctx.createBuffer(1, arr.length, d.sampleRate || SAMPLE_RATE);
+          ab.getChannelData(0).set(arr);
+          setAudioBuffer(ab);
+          try {
+            if (typeof onGenerated === 'function') {
+              const wav = bufferToWav(ab);
+              onGenerated(wav, ab);
+            }
+          } catch (e) { console.error('onGenerated callback failed', e); }
         } catch (e) {
-          console.warn('QR generation failed (image API)', e);
-          alert('Não foi possível gerar o QR via serviço externo.');
+          console.error(e);
+        } finally {
+          setIsGenerating(false);
+          setProgress(100);
+          worker.removeEventListener('message', onMessage);
         }
+      } else if (d.cmd === 'error') {
+        console.error('Worker error', d.error);
+        setIsGenerating(false);
+        worker.removeEventListener('message', onMessage);
       }
+    };
 
-      // Passa frequências escolhidas pelo Mestre
-      const audioBuffer = await imageToAudioBuffer(cvs, duration, minFreq, maxFreq);
-      onGenerateBuffer(audioBuffer);
-      onClose();
-    } catch (e) {
-      console.error(e);
-      alert('Erro na síntese do espectro.');
-    } finally {
-      setIsProcessing(false);
-    }
+    worker.addEventListener('message', onMessage);
+    worker.postMessage({ cmd: 'synthesize', width: sendW, height: sendH, imageData: imageData.data.buffer, params: { DURATION_PER_PIXEL, MIN_FREQ, MAX_FREQ, SAMPLE_RATE } }, [imageData.data.buffer]);
+  };
+
+  const download = () => {
+    if (!audioBuffer) return;
+    const wav = bufferToWav(audioBuffer);
+    const url = URL.createObjectURL(wav);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'text_spectrogram.wav'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="spectro-creator-overlay" onClick={onClose}>
-      <div className="spectro-box" onClick={e => e.stopPropagation()}>
-        <div className="sp-header">GERADOR DE SINAL OCULTO</div>
-        
-        <div className="sp-workspace">
-           {/* Preview Visual do Texto */}
-           <div className="text-preview" style={{ fontSize: `${fontSize * 0.5}px` }}>
-              {text.toUpperCase()}
-           </div>
-           
-           <label>MENSAGEM SECRETA (Máx 10 chars)</label>
-           <input 
-              value={text} 
-              onChange={e => setText(e.target.value)} 
-              maxLength={10} 
-              autoFocus
-           />
+    <div className="w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg shadow-xl border border-cyan-500/30 overflow-hidden">
+      {/* Header */}
+      <div className="bg-black/50 px-4 py-2 border-b border-cyan-500/20">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+          <h3 className="text-cyan-400 font-bold text-sm tracking-wide">TEXTO → ÁUDIO ESPECTROGRAMA</h3>
+        </div>
+      </div>
 
-            <div className="sp-divider" />
+      {/* Content */}
+      <div className="p-4 space-y-3">
+        {/* Input */}
+        <div className="flex gap-2">
+          <input 
+            value={text} 
+            onChange={e => setText(e.target.value)} 
+            maxLength={30}
+            placeholder="Digite o texto aqui..."
+            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-colors"
+          />
+          <button 
+            onClick={generate} 
+            disabled={isGenerating}
+            className={`px-6 py-2 rounded font-semibold transition-all ${
+              isGenerating 
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg'
+            }`}
+          >
+            {isGenerating ? '⏳ Gerando...' : '✨ Gerar'}
+          </button>
+        </div>
 
-            <div className="sp-row">
-              <label>Tamanho da Fonte: {fontSize}px</label>
-              <input type="range" min="20" max="80" value={fontSize} onChange={e => setFontSize(Number(e.target.value))} />
-            </div>
+        {/* Progress Bar */}
+        {isGenerating && (
+          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
 
-            <div className="sp-row">
-              <label>Duração do Sinal: {duration}s</label>
-              <input type="range" min="1" max="5" value={duration} onChange={e => setDuration(Number(e.target.value))} />
-            </div>
-
-            <div className="sp-divider" />
-
-            <div className="sp-row">
-              <label>FAIXA DE FREQUÊNCIA: {minFreq}Hz - {maxFreq}Hz</label>
-              <div style={{display:'flex', gap:10}}>
-                <input type="range" min="500" max="20000" value={minFreq} onChange={e => setMinFreq(Number(e.target.value))} />
-                <input type="range" min="500" max="20000" value={maxFreq} onChange={e => setMaxFreq(Number(e.target.value))} />
+        {/* Preview */}
+        <div className="bg-black/40 rounded-lg border border-gray-700/50 overflow-hidden">
+          {audioBuffer ? (
+            <div className="p-3 space-y-3">
+              {/* Spectrogram */}
+              <div className="bg-black rounded overflow-hidden">
+                <RealTimeSpectrogram 
+                  audioBuffer={audioBuffer} 
+                  minFreq={1000} 
+                  maxFreq={12000} 
+                  width={800} 
+                  height={160} 
+                />
               </div>
-              <small style={{color:'#666'}}>Dica: use faixas altas (acima de 8000Hz) para esconder de vocais.</small>
+
+              {/* Controls */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { 
+                    try { 
+                      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)(); 
+                      const s = ctx.createBufferSource(); 
+                      s.buffer = audioBuffer; 
+                      s.connect(ctx.destination); 
+                      s.start(); 
+                    } catch(e) { console.error(e); } 
+                  }}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded transition-all"
+                >
+                  ▶ Tocar
+                </button>
+                <button 
+                  onClick={download}
+                  className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded transition-all"
+                >
+                  💾 Baixar WAV
+                </button>
+              </div>
             </div>
-
-            <div className="sp-divider" />
-
-            <div className="sp-row">
-              <label><input type="checkbox" checked={generateQr} onChange={e => setGenerateQr(e.target.checked)} /> Gerar QR Code (transmídia)</label>
-              {generateQr && (
-               <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                <input placeholder="https://..." value={qrUrl} onChange={e => setQrUrl(e.target.value)} />
-                <small style={{color:'#666'}}>O QR será renderizado em um canvas invisível e convertido em áudio.</small>
-               </div>
-              )}
+          ) : (
+            <div className="h-40 flex flex-col items-center justify-center text-gray-500 text-sm">
+              <div className="text-4xl mb-2">📝</div>
+              <p>Digite um texto e clique em Gerar</p>
+              <p className="text-xs text-gray-600 mt-1">O texto aparecerá como imagem no espectrograma</p>
             </div>
+          )}
         </div>
-
-        <div className="sp-footer">
-           <button onClick={onClose} className="btn-cancel">CANCELAR</button>
-           <button onClick={handleGenerate} className="btn-confirm" disabled={isProcessing}>
-              {isProcessing ? 'SINTETIZANDO...' : '✔ INJETAR SINAL'}
-           </button>
-        </div>
-
-        {/* O Canvas fica escondido, ele é só a "matriz" pro áudio */}
-        <canvas ref={canvasRef} width="400" height="150" style={{ display: 'none' }} />
-        {/* Canvas auxiliar para QR (invisível) */}
-        <canvas ref={qrCanvasRef} width="400" height="400" style={{ display: 'none' }} />
       </div>
     </div>
   );
 }
+

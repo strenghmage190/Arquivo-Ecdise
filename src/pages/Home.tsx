@@ -10,6 +10,7 @@ export default function Home() {
   const [cases, setCases] = useState<any[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [rawFetch, setRawFetch] = useState<any>(null);
+  const [showEditor, setShowEditor] = useState(false);
   
 
   async function handleLogout() {
@@ -85,6 +86,19 @@ export default function Home() {
           </div>
         ))}
       </div>
+
+      {showEditor && (
+        <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
+          <div style={{width:'min(1100px,96%)'}}>
+            {/* Lazy import to avoid increasing bundle for now */}
+            <React.Suspense fallback={<div>Carregando editor...</div>}>
+              {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+              {/* @ts-ignore */}
+              {React.createElement(require('../components/tools/AudioEditor').default, { onSave: (f: File) => { console.log('saved file', f); setShowEditor(false); }, onClose: () => setShowEditor(false) })}
+            </React.Suspense>
+          </div>
+        </div>
+      )}
       {/* Terminal is available via HUD shortcuts */}
       {/* Debug panel: mostra erros de fetch e dados brutos (temporário) */}
       <div style={{ position: 'fixed', right: 20, bottom: 20, background: 'rgba(0,0,0,0.6)', color: '#9df', padding: 10, borderRadius: 6, maxWidth: 420, zIndex: 80 }}>
@@ -94,6 +108,9 @@ export default function Home() {
           <summary>Mostrar resposta crua</summary>
           <pre style={{ maxHeight: 220, overflow: 'auto', color: '#cfeff0' }}>{JSON.stringify(rawFetch, null, 2)}</pre>
         </details>}
+        <div style={{marginTop:8}}>
+          <button onClick={() => setShowEditor(true)} className="btn-stamp">Abrir Editor de Áudio</button>
+        </div>
       </div>
     </div>
   );

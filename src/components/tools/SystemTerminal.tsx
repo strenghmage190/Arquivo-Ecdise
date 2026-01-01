@@ -6,11 +6,13 @@ interface SystemTerminalProps {
   onClose?: () => void;
   cards?: Array<any>;
   onOpenCard?: (card: any) => void;
+  onThermalUnlock?: (keyword: string) => Promise<{ success: boolean; message: string; card?: any }>;
 }
 
-export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: SystemTerminalProps) {
+export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onThermalUnlock }: SystemTerminalProps) {
   const [history, setHistory] = useState<string[]>(['C.R.I.S. TERMINAL [VERSÃO 4.0.2]', 'DIGITE "HELP" PARA AJUDA.']);
   const [input, setInput] = useState('');
+  const [processing, setProcessing] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -31,6 +33,8 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: S
           'COMANDOS DISPONÍVEIS:',
           '  list - Lista arquivos no diretório atual',
           '  open <ID|NAME> - Abre um arquivo visual',
+          '  thermal <KEYWORD> - Desbloqueia modo termográfico',
+          '  unlock <KEYWORD> - Alias para thermal',
           '  scan - Varredura de integridade',
           '  clear - Limpa a tela',
           '  exit - Fecha o terminal'
@@ -54,6 +58,43 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: S
           }
         } else {
           newHistory.push('ERRO: ID DO ARQUIVO NECESSÁRIO.');
+        }
+        break;
+      case 'thermal':
+      case 'unlock':
+        if (!args[0]) {
+          newHistory.push('ERRO: PALAVRA-CHAVE NECESSÁRIA.');
+          newHistory.push('USO: thermal <KEYWORD>');
+          setHistory(newHistory);
+          setInput('');
+          return;
+        }
+        if (onThermalUnlock) {
+          setProcessing(true);
+          setHistory([...newHistory, 'PROCESSANDO...']);
+          setInput('');
+          onThermalUnlock(args.join(' ')).then(result => {
+            const finalHistory = [...newHistory];
+            if (result.success) {
+              finalHistory.push('═══════════════════════════════════');
+              finalHistory.push('🌡️  DESBLOQUEIO TERMAL AUTORIZADO');
+              finalHistory.push('═══════════════════════════════════');
+              finalHistory.push(`EVIDÊNCIA: ${result.card?.title || 'DESCONHECIDA'}`);
+              finalHistory.push(`STATUS: MODO TERMOGRÁFICO ATIVO`);
+              finalHistory.push('═══════════════════════════════════');
+            } else {
+              finalHistory.push('⚠️  ACESSO NEGADO');
+              finalHistory.push(result.message);
+            }
+            setHistory(finalHistory);
+            setProcessing(false);
+          }).catch(() => {
+            setHistory([...newHistory, 'ERRO: FALHA NA COMUNICAÇÃO COM O SERVIDOR']);
+            setProcessing(false);
+          });
+          return;
+        } else {
+          newHistory.push('ERRO: SISTEMA DE DESBLOQUEIO INDISPONÍVEL.');
         }
         break;
       case 'scan':
@@ -80,9 +121,13 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: S
     <div className="terminal-overlay" onClick={() => onClose && onClose()}>
       <div className="terminal-window" onClick={e => e.stopPropagation()}>
         <div className="terminal-output">
-          {history.map((line, i) => (
-            <div key={i} className="term-line">{line}</div>
-          ))}
+          {history.map((line, i) => {
+            // Destaque especial para linhas termais
+            const isThermalLine = line.includes('🌡️') || line.includes('TERMAL') || line.includes('TERMOGRÁFICO') || line.includes('═');
+            const isSuccessLine = line.includes('DESBLOQUEIO') || line.includes('AUTORIZADO');
+            const className = isThermalLine || isSuccessLine ? 'term-line thermal-highlight' : 'term-line';
+            return <div key={i} className={className}>{line}</div>;
+          })}
           <div ref={bottomRef} />
         </div>
         <form onSubmit={handleCommand} className="terminal-input-row">
@@ -92,6 +137,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard }: S
             value={input}
             onChange={e => setInput(e.target.value)}
             onBlur={e => (e.target as HTMLInputElement).focus()}
+            disabled={processing}
           />
         </form>
       </div>

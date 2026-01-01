@@ -1,0 +1,446 @@
+.mega-clue-card {
+  width: 100%;
+  max-width: 700px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  border: 2px solid #c6a45f;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(198, 164, 95, 0.2);
+  overflow: hidden;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mega-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(90deg, rgba(198, 164, 95, 0.1), transparent);
+  border-bottom: 1px solid rgba(198, 164, 95, 0.3);
+}
+
+.mega-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #c6a45f;
+  text-shadow: 0 0 10px rgba(198, 164, 95, 0.5);
+}
+
+.close-btn {
+  background: none;
+  border: 1px solid #c6a45f;
+  color: #c6a45f;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.close-btn:hover {
+  background: rgba(198, 164, 95, 0.2);
+  box-shadow: 0 0 15px rgba(198, 164, 95, 0.5);
+}
+
+.mega-content {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c6a45f #222;
+}
+
+.mega-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mega-content::-webkit-scrollbar-track {
+  background: #222;
+}
+
+.mega-content::-webkit-scrollbar-thumb {
+  background: #c6a45f;
+  border-radius: 4px;
+}
+
+/* LOCKED STATE */
+.mega-content.locked {
+  background: linear-gradient(135deg, rgba(255, 87, 34, 0.05), rgba(0, 0, 0, 0.05));
+}
+
+.lock-banner {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 87, 34, 0.2), rgba(255, 152, 0, 0.1));
+  border: 2px dashed #ff9800;
+  border-radius: 6px;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 152, 0, 0.6);
+  }
+}
+
+.lock-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.lock-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #ff9800;
+  letter-spacing: 2px;
+}
+
+.locked-description {
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  color: #b0b0b0;
+  line-height: 1.6;
+}
+
+.locked-description p {
+  margin: 0;
+}
+
+/* Progress Section */
+.progress-section {
+  margin: 24px 0;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(198, 164, 95, 0.2);
+  border-radius: 6px;
+}
+
+.progress-section h3 {
+  margin: 0 0 12px 0;
+  color: #c6a45f;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 24px;
+  background: #333;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 1px solid rgba(198, 164, 95, 0.3);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff9800, #ffc107);
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.progress-text {
+  text-align: center;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+}
+
+.progress-text strong {
+  color: #ff9800;
+  font-size: 1rem;
+}
+
+/* Codes Needed */
+.codes-needed {
+  margin: 24px 0;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 152, 0, 0.2);
+  border-radius: 6px;
+}
+
+.codes-needed h4 {
+  margin: 0 0 12px 0;
+  color: #ff9800;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.codes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.code-slot {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: all 0.3s;
+  min-height: 100px;
+}
+
+.code-slot.locked {
+  background: rgba(255, 152, 0, 0.1);
+  border: 2px dashed #ff9800;
+  color: #ff9800;
+}
+
+.code-slot.unlocked {
+  background: rgba(76, 175, 80, 0.15);
+  border: 2px solid #4caf50;
+  color: #81c784;
+}
+
+.slot-icon {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+
+.slot-code {
+  font-size: 0.8rem;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.slot-text {
+  font-size: 0.75rem;
+}
+
+/* Missing Message */
+.missing-message {
+  margin: 16px 0 0 0;
+  padding: 12px;
+  background: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #ff9800;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.missing-message strong {
+  color: #ff9800;
+}
+
+/* UNLOCKED STATE */
+.mega-content.unlocked {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(0, 0, 0, 0.05));
+}
+
+.unlock-banner {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(0, 0, 0, 0.1));
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+  animation: unlockPulse 1s ease-in-out;
+}
+
+@keyframes unlockPulse {
+  0% {
+    box-shadow: 0 0 0 rgba(76, 175, 80, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(76, 175, 80, 0.3);
+  }
+}
+
+.unlock-icon {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+  animation: spin 1s ease-in-out;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg) scale(0.8);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.unlock-text {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #4caf50;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+/* Truth Image */
+.truth-image {
+  position: relative;
+  margin: 20px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid #4caf50;
+  background: #000;
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+  animation: revealGlow 1s ease-out;
+}
+
+@keyframes revealGlow {
+  from {
+    box-shadow: 0 0 0 rgba(76, 175, 80, 0.3);
+    opacity: 0;
+  }
+  to {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+    opacity: 1;
+  }
+}
+
+.truth-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+.truth-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(76, 175, 80, 0.9);
+  color: #000;
+  padding: 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* Truth Box */
+.truth-box {
+  margin: 24px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(0, 0, 0, 0.2));
+  border: 2px solid #4caf50;
+  border-radius: 6px;
+}
+
+.truth-box h3 {
+  margin: 0 0 12px 0;
+  color: #81c784;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.truth-content {
+  color: #b0b0b0;
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+/* Codes Collected */
+.codes-collected {
+  margin: 24px 0;
+  padding: 16px;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 6px;
+}
+
+.codes-collected h4 {
+  margin: 0 0 12px 0;
+  color: #81c784;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.codes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.code-badge {
+  display: inline-block;
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  color: #4caf50;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  letter-spacing: 1px;
+}
+
+.btn-close {
+  width: 100%;
+  margin-top: 16px;
+  background: rgba(198, 164, 95, 0.2);
+  border: 1px solid #c6a45f;
+  color: #c6a45f;
+}
+
+.btn-close:hover {
+  background: rgba(198, 164, 95, 0.3);
+  box-shadow: 0 0 15px rgba(198, 164, 95, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .mega-clue-card {
+    max-width: 100%;
+  }
+
+  .mega-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mega-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .codes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

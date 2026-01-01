@@ -3,53 +3,62 @@ export async function imageToAudioBuffer(
   canvas: HTMLCanvasElement,
   durationSec: number,
   minFreq = 500,
-  maxFreq = 15000,
-  horizontalStep = 1,
-  verticalStep = 1
+  maxFreq = 15000
 ): Promise<AudioBuffer> {
-  const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext);
-  const ctx = new AudioCtx();
-  const sampleRate = ctx.sampleRate;
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const sampleRate = ctx.sampleRate; // usually 44100 or 48000
   const totalSamples = Math.floor(sampleRate * durationSec);
 
   const audioBuffer = ctx.createBuffer(1, totalSamples, sampleRate);
   const channelData = audioBuffer.getChannelData(0);
 
-  const imgCtx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!imgCtx) throw new Error('Canvas 2D context not available');
-  const imgData = imgCtx.getImageData(0, 0, canvas.width, canvas.height);
-  const width = canvas.width;
-  const height = canvas.height;
-  const pixels = imgData.data;
+  // 1. Prepare image
+  const w = canvas.width;
+  const h = canvas.height;
+  const imgCtx = canvas.getContext('2d');
+  if (!imgCtx) throw new Error('Canvas context error');
 
-  // Compute reduced columns and rows to speed up generation
-  const cols = Math.ceil(width / horizontalStep);
-  const rows = Math.ceil(height / verticalStep);
+  const imageData = imgCtx.getImageData(0, 0, w, h);
+  const pixels = imageData.data;
 
-  for (let cx = 0; cx < cols; cx++) {
-    const srcX = Math.min(width - 1, cx * horizontalStep);
-    const timeStart = Math.floor((cx / cols) * totalSamples);
-    const timeEnd = Math.floor(((cx + 1) / cols) * totalSamples);
+  // 2. Additive synthesis optimized: iterate image X->time, Y->frequency
+  for (let x = 0; x < w; x++) {
+    const sampleStart = Math.floor((x / w) * totalSamples);
+    const sampleEnd = Math.floor(((x + 1) / w) * totalSamples);
+    const samplesInColumn = Math.max(1, sampleEnd - sampleStart);
 
-    for (let ry = 0; ry < rows; ry++) {
-      const srcY = Math.min(height - 1, ry * verticalStep);
-      const visualY = height - 1 - srcY;
-      const pIndex = (srcY * width + srcX) * 4;
-      const intensity = (pixels[pIndex] + pixels[pIndex + 1] + pixels[pIndex + 2]) / (3 * 255);
-      if (intensity > 0.08) {
-        const freq = minFreq + (visualY / height) * (maxFreq - minFreq);
-        for (let i = timeStart; i < timeEnd; i++) {
-          const t = i / sampleRate;
-          channelData[i] += Math.sin(2 * Math.PI * freq * t) * (intensity * 0.04);
+    for (let y = 0; y < h; y++) {
+      const pixelIndex = (y * w + x) * 4;
+      const r = pixels[pixelIndex];
+      const g = pixels[pixelIndex + 1];
+      const b = pixels[pixelIndex + 2];
+      const intensity = (r + g + b) / 3 / 255;
+      if (intensity > 0.01) {
+        // stronger boost for faint pixels and slightly lower threshold
+        const eff = Math.pow(intensity, 0.35);
+        const freqPercent = 1 - (y / h);
+        const frequency = minFreq + freqPercent * (maxFreq - minFreq);
+        for (let i = 0; i < samplesInColumn; i++) {
+          const t = (sampleStart + i) / sampleRate;
+          const fundamental = Math.sin(2 * Math.PI * frequency * t) * (eff * 0.5);
+          const harmonic2 = Math.sin(2 * Math.PI * frequency * 2 * t) * (eff * 0.2);
+          const harmonic3 = Math.sin(2 * Math.PI * frequency * 3 * t) * (eff * 0.1);
+          channelData[sampleStart + i] += fundamental + harmonic2 + harmonic3;
         }
       }
     }
   }
 
-  // normalize
-  let maxAmp = 0;
-  for (let i = 0; i < totalSamples; i++) if (Math.abs(channelData[i]) > maxAmp) maxAmp = Math.abs(channelData[i]);
-  if (maxAmp > 0) for (let i = 0; i < totalSamples; i++) channelData[i] /= maxAmp;
+  // 3. normalize (avoid clipping)
+  let peak = 0;
+  for (let i = 0; i < totalSamples; i++) {
+    const absv = Math.abs(channelData[i]);
+    if (absv > peak) peak = absv;
+  }
+  if (peak > 0) {
+    const scale = 0.9 / peak;
+    for (let i = 0; i < totalSamples; i++) channelData[i] *= scale;
+  }
 
   return audioBuffer;
 }

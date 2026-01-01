@@ -5,13 +5,15 @@ interface Props {
   realText: string;
   cipherText?: string;
   startActive?: boolean;
+  initialRadius?: number; // Calibração inicial da lente
 }
 
-export default function DecipherLens({ realText, cipherText, startActive = false }: Props) {
+export default function DecipherLens({ realText, cipherText, startActive = false, initialRadius }: Props) {
   const [xy, setXy] = useState({ x: -100, y: -100 });
   const [active, setActive] = useState(startActive);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [radius, setRadius] = useState<number>(60);
+  const [radius, setRadius] = useState<number>(initialRadius || 60);
+  const [isManualRadius, setIsManualRadius] = useState(!!initialRadius);
 
   useEffect(() => {
     setActive(startActive);
@@ -20,20 +22,21 @@ export default function DecipherLens({ realText, cipherText, startActive = false
   useEffect(() => {
     const compute = () => {
       try {
+        if (isManualRadius) return; // Não recalcular se o usuário está controlando manualmente
         const el = containerRef.current;
-        if (!el) return setRadius(60);
+        if (!el) return setRadius(initialRadius || 60);
         const w = el.clientWidth || 300;
         const h = el.clientHeight || 200;
         const r = Math.round(Math.max(40, Math.min(w, h) * 0.16));
         setRadius(r);
       } catch (e) {
-        setRadius(60);
+        setRadius(initialRadius || 60);
       }
     };
     compute();
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
-  }, [containerRef.current]);
+  }, [containerRef.current, isManualRadius, initialRadius]);
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
@@ -62,10 +65,28 @@ export default function DecipherLens({ realText, cipherText, startActive = false
         className={`btn-lens ${active ? 'active' : ''}`}
         onClick={() => setActive(!active)}
         aria-pressed={active}
-        title="Ativar/desativar lente (atalho: L ou Espaço)"
+        title="Ativar/desativar decodificação (atalho: L ou Espaço)"
       >
-        {active ? 'DESATIVAR LENTE' : '👁️ ATIVAR TRADUTOR'}
+        {active ? 'DESATIVAR FILTRO' : '👁️ INICIAR DECODIFICAÇÃO'}
       </button>
+
+      <div className="lens-controls">
+        <label htmlFor="radius-control" className="calibration-label">
+          Calibrar Foco: <span className="freq-value">{radius}hz</span>
+        </label>
+        <input
+          id="radius-control"
+          type="range"
+          min="10"
+          max="200"
+          value={radius}
+          onChange={e => {
+            setRadius(Number(e.target.value));
+            setIsManualRadius(true);
+          }}
+          className="radius-slider"
+        />
+      </div>
 
       <div
         className="text-container"

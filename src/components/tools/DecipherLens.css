@@ -43,6 +43,34 @@
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
   backdrop-filter: blur(4px) saturate(1.1);
   z-index: 20;
+  animation: flicker 1.5s infinite ease-in-out;
+}
+
+/* Efeito de glitch instável para a lente */
+@keyframes flicker {
+  0%, 100% { 
+    opacity: 1; 
+    border-width: 2px; 
+    border-color: rgba(198,164,95,0.95);
+    box-shadow: 0 6px 18px rgba(198,164,95,0.12), inset 0 0 14px rgba(0,0,0,0.18);
+  }
+  15% { 
+    opacity: 0.85; 
+    border-width: 3px; 
+    border-color: rgba(220,60,60,0.8);
+    box-shadow: 0 0 25px rgba(220,60,60,0.4), inset 0 0 20px rgba(220,60,60,0.25);
+  }
+  30% { 
+    opacity: 1; 
+    border-width: 2px;
+    border-color: rgba(198,164,95,0.95);
+  }
+  65% { 
+    opacity: 0.9; 
+    border-width: 3px; 
+    border-color: rgba(220,60,60,0.7);
+    box-shadow: 0 0 20px rgba(220,60,60,0.35), inset 0 0 18px rgba(220,60,60,0.2);
+  }
 }
 
 .btn-lens {
@@ -52,3 +80,74 @@
 .btn-lens.active { background: rgba(198,164,95,0.95); color: #111; }
 
 .btn-lens:focus { outline: 2px solid rgba(198,164,95,0.25); }
+
+/* Controles de calibração */
+.lens-controls {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(15,15,16,0.85);
+  border: 1px solid rgba(198,164,95,0.6);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.calibration-label {
+  color: #f5ecd8;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.freq-value {
+  color: rgba(198,164,95,1);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(198,164,95,0.4);
+}
+
+.radius-slider {
+  flex: 1;
+  height: 6px;
+  background: rgba(91,43,43,0.3);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: rgba(198,164,95,0.95);
+  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(198,164,95,0.5);
+  transition: all 0.2s;
+}
+
+.radius-slider::-webkit-slider-thumb:hover {
+  background: rgba(220,180,110,1);
+  box-shadow: 0 0 15px rgba(198,164,95,0.8);
+}
+
+.radius-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: rgba(198,164,95,0.95);
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 0 10px rgba(198,164,95,0.5);
+  transition: all 0.2s;
+}
+
+.radius-slider::-moz-range-thumb:hover {
+  background: rgba(220,180,110,1);
+  box-shadow: 0 0 15px rgba(198,164,95,0.8);
+}

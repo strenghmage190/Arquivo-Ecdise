@@ -23,6 +23,10 @@ import StickyNote from '../tools/StickyNote';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
+import GlitchMaker from '../tools/GlitchMaker';
+import CodePromptModal from '../modals/CodePromptModal';
+import GlitchPuzzleCreator from '../modals/GlitchPuzzleCreator';
+import GlitchMegaClueCreator from '../modals/GlitchMegaClueCreator';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -101,11 +105,25 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [showFinder, setShowFinder] = useState(false);
   const [showOrganizeMenu, setShowOrganizeMenu] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [contextMenu, setContextMenu] = useState<null | { type: 'card' | 'bg'; targetId?: string; x: number; y: number }>(null);
   
   // Terminal search feedback
   const [terminalMessage, setTerminalMessage] = useState<string | null>(null);
+  
+  // Decodificador de Anomalias - Sistema de desbloqueio
+  const [decoderUnlocked, setDecoderUnlocked] = useState(false);
+  const [showDecoderModal, setShowDecoderModal] = useState(false);
+  const [showCodePrompt, setShowCodePrompt] = useState(false);
+  
+  // Glitch Puzzle Creator - Para Game Master criar quebra-cabeças
+  const [showGlitchPuzzleCreator, setShowGlitchPuzzleCreator] = useState(false);
+  const [createPuzzlePos, setCreatePuzzlePos] = useState<{ x: number; y: number } | null>(null);
+
+  // Mega Clue Creator - Para Game Master criar verdade final
+  const [showMegaClueCreator, setShowMegaClueCreator] = useState(false);
+  const [createMegaCluePos, setCreateMegaCluePos] = useState<{ x: number; y: number } | null>(null);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   // draggingRef stores info about the currently dragged card(s)
@@ -173,6 +191,120 @@ export function InvestigationBoard({ investigationId }: Props) {
   };
 
   // Terminal / ARG search: reveals a hidden card based on keyword_unlock (exact or ilike)
+  const handleThermalUnlock = async (keyword: string): Promise<{ success: boolean; message: string; card?: any }> => {
+    const q = keyword.trim();
+    if (!q) {
+      return { success: false, message: 'Palavra-chave vazia.' };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('investigation_cards')
+        .select('*')
+        .eq('investigation_id', investigationId)
+        .limit(300);
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return { success: false, message: 'Nenhum arquivo disponível nesta investigação.' };
+      }
+
+      const lowered = q.toLowerCase();
+      const thermalCard = data.find((row: any) => {
+        try {
+          const meta = row.metadata || (row.data && row.data.metadata) || null;
+          if (meta) {
+            const km = typeof meta === 'string' ? (() => { try { return JSON.parse(meta); } catch { return null; } })() : meta;
+            const thermalKeyword = km && km.thermal_keyword;
+            if (thermalKeyword && String(thermalKeyword).toLowerCase() === lowered) {
+              return true;
+            }
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+        return false;
+      });
+
+      if (thermalCard) {
+        try {
+          const meta = typeof thermalCard.metadata === 'string' ? JSON.parse(thermalCard.metadata) : (thermalCard.metadata || {});
+          meta.thermal_unlocked = true;
+          await api.updateInvestigationCard(thermalCard.id, { metadata: meta } as any);
+          try { playAudio('/sounds/success_chime.mp3'); } catch {}
+          await loadBoard();
+          return { success: true, message: 'Modo termal desbloqueado com sucesso.', card: thermalCard };
+        } catch (err) {
+          console.error('Error unlocking thermal mode', err);
+          return { success: false, message: 'Erro ao processar desbloqueio.' };
+        }
+      }
+
+      return { success: false, message: 'Palavra-chave não reconhecida pelo sistema.' };
+    } catch (err: any) {
+      console.error('ThermalUnlock error', err);
+      return { success: false, message: 'Erro de comunicação com o servidor.' };
+    }
+  };
+
+  // Sistema de desbloqueio do Decodificador
+  useEffect(() => {
+    if (investigationId) {
+      const unlocked = localStorage.getItem(`decoder_unlocked_${investigationId}`);
+      if (unlocked === 'true') {
+        setDecoderUnlocked(true);
+      }
+    }
+  }, [investigationId]);
+
+  const handleDecoderCodeSubmit = (code: string) => {
+    // Código padrão: DELTA-1977 (pode ser alterado ou tornado dinâmico)
+    const correctCode = 'DELTA-1977';
+    
+    if (code === correctCode) {
+      setDecoderUnlocked(true);
+      setShowCodePrompt(false);
+      localStorage.setItem(`decoder_unlocked_${investigationId}`, 'true');
+      
+      showToast({
+        id: 'decoder-unlock',
+        message: '⚠ DECODIFICADOR DE ANOMALIAS v1.7 DESBLOQUEADO',
+      });
+      
+      try { 
+        playAudio('/sounds/success_chime.mp3'); 
+      } catch {}
+    } else {
+      showToast({
+        id: 'decoder-error',
+        message: '❌ CÓDIGO INVÁLIDO - Acesso negado',
+      });
+      
+      try { 
+        playAudio('/sounds/denied.mp3'); 
+      } catch {}
+    }
+  };
+
+  const handleDecoderSave = async (file: File) => {
+    if (!investigationId) return;
+    
+    try {
+      const url = await uploadInvestigationImage(file, investigationId);
+      showToast({
+        id: 'decoder-save',
+        message: '✓ Artefato extraído com sucesso',
+      });
+      setShowDecoderModal(false);
+    } catch (err) {
+      console.error('Error saving decoded file', err);
+      showToast({
+        id: 'decoder-save-error',
+        message: '❌ Erro ao salvar artefato',
+      });
+    }
+  };
+
   const handleTerminalSearch = async (query: string) => {
     setTerminalMessage(null);
     const q = query.trim();
@@ -197,14 +329,28 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
 
       const lowered = q.toLowerCase();
-      const found = data.find((row: any) => {
-        // check explicit column if present
+      
+      // Busca em múltiplos campos
+      const matches = data.filter((row: any) => {
+        // Busca no título
+        if (row.title && String(row.title).toLowerCase().includes(lowered)) return true;
+        
+        // Busca na descrição
+        if (row.description && String(row.description).toLowerCase().includes(lowered)) return true;
+        
+        // Busca nas tags
+        if (row.tags && Array.isArray(row.tags)) {
+          if (row.tags.some((tag: string) => String(tag).toLowerCase().includes(lowered))) return true;
+        }
+        
+        // Busca em keyword_unlock (evidências ocultas)
         if (row.keyword_unlock && String(row.keyword_unlock).toLowerCase().includes(lowered)) return true;
-        // check inside metadata JSON if present
+        
+        // Busca em metadata
         const meta = row.metadata || (row.data && row.data.metadata) || null;
         try {
           if (meta) {
-            const km = typeof meta === 'string' ? (() => { try { return JSON.parse(meta); } catch { return null; } })() : meta;
+            const km = typeof meta === 'string' ? JSON.parse(meta) : meta;
             const key = km && (km.keyword_unlock || km.keyword || km.key);
             if (key && String(key).toLowerCase().includes(lowered)) return true;
           }
@@ -214,20 +360,39 @@ export function InvestigationBoard({ investigationId }: Props) {
         return false;
       });
 
-      if (!found) {
-        setTerminalMessage('Nenhum arquivo encontrado.');
+      // Se não encontrou nada
+      if (!matches || matches.length === 0) {
+        setTerminalMessage('Nenhuma pista encontrada.');
         try { playAudio('/sounds/error_buzz.mp3'); } catch {}
         return;
       }
+
+      // Prioriza pistas ocultas, depois visíveis
+      const found = matches.find((m: any) => m.visibility === 'hidden') || matches[0];
+
       // compute center position
       const centerX = origin.x + (window.innerWidth / 2) / zoom;
       const centerY = origin.y + (window.innerHeight / 2) / zoom;
 
-      // Reveal the card and place near center
-      await api.updateInvestigationCard(found.id, { visibility: 'visible', x: Math.round(centerX), y: Math.round(centerY) } as any);
-      try { playAudio('/sounds/success_chime.mp3'); } catch {}
-      try { playAudio('/sounds/paper_drop.mp3'); } catch {}
-      setTerminalMessage(`ARQUIVO RECUPERADO: "${found.title || found.id}"`);
+      // Se for pista oculta, revelar
+      if (found.visibility === 'hidden') {
+        await api.updateInvestigationCard(found.id, { visibility: 'visible', x: Math.round(centerX), y: Math.round(centerY) } as any);
+        try { playAudio('/sounds/success_chime.mp3'); } catch {}
+        try { playAudio('/sounds/paper_drop.mp3'); } catch {}
+        setTerminalMessage(`ARQUIVO RECUPERADO: "${found.title || found.id}"`);
+      } else {
+        // Se já está visível, apenas focar nela
+        const cardX = found.x || centerX;
+        const cardY = found.y || centerY;
+        setOrigin({ x: cardX - 400, y: cardY - 300 });
+        try { playAudio('/sounds/success_chime.mp3'); } catch {}
+        if (matches.length === 1) {
+          setTerminalMessage(`PISTA LOCALIZADA: "${found.title || found.id}"`);
+        } else {
+          setTerminalMessage(`${matches.length} PISTAS ENCONTRADAS. Focando: "${found.title || found.id}"`);
+        }
+      }
+      
       // mark to animate on next render
       setLastCreatedId(found.id);
       await loadBoard();
@@ -1192,14 +1357,39 @@ export function InvestigationBoard({ investigationId }: Props) {
       {/* Header moved to dedicated element above */}
 
       <div className="investigation-toolbar">
+        {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
           {canEdit && (
-            <button className="hud-btn primary" onClick={handleCreateClue} data-tooltip="Criar nova evidência (Apenas Mestre)">+ NOVA PISTA</button>
+            <button className="hud-btn primary" onClick={handleCreateClue} data-tooltip="Criar evidência">+ NOVA PISTA</button>
+          )}
+
+          {isGameMaster && (
+            <button 
+              className="hud-btn primary" 
+              onClick={() => {
+                const CARD_W = 220;
+                const CARD_H = 160;
+                const boardRect = corkboardRef.current?.getBoundingClientRect();
+                const viewW = boardRect?.width ?? window.innerWidth;
+                const viewH = boardRect?.height ?? window.innerHeight;
+                const cx = viewW / 2;
+                const cy = viewH / 2;
+                const bx = origin.x + cx / zoom;
+                const by = origin.y + cy / zoom;
+                setCreatePuzzlePos({
+                  x: Math.round(bx - CARD_W / 2),
+                  y: Math.round(by - CARD_H / 2)
+                });
+                setShowGlitchPuzzleCreator(true);
+              }}
+              data-tooltip="Criar quebra-cabeça de glitch"
+            >
+              🧩 NOVO GLITCH PUZZLE
+            </button>
           )}
 
           {isGameMaster && (
             <>
-              <div className="toolbar-divider" />
               <button className="hud-btn icon-only" onClick={async () => {
                  try {
                    const invite = await api.createInviteLink(investigationId);
@@ -1212,102 +1402,96 @@ export function InvestigationBoard({ investigationId }: Props) {
                    alert('Falha ao gerar link de convite');
                  }
                  setInviteOpen(true);
-              }} data-tooltip="Convidar jogadores para o caso">✉️</button>
+              }} data-tooltip="Convidar jogadores">✉️</button>
               <button 
                  className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
                  onClick={() => setPlayerView(!playerView)}
-                 data-tooltip={playerView ? "Voltar para Visão do Mestre" : "Simular Visão do Jogador"}
+                 data-tooltip={playerView ? "Visão Mestre" : "Visão Jogador"}
               >
                  {playerView ? '🕶️' : '👁️'}
               </button>
             </>
           )}
+        </div>
 
-           <button 
+        {/* Grupo 2: Ferramentas */}
+        <div className="toolbar-group">
+          <button 
             className={`hud-btn ${connectionMode ? 'active' : ''}`} 
-            onClick={() => setConnectionMode(!connectionMode)} 
-            data-tooltip="Modo Conexão (Fios)"
-           >
-            <span>🔗</span>
-            {connectionMode ? <span style={{ marginLeft: 6 }}>PARAR</span> : <span style={{ marginLeft: 6 }}>CONECTAR</span>}
-           </button>
+            onClick={() => { setConnectionMode(!connectionMode); if (connectionMode) setConnectionStart(null); }} 
+            data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
+          >
+            🔗 CONECTAR
+          </button>
 
-             <button className="hud-btn" onClick={() => setDecoderOpen(true)} data-tooltip="Abrir Decodificador">🔐 DECODIFICADOR</button>
-
-           {connectionMode && (
-            <div className="toolbar-group" style={{ animation: 'slideInRight 0.2s', border: '1px solid #444' }}>
+          {connectionMode && (
+            <>
               <button 
                 className="hud-btn icon-only" 
                 onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
-                style={{ opacity: connectionType==='confirmed'?1:0.4, border: connectionType==='confirmed'?'1px solid #c62828':'none' }}
-                data-tooltip="Linha Sólida (Fato)"
+                style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid #c62828':'none' }}
+                data-tooltip="Fato"
               >
-                <div style={{width:12, height:12, background:'#c62828', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#c62828', borderRadius: '50%'}} />
               </button>
-
               <button 
                 className="hud-btn icon-only"
                 onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
-                style={{ opacity: connectionType==='theory'?1:0.4, border: connectionType==='theory'?'1px solid #f9a825':'none' }}
-                data-tooltip="Linha Pontilhada (Teoria)"
+                style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid #f9a825':'none' }}
+                data-tooltip="Teoria"
               >
-                <div style={{width:12, height:12, background:'#f9a825', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#f9a825', borderRadius: '50%'}} />
               </button>
-
               <button 
                 className="hud-btn icon-only" 
                 onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
-                style={{ opacity: connectionType==='mystic'?1:0.4, border: connectionType==='mystic'?'1px solid #7e57c2':'none' }}
-                data-tooltip="Linha Mística (Sobrenatural)"
+                style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid #7e57c2':'none' }}
+                data-tooltip="Sobrenatural"
               >
-                <div style={{width:12, height:12, background:'#7e57c2', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#7e57c2', borderRadius: '50%'}} />
               </button>
-            </div>
-           )}
+            </>
+          )}
 
-          <div className="toolbar-sep" />
-
-          <button
-            className="hud-btn"
-            onClick={() => {
-              // Force grid unstack
-              const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
-              cards.forEach((c, i) => {
-                const col = i % 5;
-                const row = Math.floor(i / 5);
-                const x = 100 + col * 260;
-                const y = 100 + row * 300;
-                newPos[c.id] = { x, y };
-                api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
-              });
-              setLocalPositions(newPos);
-              setOrigin({ x: -50, y: -50 });
-            }}
-            title="Forçar Separação de Cartas"
-          >
-            🔢 DESEMPILHAR
-          </button>
-
-          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer (Ctrl+Z)">↩</button>
-          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer (Ctrl+Y)">↪</button>
+          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto">🔐</button>
         </div>
 
+        {/* Grupo 3: Organização & Edição */}
         <div className="toolbar-group">
-          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar Pista por Nome">🔍</button>
+          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar">🔍</button>
           <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar Pistas">🗂️</button>
+            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar">🗂️</button>
             {showOrganizeMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Organizar</div>
-                <button onClick={() => handleAutoOrganize('timeline')}>📅 Organizar por Data</button>
-                <button onClick={() => handleAutoOrganize('grid')}>🧭 Organizar por Elemento</button>
+                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}>📅 Por Data</button>
+                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}>🧭 Por Elemento</button>
+                <button onClick={() => {
+                  const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
+                  cards.forEach((c, i) => {
+                    const col = i % 5;
+                    const row = Math.floor(i / 5);
+                    const x = 100 + col * 260;
+                    const y = 100 + row * 300;
+                    newPos[c.id] = { x, y };
+                    api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
+                  });
+                  setLocalPositions(newPos);
+                  setOrigin({ x: -50, y: -50 });
+                  setShowOrganizeMenu(false);
+                }}>🔢 Desempilhar</button>
               </div>
             )}
           </div>
 
-          <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} data-tooltip="Alternar Luz UV (Ver pistas ocultas)">🔦</button>
-          <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Abrir Quadro de Conspiração Geral">🕸️</button>
-          <button className="hud-btn" onClick={async () => {
+          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer">↩</button>
+          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer">↪</button>
+        </div>
+
+        {/* Grupo 4: Ferramentas Avançadas */}
+        <div className="toolbar-group">
+          <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Conspiração">🕸️</button>
+          <button className="hud-btn icon-only" onClick={async () => {
             try {
               const boardRect = corkboardRef.current?.getBoundingClientRect();
               const viewW = boardRect?.width ?? window.innerWidth;
@@ -1321,14 +1505,30 @@ export function InvestigationBoard({ investigationId }: Props) {
               console.error('create note failed', e);
               alert('Falha ao criar nota.');
             }
-          }} data-tooltip="Adicionar Post-it">🗒️ POST-IT</button>
+          }} data-tooltip="Post-it">🗒️</button>
+          
+          <div style={{ position: 'relative' }}>
+            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas">⚙️</button>
+            {showToolsMenu && (
+              <div className="dropdown-menu">
+                <div className="dropdown-header">Ferramentas</div>
+                <button onClick={() => { setIsUV(!isUV); setShowToolsMenu(false); }} className={isUV ? 'active-uv' : ''}>
+                  🔦 Luz UV {isUV ? '(Ativa)' : ''}
+                </button>
+                <button onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}>
+                  ⌨️ Terminal C.R.I.S.
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="toolbar-group" style={{ padding: '0 12px', minWidth: 140, justifyContent: 'center', gap: 8, alignItems: 'center' }}>
-          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir Zoom">−</button>
-          <span style={{ fontSize: 11, color: '#666', minWidth: 70, textAlign: 'center' }}>ZOOM {(zoom * 100).toFixed(0)}%</span>
-          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar Zoom">+</button>
-          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Resetar Zoom">⟲</button>
+        {/* Grupo 5: Zoom */}
+        <div className="toolbar-group" style={{ marginLeft: 'auto', padding: '0 8px', minWidth: 120, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
+          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir">−</button>
+          <span style={{ fontSize: 11, color: '#666', minWidth: 50, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
+          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar">+</button>
+          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset">⟲</button>
         </div>
       </div>
 
@@ -1861,6 +2061,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         onClose={() => setTerminalOpen(false)}
         cards={cards}
         onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
+        onThermalUnlock={handleThermalUnlock}
       />
       {decoderOpen && (
         <div style={{ position: 'fixed', right: 20, top: 80, width: 560, height: '72vh', zIndex: 12000, background: '#0b0b0d', border: '1px solid #333', padding: 12, borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}>
@@ -1885,6 +2086,47 @@ export function InvestigationBoard({ investigationId }: Props) {
           />
         )}
       </div>
+
+      {/* Modal do Decodificador de Anomalias */}
+      {showDecoderModal && (
+        <div className="modal-overlay decoder-overlay" onClick={() => setShowDecoderModal(false)}>
+          <div className="decoder-wrapper" onClick={(e) => e.stopPropagation()}>
+            <GlitchMaker 
+              onSave={handleDecoderSave}
+              onClose={() => setShowDecoderModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Código para Desbloqueio */}
+      {showCodePrompt && (
+        <CodePromptModal 
+          title="ARQUIVO PROTEGIDO - PROTOCOLO DELTA"
+          description="Sistema de segurança detectado. Digite o código de acesso para desbloquear o Decodificador de Anomalias."
+          onSubmit={handleDecoderCodeSubmit}
+          onClose={() => setShowCodePrompt(false)}
+        />
+      )}
+
+      {/* Modal Criador de Glitch Puzzles */}
+      {showGlitchPuzzleCreator && (
+        <GlitchPuzzleCreator
+          isOpen={showGlitchPuzzleCreator}
+          onClose={() => {
+            setShowGlitchPuzzleCreator(false);
+            setCreatePuzzlePos(null);
+          }}
+          investigationId={investigationId}
+          initialX={createPuzzlePos?.x}
+          initialY={createPuzzlePos?.y}
+          onSaved={() => {
+            loadBoard();
+            setShowGlitchPuzzleCreator(false);
+            setCreatePuzzlePos(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,115 @@
+/* ===== CAMADAS - ESTILOS ADICIONAIS ===== */
+
+/* Animação para feedback visual ao arrastar */
+@keyframes dragPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.layer-item[draggable="true"] {
+  cursor: grab;
+}
+
+.layer-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Tooltip hover para controles */
+.layer-controls button::after,
+.layer-item-actions button::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  font-size: 10px;
+  white-space: nowrap;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.layer-controls button:hover::after,
+.layer-item-actions button:hover::after {
+  opacity: 1;
+}
+
+/* Destaque especial para camada sendo editada */
+.layer-item .layer-name-input {
+  animation: inputGlow 0.3s ease-out;
+}
+
+@keyframes inputGlow {
+  from {
+    box-shadow: 0 0 0 rgba(179, 102, 255, 0);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(179, 102, 255, 0.5);
+  }
+}
+
+/* Indicador de quantidade de camadas */
+.layers-section h4::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #b366ff;
+  border-radius: 50%;
+  margin-left: 6px;
+  box-shadow: 0 0 8px #b366ff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Smooth transitions para todas as mudanças de estado */
+.layer-item,
+.layer-item * {
+  transition: all 0.2s ease;
+}
+
+/* Destaque ao passar o mouse sobre área de drop */
+.layer-item[style*="borderWidth: 2px"] {
+  animation: dropZoneHighlight 0.3s ease-in-out infinite;
+}
+
+@keyframes dropZoneHighlight {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(179, 102, 255, 0.6);
+  }
+}
+
+/* Responsividade para controles de camadas */
+@media (max-width: 768px) {
+  .layer-controls {
+    flex-direction: row;
+  }
+  
+  .layer-item-actions {
+    flex-wrap: wrap;
+  }
+  
+  .layer-opacity-control {
+    padding: 8px;
+  }
+}

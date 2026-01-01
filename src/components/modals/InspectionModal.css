@@ -1,48 +1,28 @@
 /* =========================================
-   1. ESTRUTURA GERAL (THE GRID)
+   INSPECTION MODAL - NEXUS THEME
    ========================================= */
-.inspect-file {
-  background-color: #0d0d0d;
-  border: 1px solid #333;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px #222;
-  border-radius: 4px;
-}
-
-/* Backdrop and sizing to ensure modal is visible and centered */
-.inspect-backdrop {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.6);
-  z-index: 1000;
-  padding: 20px;
-}
-
-.inspect-file {
-  width: min(1100px, 98%);
-  height: min(80vh, 820px);
-  display: grid;
-  grid-template-rows: 50px 1fr auto;
-  overflow: auto; /* allow modal to scroll when content exceeds height */
-  -webkit-overflow-scrolling: touch;
-}
 
 /* Custom scrollbar for the modal to match app visual (dark theme) */
 .inspect-file {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(120,120,120,0.45) transparent;
+  scrollbar-color: rgba(0, 243, 255, 0.4) rgba(0, 0, 0, 0.3);
 }
 .inspect-file::-webkit-scrollbar { width: 12px; }
-.inspect-file::-webkit-scrollbar-track { background: transparent; }
+.inspect-file::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
 .inspect-file::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(120,120,120,0.14), rgba(120,120,120,0.36));
+  background: linear-gradient(180deg, rgba(0, 243, 255, 0.3), rgba(0, 243, 255, 0.5));
   border-radius: 8px;
   border: 3px solid transparent; /* spacing to create inset effect */
   background-clip: padding-box;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
 }
-.inspect-file::-webkit-scrollbar-thumb:hover { background: rgba(160,160,160,0.45); }
+.inspect-file::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0, 243, 255, 0.5), rgba(0, 243, 255, 0.7));
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.5);
+}
 
 
 /* Visual area: center content and prevent sliders/images from overflowing */
@@ -50,11 +30,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #050505;
+  background: linear-gradient(180deg, #000000 0%, #05080a 100%);
   position: relative;
-  min-height: 520px; /* increase baseline so video gets more vertical room */
-  /* allow HUD panels to overflow above the visual area so tools (decoder, etc.) are fully visible */
-  overflow: visible;
+  min-height: 520px;
+  overflow: hidden;
+  /* Sutil efeito grid Nexus */
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 .inspect-visual-area .large-evidence-img,
@@ -66,76 +50,195 @@
   display: block;
 }
 
-/* Header mais fino e técnico */
-.inspect-header {
-  height: 50px;
-  background: #111;
-  border-bottom: 1px solid #222;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 15px;
+/* UI corners - efeito visual nos cantos */
+.ui-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.ui-corners::before,
+.ui-corners::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(0, 243, 255, 0.4);
+}
+.ui-corners::before {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: -2px -2px 12px rgba(0, 243, 255, 0.3);
+}
+.ui-corners::after {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
+  box-shadow: 2px 2px 12px rgba(0, 243, 255, 0.3);
 }
 
-/* O "Rótulo" da evidência no topo */
-.meta-info {
+/* Grid overlay - efeito de grade tecnológica */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.5;
+}
+
+/* Thermal scale - escala de temperatura */
+.thermal-scale {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  line-height: 1;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 120, 60, 0.4);
+  border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  z-index: 25;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 20px rgba(255, 120, 60, 0.3);
+}
+
+.thermal-scale .temp-high {
+  color: #ffff88;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 255, 136, 0.8);
+}
+
+.thermal-scale .temp-low {
+  color: #8888ff;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(136, 136, 255, 0.8);
+}
+
+.thermal-scale .gradient-bar {
+  width: 30px;
+  height: 150px;
+  background: linear-gradient(to bottom,
+    #ffffff 0%,
+    #ffff00 25%,
+    #ff8800 50%,
+    #ff0000 75%,
+    #880088 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 120, 60, 0.4);
+}
+
+/* Header e meta-info */
+.meta-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.4;
 }
 .case-stamp {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 10px;
-  color: #666;
-  letter-spacing: 1px;
+  font-family: 'Share Tech Mono', 'Roboto Mono', monospace;
+  font-size: 11px;
+  color: #7b7b7b;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  flex: 0 0 auto;
 }
 
 .chat-contact {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #d1d5db;
-  background: rgba(10,10,10,0.6);
-  padding: 4px 8px;
-  border-radius: 6px;
+  margin-top: 0;
+  font-size: 13px;
+  color: #e6e6e6;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   display: inline-block;
+  font-weight: 600;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 220px);
 }
 .ev-id {
   font-size: 14px;
   font-weight: bold;
-  color: #b33;
+  color: var(--nexus-glitch, #ff003c);
   letter-spacing: 2px;
+}
+.type-tag {
+  background: rgba(255,255,255,0.02);
+  color: #9ee7c8;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  margin-left: 6px;
 }
 
 /* --- FUNDO E ESTRUTURA --- */
 .inspect-backdrop {
   position: fixed; inset: 0;
-  background-color: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(8px);
+  background-color: rgba(5, 8, 10, 0.95);
+  backdrop-filter: blur(12px);
   z-index: 20000;
   display: flex; align-items: center; justify-content: center;
+  animation: fadeInBackdrop 0.2s ease-out;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .inspect-file {
-  width: 90vw; height: 85vh;
-  max-width: 1300px;
+  width: 90vw; height: 88vh;
+  max-width: 1400px;
   max-height: 95vh;
-  background-color: #050505;
-  border: 1px solid #333;
-  box-shadow: 0 0 60px rgba(0,0,0,1);
+  background-color: var(--nexus-dark, #05080a);
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.95), 0 0 40px rgba(0, 243, 255, 0.08);
   display: grid; grid-template-rows: auto 1fr auto; /* header / content / footer */
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden; /* nothing may escape the modal bounds */
   -webkit-overflow-scrolling: touch;
-  font-family: 'Roboto Mono', monospace;
+  font-family: 'Share Tech Mono', 'Roboto Mono', monospace;
+  animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 /* --- HEADER (Menu Superior) --- */
 
 .inspect-header {
-  height: 48px; background: #0a0a0a; border-bottom: 1px solid #333;
+  min-height: 54px;
+  height: auto;
+  background: linear-gradient(180deg, rgba(0, 20, 30, 0.8), rgba(5, 8, 10, 0.95));
+  border-bottom: 1px solid rgba(0, 243, 255, 0.12);
   display: flex; justify-content: space-between; align-items: center;
-  padding: 0 16px; flex-shrink: 0; gap: 12px;
+  padding: 12px 20px; flex-shrink: 0; gap: 14px;
   flex-wrap: wrap; /* allow actions to wrap onto additional lines when needed */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Ensure header items lay out in a single row and do not overflow into the visual area */
@@ -159,65 +262,56 @@
   max-width: calc(100% - 220px); /* reserve space for actions */
 }
 
-.inspect-header .actions {
+/* Actions container */
+.actions {
   display: flex;
   gap: 6px;
   align-items: center;
-  flex: 0 0 auto; /* keep actions from growing */
+  flex: 0 0 auto;
   min-width: 0;
-  flex-wrap: wrap; /* allow buttons to wrap inside the actions box */
-  max-width: 48%; /* reserve room for meta-info while keeping actions contained */
+  flex-wrap: wrap;
+  max-width: 48%;
   box-sizing: border-box;
 }
 
-/* Make header buttons larger for easier tapping */
-.inspect-header .btn-tool-tab { padding: 10px 12px; font-size: 13px; }
-
-/* ====== Header visual consistency ====== */
-.inspect-header {
-  font-family: 'Roboto Mono', monospace;
-  color: #d8d8d8;
+/* Menu de Botões */
+.btn-tool-tab {
+  background: rgba(0, 243, 255, 0.04);
+  border: 1px solid rgba(0, 243, 255, 0.12);
+  color: var(--nexus-blue, #00f3ff);
+  padding: 10px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border-radius: 6px; transition: all 0.2s ease; text-transform: uppercase;
+  font-family: 'Share Tech Mono', 'Roboto Mono', monospace;
+  min-height: 40px;
+  min-width: 52px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 6px rgba(0, 243, 255, 0.3);
 }
-.inspect-header .meta-info .case-stamp {
-  text-transform: uppercase;
-  color: #7b7b7b;
-  font-weight: 600;
-  letter-spacing: 1px;
+.btn-tool-tab:hover {
+  color: #ffffff;
+  background: rgba(0, 243, 255, 0.1);
+  border-color: rgba(0, 243, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 243, 255, 0.25), 0 0 20px rgba(0, 243, 255, 0.15);
 }
-.inspect-header .meta-info .chat-contact {
-  background: transparent; /* remove pill background to match header text */
-  color: #e6e6e6;
-  font-weight: 600;
-  padding: 0; margin: 0;
-  font-size: 13px;
-}
-.inspect-header .meta-info .type-tag {
-  background: rgba(255,255,255,0.02);
-  color: #9ee7c8;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.inspect-header .actions .btn-tool-tab {
-  background: transparent; color: #cfcfcf; padding: 8px 10px; font-size: 13px; border-radius: 6px;
-}
-.inspect-header .actions .btn-tool-tab.active-green { color: #00ffaa; }
 
 /* Reduce gap so items fit in one line on narrow screens */
 @media (max-width: 900px) {
-  .inspect-header { padding: 0 12px; }
+  .inspect-header { padding: 10px 12px; }
   .inspect-header .meta-info .chat-contact { font-size: 12px; max-width: calc(100% - 180px); }
-  .inspect-header .actions .btn-tool-tab { padding: 6px 6px; font-size: 11px; }
+  .inspect-header .actions .btn-tool-tab { padding: 6px 8px; font-size: 11px; }
+  .tools-hud-panel { max-width: 90%; right: 5%; }
 }
 
 /* Make sure the visual area sits below the header and doesn't overlap */
-.inspect-visual-area { margin-top: 0; z-index: 10; }
+.inspect-visual-area { margin-top: 0; z-index: 10; position: relative; }
 
 /* Ensure the visual/content area is a rigid compartment that cannot overflow the modal */
 .inspect-file > .inspect-visual-area,
 .inspect-file > .evidence-display-area {
-  overflow: hidden; /* prevent children from escaping */
+  overflow: hidden;
   position: relative;
   display: flex;
   align-items: stretch;
@@ -237,48 +331,74 @@
 .inspect-header .actions { box-sizing: border-box; }
 
 /* Ensure header appears above any floating HUDs and that its buttons don't wrap */
-.inspect-header { position: relative; z-index: 80; }
-.actions { align-items: center; flex-wrap: nowrap; }
+.inspect-header { position: relative; z-index: 80; font-family: 'Share Tech Mono', 'Roboto Mono', monospace; color: #d8d8d8; }
+.actions { align-items: center; flex-wrap: wrap; }
 .btn-tool-tab { white-space: nowrap; line-height: 1.1; }
 
-.meta-info { display: flex; flex-direction: column; }
-.ev-id { color: #b33; font-weight: bold; letter-spacing: 2px; font-size: 14px; }
-.case-stamp { color: #666; font-size: 10px; }
 
-/* Menu de Botões */
-.actions { display: flex; gap: 4px; background: #000; padding: 4px; border-radius: 4px; border: 1px solid #222; }
-
-.btn-tool-tab {
-  background: transparent; border: none; color: #d0d0d0;
-  padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
-  border-radius: 6px; transition: all 0.14s ease; text-transform: uppercase;
-  font-family: 'Roboto Mono', monospace;
-  min-height: 40px; /* touch-friendly target */
-  min-width: 48px; /* reduce min width so many buttons fit */
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 8px;
-}
-.btn-tool-tab:hover { color: #fff; background: rgba(255,255,255,0.06); transform: translateY(-1px); }
 
 /* Cores de Ativo */
-.btn-tool-tab.active-green { color: #00ffaa; background: rgba(0, 255, 170, 0.15); box-shadow: inset 0 0 5px rgba(0, 255, 170, 0.2); }
-.btn-tool-tab.active-purple { color: #b366ff; background: rgba(179, 102, 255, 0.15); box-shadow: inset 0 0 5px rgba(179, 102, 255, 0.2); }
-.btn-tool-tab.active-blue { color: #00ccff; background: rgba(0, 204, 255, 0.15); box-shadow: inset 0 0 5px rgba(0, 204, 255, 0.2); }
+.btn-tool-tab.active-green {
+  color: #00ffaa;
+  background: rgba(0, 255, 170, 0.15);
+  border-color: rgba(0, 255, 170, 0.4);
+  box-shadow: 0 0 20px rgba(0, 255, 170, 0.3), inset 0 0 8px rgba(0, 255, 170, 0.15);
+  text-shadow: 0 0 10px rgba(0, 255, 170, 0.6);
+}
+.btn-tool-tab.active-purple {
+  color: #b366ff;
+  background: rgba(179, 102, 255, 0.15);
+  border-color: rgba(179, 102, 255, 0.4);
+  box-shadow: 0 0 20px rgba(179, 102, 255, 0.3), inset 0 0 8px rgba(179, 102, 255, 0.15);
+  text-shadow: 0 0 10px rgba(179, 102, 255, 0.6);
+}
+.btn-tool-tab.active-blue {
+  color: #00ccff;
+  background: rgba(0, 204, 255, 0.15);
+  border-color: rgba(0, 204, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 204, 255, 0.3), inset 0 0 8px rgba(0, 204, 255, 0.15);
+  text-shadow: 0 0 10px rgba(0, 204, 255, 0.6);
+}
 
 .btn-close-modal {
-  background: transparent; border: none; color: #444; font-size: 24px; cursor: pointer; margin-left: 15px;
+  background: rgba(255, 0, 60, 0.08);
+  border: 1px solid rgba(255, 0, 60, 0.2);
+  color: var(--nexus-glitch, #ff003c);
+  font-size: 22px;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: bold;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.btn-close-modal:hover { color: #fff; }
+.btn-close-modal:hover {
+  color: #ffffff;
+  background: rgba(255, 0, 60, 0.2);
+  border-color: rgba(255, 0, 60, 0.5);
+  box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
+  transform: scale(1.05);
+}
 
 /* --- ÁREA VISUAL PRINCIPAL --- */
 .inspect-visual-area {
   flex: 1; /* Ocupa todo o espaço sobrando */
   position: relative; /* Para os HUDs flutuarem aqui dentro */
-  background: #000;
+  background: linear-gradient(180deg, #000000 0%, #05080a 100%);
   overflow: hidden; 
   display: flex; align-items: center; justify-content: center;
   min-height: 0; /* importante para o flex funcionar e permitir scroll interno quando necessário */
   transition: all 0.28s ease; /* animação suave ao expandir/contrair */
+  /* Sutil efeito grid Nexus */
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 /* Quando o áudio está expandido, permita scroll interno na área visual para que o usuário
@@ -295,18 +415,18 @@
   height: auto; /* let content determine height while still respecting min/max */
   min-height: 40vh;
   max-height: 72vh;
-  background-color: #050505; /* Fundo base */
+  background-color: #000000; /* Fundo base */
   background-image:
-    linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px; /* Tamanho do grid */
+    linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(ellipse at center, rgba(0, 243, 255, 0.02), transparent 70%);
+  background-size: 60px 60px, 60px 60px, 100% 100%;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  border: 1px solid #222;
-  box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
-  overflow: auto; /* allow internal scrolling for large media */
+  overflow: hidden; /* prevent images from breaking layout */
+  box-shadow: inset 0 0 60px rgba(0, 243, 255, 0.05);
 }
 
 .evidence-display-area img,
@@ -400,29 +520,51 @@
 }
 
 /* --- PAINÉIS FLUTUANTES (HUD) --- */
-/* Isso conserta o layout quebrado da primeira foto */
+/* Painéis posicionados dentro do modal para evitar bugs de scroll */
 .tools-hud-panel {
-  position: fixed; /* fixed so it's not clipped by modal's scroll container */
-  top: 96px; /* below modal header */
-  right: 28px;
-  width: 300px;
-  max-width: calc(35vw);
-  max-height: calc(100vh - 160px);
-  overflow: auto;
-  background: rgba(12, 12, 12, 0.98);
-  border: 1px solid #444;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.95);
-  padding: 14px;
-  border-radius: 6px;
-  z-index: 1400; /* sit above modal and other UI */
-  animation: slideInRight 0.18s ease-out;
+  position: absolute; /* absolute dentro do inspect-visual-area */
+  top: 16px;
+  right: 16px;
+  width: 320px;
+  max-width: 38%;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(145deg, rgba(5, 8, 10, 0.98), rgba(10, 15, 20, 0.98));
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 243, 255, 0.12);
+  padding: 18px;
+  border-radius: 8px;
+  z-index: 100; /* sit above image but below modals */
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 243, 255, 0.3) rgba(0, 0, 0, 0.3);
 }
+
+.tools-hud-panel::-webkit-scrollbar { width: 8px; }
+.tools-hud-panel::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+.tools-hud-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.tools-hud-panel::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.5); }
 
 @keyframes slideInRight { from{opacity:0; transform:translateX(20px);} to{opacity:1; transform:translateX(0);} }
 
 .hud-title {
-  color: #fff; font-size: 11px; font-weight: bold; border-bottom: 1px solid #333;
-  padding-bottom: 8px; margin-bottom: 15px; letter-spacing: 1px;
+  color: var(--nexus-blue, #00f3ff);
+  font-size: 12px;
+  font-weight: bold;
+  border-bottom: 2px solid rgba(0, 243, 255, 0.3);
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+  font-family: 'Share Tech Mono', monospace;
 }
 
 /* --- SLIDERS CUSTOMIZADOS (Correção das Barras Brancas) --- */
@@ -434,29 +576,120 @@
 
 /* Remove estilo padrão feio do navegador */
 /* Compact filter controls */
-.filter-row { margin-bottom: 10px; }
-.filter-controls { display:flex; gap:8px; align-items:center; }
-.filter-range { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: #222; border-radius: 4px; cursor: pointer; }
-.filter-range:focus { outline: none; }
-.filter-range::-webkit-slider-runnable-track { height:6px; background:#222; border-radius:4px; }
-.filter-range::-moz-range-track { height:6px; background:#222; border-radius:4px; }
-.filter-range::-webkit-slider-thumb { -webkit-appearance:none; height:12px; width:12px; border-radius:50%; background:#00ffaa; margin-top:-3px; box-shadow:0 0 6px rgba(0,255,170,0.28); border:2px solid rgba(255,255,255,0.04); }
-.filter-range::-moz-range-thumb { height:12px; width:12px; border-radius:50%; background:#00ffaa; border:2px solid rgba(255,255,255,0.04); }
+.filter-row { margin-bottom: 12px; }
+.filter-controls { display:flex; gap:10px; align-items:center; }
+.filter-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.6), rgba(0, 243, 255, 0.1));
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-range:hover {
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.2);
+}
+.filter-range:focus { outline: none; box-shadow: 0 0 16px rgba(0, 243, 255, 0.3); }
+.filter-range::-webkit-slider-runnable-track {
+  height:8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.6), rgba(0, 243, 255, 0.1));
+  border-radius:6px;
+}
+.filter-range::-moz-range-track {
+  height:8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.6), rgba(0, 243, 255, 0.1));
+  border-radius:6px;
+}
+.filter-range::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  height:18px;
+  width:18px;
+  border-radius:50%;
+  background: linear-gradient(135deg, var(--nexus-blue, #00f3ff), rgba(0, 243, 255, 0.6));
+  margin-top:-5px;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.6), 0 0 20px rgba(0, 243, 255, 0.3);
+  border:2px solid rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.8), 0 0 30px rgba(0, 243, 255, 0.4);
+}
+.filter-range::-moz-range-thumb {
+  height:18px;
+  width:18px;
+  border-radius:50%;
+  background: linear-gradient(135deg, var(--nexus-blue, #00f3ff), rgba(0, 243, 255, 0.6));
+  border:2px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+  cursor: pointer;
+}
 
-.filter-number { width:64px; background:#0b0b0b; color:#ddd; border:1px solid #222; padding:6px 8px; border-radius:4px; text-align:center; font-size:13px; }
-.filter-number:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,204,255,0.06); }
+.filter-number {
+  width:70px;
+  background: rgba(0, 243, 255, 0.05);
+  color: var(--nexus-blue, #00f3ff);
+  border:1px solid rgba(0, 243, 255, 0.2);
+  padding:8px 10px;
+  border-radius:6px;
+  text-align:center;
+  font-size:12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-shadow: 0 0 6px rgba(0, 243, 255, 0.3);
+}
+.filter-number:hover {
+  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+}
+.filter-number:focus {
+  outline: none;
+  border-color: rgba(0, 243, 255, 0.6);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.25);
+  background: rgba(0, 243, 255, 0.08);
+}
 /* remove number input spinners */
-input[type=number].filter-number::-webkit-outer-spin-button, input[type=number].filter-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearance: textfield; appearance: textfield; }
+input[type=number].filter-number::-webkit-outer-spin-button,
+input[type=number].filter-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number].filter-number {
+  -moz-appearance: textfield;
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
 
 /* Botão Reset */
 .btn-reset, .btn-reset-filters {
-  display: inline-block; background: transparent; border: 1px solid rgba(255,255,255,0.06); color: #d6d6d6;
-  padding: 6px 10px; font-size: 12px; cursor: pointer; font-weight: 700;
-  text-transform: uppercase; margin-top: 6px; border-radius: 6px; transition: all .14s ease;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.6) inset;
+  display: inline-block;
+  background: rgba(255, 0, 60, 0.08);
+  border: 1px solid rgba(255, 0, 60, 0.2);
+  color: var(--nexus-glitch, #ff003c);
+  padding: 8px 14px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(255, 0, 60, 0.15);
+  letter-spacing: 0.8px;
+  text-shadow: 0 0 8px rgba(255, 0, 60, 0.4);
 }
-.btn-reset:hover, .btn-reset-filters:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.12); color: #fff; transform: translateY(-1px); }
+.btn-reset:hover, .btn-reset-filters:hover {
+  background: rgba(255, 0, 60, 0.15);
+  border-color: rgba(255, 0, 60, 0.5);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px rgba(255, 0, 60, 0.4);
+}
 
 /* Thermal overlay styling: canvas-based mapping rendered into .thermal-canvas */
 .thermal-overlay {
@@ -497,30 +730,68 @@ input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearanc
 }
 
 /* --- CONTROLES FORENSE (Canais RGB) --- */
-.forensic-controls { display: flex; gap: 5px; }
+.forensic-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-channel {
-  flex: 1; background: #111; border: 1px solid #333; color: #666;
-  padding: 8px 0; font-size: 10px; cursor: pointer; font-weight: bold;
+  flex: 1;
+  min-width: 60px;
+  background: rgba(0, 243, 255, 0.04);
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  color: var(--muted, #9aa6ab);
+  padding: 10px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.btn-channel:hover {
+  background: rgba(0, 243, 255, 0.08);
+  border-color: rgba(0, 243, 255, 0.3);
 }
 /* Cores Ativas */
-.btn-channel.active { color: #fff; border-color: #888; }
-.btn-channel.red.active { background: rgba(255,0,0,0.1); border-color: #f00; color: #f00; }
-.btn-channel.green.active { background: rgba(0,255,0,0.1); border-color: #0f0; color: #0f0; }
-.btn-channel.blue.active { background: rgba(0,0,255,0.1); border-color: #08f; color: #08f; }
+.btn-channel.active {
+  color: #fff;
+  border-color: rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.3);
+}
+.btn-channel.red.active {
+  background: rgba(255, 0, 0, 0.15);
+  border-color: rgba(255, 0, 0, 0.6);
+  color: #ff4444;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+  text-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+}
+.btn-channel.green.active {
+  background: rgba(0, 255, 0, 0.15);
+  border-color: rgba(0, 255, 0, 0.6);
+  color: #44ff44;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+.btn-channel.blue.active {
+  background: rgba(0, 136, 255, 0.15);
+  border-color: rgba(0, 136, 255, 0.6);
+  color: #4488ff;
+  box-shadow: 0 0 20px rgba(0, 136, 255, 0.4);
+  text-shadow: 0 0 8px rgba(0, 136, 255, 0.6);
+}
 
 /* --- RODAPÉ --- */
 .inspect-details {
   /* Reduce the vertical footprint of the details area so the visual/video
      area gets more space. Details remain scrollable when content is large. */
   height: auto;
-  min-height: 90px;
-  max-height: 22vh; /* smaller than before to prioritize the video */
-  background: #111;
-  border-top: 1px solid #333;
-  padding: 12px; /* slightly reduced padding */
+  min-height: 100px;
+  max-height: 24vh; /* smaller than before to prioritize the video */
+  background: linear-gradient(180deg, rgba(5, 8, 10, 0.95), rgba(10, 15, 20, 0.98));
+  border-top: 2px solid rgba(0, 243, 255, 0.15);
+  padding: 16px; /* slightly reduced padding */
   display: flex;
-  gap: 12px;
+  gap: 16px;
   overflow: auto; /* allow details to scroll internally */
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Left column inside the details that holds description and metadata. It scrolls */
@@ -529,38 +800,92 @@ input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearanc
   overflow-y: auto;
   padding-right: 15px;
   scrollbar-width: thin;
-  scrollbar-color: #333 #000;
+  scrollbar-color: rgba(0, 243, 255, 0.3) rgba(0, 0, 0, 0.3);
 }
-.text-col::-webkit-scrollbar { width: 6px; }
-.text-col::-webkit-scrollbar-track { background: #000; }
-.text-col::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.text-col::-webkit-scrollbar { width: 8px; }
+.text-col::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+.text-col::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+}
+.text-col::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+}
 
 .metadata-box {
   margin-top: 20px;
-  background: #080808;
-  border: 1px solid #333;
-  padding: 10px;
-  border-radius: 4px;
-  font-family: 'Roboto Mono', monospace;
+  background: rgba(0, 243, 255, 0.02);
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  padding: 14px;
+  border-radius: 6px;
+  font-family: 'Share Tech Mono', 'Roboto Mono', monospace;
   font-size: 11px;
-  color: #888;
+  color: var(--muted, #9aa6ab);
+  box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.03);
 }
 .metadata-box h4 {
-  color: #b33; margin: 0 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px;
-  font-size: 10px; text-transform: uppercase;
+  color: var(--nexus-blue, #00f3ff);
+  margin: 0 0 10px 0;
+  border-bottom: 2px solid rgba(0, 243, 255, 0.2);
+  padding-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
 }
 
 .desc-title {
-  color: #c6a45f; font-weight: bold; font-size: 11px; letter-spacing: 1px;
-  margin-bottom: 5px; display: block;
+  color: var(--nexus-blue, #00f3ff);
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  display: block;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
 }
-.text-col h2 { color: #f2f2f2; margin: 0 0 10px 0; font-family: 'Special Elite'; font-size: 22px; }
-.public-desc { color: #999; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
-.btn-edit-ref { 
-  background: #1a1a1f; border: 1px solid #444; color: #888; padding: 8px 16px; 
-  cursor: pointer; font-size: 11px; height: fit-content; 
+.text-col h2 {
+  color: #cfeff0;
+  margin: 0 0 14px 0;
+  font-family: 'Share Tech Mono', 'Special Elite', monospace;
+  font-size: 20px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
 }
-.btn-edit-ref:hover { color: #fff; border-color: #777; }
+.public-desc {
+  color: var(--muted, #9aa6ab);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.btn-edit-ref {
+  background: rgba(0, 243, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  color: var(--nexus-blue, #00f3ff);
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 12px;
+  height: fit-content;
+  border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(0, 243, 255, 0.3);
+}
+.btn-edit-ref:hover {
+  color: #ffffff;
+  background: rgba(0, 243, 255, 0.12);
+  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+  transform: translateY(-2px);
+}
 
 /* --- HEADER FLEX FIXES (override earlier fixed header/rows) --- */
 /* 1. Allow header to grow when toolbar wraps into multiple lines */
@@ -588,4 +913,164 @@ input[type=number].filter-number { -moz-appearance: textfield; -webkit-appearanc
   margin-top: 10px;
 }
 
+/* Filters overlay panel - painel de filtros flutuante */
+.filters-overlay-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 280px;
+  max-width: 35%;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  background: linear-gradient(145deg, rgba(5, 8, 10, 0.98), rgba(10, 15, 20, 0.98));
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 243, 255, 0.12);
+  padding: 18px;
+  border-radius: 8px;
+  z-index: 100;
+  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 243, 255, 0.3) rgba(0, 0, 0, 0.3);
+}
 
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.filters-overlay-panel::-webkit-scrollbar { width: 8px; }
+.filters-overlay-panel::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+.filters-overlay-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+}
+
+.filters-overlay-panel label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--nexus-blue, #00f3ff);
+  font-size: 11px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+}
+
+/* GM note styling */
+.gm-note {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(198, 164, 95, 0.08);
+  border: 1px solid rgba(198, 164, 95, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #d4af7a;
+  line-height: 1.5;
+  box-shadow: inset 0 0 12px rgba(198, 164, 95, 0.05);
+}
+
+/* Lock screen indicator */
+.btn-close {
+  background: rgba(255, 0, 60, 0.08);
+  border: 1px solid rgba(255, 0, 60, 0.2);
+  color: var(--nexus-glitch, #ff003c);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: bold;
+}
+.btn-close:hover {
+  color: #ffffff;
+  background: rgba(255, 0, 60, 0.2);
+  border-color: rgba(255, 0, 60, 0.5);
+  box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
+}
+
+/* Accessibility improvements */
+.inspect-file:focus {
+  outline: 2px solid rgba(0, 243, 255, 0.5);
+  outline-offset: -2px;
+}
+
+/* Animation for thermal mode */
+.termal-mode {
+  animation: thermalPulse 3s ease-in-out infinite;
+}
+
+@keyframes thermalPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.05); }
+}
+
+/* Subtle scan line effect for added atmosphere */
+.inspect-visual-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 243, 255, 0.01) 50%,
+    transparent 100%
+  );
+  background-size: 100% 4px;
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.3;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Prevent text selection on UI elements */
+.btn-tool-tab,
+.btn-close-modal,
+.btn-channel,
+.case-stamp,
+.hud-title {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Focus states for keyboard navigation */
+.btn-tool-tab:focus-visible,
+.btn-close-modal:focus-visible,
+.btn-edit-ref:focus-visible {
+  outline: 2px solid var(--nexus-blue, #00f3ff);
+  outline-offset: 2px;
+}
+
+/* Ensure long titles don't break layout */
+.text-col h2 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Loading state for video upload */
+.uploading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: var(--nexus-blue, #00f3ff);
+  padding: 20px 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  font-size: 14px;
+  text-align: center;
+  z-index: 200;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.02); }
+}

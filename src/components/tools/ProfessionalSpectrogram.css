@@ -1,0 +1,383 @@
+/* Professional Spectrogram Styles */
+
+.spectrogram-container {
+  width: 100%;
+  background: linear-gradient(145deg, rgba(5,8,10,0.9), rgba(10,15,20,0.95));
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,243,255,0.1);
+  overflow: hidden;
+  border: 1px solid rgba(0,243,255,0.2);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.spectrogram-header {
+  background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+  backdrop-filter: blur(8px);
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,243,255,0.15);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--nexus-blue, #00f3ff);
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 12px rgba(0,243,255,0.6);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+.header-title {
+  color: var(--nexus-blue, #00f3ff);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(0,243,255,0.3);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-text {
+  font-size: 11px;
+  font-family: monospace;
+  color: #888;
+  font-weight: 600;
+}
+
+.progress-percent {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--nexus-blue, #00f3ff);
+  background: rgba(0,243,255,0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.progress-bar-container {
+  margin-top: 10px;
+  height: 3px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--nexus-blue, #00f3ff), #0088ff);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(0,243,255,0.5);
+}
+
+.spectrogram-controls {
+  padding: 20px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.control-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--nexus-blue, #00f3ff);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.control-value {
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  background: rgba(0,243,255,0.15);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.control-slider {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.control-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--nexus-blue, #00f3ff);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0,243,255,0.6);
+  transition: all 0.2s ease;
+}
+
+.control-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 20px rgba(0,243,255,0.9);
+  transform: scale(1.15);
+}
+
+.control-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--nexus-blue, #00f3ff);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0,243,255,0.6);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.control-slider::-moz-range-thumb:hover {
+  box-shadow: 0 0 20px rgba(0,243,255,0.9);
+  transform: scale(1.15);
+}
+
+.color-scheme-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.color-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #aaa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.color-btn:hover {
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.4);
+}
+
+.color-btn.active {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.color-btn.active.hot {
+  background: linear-gradient(135deg, #ff4500, #ff8800);
+  border-color: #ff6600;
+  color: #fff;
+}
+
+.color-btn.active.cyan {
+  background: linear-gradient(135deg, #00f3ff, #0088ff);
+  border-color: #00f3ff;
+  color: #051018;
+}
+
+.color-btn.active.magma {
+  background: linear-gradient(135deg, #ff00ff, #8800ff);
+  border-color: #ff00ff;
+  color: #fff;
+}
+
+.canvas-container {
+  position: relative;
+  background: #000;
+  overflow: auto;
+  min-height: 300px;
+  max-height: 500px;
+}
+
+.canvas-wrapper {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.spectrogram-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  min-height: 300px;
+}
+
+.frequency-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.freq-marker {
+  position: absolute;
+  left: 8px;
+  font-size: 10px;
+  color: rgba(0,243,255,0.5);
+  font-family: 'Courier New', monospace;
+  background: rgba(0,0,0,0.6);
+  padding: 2px 6px;
+  border-radius: 3px;
+  backdrop-filter: blur(4px);
+}
+
+.freq-marker.highlight {
+  background: rgba(0,243,255,0.15);
+  color: rgba(0,243,255,0.9);
+  border: 1px solid rgba(0,243,255,0.3);
+  font-weight: 700;
+}
+
+.spectrogram-footer {
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.4);
+  border-top: 1px solid rgba(0,243,255,0.15);
+}
+
+.footer-text {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.footer-text strong {
+  color: var(--nexus-blue, #00f3ff);
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .control-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-title {
+    font-size: 14px;
+  }
+  
+  .color-scheme-buttons {
+    flex-direction: column;
+  }
+
+  .canvas-container {
+    min-height: 250px;
+    max-height: 400px;
+  }
+
+  .spectrogram-canvas {
+    min-height: 250px;
+  }
+
+  .spectrogram-controls {
+    padding: 16px;
+  }
+
+  .control-grid {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .canvas-container {
+    min-height: 200px;
+    max-height: 350px;
+  }
+
+  .spectrogram-canvas {
+    min-height: 200px;
+  }
+
+  .control-value {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .spectrogram-header {
+    padding: 12px 16px;
+  }
+
+  .spectrogram-controls {
+    padding: 12px;
+  }
+
+  .spectrogram-footer {
+    padding: 10px 16px;
+  }
+}
+
+@media (max-height: 700px) {
+  .canvas-container {
+    max-height: 350px;
+    min-height: 250px;
+  }
+
+  .spectrogram-canvas {
+    min-height: 250px;
+  }
+}
+
+/* Scrollbar */
+.canvas-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.canvas-container::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.3);
+}
+
+.canvas-container::-webkit-scrollbar-thumb {
+  background: rgba(0,243,255,0.3);
+  border-radius: 5px;
+}
+
+.canvas-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,243,255,0.5);
+}

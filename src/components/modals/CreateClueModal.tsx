@@ -4,17 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import UVEditor from '../tools/UVEditor';
-import AudioDecrypter from '../tools/AudioDecrypter';
+import ThermalEditor from '../tools/ThermalEditor';
 import { bufferToWav } from '../../utils/audioGenerator';
 import AdvancedAudioLab from '../tools/AdvancedAudioLab';
-import AudioForge from '../tools/AudioForge';
-import AudioMixer from '../tools/AudioMixer';
-import GlitchMaker from '../tools/GlitchMaker';
+import UrlRealTimeSpectrogram from '../tools/UrlRealTimeSpectrogram';
+
 import PhoneViewer from '../tools/PhoneViewer';
+import SpectrogramCreator from '../tools/SpectrogramCreator';
+import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import './CreateClueModal.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
 
 import { supabase } from '../../supabaseClient';
+import AudioForge from '../tools/AudioForge';
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
@@ -66,6 +68,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [audioHiddenPreview, setAudioHiddenPreview] = useState<string | null>(null);
    
    const [audioHiddenUploadedUrl, setAudioHiddenUploadedUrl] = useState<string | null>(null);
+   const [audioHiddenUploading, setAudioHiddenUploading] = useState<boolean>(false);
   const [freq, setFreq] = useState(50);
    const [triggerTime, setTriggerTime] = useState<number>(0);
 
@@ -100,7 +103,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       const [fakeMeta, setFakeMeta] = useState<{ date?: string; cam?: string; gps?: string; owner?: string }>({});
 
       const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
-      const [showGlitchMaker, setShowGlitchMaker] = useState(false);
       const [showMixer, setShowMixer] = useState(false);
            const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra'>('geral');
 
@@ -133,8 +135,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [filterRevealBrightness, setFilterRevealBrightness] = useState(150);
    const [filterRevealContrast, setFilterRevealContrast] = useState(150);
    const [filterRevealSaturate, setFilterRevealSaturate] = useState(100);
+   const [showAdvancedFilterSettings, setShowAdvancedFilterSettings] = useState(false);
    // Thermal flag: whether this evidence should show a thermal overlay in inspection
    const [thermalEnabled, setThermalEnabled] = useState(false);
+   const [thermalSecretText, setThermalSecretText] = useState('');
+   const [thermalKeyword, setThermalKeyword] = useState('');
+   const [thermalFontSize, setThermalFontSize] = useState(100);
+   const [thermalPositionY, setThermalPositionY] = useState(50);
+   const [showThermalEditor, setShowThermalEditor] = useState(false);
 
   const [loading, setLoading] = useState(false);
    const [isShredded, setIsShredded] = useState(false);
@@ -184,6 +192,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setFilterRevealBrightness(150);
       setFilterRevealContrast(150);
       setFilterRevealSaturate(100);
+      setShowAdvancedFilterSettings(false);
+      setThermalEnabled(false);
+      setThermalSecretText('');
+      setThermalKeyword('');
+      setThermalFontSize(100);
+      setThermalPositionY(50);
+      setShowThermalEditor(false);
 
       // stamp / external
       setStamp('');
@@ -197,7 +212,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       // audio/tools states
       setShowAudioForgeFor(null);
-      setShowGlitchMaker(false);
       setActiveTab('geral');
 
       // chat / phone states
@@ -361,7 +375,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
              // optional external link + qr
              if (externalLink) metadata.external_link = externalLink;
             // thermal metadata flag
-            if (thermalEnabled) metadata.thermal = true;
+            if (thermalEnabled) {
+               metadata.thermal = true;
+               if (thermalSecretText) metadata.thermal_secret_text = thermalSecretText;
+               if (thermalKeyword) metadata.thermal_keyword = thermalKeyword;
+               metadata.thermal_font_size = thermalFontSize;
+               metadata.thermal_position_y = thermalPositionY;
+            }
             // audio playback config: time (seconds) when hidden track should be triggered
             if (typeof triggerTime !== 'undefined') {
                metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
@@ -700,24 +720,171 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         </div>
                      </div>
                      <div className="field-block" style={{flex:1, borderColor:'#3498db'}}>
-                        <span className="field-title" style={{color:'#3498db'}}>3. TRATAMENTO (BRILHO/CONTRASTE)</span>
-                        <p style={{fontSize:10, color:'#aaa'}}>Segredos que aparecem ao estourar a imagem.</p>
-                        <button onClick={()=>setEditorMode('filter')} className="upload-btn">🖌️ DESENHAR CAMADA</button>
-                           <button onClick={() => setShowGlitchMaker(true)} className="upload-btn" style={{ marginLeft: 8 }}>⚡ GLITCH FX</button>
-                        <div style={{marginTop:10, background:'#000', padding:5}}>
-                           <label style={{fontSize:9}}>GATILHOS (BRILHO / CONTRASTE / SAT)</label>
-                           <div style={{display:'flex', gap:5}}>
-                              <input type="number" placeholder="150" value={filterRevealBrightness} onChange={e=>setFilterRevealBrightness(Number(e.target.value))} />
-                              <input type="number" placeholder="150" value={filterRevealContrast} onChange={e=>setFilterRevealContrast(Number(e.target.value))} />
-                              <input type="number" placeholder="100" value={filterRevealSaturate} onChange={e=>setFilterRevealSaturate(Number(e.target.value))} />
+                        <span className="field-title" style={{color:'#3498db'}}>3. CAMADAS SECRETAS</span>
+                        <p style={{fontSize:10, color:'#aaa'}}>Diferentes técnicas para esconder informações.</p>
+                        
+                        {/* FILTRO DE REVELAÇÃO */}
+                        <div style={{marginBottom:15, padding:12, background:'rgba(52,152,219,0.05)', borderRadius:6, border:'1px solid rgba(52,152,219,0.2)'}}>
+                           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                              <span style={{fontSize:11, fontWeight:'bold', color:'#3498db'}}>🔍 FILTRO DE REVELAÇÃO</span>
+                           </div>
+                           <p style={{fontSize:9, color:'#777', marginBottom:8}}>Desenhe segredos que aparecem ao ajustar brilho/contraste</p>
+                           <button onClick={()=>setEditorMode('filter')} className="upload-btn" style={{fontSize:11, padding:'8px 12px'}}>
+                              🖌️ DESENHAR CAMADA OCULTA
+                           </button>
+                           
+                           {/* Advanced settings */}
+                           <div style={{marginTop:8}}>
+                              <button 
+                                 onClick={() => setShowAdvancedFilterSettings(!showAdvancedFilterSettings)}
+                                 style={{
+                                    background: showAdvancedFilterSettings ? 'rgba(52, 152, 219, 0.2)' : 'rgba(50,50,50,0.3)',
+                                    border: '1px solid rgba(100,100,100,0.5)',
+                                    color: '#888',
+                                    padding: '6px 10px',
+                                    fontSize: '9px',
+                                    cursor: 'pointer',
+                                    borderRadius: '4px',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                 }}
+                              >
+                                 <span>⚙️ Configurações Avançadas</span>
+                                 <span style={{fontSize:'12px'}}>{showAdvancedFilterSettings ? '▼' : '▶'}</span>
+                              </button>
+                              
+                              {showAdvancedFilterSettings && (
+                                 <div style={{
+                                    marginTop:8, 
+                                    background:'rgba(0,0,0,0.6)', 
+                                    padding:10,
+                                    borderRadius: '4px',
+                                    border: '1px solid rgba(52, 152, 219, 0.3)'
+                                 }}>
+                                    <label style={{fontSize:9, color:'#888', display:'block', marginBottom:6}}>
+                                       GATILHOS DE REVELAÇÃO (BRILHO / CONTRASTE / SATURAÇÃO)
+                                    </label>
+                                    <div style={{display:'flex', gap:5, marginBottom:8}}>
+                                       <div style={{flex:1}}>
+                                          <label style={{fontSize:8, color:'#666', display:'block'}}>BRILHO</label>
+                                          <input 
+                                             type="number" 
+                                             placeholder="150" 
+                                             value={filterRevealBrightness} 
+                                             onChange={e=>setFilterRevealBrightness(Number(e.target.value))}
+                                             style={{width:'100%', fontSize:'11px'}}
+                                          />
+                                       </div>
+                                       <div style={{flex:1}}>
+                                          <label style={{fontSize:8, color:'#666', display:'block'}}>CONTRASTE</label>
+                                          <input 
+                                             type="number" 
+                                             placeholder="150" 
+                                             value={filterRevealContrast} 
+                                             onChange={e=>setFilterRevealContrast(Number(e.target.value))}
+                                             style={{width:'100%', fontSize:'11px'}}
+                                          />
+                                       </div>
+                                       <div style={{flex:1}}>
+                                          <label style={{fontSize:8, color:'#666', display:'block'}}>SAT</label>
+                                          <input 
+                                             type="number" 
+                                             placeholder="100" 
+                                             value={filterRevealSaturate} 
+                                             onChange={e=>setFilterRevealSaturate(Number(e.target.value))}
+                                             style={{width:'100%', fontSize:'11px'}}
+                                          />
+                                       </div>
+                                    </div>
+                                    <div style={{fontSize:8, color:'#555', fontStyle:'italic'}}>
+                                       💡 Valores mais altos = mais difícil revelar
+                                    </div>
+                                 </div>
+                              )}
                            </div>
                         </div>
-                          <div style={{marginTop:10}}>
-                             <label style={{display:'flex', alignItems:'center', gap:8}}>
-                                <input type="checkbox" checked={thermalEnabled} onChange={e => setThermalEnabled(e.target.checked)} />
-                                <span style={{fontSize:12}}>🌡️ Ativar TERMAL (simular termografia no INSPECIONAR)</span>
-                             </label>
-                          </div>
+                        
+                        {/* TERMAL */}
+                        <div style={{marginBottom:0, padding:12, background:'rgba(255,100,0,0.05)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)'}}>
+                           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                              <span style={{fontSize:11, fontWeight:'bold', color:'#ff6400'}}>🌡️ VISÃO TÉRMICA</span>
+                           </div>
+                           <p style={{fontSize:9, color:'#777', marginBottom:8}}>Simula câmera termográfica ao inspecionar</p>
+                           <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer', padding:'8px', background:'rgba(0,0,0,0.3)', borderRadius:4, marginBottom:8}}>
+                              <input 
+                                 type="checkbox" 
+                                 checked={thermalEnabled} 
+                                 onChange={e => setThermalEnabled(e.target.checked)}
+                                 style={{cursor:'pointer'}}
+                              />
+                              <span style={{fontSize:11, color:'#ccc'}}>Ativar modo termal na inspeção</span>
+                           </label>
+                           
+                           {thermalEnabled && (
+                              <div style={{marginTop:12, padding:10, background:'rgba(0,0,0,0.4)', borderRadius:4, border:'1px solid rgba(255,100,0,0.3)'}}>
+                                 <div style={{marginBottom:8}}>
+                                    <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>TEXTO SECRETO (visível apenas no modo termal)</label>
+                                    <textarea 
+                                       value={thermalSecretText}
+                                       onChange={e => setThermalSecretText(e.target.value)}
+                                       placeholder="Digite o texto que só aparece com visão térmica..."
+                                       rows={3}
+                                       style={{width:'100%', background:'#111', border:'1px solid #444', color:'#ff6400', padding:8, fontSize:11, borderRadius:4, fontFamily:'monospace'}}
+                                    />
+                                 </div>
+                                 <div style={{marginBottom:8}}>
+                                    <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>TAMANHO DA FONTE: {thermalFontSize}%</label>
+                                    <input 
+                                       type="range"
+                                       min="50"
+                                       max="200"
+                                       value={thermalFontSize}
+                                       onChange={e => setThermalFontSize(Number(e.target.value))}
+                                       style={{width:'100%', accentColor:'#ff6400'}}
+                                    />
+                                    <p style={{fontSize:9, color:'#666', marginTop:2}}>50% = Pequeno | 100% = Normal | 200% = Gigante</p>
+                                 </div>
+                                 <div style={{marginBottom:8}}>
+                                    <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>POSIÇÃO VERTICAL: {thermalPositionY}%</label>
+                                    <input 
+                                       type="range"
+                                       min="0"
+                                       max="100"
+                                       value={thermalPositionY}
+                                       onChange={e => setThermalPositionY(Number(e.target.value))}
+                                       style={{width:'100%', accentColor:'#ff6400'}}
+                                    />
+                                    <p style={{fontSize:9, color:'#666', marginTop:2}}>0% = Topo | 50% = Meio | 100% = Fundo</p>
+                                 </div>
+                                 {imgFile && (
+                                    <div style={{marginBottom:8}}>
+                                       <button 
+                                          onClick={() => setShowThermalEditor(true)}
+                                          style={{width:'100%', padding:'10px', background:'linear-gradient(135deg, #ff6400, #ff9500)', color:'#fff', border:'none', borderRadius:4, cursor:'pointer', fontSize:11, fontWeight:'bold', transition:'all 0.2s'}}
+                                          onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 0 15px rgba(255,100,0,0.6)'}
+                                          onMouseOut={(e) => e.currentTarget.style.boxShadow = 'none'}
+                                       >
+                                          🎨 ABRIR EDITOR DE POSIÇÃO
+                                       </button>
+                                    </div>
+                                 )}
+                                 <div>
+                                    <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>PALAVRA-CHAVE PARA ATIVAR (opcional)</label>
+                                    <input 
+                                       type="text"
+                                       value={thermalKeyword}
+                                       onChange={e => setThermalKeyword(e.target.value)}
+                                       placeholder="Ex: CALOR, TERMOGRAFIA, etc."
+                                       style={{width:'100%', background:'#111', border:'1px solid #444', color:'#ff6400', padding:8, fontSize:11, borderRadius:4, fontFamily:'monospace'}}
+                                    />
+                                    <p style={{fontSize:9, color:'#666', marginTop:4, fontStyle:'italic'}}>Se definida, o jogador precisará digitar esta palavra no Terminal C.R.I.S. para desbloquear o modo termal.</p>
+                                 </div>
+                              </div>
+                           )}
+                        </div>
                      </div>
                   </div>
                 )}
@@ -727,55 +894,177 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {activeTab === 'audio' && (
                      <div className="form-row">
                         <div className="col">
-                           <div className="evidence-group">
-                              <span className="group-title">CAMADA A: ÁUDIO AMBIENTE</span>
-                              <label>Este é o som principal que o jogador ouve (ex: música, chiado).</label>
-                              <div style={{display:'flex', gap:10}}>
-                                 <label className="upload-btn" style={{flex:1}}>
-                                    📂 SELECIONAR ARQUIVO (MP3/WAV)
+                           {/* CAMADA A - ÁUDIO AMBIENTE */}
+                           <div className="evidence-group" style={{borderColor: audioBase ? 'rgba(0,243,255,0.3)' : 'rgba(0,243,255,0.08)'}}>
+                              <span className="group-title">🎵 CAMADA A: ÁUDIO AMBIENTE</span>
+                              <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
+                                 Som principal que o jogador ouve ao reproduzir a evidência (ex: música, conversa, ruído branco).
+                              </p>
+                              <div style={{display:'flex', gap:10, marginBottom:12, flexWrap:'wrap'}}>
+                                 <label className="upload-btn" style={{flex:1, minWidth:'180px'}}>
+                                    📂 Selecionar Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} />
                                  </label>
-                                 <button className="upload-btn" onClick={() => setShowMixer(true)}>🎛️ ABRIR ESTAÇÃO DE MIXAGEM</button>
+                                 <button className="upload-btn" onClick={() => setShowMixer(true)} style={{minWidth:'180px'}}>
+                                    🎛️ Estação de Mixagem
+                                 </button>
                               </div>
-                              {audioBase && <span className="file-status">{audioBase.name}</span>}
+                              {audioBase && (
+                                 <div style={{padding:'10px', background:'rgba(0,243,255,0.05)', borderRadius:'6px', border:'1px solid rgba(0,243,255,0.15)'}}>
+                                    <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                       <span style={{fontSize:18}}>✓</span>
+                                       <span className="file-status" style={{margin:0}}>{audioBase.name}</span>
+                                    </div>
+                                 </div>
+                              )}
                            </div>
 
-                           <div className="evidence-group" style={{borderColor: audioHidden ? '#c6a45f' : '#333'}}>
-                              <span className="group-title" style={{color:'#c6a45f'}}>CAMADA B: SINAL OCULTO (EVP)</span>
-                              <label>Este é o segredo. Pode ser uma voz ou um som com imagem (espectrograma).</label>
-                              <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
-                                 <label className="upload-btn" style={{flex:1}}>
-                                    📂 UPLOAD DE ÁUDIO
+                           {/* CAMADA B - SINAL OCULTO */}
+                           <div className="evidence-group" style={{borderColor: audioHidden ? 'rgba(198,164,95,0.4)' : 'rgba(198,164,95,0.1)', background: audioHidden ? 'linear-gradient(145deg, rgba(198,164,95,0.05), rgba(0,0,0,0.3))' : undefined}}>
+                              <span className="group-title" style={{color:'#c6a45f'}}>👻 CAMADA B: SINAL OCULTO (EVP)</span>
+                              <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
+                                 Informação secreta escondida no áudio. Pode ser voz reversa, espectrograma com imagem, ou sinal codificado.
+                              </p>
+                              <div style={{display:'flex', gap:10, flexWrap:'wrap', marginBottom:12}}>
+                                 <label className="upload-btn" style={{flex:1, minWidth:'180px', borderColor:'rgba(198,164,95,0.3)', color:'#c6a45f'}}>
+                                    📂 Upload de Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} />
                                  </label>
-                                 <button className="upload-btn" onClick={() => setShowAudioForgeFor('hidden')}>🛠️ FORJA DE FX</button>
-                                
+                                 <button 
+                                    className="upload-btn" 
+                                    onClick={() => setShowAudioForgeFor('hidden')}
+                                    style={{minWidth:'180px', borderColor:'rgba(198,164,95,0.3)', color:'#c6a45f'}}
+                                 >
+                                    🛠️ Forja de FX
+                                 </button>
                               </div>
-                              {audioHidden && <span className="file-status">{audioHidden.name}</span>}
+                              {audioHidden && (
+                                 <div style={{padding:'10px', background:'rgba(198,164,95,0.08)', borderRadius:'6px', border:'1px solid rgba(198,164,95,0.2)'}}>
+                                    <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+                                       <span style={{fontSize:18}}>✓</span>
+                                       <span className="file-status" style={{margin:0, background:'rgba(198,164,95,0.15)', color:'#c6a45f'}}>{audioHidden.name}</span>
+                                       {audioHiddenUploading && (
+                                          <span style={{fontSize:11, color:'#c6a45f', padding:'4px 8px', background:'rgba(198,164,95,0.1)', borderRadius:'4px'}}>
+                                             ⏳ Enviando...
+                                          </span>
+                                       )}
+                                       {audioHiddenUploadedUrl && !audioHiddenUploading && (
+                                          <a 
+                                             href={audioHiddenUploadedUrl} 
+                                             target="_blank" 
+                                             rel="noreferrer" 
+                                             style={{fontSize:11, color:'#9cf', textDecoration:'underline'}}
+                                          >
+                                             🔗 Ver arquivo enviado
+                                          </a>
+                                       )}
+                                    </div>
+                                 </div>
+                              )}
                            </div>
 
+                           {/* CONFIGURAÇÃO DO ENIGMA */}
                            {audioBase && audioHidden && (
-                              <div className="evidence-group" style={{borderColor:'#b33'}}>
-                                 <span className="group-title" style={{color:'#b33'}}>CONFIGURAÇÃO DO ENIGMA</span>
+                              <div className="evidence-group" style={{borderColor:'rgba(179,51,51,0.4)', background:'linear-gradient(145deg, rgba(179,51,51,0.05), rgba(0,0,0,0.3))'}}>
+                                 <span className="group-title" style={{color:'#ff003c'}}>⚙️ CONFIGURAÇÃO DO ENIGMA</span>
+                                 <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
+                                    Defina a frequência que o jogador precisa sintonizar para revelar o sinal oculto.
+                                 </p>
                                  <div className="evp-config-row">
-                                    <label>FREQUÊNCIA ALVO (0 a 100)</label>
-                                    <input type="range" min="0" max="100" value={freq} onChange={e => setFreq(Number(e.target.value))} style={{accentColor:'#b33', flex:1}} />
+                                    <label>FREQUÊNCIA ALVO</label>
+                                    <input 
+                                       type="range" 
+                                       min="0" 
+                                       max="100" 
+                                       value={freq} 
+                                       onChange={e => setFreq(Number(e.target.value))} 
+                                       style={{accentColor:'#ff003c', flex:1}} 
+                                    />
                                     <span>{freq} Hz</span>
                                  </div>
-                                 <small style={{color:'#666'}}>O jogador precisará mover o dial até esta frequência para ouvir/ver o Sinal Oculto.</small>
+                                 <div style={{marginTop:10, padding:'10px', background:'rgba(0,0,0,0.3)', borderRadius:'6px', border:'1px solid rgba(179,51,51,0.2)'}}>
+                                    <small style={{fontSize:10, color:'#888', display:'block', lineHeight:1.4}}>
+                                       💡 <strong style={{color:'#ff003c'}}>Dica:</strong> O jogador precisará mover o dial de sintonia até <strong>{freq} Hz</strong> para ouvir/visualizar o Sinal Oculto. Valores mais altos = mais difícil de encontrar.
+                                    </small>
+                                 </div>
                               </div>
                            )}
                         </div>
 
+                        {/* PAINEL DE TESTE */}
                         <div className="col">
-                           <div className="evidence-group" style={{height:'100%'}}>
-                              <span className="group-title">PAINEL DE TESTE (Como o Jogador Verá)</span>
+                           <div className="evidence-group" style={{minHeight: '600px', display: 'flex', flexDirection: 'column', borderColor:'rgba(0,243,255,0.15)'}}>
+                              <span className="group-title">🎧 PAINEL DE TESTE E PREVIEW</span>
                               {audioBasePreview ? (
-                                 <div style={{width:'100%', height:'100%', minHeight:300, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                                    <AdvancedAudioLab baseSrc={audioBasePreview} hiddenSrc={audioHiddenPreview} targetFreq={freq} triggerTime={triggerTime} onTriggerChange={setTriggerTime} />
+                                 <div className="flex-1 flex flex-col gap-3">
+                                   <p style={{fontSize:11, color:'#888', marginBottom:8, lineHeight:1.5}}>
+                                      Use as ferramentas abaixo para testar como o áudio ficará no jogo.
+                                   </p>
+                                   
+                                   {/* Advanced Audio Lab */}
+                                   <div className="flex-1">
+                                      <AdvancedAudioLab 
+                                        baseSrc={audioBasePreview} 
+                                        hiddenSrc={audioHiddenPreview} 
+                                        targetFreq={freq} 
+                                        triggerTime={triggerTime} 
+                                        onTriggerChange={setTriggerTime} 
+                                      />
+                                   </div>
+
+                                   {/* Spectrogram Creator */}
+                                   <div style={{marginTop:12, padding:'12px', background:'rgba(0,0,0,0.3)', borderRadius:'6px', border:'1px solid rgba(0,243,255,0.1)'}}>
+                                      <SpectrogramCreator onGenerated={async (wavBlob, buffer) => {
+                                          try {
+                                             if (audioHiddenPreview) { try { URL.revokeObjectURL(audioHiddenPreview); } catch (e) {} }
+                                             const file = new File([wavBlob], `spectrogram_${Date.now()}.wav`, { type: 'audio/wav' });
+                                             setAudioHidden(file);
+                                             const localUrl = URL.createObjectURL(file);
+                                             setAudioHiddenPreview(localUrl);
+                                             setAudioHiddenUploadedUrl(null);
+
+                                             setAudioHiddenUploading(true);
+                                             try {
+                                                const publicUrl = await uploadAudio(file, investigationId);
+                                                if (publicUrl) {
+                                                   setAudioHiddenUploadedUrl(publicUrl);
+                                                   try { URL.revokeObjectURL(localUrl); } catch (e) {}
+                                                   setAudioHiddenPreview(publicUrl);
+                                                } else {
+                                                   console.warn('Upload returned no publicUrl');
+                                                }
+                                             } catch (uploadErr) {
+                                                console.error('Upload failed', uploadErr);
+                                                alert('Falha ao enviar áudio gerado.');
+                                             } finally {
+                                                setAudioHiddenUploading(false);
+                                             }
+                                          } catch (e) {
+                                             console.error('Failed to process generated audio', e);
+                                          }
+                                      }} />
+                                   </div>
                                  </div>
                               ) : (
-                                 <div style={{textAlign:'center', color:'#444', padding:'50px 0', fontSize:12}}>Selecione um áudio ambiente para iniciar o teste.</div>
+                                 <div style={{
+                                    flex:1, 
+                                    display:'flex', 
+                                    alignItems:'center', 
+                                    justifyContent:'center', 
+                                    textAlign:'center',
+                                    padding:'40px',
+                                    background:'rgba(0,0,0,0.2)',
+                                    borderRadius:'8px',
+                                    border:'1px dashed rgba(255,255,255,0.05)'
+                                 }}>
+                                    <div>
+                                       <div style={{fontSize:48, marginBottom:16, opacity:0.3}}>🎵</div>
+                                       <p style={{fontSize:13, color:'#666', lineHeight:1.6}}>
+                                          Selecione um áudio ambiente<br/>
+                                          <span style={{fontSize:11}}>(Camada A) para iniciar o teste</span>
+                                       </p>
+                                    </div>
+                                 </div>
                               )}
                            </div>
                         </div>
@@ -823,19 +1112,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         </div>
 
       {showMixer && (
-         <AudioMixer
-            baseAudioFile={audioBase || undefined}
-            onClose={() => setShowMixer(false)}
-            onSave={(mixedFile: File, trig: number) => {
-               // Attach mixed file as base audio
-               setAudioBase(mixedFile);
-               try { if (audioBasePreview) URL.revokeObjectURL(audioBasePreview); } catch(e){}
-               const u = URL.createObjectURL(mixedFile);
-               setAudioBasePreview(u);
-               setTriggerTime(trig);
-               setShowMixer(false);
-            }}
-         />
+         <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div style={{ width: 'min(1000px,96%)', background: '#0b0b0b', borderRadius: 8, padding: 12 }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong style={{ color: '#fff' }}>Estação de Mixagem — Visualizador de Espectrograma</strong>
+                  <button className="btn-cancel" onClick={() => setShowMixer(false)}>Fechar</button>
+               </div>
+               <div style={{background: '#000', padding: 8, borderRadius: 6 }}>
+                  <UrlRealTimeSpectrogram audioUrl={audioBasePreview} />
+               </div>
+            </div>
+         </div>
       )}
 
       </DiegeticWindow>
@@ -859,23 +1146,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          </div>
       )}
       
-      {showGlitchMaker && (
-            <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
-               <div style={{width:'min(1000px,96%)'}}>
-                 <GlitchMaker
-                    onSave={(file) => {
-                       // keep file and open UVEditor (filter mode) so user can place/resize the layer
-                       setFilterFile(file);
-                       setFilterInitialImage(file);
-                       setShowGlitchMaker(false);
-                       setEditorMode('filter');
-                    }}
-                    onClose={() => setShowGlitchMaker(false)}
-                 />
-               </div>
-            </div>
-      )}
-
       {showAudioForgeFor && (
          <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
             <div style={{ width: 'min(940px,96%)' }}>
@@ -898,6 +1168,21 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                />
             </div>
          </div>
+      )}
+
+      {showThermalEditor && imgFile && (
+         <ThermalEditor
+            baseImageUrl={previewUrl}
+            thermalText={thermalSecretText}
+            initialFontSize={thermalFontSize}
+            initialPositionY={thermalPositionY}
+            onSave={(config) => {
+               setThermalFontSize(config.fontSize);
+               setThermalPositionY(config.positionY);
+               setShowThermalEditor(false);
+            }}
+            onClose={() => setShowThermalEditor(false)}
+         />
       )}
 
     </div>

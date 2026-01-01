@@ -1,250 +1,559 @@
-import React, { useState, useRef, useEffect } from 'react';
-import WaveSurfer from 'wavesurfer.js';
-import SpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram.esm.js';
-import { bufferToWav } from '../../utils/audioGenerator';
-import SpectrogramCreator from './SpectrogramCreator';
+import React, { useEffect, useRef, useState } from 'react';
 import './AudioMixer.css';
 
 interface Props {
   baseAudioFile?: File;
-  onSave: (mixedFile: File, triggerTime: number) => void;
   onClose: () => void;
+  onSave: (mixedFile: File, triggerTime: number) => void;
 }
 
-export default function AudioMixer({ baseAudioFile, onSave, onClose }: Props) {
-  const [baseBuffer, setBaseBuffer] = useState<AudioBuffer | null>(null);
-  const [hiddenBuffer, setHiddenBuffer] = useState<AudioBuffer | null>(null);
-  const [triggerTime, setTriggerTime] = useState<number>(3);
-  const [hiddenVolume, setHiddenVolume] = useState<number>(0.08);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [showSpectroMaker, setShowSpectroMaker] = useState<boolean>(false);
+export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
 
-  const [lowpassEnabled, setLowpassEnabled] = useState<boolean>(false);
-  const [lowpassFreq, setLowpassFreq] = useState<number>(5000);
-  const [fftSamples, setFftSamples] = useState<number>(2048);
-  const [colorMap, setColorMap] = useState<string>('hot');
-  const [invertSpectro, setInvertSpectro] = useState<boolean>(false);
+  // Audio effects
+  const [volume, setVolume] = useState(1);
+  const [speed, setSpeed] = useState(1);
+  const [pitch, setPitch] = useState(0);
+  const [reverb, setReverb] = useState(0);
+  const [echo, setEcho] = useState(0);
+  const [distortion, setDistortion] = useState(0);
+  const [reverse, setReverse] = useState(false);
+  const [fadeIn, setFadeIn] = useState(0);
+  const [fadeOut, setFadeOut] = useState(0);
+  const [normalize, setNormalize] = useState(false);
 
-  const baseWaveRef = useRef<HTMLDivElement | null>(null);
-  const hiddenWaveRef = useRef<HTMLDivElement | null>(null);
-  const finalSpectroRef = useRef<HTMLDivElement | null>(null);
-  const finalWsRef = useRef<any | null>(null);
-  const mixedBufferRef = useRef<AudioBuffer | null>(null);
+  // Selection
+  const [selectionStart, setSelectionStart] = useState(0);
+  const [selectionEnd, setSelectionEnd] = useState(0);
+  const [isSelecting, setIsSelecting] = useState(false);
 
-  // Decode uploaded base file
+  // Load audio file
   useEffect(() => {
     if (!baseAudioFile) return;
-    let cancelled = false;
-    baseAudioFile.arrayBuffer().then(async (ab) => {
+
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    setAudioContext(ctx);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const arrayBuffer = e.target?.result as ArrayBuffer;
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const buf = await ctx.decodeAudioData(ab.slice(0));
-        if (!cancelled) setBaseBuffer(buf);
-        ctx.close().catch(()=>{});
-      } catch (e) {
-        console.error('decode base failed', e);
+        const buffer = await ctx.decodeAudioData(arrayBuffer);
+        setAudioBuffer(buffer);
+        setDuration(buffer.duration);
+        setSelectionEnd(buffer.duration);
+        drawWaveform(buffer);
+      } catch (err) {
+        console.error('Failed to decode audio', err);
       }
-    });
-    return () => { cancelled = true; };
+    };
+    reader.readAsArrayBuffer(baseAudioFile);
+
+    return () => {
+      ctx.close();
+    };
   }, [baseAudioFile]);
 
-  // render small previews for A and B
-  useEffect(() => {
-    let wsA: any = null;
-    if (baseWaveRef.current && baseBuffer) {
-      wsA = WaveSurfer.create({ container: baseWaveRef.current, waveColor: '#89b', progressColor: '#57a', height: 80 });
-      try { wsA.loadDecodedBuffer(baseBuffer); } catch(e){ console.warn(e); }
-    }
-    return () => { if (wsA) { try{ wsA.destroy(); }catch(e){} } };
-  }, [baseBuffer]);
+  // Draw waveform
+  const drawWaveform = (buffer: AudioBuffer) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  useEffect(() => {
-    let wsB: any = null;
-    if (hiddenWaveRef.current && hiddenBuffer) {
-      wsB = WaveSurfer.create({ container: hiddenWaveRef.current, waveColor: '#b98', progressColor: '#a75', height: 60 });
-      try { wsB.loadDecodedBuffer(hiddenBuffer); } catch(e){ console.warn(e); }
-    }
-    return () => { if (wsB) { try{ wsB.destroy(); }catch(e){} } };
-  }, [hiddenBuffer]);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  // Mix offline and preview final spectrogram
-  async function handleMixAndPreview() {
-    if (!baseBuffer || !hiddenBuffer) return;
-    setIsProcessing(true);
+    const width = canvas.width;
+    const height = canvas.height;
+    const channelData = buffer.getChannelData(0);
+    const step = Math.ceil(channelData.length / width);
+
+    ctx.fillStyle = '#0a0e15';
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw waveform
+    ctx.strokeStyle = '#00f3ff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    for (let i = 0; i < width; i++) {
+      let min = 1.0;
+      let max = -1.0;
+
+      for (let j = 0; j < step; j++) {
+        const index = i * step + j;
+        if (index < channelData.length) {
+          const datum = channelData[index];
+          if (datum < min) min = datum;
+          if (datum > max) max = datum;
+        }
+      }
+
+      const y1 = ((1 + min) * height) / 2;
+      const y2 = ((1 + max) * height) / 2;
+
+      if (i === 0) {
+        ctx.moveTo(i, y1);
+      }
+      ctx.lineTo(i, y1);
+      ctx.lineTo(i, y2);
+    }
+
+    ctx.stroke();
+
+    // Draw selection
+    if (selectionStart !== selectionEnd) {
+      const startX = (selectionStart / buffer.duration) * width;
+      const endX = (selectionEnd / buffer.duration) * width;
+      
+      ctx.fillStyle = 'rgba(0,243,255,0.2)';
+      ctx.fillRect(startX, 0, endX - startX, height);
+      
+      ctx.strokeStyle = '#00f3ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      ctx.lineTo(startX, height);
+      ctx.moveTo(endX, 0);
+      ctx.lineTo(endX, height);
+      ctx.stroke();
+    }
+
+    // Draw playhead
+    const playheadX = (currentTime / buffer.duration) * width;
+    ctx.strokeStyle = '#ff003c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, height);
+    ctx.stroke();
+  };
+
+  // Update waveform when selection or playhead changes
+  useEffect(() => {
+    if (audioBuffer) {
+      drawWaveform(audioBuffer);
+    }
+  }, [selectionStart, selectionEnd, currentTime]);
+
+  // Play/Pause
+  const togglePlayPause = () => {
+    if (!audioContext || !audioBuffer) return;
+
+    if (isPlaying) {
+      sourceRef.current?.stop();
+      pauseTimeRef.current = currentTime;
+      setIsPlaying(false);
+    } else {
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = volume;
+      
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      source.playbackRate.value = speed;
+      
+      const startOffset = pauseTimeRef.current || 0;
+      source.start(0, startOffset);
+      
+      sourceRef.current = source;
+      startTimeRef.current = audioContext.currentTime - startOffset;
+      setIsPlaying(true);
+
+      source.onended = () => {
+        setIsPlaying(false);
+        pauseTimeRef.current = 0;
+        setCurrentTime(0);
+      };
+    }
+  };
+
+  // Update playhead position
+  useEffect(() => {
+    if (!isPlaying || !audioContext) return;
+
+    const interval = setInterval(() => {
+      const elapsed = audioContext.currentTime - startTimeRef.current;
+      setCurrentTime(elapsed);
+      
+      if (elapsed >= duration) {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        pauseTimeRef.current = 0;
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, audioContext, duration]);
+
+  // Canvas mouse events for selection
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!audioBuffer) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const time = (x / canvas.width) * audioBuffer.duration;
+    
+    setSelectionStart(time);
+    setSelectionEnd(time);
+    setIsSelecting(true);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isSelecting || !audioBuffer) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const time = Math.max(0, Math.min((x / canvas.width) * audioBuffer.duration, audioBuffer.duration));
+    
+    setSelectionEnd(time);
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsSelecting(false);
+  };
+
+  // Apply effects and export
+  const handleSave = async () => {
+    if (!audioContext || !audioBuffer) {
+      alert('Nenhum áudio carregado');
+      return;
+    }
+
     try {
-      const sampleRate = Math.max(baseBuffer.sampleRate, hiddenBuffer.sampleRate, 44100);
-      const finalDuration = Math.max(baseBuffer.duration, triggerTime + hiddenBuffer.duration);
-      const offline = new OfflineAudioContext(2, Math.ceil(finalDuration * sampleRate), sampleRate);
+      let processedBuffer = audioBuffer;
 
-      // base source
-      const baseSrc = offline.createBufferSource();
-      baseSrc.buffer = baseBuffer;
-      let baseNode: AudioNode = baseSrc;
-      if (lowpassEnabled) {
-        const lp = offline.createBiquadFilter();
-        lp.type = 'lowpass';
-        lp.frequency.value = lowpassFreq;
-        baseNode.connect(lp);
-        baseNode = lp;
+      // Apply reverse
+      if (reverse) {
+        processedBuffer = reverseBuffer(processedBuffer);
       }
-      const baseGain = offline.createGain();
-      baseGain.gain.value = 1.0;
-      baseNode.connect(baseGain).connect(offline.destination);
 
-      // hidden source
-      const hiddenSrc = offline.createBufferSource();
-      hiddenSrc.buffer = hiddenBuffer;
-      const hiddenGain = offline.createGain();
-      hiddenGain.gain.value = hiddenVolume;
-      hiddenSrc.connect(hiddenGain).connect(offline.destination);
-
-      baseSrc.start(0);
-      hiddenSrc.start(triggerTime);
-
-      const rendered = await offline.startRendering();
-      mixedBufferRef.current = rendered;
-
-      // render spectrogram preview with wavesurfer
-      if (finalSpectroRef.current) {
-        if (finalWsRef.current) {
-          try { finalWsRef.current.destroy(); } catch(e){}
-          finalWsRef.current = null;
-        }
-        const ws = WaveSurfer.create({ container: finalSpectroRef.current, waveColor: '#fff', progressColor: '#0f0', height: 160 });
-        // safe plugin creation
-        let plugin: any = null;
-        try {
-          plugin = SpectrogramPlugin.create({
-            container: finalSpectroRef.current,
-            fftSamples,
-            labels: true,
-            colorMap,
-            smoothingTimeConstant: 0.1,
-            frequencyLog: true,
-          });
-        } catch (err) {
-          console.warn('spectrogram plugin colorMap failed, retrying without colorMap', err);
-          try { plugin = SpectrogramPlugin.create({ container: finalSpectroRef.current, fftSamples, labels:true, smoothingTimeConstant:0.1, frequencyLog:true }); } catch(e){ console.warn(e); }
-        }
-        if (plugin) ws.addPlugin(plugin);
-        try { ws.loadDecodedBuffer(rendered); } catch(e){ console.warn(e); }
-        finalWsRef.current = ws;
-        // apply invert style
-        if (invertSpectro && finalSpectroRef.current) finalSpectroRef.current.classList.add('inverted');
-        else if (finalSpectroRef.current) finalSpectroRef.current.classList.remove('inverted');
+      // Apply normalization
+      if (normalize) {
+        processedBuffer = normalizeBuffer(processedBuffer);
       }
-    } catch (e) {
-      console.error('mix/render failed', e);
-    } finally {
-      setIsProcessing(false);
+
+      // Create offline context for rendering
+      const offlineContext = new OfflineAudioContext(
+        processedBuffer.numberOfChannels,
+        processedBuffer.length,
+        processedBuffer.sampleRate
+      );
+
+      const source = offlineContext.createBufferSource();
+      source.buffer = processedBuffer;
+      source.playbackRate.value = speed;
+
+      // Volume
+      const gainNode = offlineContext.createGain();
+      gainNode.gain.value = volume;
+
+      // Apply fade in/out
+      if (fadeIn > 0) {
+        gainNode.gain.setValueAtTime(0, 0);
+        gainNode.gain.linearRampToValueAtTime(volume, fadeIn);
+      }
+      
+      if (fadeOut > 0) {
+        const startFadeOut = processedBuffer.duration - fadeOut;
+        gainNode.gain.setValueAtTime(volume, startFadeOut);
+        gainNode.gain.linearRampToValueAtTime(0, processedBuffer.duration);
+      }
+
+      source.connect(gainNode);
+      gainNode.connect(offlineContext.destination);
+      
+      source.start(0);
+      const renderedBuffer = await offlineContext.startRendering();
+
+      // Convert to WAV
+      const wav = bufferToWave(renderedBuffer);
+      const blob = new Blob([wav], { type: 'audio/wav' });
+      const file = new File([blob], `processed_${baseAudioFile?.name || 'audio.wav'}`, { type: 'audio/wav' });
+      
+      onSave(file, 0);
+    } catch (err) {
+      console.error('Failed to process audio', err);
+      alert('Erro ao processar áudio');
     }
-  }
+  };
 
-  function handleFinalSave() {
-    const buf = mixedBufferRef.current;
-    if (!buf) return;
-    const wav = bufferToWav(buf, buf.length);
-    const file = new File([wav], 'mixed.wav', { type: 'audio/wav' });
-    onSave(file, triggerTime);
-  }
+  // Helper: Reverse audio buffer
+  const reverseBuffer = (buffer: AudioBuffer): AudioBuffer => {
+    const reversed = audioContext!.createBuffer(
+      buffer.numberOfChannels,
+      buffer.length,
+      buffer.sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      const reversedData = reversed.getChannelData(channel);
+      for (let i = 0; i < channelData.length; i++) {
+        reversedData[i] = channelData[channelData.length - 1 - i];
+      }
+    }
+
+    return reversed;
+  };
+
+  // Helper: Normalize audio buffer
+  const normalizeBuffer = (buffer: AudioBuffer): AudioBuffer => {
+    const normalized = audioContext!.createBuffer(
+      buffer.numberOfChannels,
+      buffer.length,
+      buffer.sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      const normalizedData = normalized.getChannelData(channel);
+      
+      // Find peak
+      let peak = 0;
+      for (let i = 0; i < channelData.length; i++) {
+        peak = Math.max(peak, Math.abs(channelData[i]));
+      }
+      
+      // Normalize
+      const factor = peak > 0 ? 1 / peak : 1;
+      for (let i = 0; i < channelData.length; i++) {
+        normalizedData[i] = channelData[i] * factor;
+      }
+    }
+
+    return normalized;
+  };
+
+  // Helper: Convert AudioBuffer to WAV
+  const bufferToWave = (buffer: AudioBuffer): ArrayBuffer => {
+    const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+    const arrayBuffer = new ArrayBuffer(length);
+    const view = new DataView(arrayBuffer);
+    const channels: Float32Array[] = [];
+    let offset = 0;
+    let pos = 0;
+
+    // Write WAV header
+    const setUint16 = (data: number) => {
+      view.setUint16(pos, data, true);
+      pos += 2;
+    };
+
+    const setUint32 = (data: number) => {
+      view.setUint32(pos, data, true);
+      pos += 4;
+    };
+
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8);
+    setUint32(0x45564157); // "WAVE"
+    setUint32(0x20746d66); // "fmt "
+    setUint32(16);
+    setUint16(1);
+    setUint16(buffer.numberOfChannels);
+    setUint32(buffer.sampleRate);
+    setUint32(buffer.sampleRate * buffer.numberOfChannels * 2);
+    setUint16(buffer.numberOfChannels * 2);
+    setUint16(16);
+    setUint32(0x61746164); // "data"
+    setUint32(length - pos - 4);
+
+    // Write audio data
+    for (let i = 0; i < buffer.numberOfChannels; i++) {
+      channels.push(buffer.getChannelData(i));
+    }
+
+    while (pos < length) {
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        let sample = channels[i][offset];
+        sample = Math.max(-1, Math.min(1, sample));
+        view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        pos += 2;
+      }
+      offset++;
+    }
+
+    return arrayBuffer;
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <div className="mixer-overlay">
-      <div className="mixer-window">
+    <div className="audio-mixer-overlay" onClick={onClose}>
+      <div className="audio-mixer-container" onClick={(e) => e.stopPropagation()}>
+        
+        {/* Header */}
         <div className="mixer-header">
-          <h3>Estação de Mixagem de Sinais</h3>
-          <button onClick={onClose}>✖</button>
+          <div className="header-content">
+            <div className="status-indicator-mixer"></div>
+            <h2 className="mixer-title">🎛️ ESTAÇÃO DE MIXAGEM PROFISSIONAL</h2>
+          </div>
+          <button className="btn-close-mixer" onClick={onClose}>✕</button>
         </div>
 
-        <div className="mixer-body">
-          <div className="track">
-            <div className="track-header">TRILHA A (SOM AMBIENTE)</div>
-            <div ref={baseWaveRef} className="waveform-container" />
-            {!baseBuffer && <div className="placeholder-text">Carregue um áudio na Aba "ÁUDIO" primeiro.</div>}
+        {/* Waveform Display */}
+        <div className="waveform-section">
+          <div className="waveform-header">
+            <div className="time-display">{formatTime(currentTime)} / {formatTime(duration)}</div>
+            <div className="file-name">{baseAudioFile?.name || 'Sem arquivo'}</div>
           </div>
+          
+          <canvas 
+            ref={canvasRef}
+            width={1200}
+            height={160}
+            className="waveform-canvas"
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+          />
 
-          <div className="track">
-            <div className="track-header">TRILHA B (SINAL OCULTO)</div>
-            <div ref={hiddenWaveRef} className="waveform-container" />
-            {!hiddenBuffer && (
-              <div className="empty-track">
-                <button onClick={() => setShowSpectroMaker(true)}>📝 TEXTO → ÁUDIO (ESPECTRO)</button>
-              </div>
-            )}
-          </div>
-
-          <div className="mixer-controls">
-            <div className="control-group">
-              <label>INÍCIO DO SINAL OCULTO: {triggerTime.toFixed(1)}s</label>
-              <input type="range" min="0" max={baseBuffer?.duration || 60} step="0.1" value={triggerTime} onChange={e=>setTriggerTime(Number(e.target.value))} />
-            </div>
-            <div className="control-group">
-              <label>OPACIDADE (VOLUME DO SINAL): {(hiddenVolume*100).toFixed(0)}%</label>
-              <input type="range" min="0.01" max="0.5" step="0.01" value={hiddenVolume} onChange={e=>setHiddenVolume(Number(e.target.value))} />
-            </div>
-
-            <div className="control-group">
-              <label>Limpar Agudos (low-pass)</label>
-              <div style={{display:'flex', alignItems:'center', gap:8}}>
-                <input type="checkbox" checked={lowpassEnabled} onChange={e=>setLowpassEnabled(e.target.checked)} />
-                <input type="number" value={lowpassFreq} onChange={e=>setLowpassFreq(Number(e.target.value))} style={{width:100}} />
-                <span style={{color:'#888'}}>Hz</span>
-              </div>
-            </div>
-
-            <div className="control-group">
-              <label>Resolução (FFT)</label>
-              <select value={fftSamples} onChange={e=>setFftSamples(Number(e.target.value))}>
-                <option value={512}>512</option>
-                <option value={1024}>1024</option>
-                <option value={2048}>2048</option>
-              </select>
-            </div>
-
-            <div className="control-group">
-              <label>Paleta</label>
-              <div className="palette-selector">
-                <button onClick={()=>setColorMap('hot')} className={colorMap==='hot'?'active':''}>Hot</button>
-                <button onClick={()=>setColorMap('viridis')} className={colorMap==='viridis'?'active':''}>Viridis</button>
-                <button onClick={()=>setColorMap('greyscale')} className={colorMap==='greyscale'?'active':''}>Greyscale</button>
-              </div>
-            </div>
-
-            <div className="control-group">
-              <label>Inverter Visual</label>
-              <input type="checkbox" checked={invertSpectro} onChange={e=>setInvertSpectro(e.target.checked)} />
-            </div>
-          </div>
-
-          <button onClick={handleMixAndPreview} disabled={!baseBuffer || !hiddenBuffer || isProcessing} className="btn-preview">
-            {isProcessing ? 'RENDERIZANDO...' : '▶ GERAR PREVIEW DO ESPECTROGRAMA'}
-          </button>
-
-          <div className="final-preview">
-            <div className="track-header">RESULTADO FINAL (O QUE O JOGADOR VAI VER E OUVIR)</div>
-            <div ref={finalSpectroRef} className="spectrogram-container" />
-            {finalWsRef.current && (
-              <div style={{display:'flex', gap:10, padding:5, background:'#000'}}>
-                <button onClick={() => { try { finalWsRef.current.playPause(); } catch(e){ /* ignore */ } }}>Play/Pause</button>
-                <button onClick={() => { try { finalWsRef.current.stop(); } catch(e){ /* ignore */ } }}>Stop</button>
-              </div>
-            )}
+          <div className="transport-controls">
+            <button className="btn-transport" onClick={() => { setCurrentTime(0); pauseTimeRef.current = 0; }}>
+              ⏮ Início
+            </button>
+            <button className="btn-transport play" onClick={togglePlayPause}>
+              {isPlaying ? '⏸ Pausar' : '▶ Play'}
+            </button>
+            <button className="btn-transport" onClick={() => { setCurrentTime(duration); pauseTimeRef.current = duration; }}>
+              ⏭ Fim
+            </button>
           </div>
         </div>
 
+        {/* Effects Panel */}
+        <div className="effects-panel">
+          <div className="effects-grid">
+            
+            {/* Volume */}
+            <div className="effect-group">
+              <label className="effect-label">
+                🔊 VOLUME
+                <span className="effect-value">{Math.round(volume * 100)}%</span>
+              </label>
+              <input 
+                type="range"
+                min={0}
+                max={2}
+                step={0.01}
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="effect-slider"
+              />
+            </div>
+
+            {/* Speed */}
+            <div className="effect-group">
+              <label className="effect-label">
+                ⚡ VELOCIDADE
+                <span className="effect-value">{speed.toFixed(2)}x</span>
+              </label>
+              <input 
+                type="range"
+                min={0.25}
+                max={4}
+                step={0.05}
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                className="effect-slider"
+              />
+            </div>
+
+            {/* Fade In */}
+            <div className="effect-group">
+              <label className="effect-label">
+                📈 FADE IN
+                <span className="effect-value">{fadeIn.toFixed(1)}s</span>
+              </label>
+              <input 
+                type="range"
+                min={0}
+                max={5}
+                step={0.1}
+                value={fadeIn}
+                onChange={(e) => setFadeIn(Number(e.target.value))}
+                className="effect-slider"
+              />
+            </div>
+
+            {/* Fade Out */}
+            <div className="effect-group">
+              <label className="effect-label">
+                📉 FADE OUT
+                <span className="effect-value">{fadeOut.toFixed(1)}s</span>
+              </label>
+              <input 
+                type="range"
+                min={0}
+                max={5}
+                step={0.1}
+                value={fadeOut}
+                onChange={(e) => setFadeOut(Number(e.target.value))}
+                className="effect-slider"
+              />
+            </div>
+
+          </div>
+
+          {/* Toggle Effects */}
+          <div className="toggle-effects">
+            <button 
+              className={`btn-toggle ${reverse ? 'active' : ''}`}
+              onClick={() => setReverse(!reverse)}
+            >
+              🔄 REVERSO
+            </button>
+            <button 
+              className={`btn-toggle ${normalize ? 'active' : ''}`}
+              onClick={() => setNormalize(!normalize)}
+            >
+              📊 NORMALIZAR
+            </button>
+          </div>
+        </div>
+
+        {/* Selection Info */}
+        {selectionStart !== selectionEnd && (
+          <div className="selection-info">
+            <span>📍 Seleção: {formatTime(Math.min(selectionStart, selectionEnd))} → {formatTime(Math.max(selectionStart, selectionEnd))}</span>
+            <span>Duração: {formatTime(Math.abs(selectionEnd - selectionStart))}</span>
+          </div>
+        )}
+
+        {/* Footer */}
         <div className="mixer-footer">
-          <button onClick={onClose}>CANCELAR</button>
-          <button className="btn-save-mix" onClick={handleFinalSave}>✔ USAR ÁUDIO MIXADO</button>
+          <button className="btn-cancel-mixer" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="btn-save-mixer" onClick={handleSave}>
+            💾 Exportar Áudio Processado
+          </button>
         </div>
-      </div>
 
-      {showSpectroMaker && (
-        <SpectrogramCreator
-          onClose={() => setShowSpectroMaker(false)}
-          onGenerateBuffer={(buffer) => { setHiddenBuffer(buffer); setShowSpectroMaker(false); }}
-        />
-      )}
+      </div>
     </div>
   );
 }
-

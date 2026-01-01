@@ -114,7 +114,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     try {
       const meta = card?.metadata;
       const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
-      setLocalThermal(hasThermal);
+      // Check if thermal is unlocked (no keyword or already unlocked)
+      const thermalKeyword = meta?.thermal_keyword;
+      const thermalUnlocked = meta?.thermal_unlocked === true;
+      const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
+      setLocalThermal(canUseThermal);
     } catch (e) {}
   }, [card]);
 
@@ -219,6 +223,81 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalCompositeOperation = 'source-over';
+        
+        // Render secret thermal text if present
+        try {
+          const thermalText = card?.metadata?.thermal_secret_text;
+          if (thermalText && typeof thermalText === 'string' && thermalText.trim()) {
+            // Calculate responsive font size based on canvas dimensions
+            let baseFontSize = Math.max(48, Math.min(canvas.width, canvas.height) / 12);
+            
+            // Apply user-configured font size multiplier
+            const fontSizeMultiplier = (card?.metadata?.thermal_font_size || 100) / 100;
+            baseFontSize = baseFontSize * fontSizeMultiplier;
+            
+            ctx.font = `bold ${Math.round(baseFontSize)}px 'Courier New', monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Split text into lines if too long (wrap at ~40 chars or by newlines)
+            const maxLineLength = 40;
+            const lines: string[] = [];
+            const paragraphs = thermalText.split('\n');
+            
+            paragraphs.forEach(paragraph => {
+              if (paragraph.length <= maxLineLength) {
+                lines.push(paragraph);
+              } else {
+                // Simple word wrap
+                const words = paragraph.split(' ');
+                let currentLine = '';
+                words.forEach(word => {
+                  if ((currentLine + ' ' + word).length <= maxLineLength) {
+                    currentLine += (currentLine ? ' ' : '') + word;
+                  } else {
+                    if (currentLine) lines.push(currentLine);
+                    currentLine = word;
+                  }
+                });
+                if (currentLine) lines.push(currentLine);
+              }
+            });
+            
+            // Position text based on user-configured vertical position
+            const lineHeight = baseFontSize * 1.3;
+            const totalHeight = lines.length * lineHeight;
+            const positionYPercent = (card?.metadata?.thermal_position_y || 50) / 100;
+            const startY = (canvas.height * positionYPercent) - (totalHeight / 2) + (lineHeight / 2);
+            const centerX = canvas.width / 2;
+            
+            lines.forEach((line, index) => {
+              const y = startY + (index * lineHeight);
+              
+              // Outer glow (multiple layers for intensity)
+              ctx.shadowBlur = 30;
+              ctx.shadowColor = 'rgba(255, 255, 0, 0.8)';
+              ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+              ctx.fillText(line, centerX, y);
+              
+              // Mid glow
+              ctx.shadowBlur = 15;
+              ctx.shadowColor = 'rgba(255, 200, 0, 1)';
+              ctx.fillStyle = 'rgba(255, 220, 0, 0.6)';
+              ctx.fillText(line, centerX, y);
+              
+              // Core text (hot white)
+              ctx.shadowBlur = 5;
+              ctx.shadowColor = 'rgba(255, 255, 255, 1)';
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+              ctx.fillText(line, centerX, y);
+            });
+            
+            // Reset shadow
+            ctx.shadowBlur = 0;
+          }
+        } catch (e) {
+          // ignore thermal text rendering errors
+        }
       } catch (e) {
         // ignore
       }
@@ -640,7 +719,39 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       {card.audio_url && (
                           <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
                         )}
-                        <button type="button" className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setLocalThermal(!localThermal); setShowMoreTools(false); }}>🌡️ TERMAL</button>
+                        {(() => {
+                          const meta = currentCard?.metadata;
+                          const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
+                          const thermalKeyword = meta?.thermal_keyword;
+                          const thermalUnlocked = meta?.thermal_unlocked === true;
+                          const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
+                          const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
+                          
+                          return (
+                            <button 
+                              type="button" 
+                              className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`} 
+                              style={{ 
+                                display: 'block', 
+                                width: '100%', 
+                                textAlign: 'left',
+                                opacity: isLocked ? 0.5 : 1,
+                                cursor: isLocked ? 'not-allowed' : 'pointer'
+                              }} 
+                              onClick={() => { 
+                                if (isLocked) {
+                                  alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`);
+                                  return;
+                                }
+                                setLocalThermal(!localThermal); 
+                                setShowMoreTools(false); 
+                              }}
+                              title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
+                            >
+                              🌡️ TERMAL {isLocked ? '🔒' : ''}
+                            </button>
+                          );
+                        })()}
                         <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
                         <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
                         <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>

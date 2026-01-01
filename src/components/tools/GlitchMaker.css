@@ -1,0 +1,271 @@
+.glitch-maker-container {
+  background: #111;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #c6a45f;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.glitch-maker-container h3 {
+  color: #c6a45f;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(198, 164, 95, 0.5);
+  font-family: 'Courier New', monospace;
+}
+
+.glitch-maker-input-group {
+  margin: 8px 0;
+}
+
+/* Controles de Sliders */
+.glitch-maker-sliders {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(198, 164, 95, 0.05);
+  border: 1px solid rgba(198, 164, 95, 0.3);
+  border-radius: 6px;
+}
+
+.slider-control {
+  margin-bottom: 12px;
+}
+
+.slider-control:last-child {
+  margin-bottom: 0;
+}
+
+.slider-control label {
+  display: block;
+  color: #c6a45f;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+.slider-control .param-value {
+  color: #fff;
+  background: rgba(198, 164, 95, 0.2);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+  font-weight: normal;
+}
+
+.slider-control input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.slider-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #c6a45f, #8b7a3a);
+  border: 2px solid #c6a45f;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(198, 164, 95, 0.5);
+  transition: all 0.2s ease;
+}
+
+.slider-control input[type="range"]::-webkit-slider-thumb:hover {
+  background: linear-gradient(135deg, #e8c77f, #a89a5a);
+  box-shadow: 0 0 12px rgba(198, 164, 95, 0.8);
+  transform: scale(1.1);
+}
+
+.slider-control input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #c6a45f, #8b7a3a);
+  border: 2px solid #c6a45f;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(198, 164, 95, 0.5);
+  transition: all 0.2s ease;
+}
+
+.slider-control input[type="range"]::-moz-range-thumb:hover {
+  background: linear-gradient(135deg, #e8c77f, #a89a5a);
+  box-shadow: 0 0 12px rgba(198, 164, 95, 0.8);
+  transform: scale(1.1);
+}
+
+.slider-control input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.slider-control input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  background: #555;
+  border-color: #555;
+  box-shadow: none;
+}
+
+.glitch-maker-input-group input[type="file"] {
+  padding: 6px;
+  background: rgba(198, 164, 95, 0.05);
+  border: 1px solid #c6a45f;
+  border-radius: 4px;
+  color: #c6a45f;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.glitch-maker-input-group input[type="file"]::file-selector-button {
+  background: #c6a45f;
+  color: #111;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 11px;
+  margin-right: 8px;
+}
+
+.glitch-maker-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.glitch-maker-controls button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #c6a45f, #8b7a3a);
+  color: #111;
+  border: 1px solid #c6a45f;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+.glitch-maker-controls button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e8c77f, #a89a5a);
+  box-shadow: 0 0 12px rgba(198, 164, 95, 0.4);
+  transform: translateY(-1px);
+}
+
+.glitch-maker-controls button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.glitch-maker-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #555;
+  color: #999;
+  border-color: #555;
+}
+
+.glitch-maker-controls button:last-of-type {
+  margin-left: auto;
+  background: linear-gradient(135deg, #c41e3a, #8b1a2a);
+  border-color: #c41e3a;
+}
+
+.glitch-maker-controls button:last-of-type:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e8305a, #ab2a3a);
+  box-shadow: 0 0 12px rgba(196, 30, 58, 0.4);
+}
+
+.glitch-maker-preview {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 400px;
+  min-height: 200px;
+  overflow: auto;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.glitch-maker-preview canvas {
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  border: 1px solid #c6a45f;
+  border-radius: 2px;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .glitch-maker-container {
+    padding: 10px;
+    max-height: 85vh;
+  }
+
+  .glitch-maker-controls {
+    gap: 6px;
+  }
+
+  .glitch-maker-controls button {
+    padding: 6px 12px;
+    font-size: 10px;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .glitch-maker-controls button:last-of-type {
+    margin-left: 0;
+    flex: 0 1 auto;
+  }
+
+  .glitch-maker-preview {
+    max-height: 250px;
+    min-height: 150px;
+  }
+
+  .glitch-maker-preview canvas {
+    max-height: 230px;
+  }
+}
+
+/* Estilização da barra de rolagem */
+.glitch-maker-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.glitch-maker-container::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.glitch-maker-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #c6a45f, #8b7a3a);
+  border-radius: 4px;
+}
+
+.glitch-maker-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #e8c77f, #a89a5a);
+}

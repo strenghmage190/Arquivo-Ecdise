@@ -98,7 +98,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             </span>
           )}
         </div>
-        <h3 style={{ marginTop: 6 }}>{locked ? '#######' : title}</h3>
+        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : title}</h3>
       </div>
 
       <div className="decision-bar">

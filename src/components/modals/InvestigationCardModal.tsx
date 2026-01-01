@@ -4,6 +4,8 @@ import useEscapeClose from './useEscapeClose';
 import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
+import GlitchPuzzleCard from '../tools/GlitchPuzzleCard';
+import MegaClueCard from '../tools/MegaClueCard';
 
 interface Props {
   open: boolean;
@@ -152,6 +154,59 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
       alert('Erro ao deletar. Veja o console.');
     }
   };
+
+  // Se é um card especial (glitch_puzzle ou mega_clue), renderizar componente específico
+  const cardType = (existing as any)?.type;
+  const metadata = (existing as any)?.metadata;
+
+  if (cardType === 'glitch_puzzle' && metadata?.glitch_puzzle && existing?.id) {
+    const puzzleData = {
+      id: existing.id,
+      title: existing.title,
+      description: existing.description_public || '',
+      ...metadata.glitch_puzzle,
+    };
+
+    return createPortal(
+      <div className="modal-backdrop" onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()}>
+          <GlitchPuzzleCard
+            cardId={existing.id}
+            investigationId={investigationId}
+            puzzleData={puzzleData}
+            onClose={onClose}
+            onSolved={(rewardCode) => {
+              console.log('Puzzle resolvido! Código:', rewardCode);
+              onSaved?.(existing);
+            }}
+          />
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  if (cardType === 'mega_clue' && metadata?.mega_clue && existing?.id) {
+    const megaData = metadata.mega_clue;
+
+    return createPortal(
+      <div className="modal-backdrop" onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()}>
+          <MegaClueCard
+            cardId={existing.id}
+            title={existing.title}
+            description={existing.description_public || ''}
+            imageUrl={existing.image_url}
+            requiredCodes={megaData.required_code_count || 3}
+            collectedCodes={megaData.collected_codes || []}
+            finalTruthText={megaData.final_truth_text}
+            onClose={onClose}
+          />
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>

@@ -51,6 +51,14 @@ export interface InvestigationCard {
   visibility?: any;
   tags?: string[];
   insights?: InvestigationCardInsight[];
+  metadata?: any;
+  chat_data?: any;
+  chat_contact_name?: string | null;
+  audio_url?: string | null;
+  audio_hidden_url?: string | null;
+  audio_target_freq?: number | null;
+  is_locked?: boolean;
+  lock_password?: string | null;
 }
 
 // --- QUADRO (BOARD) ---
