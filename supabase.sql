@@ -4,6 +4,7 @@ create table if not exists investigations (
   title text not null default 'Novo Caso',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   description text,
+  cover_url text,
   gm_id uuid references auth.users(id) -- Opcional, para saber quem criou
 );
 

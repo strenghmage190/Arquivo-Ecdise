@@ -322,19 +322,28 @@ export async function deleteNote(id: string) {
 }
 
 // Create a new investigation and set current user as owner
-export async function createInvestigation(title: string) {
+export async function createInvestigation(title: string, description?: string, coverUrl?: string) {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user || null;
   if (!user) throw new Error('Usuário não autenticado');
 
   const { data, error } = await supabase
     .from('investigations')
-    .insert([{ title: title, owner_id: user.id }])
+    .insert([{ title, owner_id: user.id, description: description || null, cover_url: coverUrl || null }])
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function deleteInvestigation(id: string) {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData?.user) throw new Error('Usuário não autenticado');
+
+  const { error } = await supabase.from('investigations').delete().eq('id', id);
+  if (error) throw error;
+  return true;
 }
 
 // --- INVITES ---
