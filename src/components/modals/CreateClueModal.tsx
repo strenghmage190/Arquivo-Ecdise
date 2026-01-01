@@ -106,7 +106,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
       const [showMixer, setShowMixer] = useState(false);
-           const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra'>('geral');
+           const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega'>('geral');
 
            // Chat / Phone viewer states
            const [showChatEditor, setShowChatEditor] = useState(false);
@@ -152,6 +152,26 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [shredCols, setShredCols] = useState(8);
    const [realText, setRealText] = useState('');
    const [cipherText, setCipherText] = useState('');
+
+   // EVIDÊNCIA TYPE SELECTOR
+   const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
+
+   // GLITCH PUZZLE STATES
+   const [glitchOriginalImageFile, setGlitchOriginalImageFile] = useState<File | null>(null);
+   const [glitchOriginalImagePreview, setGlitchOriginalImagePreview] = useState<string | null>(null);
+   const [glitchCorruptedImageFile, setGlitchCorruptedImageFile] = useState<File | null>(null);
+   const [glitchCorruptedImagePreview, setGlitchCorruptedImagePreview] = useState<string | null>(null);
+   const [glitchCorrectFrequency, setGlitchCorrectFrequency] = useState(17);
+   const [glitchCorrectShift, setGlitchCorrectShift] = useState(33);
+   const [glitchCorrectChromatic, setGlitchCorrectChromatic] = useState(12);
+   const [glitchRewardCode, setGlitchRewardCode] = useState('ALPHA-01');
+
+   // MEGA CLUE STATES
+   const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
+   const [megaImageFile, setMegaImageFile] = useState<File | null>(null);
+   const [megaImagePreview, setMegaImagePreview] = useState<string | null>(null);
+   const [megaRequiredPuzzleIds, setMegaRequiredPuzzleIds] = useState<string[]>([]);
+   const [availablePuzzles, setAvailablePuzzles] = useState<Array<{ id: string; title: string }>>([]);
 
    // Reset form fields when opening the modal to avoid reusing previous values
    const resetForm = () => {
@@ -236,7 +256,33 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setShredCols(8);
       setRealText('');
       setCipherText('');
+
+      // evidence type and puzzle-specific fields
+      setEvidenceType('document');
+      setGlitchOriginalImageFile(null);
+      if (glitchOriginalImagePreview) { try { URL.revokeObjectURL(glitchOriginalImagePreview); } catch(e){} }
+      setGlitchOriginalImagePreview(null);
+      setGlitchCorruptedImageFile(null);
+      if (glitchCorruptedImagePreview) { try { URL.revokeObjectURL(glitchCorruptedImagePreview); } catch(e){} }
+      setGlitchCorruptedImagePreview(null);
+      setGlitchCorrectFrequency(17);
+      setGlitchCorrectShift(33);
+      setGlitchCorrectChromatic(12);
+      setGlitchRewardCode('ALPHA-01');
+
+      setMegaFinalTruthText('');
+      setMegaImageFile(null);
+      if (megaImagePreview) { try { URL.revokeObjectURL(megaImagePreview); } catch(e){} }
+      setMegaImagePreview(null);
+      setMegaRequiredPuzzleIds([]);
    };
+
+   // Fetch available glitch puzzles when modal opens or evidenceType changes
+   useEffect(() => {
+      if (isOpen && evidenceType === 'mega_clue') {
+         fetchAvailablePuzzles();
+      }
+   }, [isOpen, evidenceType]);
 
    useEffect(() => {
       if (isOpen) resetForm();
@@ -271,6 +317,27 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          try { return String(val); } catch { return null; }
       };
       return sanitize(input, maxDepth);
+   };
+
+   // Fetch available glitch puzzles from the database
+   const fetchAvailablePuzzles = async () => {
+      try {
+         const { data, error } = await supabase
+            .from('investigation_cards')
+            .select('id, title, metadata')
+            .eq('investigation_id', investigationId)
+            .eq('type', 'glitch_puzzle');
+         
+         if (error) {
+            console.error('Erro ao buscar puzzles:', error);
+            return;
+         }
+
+         const puzzles = (data || []).map(card => ({ id: card.id, title: card.title }));
+         setAvailablePuzzles(puzzles);
+      } catch (err) {
+         console.error('fetchAvailablePuzzles error:', err);
+      }
    };
 
       // Hooks that must always be declared in the same order.
@@ -322,6 +389,21 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");
+
+    // Validate based on evidence type
+    if (evidenceType === 'glitch_puzzle') {
+       if (!glitchOriginalImageFile || !glitchCorruptedImageFile) {
+          return alert('Você precisa de ambas as imagens: Original e Corrompida para o quebra-cabeça de glitch');
+       }
+    } else if (evidenceType === 'mega_clue') {
+       if (!megaFinalTruthText.trim()) {
+          return alert('Defina o texto da verdade final para a mega-pista');
+       }
+       if (megaRequiredPuzzleIds.length === 0) {
+          return alert('Selecione pelo menos um quebra-cabeça de glitch necessário para desbloquear esta mega-pista');
+       }
+    }
+
     setLoading(true);
 
     try {
@@ -330,7 +412,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          let filterUrl = null;
       if (imgFile) imgUrl = await uploadInvestigationImage(imgFile, investigationId);
          if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
-         if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
+         if (filterUrl) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
              // Prefer video URL input if provided, otherwise use uploaded video URL (uploaded on select). If user selected but upload didn't complete,
              // attempt a fallback upload here.
                    let finalVideoUrl: string | null = videoUrlInput || videoUrl || null;
@@ -351,6 +433,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             audHidUrl = audioHiddenUploadedUrl;
          } else if (audioHidden) {
             audHidUrl = await uploadAudio(audioHidden, investigationId);
+         }
+
+         // Upload glitch puzzle images if needed
+         let glitchOriginalUrl = null;
+         let glitchCorruptedUrl = null;
+         if (evidenceType === 'glitch_puzzle') {
+            if (glitchOriginalImageFile) glitchOriginalUrl = await uploadInvestigationImage(glitchOriginalImageFile, investigationId);
+            if (glitchCorruptedImageFile) glitchCorruptedUrl = await uploadInvestigationImage(glitchCorruptedImageFile, investigationId);
+         }
+
+         // Upload mega clue image if needed
+         let megaImageUrl = null;
+         if (evidenceType === 'mega_clue' && megaImageFile) {
+            megaImageUrl = await uploadInvestigationImage(megaImageFile, investigationId);
          }
 
              const metadata: Record<string, any> = {};
@@ -387,25 +483,46 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
             }
 
+            // Add glitch puzzle metadata if needed
+            if (evidenceType === 'glitch_puzzle') {
+               metadata.glitch_puzzle = {
+                  original_image_url: glitchOriginalUrl,
+                  corrupted_image_url: glitchCorruptedUrl,
+                  correct_frequency: glitchCorrectFrequency,
+                  correct_shift: glitchCorrectShift,
+                  correct_chromatic: glitchCorrectChromatic,
+                  reward_code: glitchRewardCode,
+                  solved: false,
+               };
+            }
+
+            // Add mega clue metadata if needed
+            if (evidenceType === 'mega_clue') {
+               metadata.mega_clue = {
+                  final_truth_text: megaFinalTruthText,
+                  required_puzzle_ids: megaRequiredPuzzleIds,
+                  collected_codes: [],
+               };
+            }
+
          // sanitize metadata to avoid sending unserializable objects
          const cleanMetadata = sanitizeForMetadata(metadata);
 
          const payload: Record<string, any> = {
         investigation_id: investigationId,
         title,
+        type: evidenceType === 'document' ? null : evidenceType,
         description_public: descPublic || null,
         description_hidden: descHidden || null,
         x: initialX ?? 100,
         y: initialY ?? 100,
-        image_url: imgUrl,
+        image_url: evidenceType === 'glitch_puzzle' ? glitchCorruptedUrl : imgUrl,
         image_uv_url: uvUrl,
             image_filter_layer: filterUrl,
             image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
             lock_password: isLocked ? lockPass : null,
-            metadata,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        audio_url: audUrl,
+            metadata: cleanMetadata,
         audio_hidden_url: audHidUrl,
             video_url: finalVideoUrl,
         audio_target_freq: freq
@@ -469,6 +586,33 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
     }
   };
 
+  const handleGlitchOriginalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file) return;
+     try { if (glitchOriginalImagePreview) URL.revokeObjectURL(glitchOriginalImagePreview); } catch(e){}
+     const url = URL.createObjectURL(file);
+     setGlitchOriginalImageFile(file);
+     setGlitchOriginalImagePreview(url);
+  };
+
+  const handleGlitchCorruptedImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file) return;
+     try { if (glitchCorruptedImagePreview) URL.revokeObjectURL(glitchCorruptedImagePreview); } catch(e){}
+     const url = URL.createObjectURL(file);
+     setGlitchCorruptedImageFile(file);
+     setGlitchCorruptedImagePreview(url);
+  };
+
+  const handleMegaImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file) return;
+     try { if (megaImagePreview) URL.revokeObjectURL(megaImagePreview); } catch(e){}
+     const url = URL.createObjectURL(file);
+     setMegaImageFile(file);
+     setMegaImagePreview(url);
+  };
+
    const onOverlayMouseDown = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!filterTransform) return;
@@ -520,12 +664,41 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL / UV / FX</button>
             <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO & EVP</button>
             <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS & PUZZLES</button>
+            {evidenceType === 'glitch_puzzle' && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🧩 CONFIG. GLITCH</button>}
+            {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}>🔐 CONFIG. MEGA-PISTA</button>}
           </div>
 
           <div className="tab-content">
 
             {activeTab === 'geral' && (
               <>
+                <div className="field-block">
+                   <span className="field-title">📋 TIPO DE EVIDÊNCIA</span>
+                   <div style={{display:'flex', gap:10, marginBottom:15}}>
+                      <button 
+                         className={`upload-btn ${evidenceType === 'document' ? 'active' : ''}`}
+                         onClick={() => setEvidenceType('document')}
+                         style={{flex:1, background: evidenceType === 'document' ? 'rgba(198,164,95,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'document' ? '#c6a45f' : '#888'}}
+                      >
+                         📄 Documento Padrão
+                      </button>
+                      <button 
+                         className={`upload-btn ${evidenceType === 'glitch_puzzle' ? 'active' : ''}`}
+                         onClick={() => setEvidenceType('glitch_puzzle')}
+                         style={{flex:1, background: evidenceType === 'glitch_puzzle' ? 'rgba(100,150,255,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'glitch_puzzle' ? '#64b5ff' : '#888'}}
+                      >
+                         🧩 Quebra-cabeça de Glitch
+                      </button>
+                      <button 
+                         className={`upload-btn ${evidenceType === 'mega_clue' ? 'active' : ''}`}
+                         onClick={() => setEvidenceType('mega_clue')}
+                         style={{flex:1, background: evidenceType === 'mega_clue' ? 'rgba(255,100,0,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'mega_clue' ? '#ff6400' : '#888'}}
+                      >
+                         🔐 Mega-Pista Final
+                      </button>
+                   </div>
+                </div>
+
                 <div className="field-block">
                    <span className="field-title">IDENTIFICAÇÃO</span>
                    <div style={{display:'flex', gap:15, marginBottom:10}}>
@@ -1100,6 +1273,195 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               </div>
             )}
 
+            {activeTab === 'glitch' && (
+              <div className="field-block">
+                 <span className="field-title">🧩 CONFIGURAÇÃO DO QUEBRA-CABEÇA DE GLITCH</span>
+                 
+                 {/* Seção de Upload de Imagens */}
+                 <div style={{marginBottom:20}}>
+                    <h4 style={{color:'#64b5ff', marginTop:0}}>📸 IMAGENS</h4>
+                    
+                    <div style={{marginBottom:15}}>
+                       <label>Imagem ORIGINAL (será revelada ao resolver):</label>
+                       <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                          <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleGlitchOriginalImageSelect} disabled={loading} /></label>
+                       </div>
+                       {glitchOriginalImagePreview && (
+                          <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)'}}>
+                             <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                <span style={{fontSize:18}}>✓</span>
+                                <span style={{color:'#888', fontSize:11}}>{glitchOriginalImageFile?.name}</span>
+                             </div>
+                             <img src={glitchOriginalImagePreview} alt="Original" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
+                          </div>
+                       )}
+                    </div>
+
+                    <div style={{marginBottom:15}}>
+                       <label>Imagem CORROMPIDA (o que o jogador vê):</label>
+                       <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                          <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleGlitchCorruptedImageSelect} disabled={loading} /></label>
+                       </div>
+                       {glitchCorruptedImagePreview && (
+                          <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)'}}>
+                             <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                <span style={{fontSize:18}}>✓</span>
+                                <span style={{color:'#888', fontSize:11}}>{glitchCorruptedImageFile?.name}</span>
+                             </div>
+                             <img src={glitchCorruptedImagePreview} alt="Corrompida" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
+                          </div>
+                       )}
+                    </div>
+                 </div>
+
+                 {/* Seção de Parâmetros */}
+                 <div style={{marginBottom:20}}>
+                    <h4 style={{color:'#64b5ff', marginTop:0}}>⚙️ PARÂMETROS CORRETOS PARA RESOLVER</h4>
+                    
+                    <div style={{marginBottom:12}}>
+                       <label>Frequência de Fatias: <strong style={{color:'#64b5ff'}}>{glitchCorrectFrequency}</strong></label>
+                       <input
+                          type="range"
+                          min="1"
+                          max="50"
+                          value={glitchCorrectFrequency}
+                          onChange={e => setGlitchCorrectFrequency(parseInt(e.target.value))}
+                          disabled={loading}
+                          style={{width:'100%', accentColor:'#64b5ff'}}
+                       />
+                    </div>
+
+                    <div style={{marginBottom:12}}>
+                       <label>Intensidade de Deslocamento: <strong style={{color:'#64b5ff'}}>{glitchCorrectShift}%</strong></label>
+                       <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={glitchCorrectShift}
+                          onChange={e => setGlitchCorrectShift(parseInt(e.target.value))}
+                          disabled={loading}
+                          style={{width:'100%', accentColor:'#64b5ff'}}
+                       />
+                    </div>
+
+                    <div style={{marginBottom:12}}>
+                       <label>Corrupção Cromática: <strong style={{color:'#64b5ff'}}>{glitchCorrectChromatic}%</strong></label>
+                       <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={glitchCorrectChromatic}
+                          onChange={e => setGlitchCorrectChromatic(parseInt(e.target.value))}
+                          disabled={loading}
+                          style={{width:'100%', accentColor:'#64b5ff'}}
+                       />
+                    </div>
+
+                    <div style={{padding:10, background:'rgba(100,150,255,0.1)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', fontSize:11, color:'#888'}}>
+                       💡 <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
+                    </div>
+                 </div>
+
+                 {/* Seção de Recompensa */}
+                 <div>
+                    <h4 style={{color:'#64b5ff', marginTop:0}}>🎁 RECOMPENSA AO RESOLVER</h4>
+                    
+                    <label>Código de Recompensa (ex: ALPHA-01, BETA-02):</label>
+                    <input
+                       type="text"
+                       value={glitchRewardCode}
+                       onChange={e => setGlitchRewardCode(e.target.value.toUpperCase())}
+                       disabled={loading}
+                       maxLength={20}
+                       placeholder="ALPHA-01"
+                       style={{width:'100%', marginTop:4}}
+                    />
+                    <small style={{display:'block', marginTop:6, color:'#666'}}>
+                       Este código será revelado quando o jogador resolver corretamente o quebra-cabeça
+                    </small>
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'mega' && (
+              <div className="field-block">
+                 <span className="field-title">🔐 CONFIGURAÇÃO DA MEGA-PISTA (VERDADE FINAL)</span>
+                 
+                 {/* Seção: Verdade Final */}
+                 <div style={{marginBottom:20}}>
+                    <h4 style={{color:'#ff6400', marginTop:0}}>🌟 A VERDADE FINAL</h4>
+                    <label>Texto da Verdade (será revelado ao desbloquear):</label>
+                    <textarea
+                       value={megaFinalTruthText}
+                       onChange={e => setMegaFinalTruthText(e.target.value)}
+                       disabled={loading}
+                       rows={6}
+                       maxLength={2000}
+                       placeholder="Insira aqui o texto completo da verdade que será revelada quando todos os códigos forem coletados..."
+                       style={{width:'100%', marginTop:4}}
+                    />
+                    <small style={{display:'block', marginTop:6, color:'#666'}}>Caracteres: {megaFinalTruthText.length}/2000</small>
+                 </div>
+
+                 {/* Seção: Imagem */}
+                 <div style={{marginBottom:20}}>
+                    <h4 style={{color:'#ff6400', marginTop:0}}>🖼 IMAGEM DA VERDADE (opcional)</h4>
+                    <label>Upload da imagem final:</label>
+                    <div style={{display:'flex', gap:8, alignItems:'center', marginTop:8}}>
+                       <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleMegaImageSelect} disabled={loading} /></label>
+                    </div>
+                    {megaImagePreview && (
+                       <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:8}}>
+                             <span style={{fontSize:18}}>✓</span>
+                             <span style={{color:'#888', fontSize:11}}>{megaImageFile?.name}</span>
+                          </div>
+                          <img src={megaImagePreview} alt="Imagem Final" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
+                       </div>
+                    )}
+                 </div>
+
+                 {/* Seção: Seleção de Puzzles Necessários */}
+                 <div>
+                    <h4 style={{color:'#ff6400', marginTop:0}}>🧩 QUEBRA-CABEÇAS NECESSÁRIOS PARA DESBLOQUEAR</h4>
+                    <p style={{fontSize:11, color:'#888', marginBottom:12}}>Selecione quais Glitch Puzzles são necessários para desbloquear esta mega-pista.</p>
+                    
+                    {availablePuzzles.length === 0 ? (
+                       <div style={{padding:12, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px dashed rgba(255,100,0,0.3)', color:'#888', fontSize:11, textAlign:'center'}}>
+                          Nenhum quebra-cabeça de glitch encontrado nesta investigação. Crie pelo menos um para criar uma mega-pista.
+                       </div>
+                    ) : (
+                       <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                          {availablePuzzles.map(puzzle => (
+                             <label key={puzzle.id} style={{display:'flex', alignItems:'center', gap:8, padding:8, background:'rgba(0,0,0,0.2)', borderRadius:4, cursor:'pointer'}}>
+                                <input
+                                   type="checkbox"
+                                   checked={megaRequiredPuzzleIds.includes(puzzle.id)}
+                                   onChange={e => {
+                                      if (e.target.checked) {
+                                         setMegaRequiredPuzzleIds([...megaRequiredPuzzleIds, puzzle.id]);
+                                      } else {
+                                         setMegaRequiredPuzzleIds(megaRequiredPuzzleIds.filter(id => id !== puzzle.id));
+                                      }
+                                   }}
+                                   disabled={loading}
+                                   style={{cursor:'pointer'}}
+                                />
+                                <span style={{color:'#ccc', fontSize:12}}>{puzzle.title}</span>
+                             </label>
+                          ))}
+                       </div>
+                    )}
+                    
+                    {megaRequiredPuzzleIds.length > 0 && (
+                       <div style={{marginTop:12, padding:10, background:'rgba(255,100,0,0.1)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)', fontSize:10, color:'#aaa'}}>
+                          ✓ {megaRequiredPuzzleIds.length} quebra-cabeça{megaRequiredPuzzleIds.length !== 1 ? 's' : ''} selecionado{megaRequiredPuzzleIds.length !== 1 ? 's' : ''}
+                       </div>
+                    )}
+                 </div>
+              </div>
+            )}
+
           </div>
 
       </div>
@@ -1124,8 +1486,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             </div>
          </div>
       )}
-
-      </DiegeticWindow>
 
       {editorMode && previewUrl && (
          <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
@@ -1185,6 +1545,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          />
       )}
 
+      </DiegeticWindow>
     </div>
   );
 }

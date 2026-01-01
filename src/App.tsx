@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import InvestigationPage from './pages/Investigation';
 import InvitePage from './pages/Invite';
+import TestPage from './pages/TestPage';
 import SystemOverlays from './components/ui/SystemOverlays';
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
         <div className="app-container">
           <Routes>
             <Route path="/login" element={<Login />} />
+            
+            <Route path="/test" element={<TestPage />} />
 
             <Route
               path="/"

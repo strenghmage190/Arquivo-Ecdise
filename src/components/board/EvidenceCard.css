@@ -582,3 +582,38 @@
 .clue-info * {
     color: inherit !important;
 }
+
+/* === CARD CONTENT CONTAINER === */
+.card-content-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+}
+
+.card-content-container img,
+.card-content-container canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* GM View - Normal */
+.card-content-container.gm-view {
+    background: #000;
+}
+
+/* Locked View - Access Denied */
+.card-content-container.locked-view {
+    background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+}
+
+/* Glitch View - Data Corruption */
+.card-content-container.glitch-view {
+    background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
+}

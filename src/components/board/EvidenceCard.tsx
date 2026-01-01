@@ -1,6 +1,6 @@
 import React from 'react'
 import './EvidenceCard.css'
-import MysteryImage from './MysteryImage'
+import EvidenceCardContent from './EvidenceCardContent'
 
 export interface EvidenceCardProps {
   id: string
@@ -28,6 +28,10 @@ export interface EvidenceCardProps {
 }
 
 const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal' }) => {
+  // DEBUG: Log de props importantes
+  if (cardType !== 'normal' || locked || isUV) {
+    console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
+  }
   const handleToggle = (s: 'verified' | 'theory' | 'false') => {
     if (!onToggleStatus) return;
     const newStatus = status === s ? null : s;
@@ -81,19 +85,19 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
         </div>
 
-        {locked && (playerView || !isGameMaster) ? (
-          <div className="lock-overlay">
-            <div className="lock-icon">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 8V7a5 5 0 10-10 0v1" stroke="#ff003c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="8" width="18" height="13" rx="2" stroke="#ff003c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-            <span className="lock-text">ENCRIPTADO</span>
-          </div>
-        ) : (
-          <>
-            <MysteryImage baseSrc={image} hiddenSrc={hiddenSrc} isUVMode={isUV} pointerLocal={undefined} />
-            <div className="overlay-scan" />
-          </>
-        )}
+        <EvidenceCardContent
+          id={id}
+          image={image}
+          hiddenSrc={hiddenSrc}
+          isUV={isUV}
+          locked={locked}
+          cardType={cardType}
+          isGameMaster={isGameMaster}
+          playerView={playerView}
+          hasUV={hasUV}
+          hasHiddenAudio={hasHiddenAudio}
+          fileType={fileType}
+        />
       </div>
 
       <div className="clue-info">
