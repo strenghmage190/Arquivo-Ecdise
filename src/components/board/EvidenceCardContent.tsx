@@ -16,6 +16,7 @@ interface EvidenceCardContentProps {
   playerView?: boolean
   hasUV?: boolean
   hasHiddenAudio?: boolean
+  performanceMode?: boolean
 }
 
 /**
@@ -36,12 +37,16 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   isGameMaster = false,
   playerView = false,
   hasUV = false,
-  hasHiddenAudio = false
+  hasHiddenAudio = false,
+  performanceMode = false
 }) => {
   // Determina se deve mostrar conteúdo ou restrição
   const isPlayerViewingLockedContent = playerView && locked && !isGameMaster
   const isPlayerViewingEncrypted = playerView && cardType === 'encrypted' && !isGameMaster
   const isPlayerViewingGlitch = playerView && cardType === 'glitch' && !isGameMaster
+
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reducedMotion = performanceMode || prefersReducedMotion
 
   // Gera código de encriptação único
   const encryptionCode = useMemo(() => {
@@ -50,6 +55,19 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
 
   // ===== PLAYER VIEW - LOCKED CONTENT (Com Senha) =====
   if (isPlayerViewingLockedContent) {
+    if (reducedMotion) {
+      return (
+        <div className="card-content-container locked-view">
+          <div className="lock-overlay encrypted-full">
+            <div className="encryption-text-wrapper">
+              <span className="lock-icon">🔐</span>
+              <div className="access-denied">ACESSO NEGADO</div>
+              <div className="encryption-code">MODO ECONÔMICO</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="card-content-container locked-view">
         <div className="encryption-grid" />
@@ -66,6 +84,18 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
 
   // ===== PLAYER VIEW - ENCRYPTED/GLITCH (Sem conseguir ver) =====
   if (isPlayerViewingEncrypted || isPlayerViewingGlitch) {
+    if (reducedMotion) {
+      return (
+        <div className="card-content-container glitch-view">
+          <div className="glitch-text-overlay" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.6)' }}>
+            <div className="glitch-chars" style={{ textAlign: 'center', color: '#ddd', letterSpacing: 1 }}>
+              <div style={{ fontSize: 12, opacity: 0.9 }}>MODO PERFORMANCE</div>
+              <div style={{ fontWeight: 700 }}>CONTEÚDO BLOQUEADO</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="card-content-container glitch-view">
         {/* Múltiplas camadas de glitch para efeito intenso */}
@@ -134,74 +164,9 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
               isUVMode={false} 
               pointerLocal={undefined} 
             />
-            <div className="overlay-scan" />
+            {!reducedMotion && <div className="overlay-scan" />}
           </>
         )}
-      </div>
-    )
-  }
-
-  // ===== PLAYER VIEW - LOCKED CONTENT (Com Senha) =====
-  if (isPlayerViewingLockedContent) {
-    return (
-      <div className="card-content-container locked-view">
-        <div className="encryption-grid" />
-        <div className="lock-overlay encrypted-full">
-          <div className="encryption-text-wrapper">
-            <span className="lock-icon">🔐</span>
-            <div className="access-denied">ACESSO NEGADO</div>
-            <div className="encryption-code">{encryptionCode}</div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ===== PLAYER VIEW - ENCRYPTED/GLITCH (Sem conseguir ver) =====
-  if (isPlayerViewingEncrypted || isPlayerViewingGlitch) {
-    return (
-      <div className="card-content-container glitch-view">
-        {/* Múltiplas camadas de glitch para efeito intenso */}
-        <div className="glitch-corruption">
-          <div className="glitch-layer-1" style={{ animationDelay: '0s' }} />
-          <div className="glitch-layer-2" style={{ animationDelay: '0.15s' }} />
-          <div className="glitch-layer-3" style={{ animationDelay: '0.3s' }} />
-        </div>
-
-        {/* Padrão de corrupção com SVG */}
-        <div className="data-corruption-overlay">
-          <div className="corruption-pattern">
-            <svg 
-              width="100%" 
-              height="100%" 
-              style={{ position: 'absolute', inset: 0 }}
-              viewBox="0 0 300 300"
-              preserveAspectRatio="xMidYMid slice"
-            >
-              <defs>
-                <pattern id="corrupt" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <rect x="0" y="0" width="50" height="50" fill="none" stroke="#ff003c" strokeWidth="0.5" opacity="0.4" />
-                  <circle cx="25" cy="25" r="4" fill="#00f3ff" opacity="0.3" />
-                  <line x1="0" y1="25" x2="50" y2="25" stroke="#ffff00" strokeWidth="0.5" opacity="0.15" />
-                  <text x="10" y="35" fontSize="8" fill="#ff00ff" opacity="0.2" fontFamily="monospace">X</text>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#corrupt)" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Texto de glitch em múltiplas camadas */}
-        <div className="glitch-text-overlay">
-          <div className="glitch-chars">
-            <div className="glitch-1">▓░▓ DATA</div>
-            <div className="glitch-2">CØRRÜPT</div>
-            <div className="glitch-3">░▓░ LOCKED</div>
-          </div>
-        </div>
-
-        {/* Efeito de scanlines */}
-        <div className="scanlines" />
       </div>
     )
   }
@@ -215,7 +180,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
         isUVMode={false} 
         pointerLocal={undefined} 
       />
-      <div className="overlay-scan" />
+      {!reducedMotion && <div className="overlay-scan" />}
     </div>
   )
 }

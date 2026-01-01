@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
 
@@ -25,9 +25,10 @@ export interface EvidenceCardProps {
   hasStamp?: boolean
   hasExternalLink?: boolean
   cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal'
+  performanceMode?: boolean
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal' }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false }) => {
   // DEBUG: Log de props importantes
   if (cardType !== 'normal' || locked || isUV) {
     console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
@@ -39,6 +40,28 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   }
 
   const shortId = id ? (String(id).length > 10 ? `${String(id).slice(0, 8)}...` : String(id)) : '';
+
+  // Lazy render para economizar re-renders e trabalho de imagem fora da viewport
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return;
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          obs.disconnect();
+        }
+      });
+    }, { rootMargin: '200px', threshold: 0.01 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Determinar tipo especial baseado no fileType ou cardType
   let specialType = '';
@@ -68,10 +91,10 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     );
   }
 
-  const rootClass = `clue-card ${specialType} ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''}`.trim();
+  const rootClass = `clue-card ${specialType} ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''} ${performanceMode ? 'performance-mode' : ''}`.trim();
 
   return (
-    <div className={rootClass} id={`card-${id}`}>
+    <div ref={cardRef} className={rootClass} id={`card-${id}`}>
       <div className="scanner-line" />
 
       <div className="clue-image-container">
@@ -85,19 +108,24 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
         </div>
 
-        <EvidenceCardContent
-          id={id}
-          image={image}
-          hiddenSrc={hiddenSrc}
-          isUV={isUV}
-          locked={locked}
-          cardType={cardType}
-          isGameMaster={isGameMaster}
-          playerView={playerView}
-          hasUV={hasUV}
-          hasHiddenAudio={hasHiddenAudio}
-          fileType={fileType}
-        />
+        {isVisible ? (
+          <EvidenceCardContent
+            id={id}
+            image={image}
+            hiddenSrc={hiddenSrc}
+            isUV={isUV}
+            locked={locked}
+            cardType={cardType}
+            isGameMaster={isGameMaster}
+            playerView={playerView}
+            hasUV={hasUV}
+            hasHiddenAudio={hasHiddenAudio}
+            fileType={fileType}
+            performanceMode={performanceMode}
+          />
+        ) : (
+          <div className="card-content-container loading-placeholder" aria-hidden />
+        )}
       </div>
 
       <div className="clue-info">
@@ -139,4 +167,11 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   )
 }
 
-export default EvidenceCard
+const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
+  const keys: Array<keyof EvidenceCardProps> = [
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode'
+  ];
+  return keys.every((k) => prev[k] === next[k]);
+};
+
+export default React.memo(EvidenceCard, propsAreEqual)

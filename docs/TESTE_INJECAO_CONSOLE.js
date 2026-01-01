@@ -17,8 +17,8 @@
     return;
   }
   
-  const firstCard = cards[0] as HTMLElement;
-  const container = firstCard.querySelector('.card-content-container') as HTMLElement;
+  const firstCard = cards[0];
+  const container = firstCard && firstCard.querySelector('.card-content-container');
   
   if (!container) {
     console.log('❌ .card-content-container não encontrado');
@@ -55,8 +55,8 @@
     return;
   }
   
-  const secondCard = cards[1] as HTMLElement;
-  const container = secondCard.querySelector('.card-content-container') as HTMLElement;
+  const secondCard = cards[1];
+  const container = secondCard && secondCard.querySelector('.card-content-container');
   
   if (!container) {
     console.log('❌ .card-content-container não encontrado no segundo card');

@@ -52,9 +52,86 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   const [zoom, setZoom] = useState(0.9);
   const [isUV, setIsUV] = useState(false);
-  const [globalMouse, setGlobalMouse] = useState<{ clientX: number; clientY: number; overBoard: boolean } | null>(null);
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
+
+  const [performanceMode, setPerformanceMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const stored = window.localStorage.getItem('investigation_performance_mode');
+      if (stored === '1') return true;
+      if (stored === '0') return false;
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('investigation_performance_mode', performanceMode ? '1' : '0');
+    } catch {
+      // ignore persistence errors
+    }
+  }, [performanceMode]);
+
+  useEffect(() => {
+    if (performanceMode) {
+      setOverlayPos(null);
+    }
+  }, [performanceMode]);
+
+  // rAF batching to reduce state churn while dragging/panning
+  const positionFrameRef = useRef<number | null>(null);
+  const pendingPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const originFrameRef = useRef<number | null>(null);
+  const pendingOriginRef = useRef<{ x: number; y: number } | null>(null);
+
+  const flushPendingPositions = () => {
+    const pending = pendingPositionsRef.current;
+    const keys = Object.keys(pending);
+    if (!keys.length) return;
+    pendingPositionsRef.current = {};
+    setLocalPositions((prev) => {
+      const next = { ...prev };
+      keys.forEach((id) => { next[id] = pending[id]; });
+      return next;
+    });
+  };
+
+  const schedulePositionUpdate = (id: string, pos: { x: number; y: number }) => {
+    pendingPositionsRef.current[id] = pos;
+    if (positionFrameRef.current === null) {
+      positionFrameRef.current = requestAnimationFrame(() => {
+        positionFrameRef.current = null;
+        flushPendingPositions();
+      });
+    }
+  };
+
+  const flushPendingOrigin = () => {
+    if (!pendingOriginRef.current) return;
+    const next = pendingOriginRef.current;
+    pendingOriginRef.current = null;
+    setOrigin(next);
+  };
+
+  const scheduleOriginUpdate = (x: number, y: number) => {
+    pendingOriginRef.current = { x, y };
+    if (originFrameRef.current === null) {
+      originFrameRef.current = requestAnimationFrame(() => {
+        originFrameRef.current = null;
+        flushPendingOrigin();
+      });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (positionFrameRef.current !== null) cancelAnimationFrame(positionFrameRef.current);
+      if (originFrameRef.current !== null) cancelAnimationFrame(originFrameRef.current);
+    };
+  }, []);
 
   // Refs to hold latest zoom and origin for global listeners (avoid stale closures)
   const zoomRef = useRef(zoom);
@@ -73,6 +150,7 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   const canEdit = isGameMaster && !playerView;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
+  const [unlockingCard, setUnlockingCard] = useState<any | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [decoderOpen, setDecoderOpen] = useState(false);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
@@ -182,7 +260,6 @@ export function InvestigationBoard({ investigationId }: Props) {
     if (!q) {
       return { success: false, message: 'Palavra-chave vazia.' };
     }
-
     try {
       const { data, error } = await supabase
         .from('investigation_cards')
@@ -823,7 +900,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       if (panningRef.current) {
         const dx = (e.clientX - panningRef.current.startX) / zoomRef.current;
         const dy = (e.clientY - panningRef.current.startY) / zoomRef.current;
-        setOrigin({ x: panningRef.current.originX - dx, y: panningRef.current.originY - dy });
+        scheduleOriginUpdate(panningRef.current.originX - dx, panningRef.current.originY - dy);
       }
 
       // 2. Dragging
@@ -832,7 +909,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         const worldNow = getWorldPosition(e.clientX, e.clientY);
         const nextX = worldNow.x - (d.offsetX || 0);
         const nextY = worldNow.y - (d.offsetY || 0);
-        setLocalPositions(prev => ({ ...prev, [d.id]: { x: nextX, y: nextY } }));
+        schedulePositionUpdate(d.id, { x: nextX, y: nextY });
         // schedule save (debounced)
         if (d.id) scheduleDebouncedSave(d.id);
       }
@@ -1185,6 +1262,156 @@ export function InvestigationBoard({ investigationId }: Props) {
     setOrigin({ x: x - viewW / (2 * zoom), y: y - viewH / (2 * zoom) });
   };
 
+  const parseCardMetadata = (card: any) => {
+    const meta = card?.metadata ?? (card?.data && card.data.metadata);
+    if (!meta) return {};
+    if (typeof meta === 'string') {
+      try {
+        return JSON.parse(meta);
+      } catch {
+        return {};
+      }
+    }
+    return meta;
+  };
+
+  const isCardLocked = (card: any, metadata: any) => {
+    if (card?.is_locked === false || metadata?.unlocked_at) return false;
+    const lockedFlag = card?.is_locked === true || card?.is_locked === 1 || (typeof card?.is_locked === 'string' && ['true','t','1'].includes(String(card.is_locked).toLowerCase()));
+    const password = card?.lock_password || metadata?.lock_pass || metadata?.lock_password;
+    return Boolean(lockedFlag || password);
+  };
+
+  const openEvidenceViewer = (card: any) => {
+    try {
+      const center = getCardCenter(card?.id);
+      if (center) panToPosition(center.x, center.y);
+    } catch {
+      // ignore centering failures
+    }
+    setInspectCard(card);
+  };
+
+  const handleCardOpen = (card: any) => {
+    const metadata = parseCardMetadata(card);
+    const isMegaClue = card?.type === 'mega_clue' || metadata?.mega_clue;
+    const megaMeta = metadata?.mega_clue || {};
+    const requiredIds = Array.isArray(megaMeta.required_puzzle_ids) ? megaMeta.required_puzzle_ids.map((id: any) => String(id)) : [];
+    const solvedIds = Array.isArray(megaMeta.solved_puzzle_ids) ? megaMeta.solved_puzzle_ids.map((id: any) => String(id)) : [];
+    const collectedCodes = Array.isArray(megaMeta.collected_codes) ? megaMeta.collected_codes : [];
+    const progressCount = Math.max(solvedIds.length, collectedCodes.length);
+    const requiredCount = megaMeta.required_code_count || requiredIds.length || collectedCodes.length || 0;
+    const alreadyUnlocked = megaMeta.unlocked === true || (requiredCount > 0 && progressCount >= requiredCount);
+
+    if (isGameMaster && !playerView) {
+      openEvidenceViewer({ ...card, metadata });
+      return;
+    }
+
+    if (isMegaClue && !alreadyUnlocked && requiredCount > 0) {
+      setUnlockingCard({ ...card, metadata });
+      return;
+    }
+
+    if (!isMegaClue && isCardLocked(card, metadata)) {
+      setUnlockingCard({ ...card, metadata });
+      return;
+    }
+
+    openEvidenceViewer({ ...card, metadata });
+  };
+
+  const handleUnlockSubmit = async (submittedCode: string) => {
+    if (!unlockingCard) return;
+    const code = submittedCode.trim().toUpperCase();
+    if (!code) return;
+
+    const metadata = parseCardMetadata(unlockingCard);
+    const isMegaClue = unlockingCard?.type === 'mega_clue' || metadata?.mega_clue;
+    try {
+      if (isMegaClue) {
+        const megaMeta = metadata?.mega_clue || {};
+        const requiredIds = Array.isArray(megaMeta.required_puzzle_ids) ? megaMeta.required_puzzle_ids.map((id: any) => String(id)) : [];
+        const solvedIds = Array.isArray(megaMeta.solved_puzzle_ids) ? megaMeta.solved_puzzle_ids.map((id: any) => String(id)) : [];
+        const requiredCount = megaMeta.required_code_count || requiredIds.length || 0;
+
+        const puzzleMatch = cards.find((c) => {
+          const m = parseCardMetadata(c);
+          const reward = m?.glitch_puzzle?.reward_code;
+          return reward && String(reward).toUpperCase() === code;
+        });
+
+        if (!puzzleMatch) {
+          showToast({ id: 'unlock-fail', message: 'Código não corresponde a nenhum puzzle.' }, 3200);
+          return;
+        }
+
+        const puzzleId = String(puzzleMatch.id);
+        const enforceRequiredList = requiredIds.length > 0;
+        if (enforceRequiredList && !requiredIds.includes(puzzleId)) {
+          showToast({ id: 'unlock-not-required', message: 'Código não está na lista de puzzles requeridos.' }, 3400);
+          return;
+        }
+
+        if (solvedIds.includes(puzzleId)) {
+          showToast({ id: 'unlock-dup', message: 'Código já utilizado nesta mega-pista.' }, 3200);
+          return;
+        }
+
+        const nextSolved = Array.from(new Set([...solvedIds, puzzleId]));
+        const existingCodes = Array.isArray(megaMeta.collected_codes) ? megaMeta.collected_codes.map((c: any) => String(c).toUpperCase()) : [];
+        const nextCodes = Array.from(new Set([...existingCodes, code]));
+        const progressCount = Math.max(nextSolved.length, nextCodes.length);
+        const totalRequired = requiredCount || requiredIds.length || nextCodes.length || nextSolved.length;
+        const displayRequired = totalRequired || progressCount || 1;
+        const unlockedNow = totalRequired > 0 ? progressCount >= totalRequired : false;
+
+        const updatedMeta = {
+          ...metadata,
+          mega_clue: {
+            ...megaMeta,
+            required_puzzle_ids: requiredIds,
+            solved_puzzle_ids: nextSolved,
+            collected_codes: nextCodes,
+            required_code_count: totalRequired,
+            unlocked: unlockedNow,
+            unlocked_at: unlockedNow ? (megaMeta.unlocked_at || new Date().toISOString()) : megaMeta.unlocked_at,
+          },
+        };
+
+        await api.updateInvestigationCard(unlockingCard.id, { metadata: updatedMeta } as any);
+        showToast({ id: `unlock-${unlockingCard.id}`, message: `Acesso concedido (${progressCount}/${displayRequired})` }, 3200);
+        setUnlockingCard(null);
+        openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta });
+        await loadBoard();
+        return;
+      }
+
+      const password = (unlockingCard.lock_password || metadata?.lock_pass || metadata?.lock_password || '').toString().toUpperCase();
+      if (!password) {
+        showToast({ id: 'unlock-missing', message: 'Nenhuma senha configurada para este card.' }, 3000);
+        setUnlockingCard(null);
+        openEvidenceViewer(unlockingCard);
+        return;
+      }
+
+      if (password !== code) {
+        showToast({ id: 'unlock-invalid', message: 'Código inválido.' }, 3200);
+        return;
+      }
+
+      const updatedMeta = { ...metadata, unlocked_at: new Date().toISOString() };
+      await api.updateInvestigationCard(unlockingCard.id, { is_locked: false, metadata: updatedMeta } as any);
+      showToast({ id: `unlock-${unlockingCard.id}`, message: 'Acesso concedido' }, 3200);
+      setUnlockingCard(null);
+      openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false });
+      await loadBoard();
+    } catch (err) {
+      console.error('Erro ao validar código', err);
+      showToast({ id: 'unlock-error', message: 'Falha ao validar código.' }, 3600);
+    }
+  };
+
   // Helper: open Create Clue modal centered on view
   const handleCreateClue = () => {
     setEditingCard(null);
@@ -1261,7 +1488,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   }, [zoom]);
 
   return (
-    <div className="investigation-board">
+    <div className="investigation-board" data-performance-mode={performanceMode ? 'on' : 'off'}>
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
       <header className="investigation-header">
         <div className="header-left">
@@ -1491,6 +1718,13 @@ export function InvestigationBoard({ investigationId }: Props) {
               </div>
             )}
           </div>
+          <button
+            className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
+            onClick={() => setPerformanceMode((s) => !s)}
+            data-tooltip={performanceMode ? 'Modo performance ativado' : 'Ativar modo performance (reduz efeitos)'}
+          >
+            ⚡
+          </button>
         </div>
 
         {/* Grupo 5: Zoom */}
@@ -1542,17 +1776,14 @@ export function InvestigationBoard({ investigationId }: Props) {
         ref={corkboardRef}
         className="corkboard-canvas"
         onMouseMove={(e) => {
+          if (!isUV || performanceMode) return;
           const boardRect = corkboardRef.current?.getBoundingClientRect();
-          if (boardRect) {
-            const lx = e.clientX - boardRect.left;
-            const ly = e.clientY - boardRect.top;
-            setOverlayPos({ x: lx, y: ly, over: true });
-            setGlobalMouse({ clientX: e.clientX, clientY: e.clientY, overBoard: true });
-          } else {
-            setGlobalMouse({ clientX: e.clientX, clientY: e.clientY, overBoard: true });
-          }
+          if (!boardRect) return;
+          const lx = e.clientX - boardRect.left;
+          const ly = e.clientY - boardRect.top;
+          setOverlayPos({ x: lx, y: ly, over: true });
         }}
-        onMouseLeave={() => { setGlobalMouse((g) => g ? { ...g, overBoard: false } : null); setOverlayPos((o) => o ? { ...o, over: false } : null); }}
+        onMouseLeave={() => { if (performanceMode) return; setOverlayPos((o) => o ? { ...o, over: false } : null); }}
         onMouseDown={(e) => {
           if (e.target === corkboardRef.current || e.target === e.currentTarget) {
             // close any open context menu when clicking the background
@@ -1595,7 +1826,7 @@ export function InvestigationBoard({ investigationId }: Props) {
           style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
         >
           {/* Global UV overlay that follows the mouse across the whole corkboard */}
-          {isUV && overlayPos && overlayPos.over && (() => {
+          {isUV && !performanceMode && overlayPos && overlayPos.over && (() => {
             // overlayPos is in screen-local board coords (pixels from corkboard left/top)
             // convert to world coordinates inside the transformed layer: world = origin + screen/zoom
             const worldX = origin.x + (overlayPos.x / zoom);
@@ -1772,13 +2003,8 @@ export function InvestigationBoard({ investigationId }: Props) {
                       return;
                     }
                   } catch (e) { console.warn('failed to parse excalidraw metadata', e); }
-                  // Open inspection modal instead of immediate edit
-                  // pan board to center the card so inspection content is visible
-                  try {
-                    const center = getCardCenter(card.id);
-                    if (center) panToPosition(center.x, center.y);
-                  } catch (e) { /* ignore */ }
-                  setInspectCard(card);
+                  // Open inspection modal through the central unlock handler
+                  handleCardOpen(card);
                 }}
               >
                 <div style={{ width: 280 }}>
@@ -1820,7 +2046,8 @@ export function InvestigationBoard({ investigationId }: Props) {
                         await toggleCardStatus(card.id, newStatus as any, []);
                       } catch (e) { console.error('toggle from EvidenceCard failed', e); }
                     }}
-                    onOpen={() => { try { const center = getCardCenter(card.id); if (center) panToPosition(center.x, center.y); } catch {} setInspectCard(card); }}
+                    onOpen={() => handleCardOpen(card)}
+                    performanceMode={performanceMode}
                   />
                 </div>
               </div>
@@ -2040,6 +2267,23 @@ export function InvestigationBoard({ investigationId }: Props) {
         onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
         onThermalUnlock={handleThermalUnlock}
       />
+      {unlockingCard && (
+        <CodePromptModal
+          title={unlockingCard.title || 'ACESSO REQUERIDO'}
+          description={(() => {
+            const meta = parseCardMetadata(unlockingCard);
+            const mega = meta?.mega_clue;
+            if (unlockingCard?.type === 'mega_clue' || mega) {
+              const required = Array.isArray(mega?.required_puzzle_ids) ? mega.required_puzzle_ids.length : (mega?.required_code_count || 0);
+              const solved = Array.isArray(mega?.solved_puzzle_ids) ? mega.solved_puzzle_ids.length : 0;
+              return `Mega-Pista protegida. Progresso: ${solved}/${required || '?'} códigos. Digite um código de recompensa.`;
+            }
+            return 'Este arquivo está protegido. Digite o código de acesso para abrir.';
+          })()}
+          onSubmit={handleUnlockSubmit}
+          onClose={() => setUnlockingCard(null)}
+        />
+      )}
       {decoderOpen && (
         <div style={{ position: 'fixed', right: 20, top: 80, width: 560, height: '72vh', zIndex: 12000, background: '#0b0b0d', border: '1px solid #333', padding: 12, borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

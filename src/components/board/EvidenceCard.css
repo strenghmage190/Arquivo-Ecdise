@@ -595,6 +595,12 @@
     background: #000;
 }
 
+.card-content-container.loading-placeholder {
+    background: linear-gradient(90deg, #0a0a0a 0%, #151515 50%, #0a0a0a 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s linear infinite;
+}
+
 .card-content-container img,
 .card-content-container canvas {
     width: 100%;
@@ -616,4 +622,9 @@
 /* Glitch View - Data Corruption */
 .card-content-container.glitch-view {
     background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
