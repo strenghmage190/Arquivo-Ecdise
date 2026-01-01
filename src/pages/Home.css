@@ -1,17 +1,173 @@
-/* Estilos básicos para a Home - ajuste conforme desejar */
+/* Home Page Styling */
+.home-screen {
+  position: relative;
+  padding: 36px;
+  background: radial-gradient(circle at 20% 20%, rgba(0,243,255,0.06), transparent 35%),
+              radial-gradient(circle at 80% 0%, rgba(255,0,60,0.08), transparent 30%),
+              var(--nexus-dark);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.home-screen:before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(0,243,255,0.05);
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: 0 0 40px rgba(0,243,255,0.06);
+}
+
+.nexus-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-badge {
+  padding: 6px 10px;
+  border: 1px solid rgba(0,243,255,0.3);
+  border-radius: 6px;
+  color: var(--nexus-blue);
+  font-weight: 800;
+  font-size: 12px;
+  background: rgba(0,243,255,0.08);
+  box-shadow: 0 0 12px rgba(0,243,255,0.12);
+}
+
+.nexus-ghost {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(0,243,255,0.15);
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.nexus-ghost:hover {
+  border-color: var(--nexus-blue);
+  color: var(--nexus-blue);
+  box-shadow: 0 0 18px rgba(0,243,255,0.15);
+}
+
+.case-grid {
+  position: relative;
+}
+
+.case-new-card {
+  border: 1px dashed rgba(0,243,255,0.35);
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: pointer;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(0,243,255,0.08), rgba(0,0,0,0.5));
+  box-shadow: inset 0 0 20px rgba(0,243,255,0.1), 0 12px 30px rgba(0,0,0,0.45);
+  color: var(--nexus-blue);
+  transition: all 0.2s ease;
+}
+
+.case-new-card span {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.case-new-card small {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.case-new-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--nexus-blue);
+  box-shadow: 0 14px 28px rgba(0,243,255,0.12);
+}
+
+.case-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.03), rgba(0,0,0,0.55));
+  border: 1px solid rgba(0,243,255,0.1);
+  padding: 20px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.case-card:before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(0,243,255,0.08), transparent 35%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.case-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 32px rgba(0,243,255,0.12);
+  border-color: rgba(0,243,255,0.35);
+}
+
+.case-card:hover:before {
+  opacity: 1;
+}
+
+.case-card h2 {
+  margin: 8px 0 0;
+  color: #e9fcff;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+.case-card .meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .home-screen h1 {
-  font-family: 'Courier Prime', monospace;
-  color: #f2e6e6;
+  font-family: 'Share Tech Mono', monospace;
+  color: #e9fcff;
+  letter-spacing: 2px;
 }
 
-.home-screen .case-card:hover {
-  transform: translateY(-4px);
-  transition: transform 0.15s ease;
+/* Responsividade */
+@media (max-width: 900px) {
+  .home-screen {
+    padding: 24px;
+  }
+
+  .case-new-card,
+  .case-card {
+    height: 180px;
+  }
 }
 
-/* Responsividade simples */
 @media (max-width: 600px) {
   .home-screen {
-    padding: 20px;
+    padding: 18px;
+  }
+
+  .nexus-ghost {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .case-new-card,
+  .case-card {
+    height: 170px;
   }
 }

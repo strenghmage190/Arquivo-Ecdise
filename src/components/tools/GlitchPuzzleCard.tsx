@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { updateInvestigationCard } from '../../api/investigations';
 import GlitchMaker from './GlitchMaker';
+import { addCollectedCode, isPuzzleSolved } from '../../utils/codeTracking';
 import './GlitchPuzzleCard.css';
 
 interface GlitchPuzzleData {
@@ -14,9 +15,7 @@ interface GlitchPuzzleData {
   correct_chromatic: number;
   hint?: string;
   reward_code: string;
-  required_code_count: number;
   solved: boolean;
-  collected_codes: string[];
 }
 
 interface Props {
@@ -46,12 +45,12 @@ export default function GlitchPuzzleCard({
 
   // Carregar estado salvo
   useEffect(() => {
-    const saved = localStorage.getItem(`puzzle_${cardId}_solved`);
-    if (saved) {
+    const alreadySolved = isPuzzleSolved(investigationId, cardId);
+    if (alreadySolved || puzzleData.solved) {
       setSolved(true);
       setShowReveal(true);
     }
-  }, [cardId]);
+  }, [cardId, investigationId, puzzleData.solved]);
 
   const handleSubmit = async () => {
     setAttempts(prev => prev + 1);
@@ -68,23 +67,21 @@ export default function GlitchPuzzleCard({
       setShowReveal(true);
       setSolved(true);
 
-      // Salvar no localStorage
-      localStorage.setItem(`puzzle_${cardId}_solved`, 'true');
-      localStorage.setItem(`puzzle_${cardId}_reward`, puzzleData.reward_code);
+      // Salvar código coletado usando sistema de tracking
+      addCollectedCode(investigationId, puzzleData.reward_code, cardId);
 
       // Salvar no Supabase
       setLoading(true);
       try {
         const newMetadata = {
-          ...puzzleData,
-          solved: true,
-          collected_codes: [...(puzzleData.collected_codes || []), puzzleData.reward_code],
+          glitch_puzzle: {
+            ...puzzleData,
+            solved: true,
+          }
         };
 
         await updateInvestigationCard(cardId, {
-          metadata: {
-            glitch_puzzle: newMetadata,
-          },
+          metadata: newMetadata,
         });
 
         // Chamar callback
@@ -141,10 +138,7 @@ export default function GlitchPuzzleCard({
               {puzzleData.reward_code}
             </div>
             <p className="reward-message">
-              Você desbloqueou este código. Colete todos os códigos disponíveis para desbloquear a MEGA-PISTA!
-            </p>
-            <p className="progress-text">
-              Códigos necessários: <strong>{puzzleData.required_code_count}</strong>
+              Você desbloqueou este código. Use-o na MEGA-PISTA para avançar no desbloqueio final.
             </p>
           </div>
 

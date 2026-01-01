@@ -194,12 +194,15 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         <div onClick={(e) => e.stopPropagation()}>
           <MegaClueCard
             cardId={existing.id}
+            investigationId={investigationId}
             title={existing.title}
-            description={existing.description_public || ''}
+            description={existing.description_public || existing.description || ''}
             imageUrl={existing.image_url}
             requiredCodes={megaData.required_code_count || 3}
-            collectedCodes={megaData.collected_codes || []}
             finalTruthText={megaData.final_truth_text}
+            collectedCodes={Array.isArray(megaData.collected_codes) ? megaData.collected_codes : []}
+            metadata={metadata}
+            onRefresh={() => onSaved?.(existing)}
             onClose={onClose}
           />
         </div>

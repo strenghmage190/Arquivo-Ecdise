@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getInvestigationById } from '../api';
 import { InvestigationBoard } from '../components/board/InvestigationBoard';
+import BootScreen from '../components/layout/BootScreen';
 
 export default function Investigation() {
   const { id } = useParams();
@@ -9,6 +10,7 @@ export default function Investigation() {
   const [investigation, setInvestigation] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bootDone, setBootDone] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -25,16 +27,10 @@ export default function Investigation() {
     return () => { mounted = false; };
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="nexus-page" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>
-        <div style={{textAlign:'center'}}>
-          <div className="loading-spinner" />
-          <h2 style={{marginTop:16, color:'var(--nexus-blue)', letterSpacing:2}}>ACESSANDO ARQUIVOS DA ORDEM...</h2>
-          <p style={{color:'var(--muted)'}}>Aguarde, calibrando a Membrana...</p>
-        </div>
-      </div>
-    );
+  const showBoot = loading || !bootDone;
+
+  if (showBoot) {
+    return <BootScreen onComplete={() => setBootDone(true)} />;
   }
 
   if (error) {

@@ -6,7 +6,6 @@ import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
 import CreateClueModal from '../modals/CreateClueModal';
 import Sketchpad from '../tools/Sketchpad';
-import BootScreen from '../layout/BootScreen';
 import TerminalSearch from './TerminalSearch';
 import { playAudio } from '../../utils/audio';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
@@ -79,9 +78,6 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [decoderOpen, setDecoderOpen] = useState(false);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
-  // Sistema de boot C.R.I.S.: controla a exibição da tela de inicialização
-  // Sempre iniciar com o boot-screen ativo para exibir a animação a cada carga
-  const [systemReady, setSystemReady] = useState<boolean>(false);
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -1269,10 +1265,6 @@ export function InvestigationBoard({ investigationId }: Props) {
     return () => { if (boardEl) boardEl.removeEventListener('wheel', handleWheel as any); };
   }, [zoom]);
 
-  if (!systemReady) {
-    return <BootScreen onComplete={() => setSystemReady(true)} />;
-  }
-
   return (
     <div className="investigation-board">
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
@@ -1385,6 +1377,31 @@ export function InvestigationBoard({ investigationId }: Props) {
               data-tooltip="Criar quebra-cabeça de glitch"
             >
               🧩 NOVO GLITCH PUZZLE
+            </button>
+          )}
+
+          {isGameMaster && (
+            <button
+              className="hud-btn"
+              onClick={() => {
+                const CARD_W = 220;
+                const CARD_H = 160;
+                const boardRect = corkboardRef.current?.getBoundingClientRect();
+                const viewW = boardRect?.width ?? window.innerWidth;
+                const viewH = boardRect?.height ?? window.innerHeight;
+                const cx = viewW / 2;
+                const cy = viewH / 2;
+                const bx = origin.x + cx / zoom;
+                const by = origin.y + cy / zoom;
+                setCreateMegaCluePos({
+                  x: Math.round(bx - CARD_W / 2),
+                  y: Math.round(by - CARD_H / 2)
+                });
+                setShowMegaClueCreator(true);
+              }}
+              data-tooltip="Criar mega-pista (verdade final)"
+            >
+              🔐 MEGA-PISTA
             </button>
           )}
 
@@ -2124,6 +2141,26 @@ export function InvestigationBoard({ investigationId }: Props) {
             loadBoard();
             setShowGlitchPuzzleCreator(false);
             setCreatePuzzlePos(null);
+          }}
+        />
+      )}
+
+      {/* Modal Criador de Mega-Pista (Verdade Final) */}
+      {showMegaClueCreator && (
+        <GlitchMegaClueCreator
+          isOpen={showMegaClueCreator}
+          onClose={() => {
+            setShowMegaClueCreator(false);
+            setCreateMegaCluePos(null);
+          }}
+          investigationId={investigationId}
+          initialX={createMegaCluePos?.x}
+          initialY={createMegaCluePos?.y}
+          requiredCodeCount={cards.filter(c => c.type === 'glitch_puzzle').length || 3}
+          onSaved={() => {
+            loadBoard();
+            setShowMegaClueCreator(false);
+            setCreateMegaCluePos(null);
           }}
         />
       )}

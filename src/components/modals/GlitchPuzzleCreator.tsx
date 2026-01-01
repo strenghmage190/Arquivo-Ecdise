@@ -33,9 +33,6 @@ interface GlitchPuzzleConfig {
   
   // Código de recompensa que o jogador ganha ao resolver
   rewardCode: string;
-  
-  // Quantos códigos são necessários para desbloquear a mega-pista
-  requiredCodeCount: number;
 }
 
 export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
@@ -51,7 +48,6 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
     description: 'Uma imagem corrompida aguarda decodificação',
     hint: '',
     rewardCode: 'ALPHA-01',
-    requiredCodeCount: 3,
   });
 
   const [loading, setLoading] = useState(false);
@@ -120,9 +116,7 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
             correct_chromatic: config.correctChromatic,
             hint: config.hint,
             reward_code: config.rewardCode,
-            required_code_count: config.requiredCodeCount,
             solved: false,
-            collected_codes: [],
           },
         },
       };
@@ -155,7 +149,6 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
       description: 'Uma imagem corrompida aguarda decodificação',
       hint: '',
       rewardCode: 'ALPHA-01',
-      requiredCodeCount: 3,
     });
   };
 
@@ -319,21 +312,6 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
                 Este código será revelado quando o jogador resolver corretamente o quebra-cabeça
               </small>
             </div>
-
-            <div className="form-group">
-              <label>Quantos códigos são necessários para desbloquear a MEGA-PISTA?</label>
-              <input
-                type="number"
-                value={config.requiredCodeCount}
-                onChange={e => setConfig(prev => ({ ...prev, requiredCodeCount: Math.max(1, parseInt(e.target.value) || 1) }))}
-                disabled={loading}
-                min="1"
-                max="20"
-              />
-              <small style={{ display: 'block', marginTop: 6, color: '#999' }}>
-                Se houver 5 quebra-cabeças, defina como 5. O jogador precisa resolver todos para acessar a verdade final.
-              </small>
-            </div>
           </div>
 
           {/* Seção 4: Resumo */}
@@ -345,7 +323,7 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
               <p>🔧 <strong>Parâmetros corretos:</strong> {config.correctFrequency} fatias, {config.correctShift}% deslocamento, {config.correctChromatic}% cromática</p>
               <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida</p>
               <p>🎁 <strong>Recompensa:</strong> <code style={{ background: '#333', padding: '2px 6px', borderRadius: 3, color: '#c6a45f' }}>{config.rewardCode}</code></p>
-              <p>🔓 <strong>Códigos necessários para mega-pista:</strong> {config.requiredCodeCount}</p>
+
             </div>
           </div>
         </div>
