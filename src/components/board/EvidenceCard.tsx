@@ -108,24 +108,20 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
         </div>
 
-        {isVisible ? (
-          <EvidenceCardContent
-            id={id}
-            image={image}
-            hiddenSrc={hiddenSrc}
-            isUV={isUV}
-            locked={locked}
-            cardType={cardType}
-            isGameMaster={isGameMaster}
-            playerView={playerView}
-            hasUV={hasUV}
-            hasHiddenAudio={hasHiddenAudio}
-            fileType={fileType}
-            performanceMode={performanceMode}
-          />
-        ) : (
-          <div className="card-content-container loading-placeholder" aria-hidden />
-        )}
+        <EvidenceCardContent
+          id={id}
+          image={isVisible ? image : undefined}
+          hiddenSrc={hiddenSrc}
+          isUV={isUV}
+          locked={locked}
+          cardType={cardType}
+          isGameMaster={isGameMaster}
+          playerView={playerView}
+          hasUV={hasUV}
+          hasHiddenAudio={hasHiddenAudio}
+          fileType={fileType}
+          performanceMode={performanceMode}
+        />
       </div>
 
       <div className="clue-info">

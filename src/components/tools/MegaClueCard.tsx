@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchCards, updateInvestigationCard } from '../../api/investigations';
-import CodePromptModal from '../modals/CodePromptModal';
+import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import './MegaClueCard.css';
 
 interface Props {
@@ -102,23 +102,26 @@ export default function MegaClueCard({
     }
   }, [unlocked, hasPrompted]);
 
-  const handleSubmitCode = async (submittedCode: string) => {
+  const handleSubmitCode = async (submittedCode: string): Promise<CodePromptResult> => {
     const code = submittedCode.trim().toUpperCase();
     setFeedback(null);
 
     if (!code) {
-      setFeedback({ type: 'error', message: '✗ DIGITE UM CÓDIGO VÁLIDO' });
-      return;
+      const message = '✗ DIGITE UM CÓDIGO VÁLIDO';
+      setFeedback({ type: 'error', message });
+      return { success: false, message };
     }
 
     if (collectedCodes.includes(code)) {
-      setFeedback({ type: 'error', message: '✗ CÓDIGO JÁ UTILIZADO' });
-      return;
+      const message = '✗ CÓDIGO JÁ UTILIZADO';
+      setFeedback({ type: 'error', message });
+      return { success: false, message };
     }
 
     if (validCodes.length > 0 && !validCodes.includes(code)) {
-      setFeedback({ type: 'error', message: '✗ CÓDIGO INVÁLIDO' });
-      return;
+      const message = '✗ CÓDIGO INVÁLIDO';
+      setFeedback({ type: 'error', message });
+      return { success: false, message };
     }
 
     setSubmitting(true);
@@ -144,21 +147,25 @@ export default function MegaClueCard({
 
       setCollectedCodes(newCollectedCodes);
       setUnlocked(nowUnlocked);
-      setFeedback({
-        type: 'success',
-        message: nowUnlocked
-          ? `✓ DESBLOQUEIO COMPLETO! (${newCollectedCodes.length}/${requiredCodes})`
-          : `✓ CÓDIGO ACEITO! PROGRESSO: ${newCollectedCodes.length}/${requiredCodes}`,
-      });
+      const successMessage = nowUnlocked
+        ? `✓ DESBLOQUEIO COMPLETO! (${newCollectedCodes.length}/${requiredCodes})`
+        : `✓ CÓDIGO ACEITO! PROGRESSO: ${newCollectedCodes.length}/${requiredCodes}`;
+      setFeedback({ type: 'success', message: successMessage });
 
-      setShowPrompt(false);
+      if (nowUnlocked) {
+        setShowPrompt(false);
+      }
 
       if (onRefresh) {
-        onRefresh();
+        await onRefresh();
       }
+
+      return { success: true, message: successMessage, closeModal: nowUnlocked };
     } catch (err) {
       console.error('Erro ao submeter código:', err);
-      setFeedback({ type: 'error', message: '✗ ERRO AO PROCESSAR CÓDIGO' });
+      const message = '✗ ERRO AO PROCESSAR CÓDIGO';
+      setFeedback({ type: 'error', message });
+      return { success: false, message };
     } finally {
       setSubmitting(false);
     }
@@ -249,6 +256,12 @@ export default function MegaClueCard({
           <div className="lock-banner">
             <div className="lock-icon">🔐</div>
             <div className="lock-text">MEGA-PISTA PROTEGIDA</div>
+            <div className="lock-boot-lines">
+              <div className="boot-line">&gt; FIREWALL: ATIVO</div>
+              <div className="boot-line">&gt; CRIPTOGRAFIA: AES-256</div>
+              <div className="boot-line">&gt; CHAVES DE ACESSO REQUERIDAS</div>
+              <div className="boot-line error">&gt; ACESSO NEGADO</div>
+            </div>
           </div>
 
           <div className="locked-description">
@@ -299,7 +312,12 @@ export default function MegaClueCard({
 
             {feedback && <div className={`feedback-message ${feedback.type}`}>{feedback.message}</div>}
 
-            <button className="btn btn-submit-code" onClick={() => setShowPrompt(true)} disabled={submitting || loadingCodes}>
+            <button
+              className="btn btn-submit-code"
+              data-text="INSERIR CÓDIGO"
+              onClick={() => setShowPrompt(true)}
+              disabled={submitting || loadingCodes}
+            >
               {submitting ? 'VALIDANDO...' : 'INSERIR CÓDIGO'}
             </button>
 

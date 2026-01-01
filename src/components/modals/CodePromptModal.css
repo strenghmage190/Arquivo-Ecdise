@@ -1,266 +1,390 @@
+:root {
+  --hacker-green: #0f0;
+  --hacker-dim: #003300;
+  --hacker-dark: #050a05;
+  --cypher-cyan: #00f3ff;
+  --error-red: #ff2a2a;
+  --terminal-bg: rgba(5, 10, 5, 0.95);
+  --scanline-color: rgba(18, 16, 16, 0.5);
+  --font-stack: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
 .code-prompt-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  inset: 0;
+  background-color: #000;
+  background-image:
+    linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 15000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
+  font-family: var(--font-stack);
+}
+
+.code-prompt-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 30%, black 100%);
+  pointer-events: none;
 }
 
 .code-prompt-modal {
-  background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
-  border: 2px solid #c6a45f;
-  border-radius: 8px;
+  position: relative;
   width: 90%;
-  max-width: 500px;
-  box-shadow: 0 0 40px rgba(198, 164, 95, 0.4), inset 0 0 20px rgba(198, 164, 95, 0.1);
-  animation: codePromptAppear 0.3s ease-out;
+  max-width: 600px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--hacker-green);
+  box-shadow:
+    0 0 20px rgba(0, 255, 0, 0.2),
+    inset 0 0 40px rgba(0, 50, 0, 0.5);
+  overflow: hidden;
+  animation: turnOnScreen 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@keyframes codePromptAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.code-prompt-modal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(to right, var(--hacker-green) 2px, transparent 2px) 0 0,
+    linear-gradient(to bottom, var(--hacker-green) 2px, transparent 2px) 0 0,
+    linear-gradient(to left, var(--hacker-green) 2px, transparent 2px) 100% 0,
+    linear-gradient(to bottom, var(--hacker-green) 2px, transparent 2px) 100% 0,
+    linear-gradient(to right, var(--hacker-green) 2px, transparent 2px) 0 100%,
+    linear-gradient(to top, var(--hacker-green) 2px, transparent 2px) 0 100%,
+    linear-gradient(to left, var(--hacker-green) 2px, transparent 2px) 100% 100%,
+    linear-gradient(to top, var(--hacker-green) 2px, transparent 2px) 100% 100%;
+  background-repeat: no-repeat;
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.code-prompt-modal::before {
+  content: ' ';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+      rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.25) 50%
+  ),
+  linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.06),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.06)
+  );
+  z-index: 99;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .code-prompt-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(198, 164, 95, 0.3);
+  background: rgba(0, 255, 0, 0.05);
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--hacker-green);
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  background: rgba(198, 164, 95, 0.05);
+  align-items: center;
 }
 
 .code-prompt-header h3 {
   margin: 0;
-  color: #c6a45f;
+  font-family: var(--font-stack);
   font-size: 16px;
-  font-weight: bold;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  font-family: 'Courier New', monospace;
-  text-shadow: 0 0 10px rgba(198, 164, 95, 0.5);
+  color: var(--hacker-green);
+  text-shadow: 0 0 5px var(--hacker-green);
+  display: flex;
+  align-items: center;
+}
+
+.code-prompt-header h3::before {
+  content: 'SYS LOCKED';
+  font-size: 10px;
+  margin-right: 15px;
+  background: var(--hacker-green);
+  color: black;
+  padding: 2px 6px;
+  font-weight: bold;
+  animation: blinkWarn 1s infinite;
 }
 
 .code-prompt-close {
-  background: none;
-  border: none;
-  color: #c6a45f;
-  font-size: 28px;
+  background: transparent;
+  border: 1px solid var(--hacker-green);
+  color: var(--hacker-green);
+  width: 30px;
+  height: 30px;
   cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  font-family: var(--font-stack);
 }
 
 .code-prompt-close:hover {
-  background: rgba(198, 164, 95, 0.2);
-  transform: rotate(90deg);
+  background: var(--hacker-green);
+  color: black;
+  box-shadow: 0 0 10px var(--hacker-green);
 }
 
 .code-prompt-body {
-  padding: 24px;
+  padding: 25px;
 }
 
 .code-prompt-terminal {
   background: #000;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 12px;
+  border: 1px dashed #333;
+  padding: 15px;
   margin-bottom: 20px;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  min-height: 100px;
+  position: relative;
+}
+
+.code-prompt-terminal::after {
+  content: 'MEM: 64TB // ENCRYPTION: ACTIVE';
+  position: absolute;
+  bottom: 2px;
+  right: 5px;
+  font-size: 9px;
+  color: #444;
 }
 
 .terminal-line {
   margin-bottom: 4px;
   display: flex;
-  gap: 8px;
-}
-
-.terminal-line:last-child {
-  margin-bottom: 0;
 }
 
 .terminal-prompt {
-  color: #c6a45f;
-  font-weight: bold;
+  margin-right: 8px;
+  color: #555;
 }
 
 .terminal-text {
-  color: #0f0;
+  color: #ccc;
+  word-break: break-all;
 }
 
-.terminal-line.error .terminal-text {
-  color: #ff4444;
-  animation: terminalBlink 1s infinite;
-}
+.terminal-line.info .terminal-text { color: #aaa; }
+.terminal-line.success .terminal-text { color: var(--hacker-green); text-shadow: 0 0 4px var(--hacker-green); }
+.terminal-line.error .terminal-text { color: var(--error-red); text-shadow: 0 0 4px var(--error-red); }
 
-@keyframes terminalBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+.blinking-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--hacker-green);
+  animation: blinkBlock 0.8s steps(2) infinite;
+  vertical-align: middle;
+  margin-left: 4px;
 }
 
 .code-prompt-description {
-  color: #ccc;
-  font-size: 13px;
-  margin-bottom: 20px;
-  line-height: 1.6;
+  color: var(--cypher-cyan);
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
 }
 
 .code-input-group {
-  margin-bottom: 20px;
+  position: relative;
+  margin: 30px 0;
 }
 
 .code-input {
   width: 100%;
-  padding: 14px 16px;
-  background: rgba(198, 164, 95, 0.05);
-  border: 2px solid #c6a45f;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 18px;
-  font-family: 'Courier New', monospace;
+  background: rgba(0, 20, 0, 0.6);
+  border: none;
+  border-bottom: 2px solid var(--hacker-green);
+  border-radius: 0;
+  color: var(--hacker-green);
+  font-family: var(--font-stack);
+  font-size: 24px;
   text-align: center;
-  letter-spacing: 3px;
+  padding: 15px;
+  letter-spacing: 8px;
   text-transform: uppercase;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  outline: none;
+  transition: all 0.3s;
+  text-shadow: 2px 0 var(--error-red), -2px 0 blue;
+  box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
 }
 
 .code-input:focus {
-  outline: none;
-  border-color: #e8c77f;
-  background: rgba(198, 164, 95, 0.1);
-  box-shadow: 0 0 20px rgba(198, 164, 95, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: rgba(0, 30, 0, 0.8);
+  box-shadow: 0 10px 20px -10px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.2);
+  text-shadow: 0 0 8px var(--hacker-green);
 }
 
 .code-input::placeholder {
-  color: rgba(198, 164, 95, 0.3);
+  color: rgba(0, 255, 0, 0.2);
+  text-shadow: none;
+  font-size: 16px;
   letter-spacing: 2px;
+  vertical-align: middle;
 }
 
 .code-input.error {
-  border-color: #ff4444;
-  animation: codeShake 0.5s;
-}
-
-@keyframes codeShake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+  border-bottom-color: var(--error-red);
+  color: var(--error-red);
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+  box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.2);
 }
 
 .code-error {
   display: block;
-  color: #ff4444;
-  font-size: 12px;
   margin-top: 8px;
-  font-weight: bold;
-  animation: errorFade 0.3s ease-in;
+  color: var(--error-red);
+  font-size: 11px;
+  background: rgba(255,0,0,0.1);
+  padding: 4px;
+  border-left: 3px solid var(--error-red);
 }
 
-@keyframes errorFade {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+.code-prompt-feedback {
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 12px;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.code-prompt-feedback.success {
+  border-color: var(--hacker-green);
+  color: var(--hacker-green);
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.code-prompt-feedback.error {
+  border-color: var(--error-red);
+  color: var(--error-red);
+  background: rgba(255, 0, 0, 0.1);
 }
 
 .code-prompt-actions {
   display: flex;
-  gap: 12px;
+  gap: 15px;
+  margin-top: 30px;
 }
 
 .code-btn {
   flex: 1;
-  padding: 12px 20px;
-  border: 2px solid;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 14px;
+  font-family: var(--font-stack);
   font-weight: bold;
-  text-transform: uppercase;
+  font-size: 14px;
   letter-spacing: 1px;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Courier New', monospace;
+  position: relative;
+  overflow: hidden;
+  transition: 0.3s;
 }
 
 .code-btn.primary {
-  background: linear-gradient(135deg, #c6a45f, #8b7a3a);
-  border-color: #c6a45f;
-  color: #111;
+  background: var(--hacker-dim);
+  border: 1px solid var(--hacker-green);
+  color: var(--hacker-green);
 }
 
-.code-btn.primary:hover {
-  background: linear-gradient(135deg, #e8c77f, #a89a5a);
-  box-shadow: 0 0 20px rgba(198, 164, 95, 0.6);
-  transform: translateY(-2px);
+.code-btn.primary:hover:not(:disabled) {
+  background: var(--hacker-green);
+  color: #000;
+  box-shadow: 0 0 15px var(--hacker-green);
 }
 
-.code-btn.primary:active {
-  transform: translateY(0);
+.code-btn.primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: 0.5s;
+}
+
+.code-btn.primary:hover::before {
+  left: 100%;
 }
 
 .code-btn.secondary {
   background: transparent;
-  border-color: #666;
-  color: #999;
+  border: 1px solid #555;
+  color: #777;
 }
 
 .code-btn.secondary:hover {
-  border-color: #c6a45f;
-  color: #c6a45f;
-  background: rgba(198, 164, 95, 0.05);
+  border-color: var(--error-red);
+  color: var(--error-red);
+}
+
+.code-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .code-prompt-hint {
-  margin-top: 20px;
-  padding: 12px;
-  background: rgba(198, 164, 95, 0.05);
-  border-left: 3px solid #c6a45f;
-  border-radius: 4px;
+  margin-top: 25px;
+  border-top: 1px dashed rgba(0, 243, 255, 0.3);
+  padding-top: 15px;
+  color: rgba(0, 243, 255, 0.7);
 }
 
-.code-prompt-hint small {
-  color: #999;
-  font-size: 11px;
-  line-height: 1.5;
-  display: block;
+.code-prompt-hint small::before {
+  content: '[ CLUE_001 ] > ';
+  color: var(--cypher-cyan);
+  opacity: 0.8;
 }
 
-@media (max-width: 600px) {
-  .code-prompt-modal {
-    width: 95%;
-    margin: 10px;
-  }
+@keyframes turnOnScreen {
+  0% { transform: scale(1, 0.005); opacity: 0; }
+  30% { transform: scale(1, 0.005); opacity: 1; }
+  50% { transform: scale(1, 0.5); }
+  100% { transform: scale(1, 1); }
+}
 
-  .code-prompt-body {
-    padding: 16px;
-  }
+@keyframes blinkWarn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 
-  .code-input {
-    font-size: 16px;
-    padding: 12px;
-  }
+@keyframes blinkBlock {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 
-  .code-btn {
-    padding: 10px 16px;
-    font-size: 12px;
-  }
+@keyframes shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+.form-fade-in {
+  animation: fadeInCode 0.5s forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInCode {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

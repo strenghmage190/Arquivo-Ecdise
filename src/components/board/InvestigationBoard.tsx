@@ -23,7 +23,7 @@ import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import GlitchMaker from '../tools/GlitchMaker';
-import CodePromptModal from '../modals/CodePromptModal';
+import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -140,7 +140,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   useEffect(() => { originRef.current = origin; }, [origin]);
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
-  const [playerView, setPlayerView] = useState(false);
+  const [playerView, setPlayerView] = useState<boolean>(() => true);
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
   const isMobileDevice = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
   const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
@@ -149,6 +149,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const selectedIdsRef = useRef<string[]>([]);
 
   const canEdit = isGameMaster && !playerView;
+  const viewerMode = isGameMaster ? playerView : true;
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [unlockingCard, setUnlockingCard] = useState<any | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
@@ -320,33 +321,38 @@ export function InvestigationBoard({ investigationId }: Props) {
     }
   }, [investigationId]);
 
-  const handleDecoderCodeSubmit = (code: string) => {
+  const handleDecoderCodeSubmit = async (code: string): Promise<CodePromptResult> => {
     // Código padrão: DELTA-1977 (pode ser alterado ou tornado dinâmico)
     const correctCode = 'DELTA-1977';
-    
-    if (code === correctCode) {
+    const normalized = code.trim().toUpperCase();
+
+    if (normalized === correctCode) {
       setDecoderUnlocked(true);
       setShowCodePrompt(false);
       localStorage.setItem(`decoder_unlocked_${investigationId}`, 'true');
-      
+
       showToast({
         id: 'decoder-unlock',
         message: '⚠ DECODIFICADOR DE ANOMALIAS v1.7 DESBLOQUEADO',
       });
-      
-      try { 
-        playAudio('/sounds/success_chime.mp3'); 
+
+      try {
+        playAudio('/sounds/success_chime.mp3');
       } catch {}
-    } else {
-      showToast({
-        id: 'decoder-error',
-        message: '❌ CÓDIGO INVÁLIDO - Acesso negado',
-      });
-      
-      try { 
-        playAudio('/sounds/denied.mp3'); 
-      } catch {}
+
+      return { success: true, message: 'DECODIFICADOR DESBLOQUEADO', closeModal: true };
     }
+
+    showToast({
+      id: 'decoder-error',
+      message: '❌ CÓDIGO INVÁLIDO - Acesso negado',
+    });
+
+    try {
+      playAudio('/sounds/denied.mp3');
+    } catch {}
+
+    return { success: false, message: 'Código inválido.' };
   };
 
   const handleDecoderSave = async (file: File) => {
@@ -1321,10 +1327,10 @@ export function InvestigationBoard({ investigationId }: Props) {
     openEvidenceViewer({ ...card, metadata });
   };
 
-  const handleUnlockSubmit = async (submittedCode: string) => {
-    if (!unlockingCard) return;
+  const handleUnlockSubmit = async (submittedCode: string): Promise<CodePromptResult> => {
+    if (!unlockingCard) return { success: false, message: 'Nenhum card selecionado.' };
     const code = submittedCode.trim().toUpperCase();
-    if (!code) return;
+    if (!code) return { success: false, message: 'Digite um código válido.' };
 
     const metadata = parseCardMetadata(unlockingCard);
     const isMegaClue = unlockingCard?.type === 'mega_clue' || metadata?.mega_clue;
@@ -1343,19 +1349,19 @@ export function InvestigationBoard({ investigationId }: Props) {
 
         if (!puzzleMatch) {
           showToast({ id: 'unlock-fail', message: 'Código não corresponde a nenhum puzzle.' }, 3200);
-          return;
+          return { success: false, message: 'Código não corresponde a nenhum puzzle.' };
         }
 
         const puzzleId = String(puzzleMatch.id);
         const enforceRequiredList = requiredIds.length > 0;
         if (enforceRequiredList && !requiredIds.includes(puzzleId)) {
           showToast({ id: 'unlock-not-required', message: 'Código não está na lista de puzzles requeridos.' }, 3400);
-          return;
+          return { success: false, message: 'Código não está na lista de puzzles requeridos.' };
         }
 
         if (solvedIds.includes(puzzleId)) {
           showToast({ id: 'unlock-dup', message: 'Código já utilizado nesta mega-pista.' }, 3200);
-          return;
+          return { success: false, message: 'Código já utilizado nesta mega-pista.' };
         }
 
         const nextSolved = Array.from(new Set([...solvedIds, puzzleId]));
@@ -1380,11 +1386,24 @@ export function InvestigationBoard({ investigationId }: Props) {
         };
 
         await api.updateInvestigationCard(unlockingCard.id, { metadata: updatedMeta } as any);
-        showToast({ id: `unlock-${unlockingCard.id}`, message: `Acesso concedido (${progressCount}/${displayRequired})` }, 3200);
-        setUnlockingCard(null);
-        openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta });
-        await loadBoard();
-        return;
+
+        const updatedCard = { ...unlockingCard, metadata: updatedMeta };
+        setCards((prev) => prev.map((c) => (c.id === unlockingCard.id ? { ...c, metadata: updatedMeta } : c)));
+
+        const successMessage = unlockedNow
+          ? `✓ DESBLOQUEIO COMPLETO! (${progressCount}/${displayRequired})`
+          : `✓ CÓDIGO ACEITO! PROGRESSO: ${progressCount}/${displayRequired}`;
+
+        if (unlockedNow) {
+          setUnlockingCard(null);
+          openEvidenceViewer({ ...updatedCard, metadata: updatedMeta });
+          await loadBoard();
+        } else {
+          setUnlockingCard(updatedCard);
+        }
+
+        showToast({ id: `unlock-${unlockingCard.id}`, message: successMessage }, 3200);
+        return { success: true, message: successMessage, closeModal: unlockedNow };
       }
 
       const password = (unlockingCard.lock_password || metadata?.lock_pass || metadata?.lock_password || '').toString().toUpperCase();
@@ -1392,12 +1411,12 @@ export function InvestigationBoard({ investigationId }: Props) {
         showToast({ id: 'unlock-missing', message: 'Nenhuma senha configurada para este card.' }, 3000);
         setUnlockingCard(null);
         openEvidenceViewer(unlockingCard);
-        return;
+        return { success: true, message: 'Acesso concedido', closeModal: true };
       }
 
       if (password !== code) {
         showToast({ id: 'unlock-invalid', message: 'Código inválido.' }, 3200);
-        return;
+        return { success: false, message: 'Código inválido.' };
       }
 
       const updatedMeta = { ...metadata, unlocked_at: new Date().toISOString() };
@@ -1406,9 +1425,11 @@ export function InvestigationBoard({ investigationId }: Props) {
       setUnlockingCard(null);
       openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false });
       await loadBoard();
+      return { success: true, message: 'Acesso concedido', closeModal: true };
     } catch (err) {
       console.error('Erro ao validar código', err);
       showToast({ id: 'unlock-error', message: 'Falha ao validar código.' }, 3600);
+      return { success: false, message: 'Falha ao validar código.' };
     }
   };
 
@@ -1570,7 +1591,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       })()}
       {/* Header moved to dedicated element above */}
 
-      <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={playerView ? 'true' : 'false'}>
+      <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={viewerMode ? 'true' : 'false'}>
         {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
           {/* Criar Nova Evidência - Único portal para criar pistas, puzzles e mega-pistas */}
@@ -2019,7 +2040,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                       card?.is_locked === true || card?.is_locked === 1 || (typeof card?.is_locked === 'string' && ['true','t','1'].includes(String(card.is_locked).toLowerCase())) || card?.lock_password
                     )}
                     isGameMaster={isGameMaster}
-                    playerView={playerView}
+                    playerView={viewerMode}
                     fileType={
                       card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)) ? 'video' :
                       (card?.metadata && (card.metadata.audio || card.metadata.audio_url)) ? 'audio' :

@@ -44,6 +44,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   const isPlayerViewingLockedContent = playerView && locked && !isGameMaster
   const isPlayerViewingEncrypted = playerView && cardType === 'encrypted' && !isGameMaster
   const isPlayerViewingGlitch = playerView && cardType === 'glitch' && !isGameMaster
+  const canSeeFullContent = isGameMaster || !playerView
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const reducedMotion = performanceMode || prefersReducedMotion
@@ -143,8 +144,12 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
     )
   }
 
-  // ===== GM VIEW (Normal - Pode ver tudo) =====
-  if (isGameMaster || !playerView) {
+  if (!image) {
+    return <div className="card-content-container loading-placeholder" />
+  }
+
+  // ===== VISÃO COMPLETA (GM OU VISÃO NORMAL) =====
+  if (canSeeFullContent) {
     return (
       <div className="card-content-container gm-view">
         {hasUV && isUV ? (
@@ -171,7 +176,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
     )
   }
 
-  // Default - Normal view
+  // ===== VISÃO NORMAL DO JOGADOR (CARD DESBLOQUEADO) =====
   return (
     <div className="card-content-container normal-view">
       <MysteryImage 
