@@ -44,7 +44,6 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   const isPlayerViewingLockedContent = playerView && locked && !isGameMaster
   const isPlayerViewingEncrypted = playerView && cardType === 'encrypted' && !isGameMaster
   const isPlayerViewingGlitch = playerView && cardType === 'glitch' && !isGameMaster
-  const canSeeFullContent = isGameMaster || !playerView
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const reducedMotion = performanceMode || prefersReducedMotion
@@ -148,44 +147,29 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
     return <div className="card-content-container loading-placeholder" />
   }
 
-  // ===== VISÃO COMPLETA (GM OU VISÃO NORMAL) =====
-  if (canSeeFullContent) {
-    return (
-      <div className="card-content-container gm-view">
-        {hasUV && isUV ? (
-          <div className="uv-layer">
-            <MysteryImage 
-              baseSrc={image} 
-              hiddenSrc={hiddenSrc} 
-              isUVMode={true} 
-              pointerLocal={undefined} 
-            />
-          </div>
-        ) : (
-          <>
-            <MysteryImage 
-              baseSrc={image} 
-              hiddenSrc={hiddenSrc} 
-              isUVMode={false} 
-              pointerLocal={undefined} 
-            />
-            {!reducedMotion && <div className="overlay-scan" />}
-          </>
-        )}
-      </div>
-    )
-  }
-
-  // ===== VISÃO NORMAL DO JOGADOR (CARD DESBLOQUEADO) =====
+  // ===== VISÃO COMPLETA / NORMAL (FALLBACK) =====
   return (
-    <div className="card-content-container normal-view">
-      <MysteryImage 
-        baseSrc={image} 
-        hiddenSrc={hiddenSrc} 
-        isUVMode={false} 
-        pointerLocal={undefined} 
-      />
-      {!reducedMotion && <div className="overlay-scan" />}
+    <div className="card-content-container gm-view">
+      {hasUV && isUV ? (
+        <div className="uv-layer">
+          <MysteryImage 
+            baseSrc={image} 
+            hiddenSrc={hiddenSrc} 
+            isUVMode={true} 
+            pointerLocal={undefined} 
+          />
+        </div>
+      ) : (
+        <>
+          <MysteryImage 
+            baseSrc={image} 
+            hiddenSrc={hiddenSrc} 
+            isUVMode={false} 
+            pointerLocal={undefined} 
+          />
+          {!reducedMotion && <div className="overlay-scan" />}
+        </>
+      )}
     </div>
   )
 }
