@@ -61,6 +61,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [videoUrlInput, setVideoUrlInput] = useState<string>('');
    const [videoUploadPromise, setVideoUploadPromise] = useState<Promise<string | null> | null>(null);
    const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uvFile, setUvFile] = useState<File | null>(null);
    const [filterFile, setFilterFile] = useState<File | null>(null);
       const [previewUrl, setPreviewUrl] = useState<string | null>(null);

@@ -75,8 +75,28 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
   const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showAddLayerMenu, setShowAddLayerMenu] = useState(false);
+  
+  // RAF optimization for draw
+  const rafIdRef = useRef<number | null>(null);
+  const lastMouseEventRef = useRef<React.MouseEvent | null>(null);
+  const redrawRafIdRef = useRef<number | null>(null);
+  const redrawScheduledRef = useRef<boolean>(false);
 
   const colors = COLOR_PALETTES[mode];
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (redrawRafIdRef.current !== null) {
+        cancelAnimationFrame(redrawRafIdRef.current);
+        redrawRafIdRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -139,91 +159,100 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
 
   // redraw main canvas from offscreen drawing + layers
   const redrawAll = () => {
-    const canvas = canvasRef.current;
-    const off = drawingOffscreen.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    // draw existing strokes from offscreen
-    if (off) ctx.drawImage(off, 0, 0);
-    // draw layers (respecting visibility and opacity)
-    for (const layer of layers) {
-      if (!layer.visible) continue; // skip invisible layers
+    // Se já tem um redraw agendado, não agenda outro
+    if (redrawScheduledRef.current) return;
+    
+    redrawScheduledRef.current = true;
+    redrawRafIdRef.current = requestAnimationFrame(() => {
+      redrawScheduledRef.current = false;
+      redrawRafIdRef.current = null;
       
-      ctx.save();
-      ctx.globalAlpha = (layer.opacity || 100) / 100;
-      
-      if (layer.type === 'text') {
-        // draw subtle stroke for contrast then fill
-        ctx.fillStyle = layer.color || color;
-        ctx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-        ctx.textBaseline = 'top';
-        ctx.lineWidth = Math.max(1, (layer.size || textSize) * 0.08);
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-        ctx.strokeText(layer.text || '', layer.x || 0, layer.y || 0);
-        ctx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-      } else if (layer.type === 'image' && layer.img) {
-        const w = layer.img.naturalWidth * (layer.scale || 1);
-        const h = layer.img.naturalHeight * (layer.scale || 1);
-        ctx.drawImage(layer.img, (layer.x || 0) - w/2, (layer.y || 0) - h/2, w, h);
-      } else if (layer.type === 'drawing' && layer.drawingCanvas) {
-        // Draw the drawing layer canvas
-        ctx.drawImage(layer.drawingCanvas, 0, 0);
-      }
-      
-      ctx.restore();
-    }
-    // draw selection outline with resize handles
-    if (selectedLayer) {
-      const s = layers.find(l => l.id === selectedLayer);
-      if (s) {
+      const canvas = canvasRef.current;
+      const off = drawingOffscreen.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // draw existing strokes from offscreen
+      if (off) ctx.drawImage(off, 0, 0);
+      // draw layers (respecting visibility and opacity)
+      for (const layer of layers) {
+        if (!layer.visible) continue; // skip invisible layers
+        
         ctx.save();
-        ctx.strokeStyle = '#00ffff';
-        ctx.setLineDash([6,4]);
-        ctx.lineWidth = 2;
+        ctx.globalAlpha = (layer.opacity || 100) / 100;
         
-        let bounds = { x: 0, y: 0, w: 0, h: 0 };
-        
-        if (s.type === 'image' && s.img) {
-          const w = s.img.naturalWidth * (s.scale || 1);
-          const h = s.img.naturalHeight * (s.scale || 1);
-          bounds = { x: s.x - w/2, y: s.y - h/2, w, h };
-        } else if (s.type === 'text') {
-          ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-          const measure = ctx.measureText(s.text || '');
-          const w = measure.width;
-          const h = (s.size || textSize) * 1.2;
-          bounds = { x: s.x, y: s.y, w, h };
+        if (layer.type === 'text') {
+          // draw subtle stroke for contrast then fill
+          ctx.fillStyle = layer.color || color;
+          ctx.font = `${Math.max(8, layer.size || textSize)}px serif`;
+          ctx.textBaseline = 'top';
+          ctx.lineWidth = Math.max(1, (layer.size || textSize) * 0.08);
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.strokeText(layer.text || '', layer.x || 0, layer.y || 0);
+          ctx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
+        } else if (layer.type === 'image' && layer.img) {
+          const w = layer.img.naturalWidth * (layer.scale || 1);
+          const h = layer.img.naturalHeight * (layer.scale || 1);
+          ctx.drawImage(layer.img, (layer.x || 0) - w/2, (layer.y || 0) - h/2, w, h);
+        } else if (layer.type === 'drawing' && layer.drawingCanvas) {
+          // Draw the drawing layer canvas
+          ctx.drawImage(layer.drawingCanvas, 0, 0);
         }
-        
-        // Draw bounding box
-        ctx.strokeRect(bounds.x - 6, bounds.y - 6, bounds.w + 12, bounds.h + 12);
-        
-        // Draw resize handles (corner circles)
-        const handleSize = 10;
-        ctx.fillStyle = '#00ffff';
-        ctx.strokeStyle = '#ffffff';
-        ctx.setLineDash([]);
-        ctx.lineWidth = 2;
-        
-        const handles = [
-          { x: bounds.x - 6, y: bounds.y - 6, pos: 'nw' }, // top-left
-          { x: bounds.x + bounds.w + 6, y: bounds.y - 6, pos: 'ne' }, // top-right
-          { x: bounds.x - 6, y: bounds.y + bounds.h + 6, pos: 'sw' }, // bottom-left
-          { x: bounds.x + bounds.w + 6, y: bounds.y + bounds.h + 6, pos: 'se' }, // bottom-right
-        ];
-        
-        handles.forEach(handle => {
-          ctx.beginPath();
-          ctx.arc(handle.x, handle.y, handleSize / 2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        });
         
         ctx.restore();
       }
-    }
+      // draw selection outline with resize handles
+      if (selectedLayer) {
+        const s = layers.find(l => l.id === selectedLayer);
+        if (s) {
+          ctx.save();
+          ctx.strokeStyle = '#00ffff';
+          ctx.setLineDash([6,4]);
+          ctx.lineWidth = 2;
+          
+          let bounds = { x: 0, y: 0, w: 0, h: 0 };
+          
+          if (s.type === 'image' && s.img) {
+            const w = s.img.naturalWidth * (s.scale || 1);
+            const h = s.img.naturalHeight * (s.scale || 1);
+            bounds = { x: s.x - w/2, y: s.y - h/2, w, h };
+          } else if (s.type === 'text') {
+            ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
+            const measure = ctx.measureText(s.text || '');
+            const w = measure.width;
+            const h = (s.size || textSize) * 1.2;
+            bounds = { x: s.x, y: s.y, w, h };
+          }
+          
+          // Draw bounding box
+          ctx.strokeRect(bounds.x - 6, bounds.y - 6, bounds.w + 12, bounds.h + 12);
+          
+          // Draw resize handles (corner circles)
+          const handleSize = 10;
+          ctx.fillStyle = '#00ffff';
+          ctx.strokeStyle = '#ffffff';
+          ctx.setLineDash([]);
+          ctx.lineWidth = 2;
+          
+          const handles = [
+            { x: bounds.x - 6, y: bounds.y - 6, pos: 'nw' }, // top-left
+            { x: bounds.x + bounds.w + 6, y: bounds.y - 6, pos: 'ne' }, // top-right
+            { x: bounds.x - 6, y: bounds.y + bounds.h + 6, pos: 'sw' }, // bottom-left
+            { x: bounds.x + bounds.w + 6, y: bounds.y + bounds.h + 6, pos: 'se' }, // bottom-right
+          ];
+          
+          handles.forEach(handle => {
+            ctx.beginPath();
+            ctx.arc(handle.x, handle.y, handleSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
+          
+          ctx.restore();
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -443,69 +472,83 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
   };
 
   const draw = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const scaleX = canvas.width / rect.width || 1;
-    const scaleY = canvas.height / rect.height || 1;
-    const x = rawX * scaleX;
-    const y = rawY * scaleY;
+    // Salva o último evento de mouse
+    lastMouseEventRef.current = e;
     
-    // Handle resizing
-    if (isResizing && selectedLayer && resizeHandle && resizeStartRef.current) {
-      const s = layers.find(l => l.id === selectedLayer);
-      if (s) {
-        const startData = resizeStartRef.current;
-        
-        if (s.type === 'image' && s.img) {
-          // Calculate new scale based on handle movement
-          const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-          const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-          const delta = Math.max(dx, dy);
-          const newScale = Math.max(0.1, startData.scale + (delta / s.img.naturalWidth));
-          
-          setLayers(prev => prev.map(l => 
-            l.id === selectedLayer ? { ...l, scale: newScale } : l
-          ));
-        } else if (s.type === 'text') {
-          // For text, resize means changing font size
-          const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-          const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-          const delta = Math.max(dx, dy);
-          const newSize = Math.max(8, Math.min(200, startData.scale + delta / 2));
-          
-          setLayers(prev => prev.map(l => 
-            l.id === selectedLayer ? { ...l, size: Math.round(newSize) } : l
-          ));
-        }
-        
-        redrawAll();
-      }
-      return;
-    }
+    // Se já tem um RAF agendado, não agenda outro
+    if (rafIdRef.current !== null) return;
     
-    // Handle drawing
-    if (isDrawing) {
-      // Check if we should draw on a selected drawing layer
-      let targetCanvas = drawingOffscreen.current;
-      if (selectedLayer) {
-        const layer = layers.find(l => l.id === selectedLayer);
-        if (layer && layer.type === 'drawing' && layer.drawingCanvas) {
-          targetCanvas = layer.drawingCanvas;
+    // Agenda processamento no próximo frame
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      
+      const mouseEvent = lastMouseEventRef.current;
+      if (!mouseEvent) return;
+      
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const rawX = mouseEvent.clientX - rect.left;
+      const rawY = mouseEvent.clientY - rect.top;
+      const scaleX = canvas.width / rect.width || 1;
+      const scaleY = canvas.height / rect.height || 1;
+      const x = rawX * scaleX;
+      const y = rawY * scaleY;
+      
+      // Handle resizing
+      if (isResizing && selectedLayer && resizeHandle && resizeStartRef.current) {
+        const s = layers.find(l => l.id === selectedLayer);
+        if (s) {
+          const startData = resizeStartRef.current;
+          
+          if (s.type === 'image' && s.img) {
+            // Calculate new scale based on handle movement
+            const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
+            const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
+            const delta = Math.max(dx, dy);
+            const newScale = Math.max(0.1, startData.scale + (delta / s.img.naturalWidth));
+            
+            setLayers(prev => prev.map(l => 
+              l.id === selectedLayer ? { ...l, scale: newScale } : l
+            ));
+          } else if (s.type === 'text') {
+            // For text, resize means changing font size
+            const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
+            const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
+            const delta = Math.max(dx, dy);
+            const newSize = Math.max(8, Math.min(200, startData.scale + delta / 2));
+            
+            setLayers(prev => prev.map(l => 
+              l.id === selectedLayer ? { ...l, size: Math.round(newSize) } : l
+            ));
+          }
+          
+          redrawAll();
         }
+        return;
       }
       
-      const off = targetCanvas;
-      if (!off) return;
-      const ctx = off.getContext('2d');
-      if (!ctx) return;
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      redrawAll();
-      return;
-    }
+      // Handle drawing
+      if (isDrawing) {
+        // Check if we should draw on a selected drawing layer
+        let targetCanvas = drawingOffscreen.current;
+        if (selectedLayer) {
+          const layer = layers.find(l => l.id === selectedLayer);
+          if (layer && layer.type === 'drawing' && layer.drawingCanvas) {
+            targetCanvas = layer.drawingCanvas;
+          }
+        }
+        
+        const off = targetCanvas;
+        if (!off) return;
+        const ctx = off.getContext('2d');
+        if (!ctx) return;
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        redrawAll();
+        return;
+      }
+    });
   };
 
   const stopDrawing = () => {
@@ -518,24 +561,45 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
 
   // drag handling for selected layer
   useEffect(() => {
+    let rafId: number | null = null;
+    let lastMouseEvent: MouseEvent | null = null;
+    
     const handleMove = (e: MouseEvent) => {
-      if (!isDraggingLayer && !isResizing) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const rawX = e.clientX - rect.left;
-      const rawY = e.clientY - rect.top;
-      const scaleX = canvas.width / rect.width || 1;
-      const scaleY = canvas.height / rect.height || 1;
-      const x = rawX * scaleX;
-      const y = rawY * scaleY;
+      lastMouseEvent = e;
       
-      if (isDraggingLayer && selectedLayer) {
-        setLayers(prev => prev.map(l => l.id !== selectedLayer ? l : { ...l, x: x - (dragOffsetRef.current?.ox||0), y: y - (dragOffsetRef.current?.oy||0) }));
-        redrawAll();
-      }
+      if (!isDraggingLayer && !isResizing) return;
+      
+      // Se já tem um RAF agendado, não agenda outro
+      if (rafId !== null) return;
+      
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        
+        if (!lastMouseEvent) return;
+        const e = lastMouseEvent;
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const rawX = e.clientX - rect.left;
+        const rawY = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width || 1;
+        const scaleY = canvas.height / rect.height || 1;
+        const x = rawX * scaleX;
+        const y = rawY * scaleY;
+        
+        if (isDraggingLayer && selectedLayer) {
+          setLayers(prev => prev.map(l => l.id !== selectedLayer ? l : { ...l, x: x - (dragOffsetRef.current?.ox||0), y: y - (dragOffsetRef.current?.oy||0) }));
+          redrawAll();
+        }
+      });
     };
+    
     const handleUp = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
       if (isDraggingLayer) setIsDraggingLayer(false);
       if (isResizing) {
         setIsResizing(false);
@@ -543,9 +607,13 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
         resizeStartRef.current = null;
       }
     };
+    
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
