@@ -3,6 +3,7 @@ import './Desktop.css';
 import SystemTerminal from '../tools/SystemTerminal';
 import FileExplorer from '../tools/FileExplorer';
 import NetUplink from '../tools/NetUplink';
+import AgentProfileConfig from '../modals/AgentProfileConfig';
 
 export default function Desktop({ cases }: { cases: any[] }) {
   const [openWindow, setOpenWindow] = React.useState<string | null>(null);
@@ -20,6 +21,14 @@ export default function Desktop({ cases }: { cases: any[] }) {
     return () => window.removeEventListener('open-desktop-window', handler as EventListener);
   }, []);
 
+  React.useEffect(() => {
+    if (openWindow) {
+      window.dispatchEvent(new Event('modal-opened'));
+    } else {
+      window.dispatchEvent(new Event('modal-closed'));
+    }
+  }, [openWindow]);
+
   return (
     <div className="desktop-root">
       {/* Desktop icons moved to HUD for compactness */}
@@ -34,6 +43,7 @@ export default function Desktop({ cases }: { cases: any[] }) {
           onOpenCard={(c: any) => { if (c && c.id) navigateToCase(c.id); }}
         />
       )}
+      {openWindow === 'profile' && <AgentProfileConfig onClose={() => setOpenWindow(null)} />}
     </div>
   );
 }

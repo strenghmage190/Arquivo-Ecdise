@@ -59,7 +59,6 @@ export default function Home() {
           <div className="title-badge">HQ</div>
           <h1 className="nexus-title">ARQUIVOS DA ORDEM</h1>
         </div>
-        <button className="nexus-ghost" onClick={handleLogout}>SAIR</button>
       </div>
 
       <div className="case-grid">

@@ -1,0 +1,385 @@
+/* =========================================
+   EVIDENCE CARD CONTENT - PLAYER VS GM VIEW
+   ========================================= */
+
+.card-content-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* === GM VIEW - Normal (Pode ver tudo) === */
+.card-content-container.gm-view {
+  background: #000;
+}
+
+.card-content-container.gm-view img,
+.card-content-container.gm-view canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.uv-layer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* === PLAYER VIEW - Base === */
+.card-content-container.player-view {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* =========================================
+   LOCKED VIEW - ACESSO RESTRITO
+   ========================================= */
+
+.card-content-container.locked-view {
+  background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+}
+
+.lock-overlay.encrypted-full {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: linear-gradient(135deg, rgba(10,10,10,0.98), rgba(5,5,5,0.98));
+}
+
+.encryption-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,0,60,0.08) 0px,
+      rgba(255,0,60,0.08) 2px,
+      transparent 2px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,0,60,0.08) 0px,
+      rgba(255,0,60,0.08) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  pointer-events: none;
+  animation: grid-pulse 3s infinite;
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.encryption-text-wrapper {
+  position: relative;
+  z-index: 101;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.encryption-text-wrapper .lock-icon {
+  font-size: 48px;
+  color: #ff003c;
+  animation: lock-pulse 2s infinite;
+  filter: drop-shadow(0 0 20px rgba(255,0,60,0.8));
+}
+
+@keyframes lock-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.access-denied {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 16px;
+  color: #ff003c;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: bold;
+  text-shadow: 0 0 15px rgba(255,0,60,0.8);
+  animation: access-blink 1s infinite;
+}
+
+@keyframes access-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.encryption-code {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: #ff6600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* =========================================
+   GLITCH VIEW - DATA CORRUPTION
+   ========================================= */
+
+.card-content-container.glitch-view {
+  background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
+  animation: glitch-bg 4s infinite;
+}
+
+@keyframes glitch-bg {
+  0%, 100% { filter: hue-rotate(0deg) saturate(80%); }
+  50% { filter: hue-rotate(-5deg) saturate(120%); }
+}
+
+/* Camadas de glitch empilhadas */
+.glitch-corruption {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+}
+
+.glitch-layer-1,
+.glitch-layer-2,
+.glitch-layer-3 {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255,0,255,0.15) 0px,
+    rgba(255,0,255,0.15) 2px,
+    rgba(0,255,255,0.1) 2px,
+    rgba(0,255,255,0.1) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  animation: glitch-shift 0.3s infinite;
+}
+
+.glitch-layer-1 {
+  animation: glitch-shift 0.3s infinite;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255,0,60,0.2) 0px,
+    rgba(255,0,60,0.2) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.glitch-layer-2 {
+  animation: glitch-shift-reverse 0.25s infinite;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0,255,255,0.2) 0px,
+    rgba(0,255,255,0.2) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.glitch-layer-3 {
+  animation: glitch-shift 0.35s infinite;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255,255,0,0.15) 0px,
+    rgba(255,255,0,0.15) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
+@keyframes glitch-shift {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
+}
+
+@keyframes glitch-shift-reverse {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(2px); }
+  40% { transform: translateX(-2px); }
+  60% { transform: translateX(1px); }
+  80% { transform: translateX(-1px); }
+}
+
+/* Data corruption overlay */
+.data-corruption-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.corruption-pattern {
+  width: 100%;
+  height: 100%;
+  animation: corruption-float 2s infinite ease-in-out;
+}
+
+@keyframes corruption-float {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  50% { transform: translate(-3px, 2px); opacity: 0.8; }
+}
+
+/* Texto de glitch */
+.glitch-text-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.glitch-chars {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  font-weight: bold;
+  position: relative;
+  line-height: 1.8;
+}
+
+.glitch-1 {
+  color: #ff003c;
+  animation: glitch-char 0.4s infinite;
+  text-shadow: 
+    -2px 0 #00f3ff,
+    2px 0 #ff00ff,
+    0 0 15px rgba(255,0,60,0.8);
+}
+
+.glitch-2 {
+  color: #ffff00;
+  font-size: 13px;
+  animation: glitch-char-reverse 0.35s infinite;
+  text-shadow: 0 0 10px rgba(255,255,0,0.6);
+  opacity: 0.7;
+}
+
+.glitch-3 {
+  color: #00f3ff;
+  animation: glitch-char 0.45s infinite;
+  text-shadow: 
+    -1px 0 #ff003c,
+    1px 0 #ffff00,
+    0 0 15px rgba(0,243,255,0.8);
+}
+
+@keyframes glitch-char {
+  0%, 100% { transform: translateX(0) scaleX(1); opacity: 1; }
+  20% { transform: translateX(-3px) scaleX(0.98); opacity: 0.8; }
+  40% { transform: translateX(2px) scaleX(1.02); opacity: 0.9; }
+  60% { transform: translateX(-1px) scaleX(0.99); opacity: 0.7; }
+  80% { transform: translateX(1px) scaleX(1.01); opacity: 0.8; }
+}
+
+@keyframes glitch-char-reverse {
+  0%, 100% { transform: translateX(0) skewX(0deg); opacity: 1; }
+  20% { transform: translateX(3px) skewX(-2deg); opacity: 0.7; }
+  40% { transform: translateX(-2px) skewX(2deg); opacity: 0.8; }
+  60% { transform: translateX(1px) skewX(-1deg); opacity: 0.9; }
+  80% { transform: translateX(-1px) skewX(1deg); opacity: 0.7; }
+}
+
+/* Scanlines */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,255,255,0.03) 2px,
+    rgba(0,255,255,0.03) 4px
+  );
+  animation: scanline-drift 8s linear infinite;
+}
+
+@keyframes scanline-drift {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(10px); }
+}
+
+/* Mais intenso */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 80px,
+    rgba(255,0,60,0.02) 80px,
+    rgba(255,0,60,0.02) 160px
+  );
+  animation: scanline-horizontal 15s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanline-horizontal {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100px); }
+}
+
+/* =========================================
+   OVERLAY SCAN NORMAL
+   ========================================= */
+
+.overlay-scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 243, 255, 0.02) 2px,
+    rgba(0, 243, 255, 0.02) 4px
+  );
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 10;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 480px) {
+  .glitch-chars {
+    font-size: 10px;
+    letter-spacing: 3px;
+  }
+
+  .glitch-1,
+  .glitch-2,
+  .glitch-3 {
+    text-shadow: none;
+  }
+
+  .access-denied {
+    font-size: 14px;
+  }
+}

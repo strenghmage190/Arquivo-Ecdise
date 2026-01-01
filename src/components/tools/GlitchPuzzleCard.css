@@ -308,7 +308,7 @@
 
 .param-control small {
   display: block;
-  color: #888;
+  color: #888888;
   font-size: 0.75rem;
   margin-top: 4px;
 }
@@ -470,7 +470,7 @@
 }
 
 .param-label {
-  color: #888;
+  color: #888888;
   font-size: 0.7rem;
   letter-spacing: 1px;
   margin-bottom: 6px;
@@ -488,7 +488,7 @@
 .attempts-info {
   margin-top: 12px;
   text-align: right;
-  color: #888;
+  color: #888888;
   font-size: 0.8rem;
 }
 

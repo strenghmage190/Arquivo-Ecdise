@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function SystemOverlays() {
@@ -11,6 +11,21 @@ export default function SystemOverlays() {
   const clickIntervalRef = useRef<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [hideHeader, setHideHeader] = useState(false);
+
+  // Listen for modal open/close events
+  useEffect(() => {
+    const handleModalOpen = () => setHideHeader(true);
+    const handleModalClose = () => setHideHeader(false);
+    
+    window.addEventListener('modal-opened', handleModalOpen);
+    window.addEventListener('modal-closed', handleModalClose);
+    
+    return () => {
+      window.removeEventListener('modal-opened', handleModalOpen);
+      window.removeEventListener('modal-closed', handleModalClose);
+    };
+  }, []);
 
   // Integrity simulation
   useEffect(() => {
@@ -220,7 +235,7 @@ export default function SystemOverlays() {
 
   return (
     <>
-      <header className="nexus-hud" aria-hidden>
+      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
         <div className="hud-left">
           {location.pathname === '/' ? (
             <>
@@ -232,6 +247,9 @@ export default function SystemOverlays() {
               </button>
               <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
                 <span aria-hidden>📡</span>
+              </button>
+              <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
+                <span aria-hidden>👤</span>
               </button>
             </>
           ) : (

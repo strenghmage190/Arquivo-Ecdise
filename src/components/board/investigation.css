@@ -181,6 +181,17 @@ html, body {
   overflow: visible; /* allow dropdowns to escape the toolbar */
 }
 
+/* PROTEÇÃO: Esconder botões de mestre quando em visão de jogador */
+.investigation-toolbar[data-player-view="true"] .hud-btn.primary,
+.investigation-toolbar[data-player-view="true"] .hud-btn:not(.icon-only):not([class*="connection"]):not([class*="organize"]):not([class*="tool"]) {
+  display: none !important;
+}
+
+.investigation-toolbar[data-game-master="false"] .hud-btn.primary,
+.investigation-toolbar[data-game-master="false"] .hud-btn:not(.icon-only) {
+  display: none !important;
+}
+
 /* Botões da Toolbar */
 .board-button {
   background: transparent;
@@ -283,7 +294,7 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
 .board-back-btn { position: fixed; left: 8px; top: 72px; z-index: 2200; }
 
 .filter-group { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.filter-label { font-size: 0.8rem; color: #888; }
+.filter-label { font-size: 0.8rem; color: #888888; }
 .filter-toggle { background: #333; border: 1px solid #555; color: #aaa; padding: 6px 10px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
 .filter-toggle.active { background: #513e93; color: white; border-color: #9d4edd; }
 
@@ -426,7 +437,7 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
     align-items: center;
     justify-content: center;
     background: rgba(0,0,0,0.6);
-    z-index: 9999;
+    z-index: 10000;
 }
 .modal-content {
     background: #0f1722;
@@ -656,7 +667,7 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
-.dropdown-header { font-size: 11px; color: #888; padding: 6px 8px; font-weight: 700; }
+.dropdown-header { font-size: 11px; color: #888888; padding: 6px 8px; font-weight: 700; }
 .dropdown-menu button { background: transparent; border: none; color: #ddd; padding: 8px 10px; text-align: left; cursor: pointer; border-radius:4px }
 .dropdown-menu button:hover { background: rgba(255,255,255,0.04); color:#fff }
 

@@ -61,7 +61,7 @@
 .status-text {
   font-size: 11px;
   font-family: monospace;
-  color: #888;
+  color: #888888;
   font-weight: 600;
 }
 
@@ -276,7 +276,7 @@
 
 .footer-text {
   font-size: 11px;
-  color: #888;
+  color: #888888;
   text-align: center;
   margin: 0;
   line-height: 1.5;

@@ -140,6 +140,13 @@ button, a, input, textarea, select, label {
   background: linear-gradient(to bottom, rgba(5,8,10,0.95), rgba(5,8,10,0));
   z-index: 2000;
   box-sizing: border-box;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.nexus-hud.hidden {
+  opacity: 0;
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 .hud-left { display:flex; align-items:center; gap:12px; }
 .hud-right { display:flex; align-items:center; gap:24px; }

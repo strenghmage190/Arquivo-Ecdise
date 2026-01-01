@@ -26,6 +26,7 @@ import GlitchMaker from '../tools/GlitchMaker';
 import CodePromptModal from '../modals/CodePromptModal';
 import GlitchPuzzleCreator from '../modals/GlitchPuzzleCreator';
 import GlitchMegaClueCreator from '../modals/GlitchMegaClueCreator';
+import CreatorHub from '../modals/CreatorHub';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -120,6 +121,9 @@ export function InvestigationBoard({ investigationId }: Props) {
   // Mega Clue Creator - Para Game Master criar verdade final
   const [showMegaClueCreator, setShowMegaClueCreator] = useState(false);
   const [createMegaCluePos, setCreateMegaCluePos] = useState<{ x: number; y: number } | null>(null);
+
+  // Creator Hub - Sistema centralizado de criação
+  const [showCreatorHub, setShowCreatorHub] = useState(false);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   // draggingRef stores info about the currently dragged card(s)
@@ -1348,60 +1352,18 @@ export function InvestigationBoard({ investigationId }: Props) {
       })()}
       {/* Header moved to dedicated element above */}
 
-      <div className="investigation-toolbar">
+      <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={playerView ? 'true' : 'false'}>
         {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
-          {canEdit && (
-            <button className="hud-btn primary" onClick={handleCreateClue} data-tooltip="Criar evidência">+ NOVA PISTA</button>
-          )}
-
-          {isGameMaster && (
+          {/* Hub de Criação Centralizado - Portal único para TUDO */}
+          {isGameMaster && !playerView && (
             <button 
               className="hud-btn primary" 
-              onClick={() => {
-                const CARD_W = 220;
-                const CARD_H = 160;
-                const boardRect = corkboardRef.current?.getBoundingClientRect();
-                const viewW = boardRect?.width ?? window.innerWidth;
-                const viewH = boardRect?.height ?? window.innerHeight;
-                const cx = viewW / 2;
-                const cy = viewH / 2;
-                const bx = origin.x + cx / zoom;
-                const by = origin.y + cy / zoom;
-                setCreatePuzzlePos({
-                  x: Math.round(bx - CARD_W / 2),
-                  y: Math.round(by - CARD_H / 2)
-                });
-                setShowGlitchPuzzleCreator(true);
-              }}
-              data-tooltip="Criar quebra-cabeça de glitch"
+              onClick={() => setShowCreatorHub(true)}
+              data-tooltip="Hub de Criação: criar pistas, puzzles e mega-pistas"
+              style={{ background: 'linear-gradient(135deg, #c6a45f 0%, #a88747 100%)', color: '#000' }}
             >
-              🧩 NOVO GLITCH PUZZLE
-            </button>
-          )}
-
-          {isGameMaster && (
-            <button
-              className="hud-btn"
-              onClick={() => {
-                const CARD_W = 220;
-                const CARD_H = 160;
-                const boardRect = corkboardRef.current?.getBoundingClientRect();
-                const viewW = boardRect?.width ?? window.innerWidth;
-                const viewH = boardRect?.height ?? window.innerHeight;
-                const cx = viewW / 2;
-                const cy = viewH / 2;
-                const bx = origin.x + cx / zoom;
-                const by = origin.y + cy / zoom;
-                setCreateMegaCluePos({
-                  x: Math.round(bx - CARD_W / 2),
-                  y: Math.round(by - CARD_H / 2)
-                });
-                setShowMegaClueCreator(true);
-              }}
-              data-tooltip="Criar mega-pista (verdade final)"
-            >
-              🔐 MEGA-PISTA
+              ⚙️ HUB DE CRIAÇÃO
             </button>
           )}
 
@@ -1840,6 +1802,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                       card?.is_locked === true || card?.is_locked === 1 || (typeof card?.is_locked === 'string' && ['true','t','1'].includes(String(card.is_locked).toLowerCase())) || card?.lock_password
                     )}
                     isGameMaster={isGameMaster}
+                    playerView={playerView}
                     hasRecord={Boolean(card?.metadata && (card.metadata.type === 'person' || card.metadata.person || card.metadata.person_meta))}
                     fileType={
                       card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)) ? 'video' :
@@ -1940,10 +1903,10 @@ export function InvestigationBoard({ investigationId }: Props) {
               {/* O Menu que abre para cima */}
               {mobileMenuOpen && (
                 <div className="mobile-fab-menu">
-                  {/* Grupo Criação */}
+                  {/* Hub de Criação */}
                   {isGameMaster && (
-                    <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
-                      <span>📝</span> NOVA PISTA
+                    <button onClick={() => {setShowCreatorHub(true); setMobileMenuOpen(false)}} className="fab-item primary">
+                      <span>⚙️</span> HUB DE CRIAÇÃO
                     </button>
                   )}
                   
@@ -2161,6 +2124,18 @@ export function InvestigationBoard({ investigationId }: Props) {
             loadBoard();
             setShowMegaClueCreator(false);
             setCreateMegaCluePos(null);
+          }}
+        />
+      )}
+
+      {/* Hub de Criação Centralizado */}
+      {showCreatorHub && (
+        <CreatorHub
+          isOpen={showCreatorHub}
+          onClose={() => setShowCreatorHub(false)}
+          investigationId={investigationId}
+          onPuzzleCreated={() => {
+            loadBoard();
           }}
         />
       )}

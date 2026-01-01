@@ -198,7 +198,7 @@
   position: fixed; inset: 0;
   background-color: rgba(5, 8, 10, 0.95);
   backdrop-filter: blur(12px);
-  z-index: 20000;
+  z-index: 25000;
   display: flex; align-items: center; justify-content: center;
   animation: fadeInBackdrop 0.2s ease-out;
 }
@@ -252,7 +252,7 @@
   min-width: 0; /* enable text truncation */
   overflow: hidden;
 }
-.inspect-header .meta-info .case-stamp { flex: 0 0 auto; color: #888; font-size: 11px; }
+.inspect-header .meta-info .case-stamp { flex: 0 0 auto; color: #888888; font-size: 11px; }
 .inspect-header .meta-info .type-tag { flex: 0 0 auto; margin-left: 6px; font-size: 11px; }
 .inspect-header .meta-info .chat-contact {
   flex: 1 1 auto;

@@ -1,0 +1,324 @@
+.agent-profile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15000;
+  padding: 20px;
+}
+
+.agent-profile-content {
+  background: #0a0e1a;
+  border: 2px solid #00ffff;
+  border-radius: 4px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 30px;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+  position: relative;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #00ffff33;
+}
+
+.profile-header h2 {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  font-size: 24px;
+  margin: 0;
+  flex: 1;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.btn-close {
+  background: transparent;
+  border: 1px solid #ff0055;
+  color: #ff0055;
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn-close:hover {
+  background: #ff0055;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+}
+
+.profile-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.nexus-input,
+.nexus-select {
+  background: #0a0e1a;
+  border: 1px solid #00ffff66;
+  color: #00ffff;
+  padding: 12px 15px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.nexus-input:focus,
+.nexus-select:focus {
+  outline: none;
+  border-color: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.nexus-input::placeholder {
+  color: #00ffff55;
+}
+
+.nexus-select {
+  cursor: pointer;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.btn-cancel,
+.btn-save {
+  padding: 12px 30px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid #666;
+  color: #999;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  border-color: #00ffff;
+  color: #00ffff;
+}
+
+.btn-save {
+  background: #00ffff;
+  border: 1px solid #00ffff;
+  color: #000;
+  font-weight: bold;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #00cccc;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.btn-save:disabled,
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-preview {
+  border-top: 1px solid #00ffff33;
+  padding-top: 25px;
+}
+
+.preview-label {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+}
+
+.agent-card {
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a1e2a 100%);
+  border: 2px solid #00ffff;
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.agent-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    #00ffff 50%, 
+    transparent 100%);
+  opacity: 0.5;
+}
+
+.agent-clearance {
+  display: inline-block;
+  background: #ff0055;
+  color: #000;
+  padding: 6px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+  box-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
+}
+
+/* Cores por credencial */
+.agent-card:has(.agent-clearance:contains("BRANCO")) .agent-clearance {
+  background: #e0e0e0;
+  color: #000;
+  box-shadow: 0 0 10px rgba(224, 224, 224, 0.5);
+}
+
+.agent-card:has(.agent-clearance:contains("AMARELO")) .agent-clearance {
+  background: #FFD700;
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.agent-card:has(.agent-clearance:contains("LARANJA")) .agent-clearance {
+  background: #FF8C00;
+  color: #000;
+  box-shadow: 0 0 10px rgba(255, 140, 0, 0.5);
+}
+
+.agent-card:has(.agent-clearance:contains("VERMELHO")) .agent-clearance {
+  background: #DC143C;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(220, 20, 60, 0.5);
+}
+
+.agent-card:has(.agent-clearance:contains("PRETO")) .agent-clearance {
+  background: #1a1a1a;
+  color: #00ffff;
+  border: 1px solid #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.agent-card:has(.agent-clearance:contains("ALFA")) .agent-clearance {
+  background: linear-gradient(135deg, #4169E1, #00CED1);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(65, 105, 225, 0.7);
+}
+
+.agent-card:has(.agent-clearance:contains("OMEGA")) .agent-clearance {
+  background: linear-gradient(135deg, #8B00FF, #FF1493);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(139, 0, 255, 0.8);
+  animation: pulse-omega 2s infinite;
+}
+
+@keyframes pulse-omega {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.agent-name {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.agent-codename {
+  font-family: 'Courier New', monospace;
+  color: #999;
+  font-size: 16px;
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.agent-spec {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.agent-prestige {
+  font-family: 'Courier New', monospace;
+  color: #FFD700;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #00ffff33;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+.loading-text {
+  font-family: 'Courier New', monospace;
+  color: #00ffff;
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profile-form {
+    grid-template-columns: 1fr;
+  }
+  
+  .agent-profile-content {
+    padding: 20px;
+  }
+}

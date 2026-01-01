@@ -43,6 +43,8 @@ interface EditingChatMessage {
 }
 
 export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
+  if (!isOpen) return null;
+
   const [title, setTitle] = useState('');
   const [descPublic, setDescPublic] = useState('');
   const [descHidden, setDescHidden] = useState('');
@@ -317,8 +319,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          window.addEventListener('mouseup', onUp);
          return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
       }, [filterPreviewUrl, filterTransform, previewUrl]);
-
-      if (!isOpen) return null;
 
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");

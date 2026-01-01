@@ -36,6 +36,15 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [newMsgSender, setNewMsgSender] = useState<'me'|'them'>('them');
 
   useEscapeClose(open, onClose);
+  
+  useEffect(() => {
+    if (open) {
+      window.dispatchEvent(new Event('modal-opened'));
+    } else {
+      window.dispatchEvent(new Event('modal-closed'));
+    }
+  }, [open]);
+  
   useEffect(() => {
     setTitle(existing?.title || '');
     setDescriptionPublic(existing?.description_public || '');
@@ -196,7 +205,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             cardId={existing.id}
             investigationId={investigationId}
             title={existing.title}
-            description={existing.description_public || existing.description || ''}
+            description={existing.description_public || ''}
             imageUrl={existing.image_url}
             requiredCodes={megaData.required_code_count || 3}
             finalTruthText={megaData.final_truth_text}

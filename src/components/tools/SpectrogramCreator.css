@@ -32,7 +32,7 @@
   text-align: center;
 }
 
-label { font-size: 10px; color: #888; text-transform: uppercase; }
+label { font-size: 10px; color: #888888; text-transform: uppercase; }
 input[type=text] {
   background: #000; border: 1px solid #555; color: #fff;
   padding: 12px; font-size: 18px; text-align: center;
@@ -48,5 +48,5 @@ input[type=range] { width: 100%; accent-color: #b33; }
   background: #1a1a1f;
   border-top: 1px solid #333;
 }
-.btn-cancel, .btn-confirm { background: none; border: 1px solid #444; color: #888; padding: 8px 16px; cursor: pointer; }
+.btn-cancel, .btn-confirm { background: none; border: 1px solid #444; color: #888888; padding: 8px 16px; cursor: pointer; }
 .btn-confirm { background: #b33; color: #fff; border-color: #b33; font-weight: bold; }

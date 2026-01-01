@@ -13,8 +13,9 @@ export interface EvidenceCardProps {
   onOpen?: () => void
   locked?: boolean
   hasRecord?: boolean
-  fileType?: 'video' | 'audio' | 'image' | 'text'
+  fileType?: 'video' | 'audio' | 'image' | 'text' | 'glitch_puzzle' | 'mega_clue'
   isGameMaster?: boolean
+  playerView?: boolean
   hasUV?: boolean
   hasHiddenAudio?: boolean
   hasAudio?: boolean
@@ -23,9 +24,10 @@ export interface EvidenceCardProps {
   hasThermal?: boolean
   hasStamp?: boolean
   hasExternalLink?: boolean
+  cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal'
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal' }) => {
   const handleToggle = (s: 'verified' | 'theory' | 'false') => {
     if (!onToggleStatus) return;
     const newStatus = status === s ? null : s;
@@ -33,6 +35,16 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   }
 
   const shortId = id ? (String(id).length > 10 ? `${String(id).slice(0, 8)}...` : String(id)) : '';
+
+  // Determinar tipo especial baseado no fileType ou cardType
+  let specialType = '';
+  if (cardType === 'glitch' || fileType === 'glitch_puzzle') {
+    specialType = 'type-glitch';
+  } else if (cardType === 'mega-clue' || fileType === 'mega_clue') {
+    specialType = 'type-mega-clue';
+  } else if (locked || cardType === 'encrypted') {
+    specialType = 'type-encrypted';
+  }
 
   const getTypeIcon = (t: string) => {
     if (t === 'locked') return (
@@ -52,7 +64,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     );
   }
 
-  const rootClass = `clue-card ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''}`.trim();
+  const rootClass = `clue-card ${specialType} ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''}`.trim();
 
   return (
     <div className={rootClass} id={`card-${id}`}>
@@ -69,7 +81,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
         </div>
 
-        {locked && !isGameMaster ? (
+        {locked && (playerView || !isGameMaster) ? (
           <div className="lock-overlay">
             <div className="lock-icon">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 8V7a5 5 0 10-10 0v1" stroke="#ff003c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="8" width="18" height="13" rx="2" stroke="#ff003c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>

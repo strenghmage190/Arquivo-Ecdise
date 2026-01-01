@@ -130,6 +130,7 @@ export async function createInvestigationCard(card: InvestigationCard) {
   const payload: any = {
     investigation_id: card.investigation_id,
     title: card.title,
+    type: (card as any).type || null, // ← ADICIONAR ESTE CAMPO!
     image_uv_url: (card as any).image_uv_url || null,
     video_url: (card as any).video_url || null,
     image_filter_layer: (card as any).image_filter_layer || null,
