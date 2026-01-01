@@ -1,29 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { eventManager } from '../../utils/EventManager';
+import { audioManager } from '../../utils/AudioManager';
 
 export default function SystemOverlays() {
   const integrityRef = useRef<HTMLDivElement | null>(null);
   const integrityTextRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const droneRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
-  const clickIntervalRef = useRef<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const [hideHeader, setHideHeader] = useState(false);
 
-  // Listen for modal open/close events
+  // ✅ Listen for modal open/close events via EventManager
   useEffect(() => {
-    const handleModalOpen = () => setHideHeader(true);
-    const handleModalClose = () => setHideHeader(false);
-    
-    window.addEventListener('modal-opened', handleModalOpen);
-    window.addEventListener('modal-closed', handleModalClose);
+    const unsubscribeOpen = eventManager.on('modal:opened', () => setHideHeader(true));
+    const unsubscribeClose = eventManager.on('modal:closed', () => setHideHeader(false));
+    const unsubscribeHeaderToggle = eventManager.on('header:toggle', (show: boolean) => setHideHeader(!show));
     
     return () => {
-      window.removeEventListener('modal-opened', handleModalOpen);
-      window.removeEventListener('modal-closed', handleModalClose);
+      unsubscribeOpen();
+      unsubscribeClose();
+      unsubscribeHeaderToggle();
     };
   }, []);
 
@@ -56,43 +53,57 @@ export default function SystemOverlays() {
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
-  // Custom cursor with requestAnimationFrame for smooth, centered tracking
+  // ✅ Custom cursor tracking (sem duplicatas, com cleanup garantido)
   useEffect(() => {
     let rafId: number | null = null;
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
+    const cursor = cursorRef.current;
+    if (!cursor) return;
 
-    const onMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      if (cursorRef.current) {
-        cursorRef.current.style.display = 'block';
-        cursorRef.current.style.opacity = '1';
-      }
-    };
-
-    const onDown = () => { if (cursorRef.current) cursorRef.current.classList.add('pressed'); };
-    const onUp = () => { if (cursorRef.current) cursorRef.current.classList.remove('pressed'); };
-
-    const hoverToggle = (e: Event) => {
-      if (!cursorRef.current) return;
-      const tgt = e.target as HTMLElement | null;
-      const interactive = tgt && tgt.closest && (tgt.closest('button, a, input[type="button"], input[type="submit"], .clickable, [role="button"], [onclick], [tabindex]'));
-      if (interactive) cursorRef.current.classList.add('active'); else cursorRef.current.classList.remove('active');
-    };
+    let isActive = false;
+    let isPressed = false;
 
     const render = () => {
-      if (cursorRef.current) {
-        const isActive = cursorRef.current.classList.contains('active');
-        const isPressed = cursorRef.current.classList.contains('pressed');
-        let scale = isActive ? 1.12 : 1;
-        if (isPressed) scale *= 0.85;
-        // Set left/top to the pointer position and use transform only for centering + scale
-        cursorRef.current.style.left = `${mouseX}px`;
-        cursorRef.current.style.top = `${mouseY}px`;
-        cursorRef.current.style.transform = `translate(-50%,-50%) scale(${scale})`;
+      if (!cursor) return;
+      let scale = isActive ? 1.12 : 1;
+      if (isPressed) scale *= 0.85;
+      cursor.style.transform = `translate(-50%,-50%) scale(${scale})`;
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!cursor) return;
+      cursor.style.left = `${e.clientX}px`;
+      cursor.style.top = `${e.clientY}px`;
+      cursor.style.display = 'block';
+      cursor.style.opacity = '1';
+    };
+
+    const onDown = () => {
+      isPressed = true;
+      if (cursor) cursor.classList.add('pressed');
+      render();
+    };
+
+    const onUp = () => {
+      isPressed = false;
+      if (cursor) cursor.classList.remove('pressed');
+      render();
+    };
+
+    const hoverToggle = (e: Event) => {
+      if (!cursor) return;
+      const tgt = e.target as HTMLElement | null;
+      const interactive = tgt && tgt.closest && (
+        tgt.closest('button, a, input[type="button"], input[type="submit"], .clickable, [role="button"], [onclick], [tabindex]')
+      );
+      
+      if (interactive) {
+        isActive = true;
+        cursor.classList.add('active');
+      } else {
+        isActive = false;
+        cursor.classList.remove('active');
       }
-      rafId = requestAnimationFrame(render);
+      render();
     };
 
     window.addEventListener('mousemove', onMove);
@@ -101,7 +112,8 @@ export default function SystemOverlays() {
     window.addEventListener('mousedown', onDown);
     window.addEventListener('mouseup', onUp);
 
-    render();
+    // Initial render
+    rafId = requestAnimationFrame(render);
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
@@ -113,31 +125,50 @@ export default function SystemOverlays() {
     };
   }, []);
 
-  // Decode-effect delegation
+  // ✅ Decode-effect delegation (com Set para cleanup correto)
   useEffect(() => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
-    let activeIntervals: number[] = [];
+    const activeIntervals = new Set<number>();
+
     function handleOver(e: Event) {
       const target = e.currentTarget as HTMLElement;
       const original = target.dataset.value || target.innerText || '';
       let iterations = 0;
+
       const interval = window.setInterval(() => {
         const text = original.split('').map((ch, idx) => {
           if (idx < iterations) return original[idx];
           return letters[Math.floor(Math.random() * letters.length)];
         }).join('');
+        
         target.innerText = text;
+        
         if (iterations >= original.length) {
           clearInterval(interval);
+          activeIntervals.delete(interval);
         }
-        iterations += 1/3;
+        iterations += 1 / 3;
       }, 30) as unknown as number;
-      activeIntervals.push(interval);
+
+      activeIntervals.add(interval);
     }
 
     const elems = Array.from(document.querySelectorAll<HTMLElement>('.decode-effect'));
     elems.forEach(el => el.addEventListener('mouseover', handleOver));
-    return () => { elems.forEach(el => el.removeEventListener('mouseover', handleOver)); activeIntervals.forEach(i => clearInterval(i)); };
+
+    return () => {
+      elems.forEach(el => el.removeEventListener('mouseover', handleOver));
+      activeIntervals.forEach(clearInterval);
+      activeIntervals.clear();
+    };
+  }, []);
+
+  // ✅ AudioManager cleanup (audio permanece disabled por padrão)
+  useEffect(() => {
+    // Note: audio remains disabled by default; no UI control for sensors
+    return () => {
+      audioManager.cleanup();
+    };
   }, []);
 
   // Apply a document-level class so we only hide native cursor when overlay is active
@@ -151,68 +182,6 @@ export default function SystemOverlays() {
       try { document.documentElement.classList.remove('use-custom-cursor'); } catch (e) {}
     };
   }, []);
-
-  // Ambient audio (drone + random clicks) via WebAudio
-  const initAudio = async () => {
-    try {
-      if (audioCtxRef.current) return;
-      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      audioCtxRef.current = ctx;
-
-      const gain = ctx.createGain();
-      gain.gain.value = 0; // start muted by default
-      gain.connect(ctx.destination);
-      gainRef.current = gain;
-
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = 60; // low hum
-      const oscGain = ctx.createGain();
-      oscGain.gain.value = 0.6;
-      osc.connect(oscGain);
-      oscGain.connect(gain);
-      osc.start();
-      droneRef.current = osc;
-
-      // random clicks
-      const clickInterval = window.setInterval(() => {
-        const currentCtx = audioCtxRef.current;
-        if (!currentCtx) return;
-        const now = currentCtx.currentTime;
-        const click = currentCtx.createBufferSource();
-        const buffer = currentCtx.createBuffer(1, currentCtx.sampleRate * 0.012, currentCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / data.length) * 0.4;
-        click.buffer = buffer;
-        const clickGain = currentCtx.createGain();
-        clickGain.gain.value = 0.4;
-        click.connect(clickGain);
-        clickGain.connect(gain);
-        click.start(now + 0);
-      }, 4200 + Math.random() * 3000) as unknown as number;
-      clickIntervalRef.current = clickInterval;
-      // Ensure context is running (resume on user gesture)
-      if (ctx.state === 'suspended') await ctx.resume();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Audio init failed', e);
-    }
-  };
-
-  const teardownAudio = () => {
-    try {
-      if (clickIntervalRef.current) { clearInterval(clickIntervalRef.current); clickIntervalRef.current = null; }
-      if (droneRef.current) { try { droneRef.current.stop(); } catch (e) {} droneRef.current = null; }
-      if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch (e) {} audioCtxRef.current = null; }
-      gainRef.current = null;
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  // Note: audio remains disabled by default; no UI control for sensors
 
   // background hex data generator (static columns)
   const hexColumn = (lines = 40) => {
@@ -228,10 +197,6 @@ export default function SystemOverlays() {
     }
     return parts.join('\n');
   };
-
-  useEffect(() => {
-    return () => { teardownAudio(); };
-  }, []);
 
   return (
     <>

@@ -13,9 +13,17 @@ export interface GlitchImageEngineProps {
   className?: string;
   height?: number | string;
   onResolved?: () => void;
-}
+} 
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+// Memoized para evitar recalcular a cada render
+const computeDropShadowMemo = (delta: number): string => {
+  const intensity = clamp01(delta / 36);
+  const offset = 4 + intensity * 14;
+  const alpha = 0.18 + intensity * 0.28;
+  return `drop-shadow(${offset}px 0 rgba(0,180,255,${alpha})) drop-shadow(-${offset}px 0 rgba(255,0,120,${alpha}))`;
+};
 
 interface SliceSeed {
   top: number;
@@ -39,14 +47,7 @@ function buildSeeds(seedKey: string): SliceSeed[] {
   return seeds;
 }
 
-function computeDropShadow(delta: number) {
-  const intensity = clamp01(delta / 36); // tuned for 0..100 inputs
-  const offset = 4 + intensity * 14;
-  const alpha = 0.18 + intensity * 0.28;
-  return `drop-shadow(${offset}px 0 rgba(0,180,255,${alpha})) drop-shadow(-${offset}px 0 rgba(255,0,120,${alpha}))`;
-}
-
-export function GlitchImageEngine({
+const GlitchImageEngineComponent = ({
   imageUrl,
   targetFrequency,
   targetShift,
@@ -85,9 +86,19 @@ export function GlitchImageEngine({
   const sliceCount = Math.max(3, Math.round(6 + glitchStrength * 12));
   const slices = useMemo(() => seeds.slice(0, sliceCount), [seeds, sliceCount]);
 
-  const baseFilter = `blur(${glitchStrength * 4}px) contrast(${1 + glitchStrength * 0.4}) saturate(${1 + glitchStrength * 0.5}) ${computeDropShadow(chromaDelta)}`;
-  const baseTranslate = (shiftDelta * glitchStrength * 0.4) * (Math.sin((playerFrequency + 13) * 0.3) >= 0 ? 1 : -1);
-  const grainOpacity = clamp01(0.25 + glitchStrength * 0.7);
+  // Memoizar cálculos de filtro para evitar recalcular quando props não mudam
+  const baseFilter = useMemo(
+    () => `blur(${glitchStrength * 4}px) contrast(${1 + glitchStrength * 0.4}) saturate(${1 + glitchStrength * 0.5}) ${computeDropShadowMemo(chromaDelta)}`,
+    [glitchStrength, chromaDelta]
+  );
+  const baseTranslate = useMemo(
+    () => (shiftDelta * glitchStrength * 0.4) * (Math.sin((playerFrequency + 13) * 0.3) >= 0 ? 1 : -1),
+    [shiftDelta, glitchStrength, playerFrequency]
+  );
+  const grainOpacity = useMemo(
+    () => clamp01(0.25 + glitchStrength * 0.7),
+    [glitchStrength]
+  );
 
   return (
     <div className={`glitch-engine ${className || ''}`} style={{ height }}>
@@ -108,7 +119,7 @@ export function GlitchImageEngine({
           {slices.map((slice, idx) => {
             const localShift = (Math.sin(slice.phase * 10 + playerShift) * 0.5 + 0.5) * shiftDelta * glitchStrength * 0.6;
             const chroma = clamp01((chromaDelta / 100) * (0.6 + slice.phase * 0.8));
-            const shadow = computeDropShadow(chromaDelta * (0.6 + slice.phase * 0.5));
+            const shadow = computeDropShadowMemo(chromaDelta * (0.6 + slice.phase * 0.5));
             return (
               <div
                 key={`${slice.top}-${idx}`}
@@ -118,7 +129,8 @@ export function GlitchImageEngine({
                   height: `${slice.height}%`,
                   backgroundImage: `url(${imageUrl})`,
                   backgroundPosition: `50% ${slice.top}%`,
-                  backgroundSize: 'cover',
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
                   transform: `translateX(${localShift}px)`,
                   filter: `${shadow} brightness(${1 + chroma * 0.25}) saturate(${1 + chroma * 0.8})`,
                   opacity: clamp01(0.6 + chroma * 0.3),
@@ -159,6 +171,21 @@ export function GlitchImageEngine({
       </div>
     </div>
   );
-}
+});
+
+// React.memo para evitar re-renders quando props não mudam
+export const GlitchImageEngine = React.memo(GlitchImageEngineComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.imageUrl === nextProps.imageUrl &&
+    prevProps.targetFrequency === nextProps.targetFrequency &&
+    prevProps.targetShift === nextProps.targetShift &&
+    prevProps.targetChromatic === nextProps.targetChromatic &&
+    prevProps.playerFrequency === nextProps.playerFrequency &&
+    prevProps.playerShift === nextProps.playerShift &&
+    prevProps.playerChromatic === nextProps.playerChromatic &&
+    prevProps.solved === nextProps.solved &&
+    prevProps.height === nextProps.height
+  );
+});
 
 export default GlitchImageEngine;

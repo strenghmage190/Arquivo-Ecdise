@@ -143,12 +143,23 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     el.style.left = `${Math.max(0, (triggerLocal / baseDuration) * 100)}%`;
   }, [triggerLocal, baseDuration]);
 
-  // revoke any local hidden URL on unmount
+  // ✅ Unified cleanup: revoke URL AND destroy wavesurfer together
   useEffect(() => {
     return () => {
-      try { if (prevLocalHiddenRef.current) { URL.revokeObjectURL(prevLocalHiddenRef.current); prevLocalHiddenRef.current = null; } } catch (e) {}
+      if (prevLocalHiddenRef.current) {
+        try { 
+          URL.revokeObjectURL(prevLocalHiddenRef.current); 
+        } catch (e) {
+          console.warn('Failed to revoke URL:', e);
+        }
+        prevLocalHiddenRef.current = null;
+      }
+      try {
+        const r = ws.destroy();
+        if (r && typeof r.then === 'function') r.catch(() => {});
+      } catch (e) { }
     };
-  }, []);
+  }, [ws]);
 
   // apply opacity and highlight toggle to overlay container whenever they change
   useEffect(() => {

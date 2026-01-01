@@ -45,6 +45,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
     setShowGlitchSolver(false);
+    setPuzzleSolved(false);
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
@@ -93,11 +94,30 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const unified = metadataObj?.unified_media || {};
     const baseType = unified.base_media_type || metadataObj?.media_type || cardObj?.base_media_type || null;
     const baseUrl = unified.base_media_url || cardObj?.base_media_url || null;
-    const imageUrl = cardObj?.image_url || unified.image_url || (baseType === 'image' ? baseUrl : null) || null;
-    const videoUrl = cardObj?.video_url || unified.video_url || (baseType === 'video' ? baseUrl : null) || null;
-    const audioUrl = cardObj?.audio_url || unified.audio_base_url || (baseType === 'audio' ? baseUrl : null) || null;
+    const maskedPreview = metadataObj?.masked_preview === true || (metadataObj?.security_layer?.enabled && baseUrl);
+
+    const imageUrl = (() => {
+      const baseImage = cardObj?.image_url || baseUrl || unified.image_url || null;
+      return baseImage;
+    })();
+
+    const videoUrl = (() => {
+      if (baseType === 'video' && baseUrl) return baseUrl;
+      return cardObj?.video_url || unified.video_url || null;
+    })();
+
+    const audioUrl = (() => {
+      if (baseType === 'audio' && baseUrl) return baseUrl;
+      return cardObj?.audio_url || unified.audio_base_url || null;
+    })();
+
     const audioHiddenUrl = cardObj?.audio_hidden_url || unified.audio_hidden_url || null;
-    return { baseType, baseUrl, imageUrl, videoUrl, audioUrl, audioHiddenUrl };
+    return { baseType, baseUrl, imageUrl, videoUrl, audioUrl, audioHiddenUrl, maskedPreview };
+  };
+
+  const handleSecuritySolved = () => {
+    setPuzzleSolved(true);
+    setShowGlitchSolver(false);
   };
 
   // Controle de qual ferramenta visual está ativa
@@ -347,6 +367,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
     const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
 
+    const securityLayer = parsedMetadata?.security_layer || null;
+    const securityRevealLogic = securityLayer?.reveal_logic || 'aligned_only';
+    const securityAlwaysVisible = securityRevealLogic === 'always_visible';
+    const securityLocked = Boolean(securityLayer?.enabled && !isGameMaster && !puzzleSolved && !securityAlwaysVisible);
+
     const cardLocked = isCardLocked(currentCard);
     const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
 
@@ -482,6 +507,40 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       // INTERCEPTAR GLITCH PUZZLE - antes de renderizar imagem normal
       if (unifiedMedia.imageUrl || currentCard.image_url) {
+        const baseImage = unifiedMedia.imageUrl || currentCard.image_url || null;
+
+        const renderSecurityLocked = () => {
+          return (
+            <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
+              <div className="grid-overlay" aria-hidden />
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18, padding:24, color:'#d5d5d5', textAlign:'center', height:'100%'}}>
+                <div style={{position:'relative', width:'100%', maxWidth:640, aspectRatio:'16/9', border:'1px dashed rgba(255,255,255,0.08)', overflow:'hidden', borderRadius:8, background:'#050505'}}>
+                  {baseImage ? (
+                    <div style={{position:'absolute', inset:0, backgroundImage:`url(${baseImage})`, backgroundSize:'contain', backgroundPosition:'center', backgroundRepeat:'no-repeat', filter:'blur(14px) brightness(0.5)', transform:'scale(1.02)'}} aria-hidden />
+                  ) : (
+                    <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#777', fontSize:13}}>Pré-visualização mascarada</div>
+                  )}
+                  <div style={{position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(0,255,255,0.06), rgba(255,0,150,0.08))'}} aria-hidden />
+                  <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10}}>
+                    <div style={{fontSize:18, fontWeight:700, letterSpacing:1}}>CAMADA CRIPTOGRAFADA</div>
+                    <div style={{fontSize:13, maxWidth:400, color:'#c8f7ff'}}>
+                      Resolva o painel de sincronização antes de revelar a imagem limpa.
+                    </div>
+                  </div>
+                </div>
+                <div style={{display:'flex', flexDirection:'column', gap:8, alignItems:'center'}}>
+                  <span style={{fontSize:12, color:'#9ac4ff'}}>Lógica: {securityRevealLogic === 'aligned_keyword' ? 'Alinhar sinal + validar assinatura' : securityRevealLogic === 'always_visible' ? 'Sempre visível' : 'Alinhar sinal'}</span>
+                  {securityLayer?.require_keyword && (
+                    <span style={{fontSize:12, color:'#ffc78b'}}>Assinatura digital exigida</span>
+                  )}
+                  <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(true)} style={{marginTop:6}}>🧩 ABRIR DECODIFICADOR</button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        if (securityLocked) return renderSecurityLocked();
         return (
           <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
             <div className="grid-overlay" aria-hidden />
@@ -1088,7 +1147,13 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     </div>
   );
 
-  const glitchPortal = showGlitchSolver && isGlitchPuzzleGlobal && parsedMetadata?.glitch_puzzle
+  const glitchSolverConfig = React.useMemo(() => {
+    if (!parsedMetadata?.glitch_puzzle) return null;
+    const security = parsedMetadata.glitch_puzzle.security_layer || parsedMetadata.security_layer;
+    return security ? { ...parsedMetadata.glitch_puzzle, security_layer: security } : parsedMetadata.glitch_puzzle;
+  }, [parsedMetadata]);
+
+  const glitchPortal = showGlitchSolver && isGlitchPuzzleGlobal && glitchSolverConfig && !glitchSolverConfig.solved
     ? createPortal(
         <div className="glitch-solver-backdrop" onClick={() => setShowGlitchSolver(false)}>
           <div className="glitch-solver-modal" onClick={(e) => e.stopPropagation()}>
@@ -1104,10 +1169,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             <div className="glitch-solver-body">
               <React.Suspense fallback={<div style={{color:'#0f0', padding:20, textAlign:'center'}}>CARREGANDO DECODIFICADOR...</div>}>
                 <GlitchPuzzleSolverLazy
-                  config={parsedMetadata?.glitch_puzzle}
+                  config={glitchSolverConfig}
+                  fullMetadata={parsedMetadata}
                   investigationId={currentCard.investigation_id}
                   cardId={currentCard.id}
-                  onSolved={() => setShowGlitchSolver(false)}
+                  onSolved={handleSecuritySolved}
                 />
               </React.Suspense>
             </div>

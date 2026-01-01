@@ -59,6 +59,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [videoUrl, setVideoUrl] = useState<string | null>(null);
    const [videoUploading, setVideoUploading] = useState<boolean>(false);
    const [videoUrlInput, setVideoUrlInput] = useState<string>('');
+   const [videoUploadPromise, setVideoUploadPromise] = useState<Promise<string | null> | null>(null);
+   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uvFile, setUvFile] = useState<File | null>(null);
    const [filterFile, setFilterFile] = useState<File | null>(null);
       const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -183,6 +185,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [glitchKeyword, setGlitchKeyword] = useState('');
    const [glitchRequireKeyword, setGlitchRequireKeyword] = useState(false);
    const [glitchUnlockMode, setGlitchUnlockMode] = useState<'code' | 'code_plus_keyword' | 'media' | 'media_and_code'>('code');
+   const [glitchDifficulty, setGlitchDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('hard');
    const [glitchToleranceFreq, setGlitchToleranceFreq] = useState(1);
    const [glitchToleranceShift, setGlitchToleranceShift] = useState(2);
    const [glitchToleranceChroma, setGlitchToleranceChroma] = useState(2);
@@ -305,6 +308,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setGlitchKeyword('');
       setGlitchRequireKeyword(false);
       setGlitchUnlockMode('code');
+      setGlitchDifficulty('hard');
       setGlitchToleranceFreq(1);
       setGlitchToleranceShift(2);
       setGlitchToleranceChroma(2);
@@ -337,6 +341,65 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    useEffect(() => {
       if (isOpen) resetForm();
    }, [isOpen]);
+
+   const applyGlitchDifficulty = (level: 'easy' | 'normal' | 'hard' | 'custom') => {
+      setGlitchDifficulty(level);
+      if (level === 'easy') {
+         setGlitchToleranceFreq(5);
+         setGlitchToleranceShift(5);
+         setGlitchToleranceChroma(5);
+      } else if (level === 'normal') {
+         setGlitchToleranceFreq(3);
+         setGlitchToleranceShift(3);
+         setGlitchToleranceChroma(3);
+      } else if (level === 'hard') {
+         setGlitchToleranceFreq(1);
+         setGlitchToleranceShift(2);
+         setGlitchToleranceChroma(2);
+      }
+   };
+
+   // ✅ Cleanup object URLs proactively using Set
+   const urlsRef = React.useRef<Set<string>>(new Set());
+   const revokeUrl = (url: string | null | undefined) => {
+      if (url && urlsRef.current.has(url)) {
+         try { URL.revokeObjectURL(url); } catch (err) {}
+         urlsRef.current.delete(url);
+      }
+   };
+   const registerUrl = (url: string | null | undefined) => {
+      if (url) urlsRef.current.add(url);
+   };
+   
+   useEffect(() => {
+      if (previewUrl) registerUrl(previewUrl);
+      return () => revokeUrl(previewUrl);
+   }, [previewUrl]);
+   
+   useEffect(() => {
+      if (videoPreviewUrl) registerUrl(videoPreviewUrl);
+      return () => revokeUrl(videoPreviewUrl);
+   }, [videoPreviewUrl]);
+   
+   useEffect(() => {
+      if (audioBasePreview) registerUrl(audioBasePreview);
+      if (audioHiddenPreview) registerUrl(audioHiddenPreview);
+      return () => { revokeUrl(audioBasePreview); revokeUrl(audioHiddenPreview); };
+   }, [audioBasePreview, audioHiddenPreview]);
+   
+   useEffect(() => {
+      if (glitchFocusedImagePreview) registerUrl(glitchFocusedImagePreview);
+      if (megaImagePreview) registerUrl(megaImagePreview);
+      if (filterPreviewUrl) registerUrl(filterPreviewUrl);
+      return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); };
+   }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl]);
+   
+   useEffect(() => {
+      return () => {
+         urlsRef.current.forEach((u) => { try { URL.revokeObjectURL(u); } catch (err) {} });
+         urlsRef.current.clear();
+      };
+   }, []);
 
    // Helper: sanitize metadata to ensure it's JSON-serializable before sending to server
    const sanitizeForMetadata = (input: any, maxDepth = 6) => {
@@ -407,20 +470,28 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       // drag / resize refs (must be a hook)
       const draggingRef = React.useRef<{ mode: 'move' | 'resize' | null; startX: number; startY: number; startTransform?: any } | null>(null);
+      const filterTransformRef = React.useRef(filterTransform);
+      
+      // Sync ref com state
+      React.useEffect(() => {
+         filterTransformRef.current = filterTransform;
+      }, [filterTransform]);
 
       useEffect(() => {
          const onMove = (e: MouseEvent) => {
-            if (!draggingRef.current || !filterTransform || !previewUrl) return;
+            if (!draggingRef.current || !filterTransformRef.current || !previewUrl) return;
             const rect = document.querySelector('.image-edit-canvas') as HTMLElement | null;
             if (!rect) return;
             const bounds = rect.getBoundingClientRect();
             const start = draggingRef.current;
+            const current = filterTransformRef.current;
+            
             if (start.mode === 'move') {
                const dx = e.clientX - start.startX;
                const dy = e.clientY - start.startY;
                const newLeft = ((start.startTransform.left / 100) * bounds.width + dx) / bounds.width * 100;
                const newTop = ((start.startTransform.top / 100) * bounds.height + dy) / bounds.height * 100;
-               setFilterTransform({ ...filterTransform, left: Math.max(0, Math.min(100 - filterTransform.width, newLeft)), top: Math.max(0, Math.min(100 - filterTransform.height, newTop)) });
+               setFilterTransform({ ...current, left: Math.max(0, Math.min(100 - current.width, newLeft)), top: Math.max(0, Math.min(100 - current.height, newTop)) });
             } else if (start.mode === 'resize') {
                const dx = e.clientX - start.startX;
                const dy = e.clientY - start.startY;
@@ -428,14 +499,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                const deltaPctH = (dy / bounds.height) * 100;
                const newW = Math.max(5, Math.min(100 - start.startTransform.left, start.startTransform.width + deltaPctW));
                const newH = Math.max(5, Math.min(100 - start.startTransform.top, start.startTransform.height + deltaPctH));
-               setFilterTransform({ ...filterTransform, width: newW, height: newH });
+               setFilterTransform({ ...current, width: newW, height: newH });
             }
          };
          const onUp = () => { draggingRef.current = null; };
          window.addEventListener('mousemove', onMove);
          window.addEventListener('mouseup', onUp);
          return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-      }, [filterPreviewUrl, filterTransform, previewUrl]);
+      }, [previewUrl]);
 
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");
@@ -459,25 +530,72 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
     }
 
     setLoading(true);
+    const errors: string[] = [];
 
     try {
+      // Aguardar upload de vídeo em andamento
+      if (videoUploadPromise) {
+         try {
+            await videoUploadPromise;
+         } catch (e) {
+            errors.push(`Upload de vídeo falhou: ${e instanceof Error ? e.message : 'Erro desconhecido'}`);
+         }
+      }
+
       let imgUrl = null;
       let uvUrl = null;
-         let filterUrl = null;
-      if (imgFile) imgUrl = await uploadInvestigationImage(imgFile, investigationId);
-         if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
-         if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
-             // Prefer video URL input if provided, otherwise use uploaded video URL (uploaded on select). If user selected but upload didn't complete,
-             // attempt a fallback upload here.
-                   let finalVideoUrl: string | null = videoUrlInput || videoUrl || null;
-                   if (!finalVideoUrl && videoFile) {
-                      try {
-                         finalVideoUrl = await uploadInvestigationFile(videoFile, investigationId, videoFile.name.split('.').pop() || 'mp4');
-                      } catch (e) {
-                         console.error('Video upload failed on save', e);
-                         finalVideoUrl = null;
-                      }
-                   }
+      let filterUrl = null;
+      
+      try {
+         if (imgFile) {
+            imgUrl = await uploadInvestigationImage(imgFile, investigationId, (progress) => {
+               setUploadProgress(prev => ({ ...prev, image: progress }));
+            });
+         }
+      } catch (e) {
+         errors.push(`Imagem principal: ${e instanceof Error ? e.message : 'Falha no upload'}`);
+      }
+      
+      try {
+         if (uvFile) {
+            uvUrl = await uploadInvestigationImage(uvFile, investigationId, (progress) => {
+               setUploadProgress(prev => ({ ...prev, uv: progress }));
+            });
+         }
+      } catch (e) {
+         errors.push(`Camada UV: ${e instanceof Error ? e.message : 'Falha no upload'}`);
+      }
+      
+      try {
+         if (filterFile) {
+            filterUrl = await uploadInvestigationImage(filterFile, investigationId, (progress) => {
+               setUploadProgress(prev => ({ ...prev, filter: progress }));
+            });
+         }
+      } catch (e) {
+         errors.push(`Camada de filtro: ${e instanceof Error ? e.message : 'Falha no upload'}`);
+      }
+      
+      // Prefer video URL input if provided, otherwise use uploaded video URL
+      let finalVideoUrl: string | null = videoUrlInput || videoUrl || null;
+      if (!finalVideoUrl && videoFile) {
+         try {
+            finalVideoUrl = await uploadInvestigationFile(videoFile, investigationId, videoFile.name.split('.').pop() || 'mp4');
+         } catch (e) {
+            errors.push(`Vídeo (fallback): ${e instanceof Error ? e.message : 'Falha no upload'}`);
+            finalVideoUrl = null;
+         }
+      }
+
+      // Verificar se há erros críticos
+      if (errors.length > 0) {
+         const errorMsg = `⚠️ Erros durante upload:\n${errors.join('\n')}\n\nDeseja continuar mesmo assim?`;
+         const shouldContinue = window.confirm(errorMsg);
+         if (!shouldContinue) {
+            setLoading(false);
+            return;
+         }
+      }
 
          let audUrl = null;
          let audHidUrl = null;
@@ -519,156 +637,156 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            return evidenceType === 'document' ? null : evidenceType;
          })();
 
-             const metadata: Record<string, any> = {};
-             metadata.image_filter_reveal = {
-                  brightness: filterRevealBrightness,
-                  contrast: filterRevealContrast,
-                  saturate: filterRevealSaturate
-             };
-             // attach fake metadata fields if provided (prefer explicit fields, fallback to fakeMeta map)
-             if (fakeDate) metadata.date_created = fakeDate;
-             if (fakeLocation) metadata.gps_coords = fakeLocation;
-             if (technicalNote) {
-                metadata.technical_note = technicalNote;
-                metadata.hex_comment = technicalNote;
-             }
-             if (fakeMeta) {
-                if (fakeMeta.date) metadata.date_created = fakeMeta.date;
-                if (fakeMeta.gps) metadata.gps_coords = fakeMeta.gps;
-                if (fakeMeta.owner) metadata.device_owner = fakeMeta.owner;
-             }
-            // spectrograms are stored via `audio_hidden_url` only; do not add to metadata
-             // optional external link + qr
-             if (externalLink) metadata.external_link = externalLink;
-            // thermal metadata flag
-            if (thermalEnabled) {
-               metadata.thermal = true;
-               if (thermalSecretText) metadata.thermal_secret_text = thermalSecretText;
-               if (thermalKeyword) metadata.thermal_keyword = thermalKeyword;
-               metadata.thermal_font_size = thermalFontSize;
-               metadata.thermal_position_y = thermalPositionY;
-            }
-            // audio playback config: time (seconds) when hidden track should be triggered
-            if (typeof triggerTime !== 'undefined') {
-               metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
-            }
+         const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) ? LOCKED_PLACEHOLDER_IMG : (imgUrl || null);
 
-            if (wantsSecurityLayer) {
-               metadata.unified_media = {
-                  base_media_type: baseMediaType,
-                  base_media_url: baseMediaUrl,
-                  uv_layer_url: uvUrl || null,
-                  filter_layer_url: filterUrl || null,
-                  hidden_layer_url: glitchFocusedUrl || null,
-                  video_url: finalVideoUrl || null,
-                  audio_base_url: audUrl || null,
-                  audio_hidden_url: audHidUrl || null,
-                  hide_preview_on_board: hidePreviewOnBoard,
-               };
+         const metadata: Record<string, any> = {};
+         metadata.image_filter_reveal = {
+              brightness: filterRevealBrightness,
+              contrast: filterRevealContrast,
+              saturate: filterRevealSaturate
+         };
+         // attach fake metadata fields if provided (prefer explicit fields, fallback to fakeMeta map)
+         if (fakeDate) metadata.date_created = fakeDate;
+         if (fakeLocation) metadata.gps_coords = fakeLocation;
+         if (technicalNote) {
+            metadata.technical_note = technicalNote;
+            metadata.hex_comment = technicalNote;
+         }
+         if (fakeMeta) {
+            if (fakeMeta.date) metadata.date_created = fakeMeta.date;
+            if (fakeMeta.gps) metadata.gps_coords = fakeMeta.gps;
+            if (fakeMeta.owner) metadata.device_owner = fakeMeta.owner;
+         }
+        // spectrograms are stored via `audio_hidden_url` only; do not add to metadata
+         // optional external link + qr
+         if (externalLink) metadata.external_link = externalLink;
+        // thermal metadata flag
+        if (thermalEnabled) {
+           metadata.thermal = true;
+           if (thermalSecretText) metadata.thermal_secret_text = thermalSecretText;
+           if (thermalKeyword) metadata.thermal_keyword = thermalKeyword;
+           metadata.thermal_font_size = thermalFontSize;
+           metadata.thermal_position_y = thermalPositionY;
+        }
+        // audio playback config: time (seconds) when hidden track should be triggered
+        if (typeof triggerTime !== 'undefined') {
+           metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
+        }
 
-               metadata.masked_preview = hidePreviewOnBoard;
+        const mediaVisibilityConfig = {
+           audio_base: mediaVisibility.audioBase,
+           audio_hidden: mediaVisibility.audioHidden,
+           uv_layer: mediaVisibility.uvLayer,
+           visual: mediaVisibility.visual,
+        };
 
-               metadata.security_layer = {
-                  enabled: true,
-                  reveal_logic: revealLogicMode,
-                  require_keyword: revealRequiresKeyword,
-                  keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
-                  reward_code: glitchRewardCode || null,
-                  signal_targets: signalTargets,
-                  slider_config: {
-                     target_frequency: glitchCorrectFrequency,
-                     target_shift: glitchCorrectShift,
-                     target_chromatic: glitchCorrectChromatic,
-                     tolerance_frequency: glitchToleranceFreq,
-                     tolerance_shift: glitchToleranceShift,
-                     tolerance_chromatic: glitchToleranceChroma,
-                  },
-                  start_values: {
-                     frequency: glitchStartFrequency,
-                     shift: glitchStartShift,
-                     chromatic: glitchStartChromatic,
-                  },
-               };
+        if (wantsSecurityLayer) {
+           const securityLayer = {
+              enabled: true,
+              reveal_logic: revealLogicMode,
+              require_keyword: revealRequiresKeyword,
+              keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
+              reward_code: glitchRewardCode || null,
+              signal_targets: signalTargets,
+              slider_config: {
+                 target_frequency: glitchCorrectFrequency,
+                 target_shift: glitchCorrectShift,
+                 target_chromatic: glitchCorrectChromatic,
+                 tolerance_frequency: glitchToleranceFreq,
+                 tolerance_shift: glitchToleranceShift,
+                 tolerance_chromatic: glitchToleranceChroma,
+              },
+              start_values: {
+                 frequency: glitchStartFrequency,
+                 shift: glitchStartShift,
+                 chromatic: glitchStartChromatic,
+              },
+           };
 
-               metadata.card_type = resolvedCardType;
-               metadata.media_type = baseMediaType;
-               metadata.reward_code = glitchRewardCode || null;
+           const glitchPuzzleMeta = {
+              original_image_url: baseMediaUrl || imgUrl || null,
+              corrupted_image_url: imgUrl || null,
+              correct_frequency: glitchCorrectFrequency,
+              correct_shift: glitchCorrectShift,
+              correct_chromatic: glitchCorrectChromatic,
+              difficulty: glitchDifficulty,
+              tolerance_frequency: glitchToleranceFreq,
+              tolerance_shift: glitchToleranceShift,
+              tolerance_chromatic: glitchToleranceChroma,
+              start_frequency: glitchStartFrequency,
+              start_shift: glitchStartShift,
+              start_chromatic: glitchStartChromatic,
+              access_instructions: glitchAccessInstructions || undefined,
+              hint: glitchHint || undefined,
+              reward_code: glitchRewardCode,
+              correct_keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
+              require_keyword_validation: revealRequiresKeyword,
+              unlock_mode: resolvedUnlockMode,
+              variant: revealRequiresKeyword ? 'advanced_glitch' : 'standard_glitch',
+              manual_unlock_required: revealRequiresKeyword,
+              hidden_uv_url: uvUrl || null,
+              hidden_audio_url: glitchHiddenAudioUrl || null,
+              hidden_video_url: glitchHiddenVideoUrl || null,
+              focused_image_url: glitchFocusedUrl || null,
+              image_uv_url: uvUrl || null,
+              media_visibility: mediaVisibilityConfig,
+              audio_static_sync: audioStaticSync,
+              narrative_hints: {
+                 audio_guides_visual: narrativeLinks.audioHintsVisual,
+                 visual_guides_code: narrativeLinks.visualHintsCode,
+                 hint_note: narrativeLinks.hintNote || null,
+              },
+              security_layer: securityLayer,
+              solved: false,
+           };
 
-               metadata.logic = 'glitch_sequential';
-               metadata.sequence = {
-                  step_1: 'unlock_boot',
-                  step_2: 'align_signal',
-                  step_3: revealRequiresKeyword ? 'keyword_verification' : 'reveal',
-               };
+           metadata.unified_media = {
+              base_media_type: baseMediaType,
+              base_media_url: baseMediaUrl,
+              uv_layer_url: uvUrl || null,
+              filter_layer_url: filterUrl || null,
+              hidden_layer_url: glitchFocusedUrl || null,
+              video_url: finalVideoUrl || null,
+              audio_base_url: audUrl || null,
+              audio_hidden_url: audHidUrl || null,
+              hide_preview_on_board: hidePreviewOnBoard,
+           };
 
-               metadata.media_visibility = {
-                  audio_base: mediaVisibility.audioBase,
-                  audio_hidden: mediaVisibility.audioHidden,
-                  uv_layer: mediaVisibility.uvLayer,
-                  visual: mediaVisibility.visual,
-               };
-               metadata.audio_static_sync = audioStaticSync;
-               metadata.narrative_hints = {
-                  audio_guides_visual: narrativeLinks.audioHintsVisual,
-                  visual_guides_code: narrativeLinks.visualHintsCode,
-                  hint_note: narrativeLinks.hintNote || null,
-               };
-            }
+           metadata.masked_preview = hidePreviewOnBoard;
+           metadata.security_layer = securityLayer;
+           metadata.glitch_puzzle = glitchPuzzleMeta;
+           metadata.card_type = resolvedCardType;
+           metadata.media_type = baseMediaType;
+           metadata.reward_code = glitchRewardCode || null;
+           metadata.media_visibility = mediaVisibilityConfig;
+           metadata.audio_static_sync = audioStaticSync;
+           metadata.narrative_hints = {
+              audio_guides_visual: narrativeLinks.audioHintsVisual,
+              visual_guides_code: narrativeLinks.visualHintsCode,
+              hint_note: narrativeLinks.hintNote || null,
+           };
+           metadata.logic = 'glitch_sequential';
+           metadata.sequence = {
+              step_1: 'unlock_boot',
+              step_2: 'align_signal',
+              step_3: revealRequiresKeyword ? 'keyword_verification' : 'reveal',
+           };
+        }
 
-            // Add glitch puzzle metadata if needed
-            if (wantsSecurityLayer) {
-               metadata.glitch_puzzle = {
-                  original_image_url: baseMediaUrl || imgUrl || null,
-                  correct_frequency: glitchCorrectFrequency,
-                  correct_shift: glitchCorrectShift,
-                  correct_chromatic: glitchCorrectChromatic,
-                  tolerance_frequency: glitchToleranceFreq,
-                  tolerance_shift: glitchToleranceShift,
-                  tolerance_chromatic: glitchToleranceChroma,
-                  start_frequency: glitchStartFrequency,
-                  start_shift: glitchStartShift,
-                  start_chromatic: glitchStartChromatic,
-                  access_instructions: glitchAccessInstructions || undefined,
-                  hint: glitchHint || undefined,
-                  reward_code: glitchRewardCode,
-                  correct_keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
-                  require_keyword_validation: revealRequiresKeyword,
-                  unlock_mode: resolvedUnlockMode,
-                  variant: revealRequiresKeyword ? 'advanced_glitch' : 'standard_glitch',
-                  manual_unlock_required: revealRequiresKeyword,
-                  hidden_uv_url: uvUrl || null,
-                  hidden_audio_url: glitchHiddenAudioUrl || null,
-                  hidden_video_url: glitchHiddenVideoUrl || null,
-                  focused_image_url: glitchFocusedUrl || null,
-                  solved: false,
-               };
-               metadata.media_visibility = {
-                  audio_base: mediaVisibility.audioBase,
-                  audio_hidden: mediaVisibility.audioHidden,
-                  uv_layer: mediaVisibility.uvLayer,
-                  visual: mediaVisibility.visual,
-               };
-               metadata.audio_static_sync = audioStaticSync;
-               metadata.narrative_hints = {
-                  audio_guides_visual: narrativeLinks.audioHintsVisual,
-                  visual_guides_code: narrativeLinks.visualHintsCode,
-                  hint_note: narrativeLinks.hintNote || null,
-               };
-            }
-
-            // Add mega clue metadata if needed
-            if (evidenceType === 'mega_clue') {
-               metadata.mega_clue = {
-                  final_truth_text: megaFinalTruthText,
-                  required_puzzle_ids: megaRequiredPuzzleIds,
-                  collected_codes: [],
-               };
-            }
+        // Add mega clue metadata if needed
+        if (evidenceType === 'mega_clue') {
+           metadata.mega_clue = {
+              final_truth_text: megaFinalTruthText,
+              required_puzzle_ids: megaRequiredPuzzleIds,
+              required_code_count: megaRequiredPuzzleIds.length,
+              solved_puzzle_ids: [],
+              collected_codes: [],
+              unlocked: false,
+           };
+        }
 
          // sanitize metadata to avoid sending unserializable objects
          const cleanMetadata = sanitizeForMetadata(metadata);
-
-            const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) ? LOCKED_PLACEHOLDER_IMG : (imgUrl || null);
 
          const payload: Record<string, any> = {
         investigation_id: investigationId,
@@ -704,24 +822,28 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    payload.metadata.chat_contact_name = finalChatContact || null;
                 }
 
-         // attach person dossier metadata
-          if (isPerson) {
-             payload.metadata = payload.metadata || {};
-             payload.metadata.person = sanitizeForMetadata({
-               name: personName || title,
-               dob: personDob || null,
-               status: personStatus || 'UNKNOWN',
-               occupation: personOccupation || null,
-             });
-          }
-            // shredded document fields
-            if (isShredded) {
-               payload.is_shredded = true;
-               payload.shred_rows = shredRows;
-               payload.shred_cols = shredCols;
-            }
+         // attach person dossier metadata only for document evidence
+         if (evidenceType === 'document' && isPerson) {
+            payload.metadata = payload.metadata || {};
+            payload.metadata.person = sanitizeForMetadata({
+              name: personName || title,
+              dob: personDob || null,
+              status: personStatus || 'UNKNOWN',
+              occupation: personOccupation || null,
+            });
+         }
+
+         // shredded document fields only apply to document evidence
+         if (evidenceType === 'document' && isShredded) {
+            payload.is_shredded = true;
+            payload.shred_rows = shredRows;
+            payload.shred_cols = shredCols;
+         }
+
+         if (evidenceType === 'document') {
             if (realText) payload.real_text = realText;
             if (cipherText) payload.cipher_text = cipherText;
+         }
          // optional stamp text column (if DB has column 'stamp_text')
          if (stamp) payload.stamp_text = stamp;
 
@@ -743,6 +865,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
   const handleImgSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
+         const file = e.target.files[0];
+         
+         // Validar arquivo
+         const maxSize = 10 * 1024 * 1024; // 10MB
+         if (file.size > maxSize) {
+            alert(`Imagem muito grande. Tamanho máximo: ${(maxSize / 1024 / 1024).toFixed(0)}MB`);
+            return;
+         }
+         
+         if (!file.type.startsWith('image/')) {
+            alert('Apenas arquivos de imagem são permitidos');
+            return;
+         }
+         
+         if (previewUrl) {
+            try { URL.revokeObjectURL(previewUrl); } catch (err) {}
+         }
       setImgFile(e.target.files[0]);
          setPreviewUrl(URL.createObjectURL(e.target.files[0]));
     }
@@ -765,7 +904,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    };
 
    const onHandleMouseDown = (e: React.MouseEvent) => {
-      e.stopPropagation();
+      e.preventDefault();
       if (!filterTransform) return;
       draggingRef.current = { mode: 'resize', startX: e.clientX, startY: e.clientY, startTransform: { ...filterTransform } };
    };
@@ -773,35 +912,57 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       const f = e.target.files?.[0] || null;
       if (!f) return;
+      
+      // Validar arquivo
+      const maxSize = 100 * 1024 * 1024; // 100MB
+      if (f.size > maxSize) {
+         alert(`Vídeo muito grande. Tamanho máximo: ${(maxSize / 1024 / 1024).toFixed(0)}MB`);
+         return;
+      }
+      
+      if (!f.type.startsWith('video/')) {
+         alert('Apenas arquivos de vídeo são permitidos');
+         return;
+      }
+      
       setVideoFile(f);
       try { if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
       const localUrl = URL.createObjectURL(f);
       setVideoPreviewUrl(localUrl);
 
-      // Upload immediately
-      (async () => {
+      // Upload immediately and track promise
+      const uploadPromise = (async () => {
          try {
             setVideoUploading(true);
             const ext = f.name.split('.').pop() || 'mp4';
-            const publicUrl = await uploadInvestigationFile(f, investigationId, ext);
+            const publicUrl = await uploadInvestigationFile(f, investigationId, ext, (progress) => {
+               setUploadProgress(prev => ({ ...prev, video: progress }));
+            });
             if (publicUrl) {
                setVideoUrl(publicUrl);
+               return publicUrl;
             } else {
-               alert('Falha ao enviar vídeo');
+               throw new Error('Upload retornou URL vazia');
             }
          } catch (err) {
             console.error('Video upload failed', err);
-            alert('Falha ao enviar vídeo');
+            setUploadErrors(prev => [...prev, `Vídeo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`]);
+            throw err;
          } finally {
             setVideoUploading(false);
+            setUploadProgress(prev => ({ ...prev, video: 100 }));
          }
       })();
+      
+      setVideoUploadPromise(uploadPromise);
    };
+
+   const overlayActive = showMixer || !!editorMode || showGlitchDesigner || !!showAudioForgeFor || showThermalEditor;
 
    return (
     <div className="modal-overlay">
       <DiegeticWindow title="REGISTRO DE EVIDÊNCIA" onClose={onClose}>
-        <div className="dossier-body" style={{ padding: 0 }}>
+            <div className="dossier-body" style={{ padding: 0, pointerEvents: overlayActive ? 'none' : 'auto', position: 'relative' }}>
 
           <div className="tabs-header">
             <button className={`tab-btn ${activeTab==='geral'?'active':''}`} onClick={()=>setActiveTab('geral')}>📄 GERAL & DADOS</button>
@@ -821,7 +982,19 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    <div style={{display:'flex', gap:10, marginBottom:15}}>
                       <button 
                          className={`upload-btn ${evidenceType === 'document' ? 'active' : ''}`}
-                         onClick={() => setEvidenceType('document')}
+                         onClick={() => {
+                            setEvidenceType('document');
+                            // Limpar mídias incompatíveis ao mudar tipo
+                            if (evidenceType !== 'document') {
+                               setVideoFile(null);
+                               setVideoUrl(null);
+                               setVideoUrlInput('');
+                               if (videoPreviewUrl) {
+                                  try { URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
+                               }
+                               setVideoPreviewUrl(null);
+                            }
+                         }}
                          style={{flex:1, background: evidenceType === 'document' ? 'rgba(198,164,95,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'document' ? '#c6a45f' : '#888'}}
                       >
                          📄 Documento Padrão
@@ -847,7 +1020,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   <div className="field-block" style={{background:'linear-gradient(135deg, rgba(18,24,40,0.8), rgba(0,0,0,0.7))', border:'1px solid rgba(100,150,255,0.3)', borderRadius:8}}>
                     <span className="field-title" style={{color:'#64b5ff'}}>🧩 HUB GLITCH</span>
                     <p style={{fontSize:12, color:'#9fb9ff', marginTop:6, lineHeight:1.5}}>
-                      Use a aba "CONFIG. GLITCH" para definir valores alvo. A imagem enviada aqui será mantida limpa e o motor aplicará a distorção para o jogador.
+                                 Use os controles na aba Visual para definir os valores alvo do glitch. A imagem enviada aqui será mantida limpa e o motor aplicará a distorção para o jogador.
                     </p>
                               {previewUrl ? (
                       <GlitchImageEngine
@@ -940,6 +1113,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         return 'Nenhuma';
                       })()}</span>
                       <span style={{color:'#64b5ff'}}>Aba Glitch continua sendo usada para calibrar sliders.</span>
+                                 <span style={{color:'#64b5ff'}}>Use a seção de calibração na aba Visual para ajustar os sliders.</span>
                    </div>
                 </div>
 
@@ -1131,8 +1305,120 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         height={240}
                      />
                      <small style={{display:'block', marginTop:8, color:'#888'}}>
-                        A imagem acima é a base limpa. Ajuste os sliders na aba Glitch para calibrar a dificuldade enquanto vê o efeito aqui.
+                        A imagem acima é a base limpa. Ajuste os sliders na seção de calibração logo abaixo para calibrar a dificuldade enquanto vê o efeito aqui.
                      </small>
+                  </div>
+                )}
+
+                {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && (
+                  <div className="field-block" style={{borderColor:'rgba(100,150,255,0.25)'}}>
+                    <span className="field-title" style={{color:'#64b5ff'}}>🎛️ CALIBRAÇÃO DO GLITCH NO VISUAL</span>
+                    <p style={{fontSize:11, color:'#9fb9ff', marginBottom:12}}>
+                      Ajuste os valores alvo enquanto vê a prévia. Os controles são os mesmos da aba Glitch, mas ficam aqui para facilitar durante a criação.
+                    </p>
+
+                    <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:14, alignItems:'start'}}>
+                      <div>
+                        <div style={{marginBottom:12}}>
+                           <label>Frequência de Fatias: <strong style={{color:'#64b5ff'}}>{glitchCorrectFrequency}</strong></label>
+                           <input
+                              type="range"
+                              min="1"
+                              max="50"
+                              value={glitchCorrectFrequency}
+                              onChange={e => setGlitchCorrectFrequency(parseInt(e.target.value))}
+                              disabled={loading}
+                              style={{width:'100%', accentColor:'#64b5ff'}}
+                           />
+                        </div>
+
+                        <div style={{marginBottom:12}}>
+                           <label>Intensidade de Deslocamento: <strong style={{color:'#64b5ff'}}>{glitchCorrectShift}%</strong></label>
+                           <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={glitchCorrectShift}
+                              onChange={e => setGlitchCorrectShift(parseInt(e.target.value))}
+                              disabled={loading}
+                              style={{width:'100%', accentColor:'#64b5ff'}}
+                           />
+                        </div>
+
+                        <div style={{marginBottom:12}}>
+                           <label>Corrupção Cromática: <strong style={{color:'#64b5ff'}}>{glitchCorrectChromatic}%</strong></label>
+                           <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={glitchCorrectChromatic}
+                              onChange={e => setGlitchCorrectChromatic(parseInt(e.target.value))}
+                              disabled={loading}
+                              style={{width:'100%', accentColor:'#64b5ff'}}
+                           />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{padding:10, background:'rgba(100,150,255,0.08)', border:'1px solid rgba(100,150,255,0.2)', borderRadius:6, color:'#9fb9ff', fontSize:11}}>
+                           💡 <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
+                        </div>
+
+                        <div style={{marginTop:12, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
+                           <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Tolerância de acerto (sliders)</h5>
+                           <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:8, flexWrap:'wrap'}}>
+                              <span style={{fontSize:12, color:'#9fb9ff'}}>Dificuldade:</span>
+                              <button
+                                 className={`upload-btn ${glitchDifficulty === 'easy' ? 'active' : ''}`}
+                                 onClick={() => applyGlitchDifficulty('easy')}
+                                 style={{minWidth:90}}
+                              >Fácil</button>
+                              <button
+                                 className={`upload-btn ${glitchDifficulty === 'normal' ? 'active' : ''}`}
+                                 onClick={() => applyGlitchDifficulty('normal')}
+                                 style={{minWidth:90}}
+                              >Normal</button>
+                              <button
+                                 className={`upload-btn ${glitchDifficulty === 'hard' ? 'active' : ''}`}
+                                 onClick={() => applyGlitchDifficulty('hard')}
+                                 style={{minWidth:90}}
+                              >Difícil</button>
+                              {glitchDifficulty === 'custom' && <span style={{fontSize:11, color:'#c6a45f'}}>Personalizado</span>}
+                           </div>
+                           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:8}}>
+                               <label style={{fontSize:12, color:'#ccc'}}>Freq. (±)
+                                  <input type="number" value={glitchToleranceFreq} onChange={e => { setGlitchDifficulty('custom'); setGlitchToleranceFreq(Math.max(0, parseInt(e.target.value) || 0)); }} min={0} max={10} style={{width:'100%', marginTop:4}} />
+                               </label>
+                               <label style={{fontSize:12, color:'#ccc'}}>Shift (±)
+                                  <input type="number" value={glitchToleranceShift} onChange={e => { setGlitchDifficulty('custom'); setGlitchToleranceShift(Math.max(0, parseInt(e.target.value) || 0)); }} min={0} max={20} style={{width:'100%', marginTop:4}} />
+                               </label>
+                               <label style={{fontSize:12, color:'#ccc'}}>Chroma (±)
+                                  <input type="number" value={glitchToleranceChroma} onChange={e => { setGlitchDifficulty('custom'); setGlitchToleranceChroma(Math.max(0, parseInt(e.target.value) || 0)); }} min={0} max={20} style={{width:'100%', marginTop:4}} />
+                               </label>
+                           </div>
+                           <small style={{display:'block', marginTop:6, color:'#777'}}>Valores menores deixam o puzzle mais preciso; maiores permitem folga ao alinhar.</small>
+                        </div>
+
+                        <div style={{marginTop:12}}>
+                           <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Pontos de partida para o jogador</h5>
+                           <p style={{fontSize:11, color:'#888', marginBottom:8}}>Defina de onde os controles começam para não entregar a resposta de imediato.</p>
+                           <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:10}}>
+                              <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                                 Frequência inicial
+                                 <input type="number" value={glitchStartFrequency} onChange={e => setGlitchStartFrequency(parseInt(e.target.value) || 0)} min={1} max={50} style={{width:'100%', marginTop:4}} />
+                              </label>
+                              <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                                 Deslocamento inicial (%)
+                                 <input type="number" value={glitchStartShift} onChange={e => setGlitchStartShift(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
+                              </label>
+                              <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                                 Cromática inicial (%)
+                                 <input type="number" value={glitchStartChromatic} onChange={e => setGlitchStartChromatic(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
+                              </label>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -1542,7 +1828,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     )}
                     {previewUrl && (
                       <div style={{padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', display:'flex', flexDirection:'column', gap:8}}>
-                        <span style={{fontSize:11, color:'#9fb9ff'}}>Mídia conectada. Ajuste os sliders abaixo para definir o quebra-cabeça.</span>
+                                    <span style={{fontSize:11, color:'#9fb9ff'}}>Mídia conectada. Ajuste os sliders na aba Visual para definir o quebra-cabeça.</span>
                         {glitchFocusedImagePreview && (
                           <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                              <span style={{fontSize:18}}>✓</span>
@@ -1551,70 +1837,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         )}
                       </div>
                     )}
-                 </div>
-
-                 {/* Seção de Parâmetros */}
-                 <div style={{marginBottom:20}}>
-                    <h4 style={{color:'#64b5ff', marginTop:0}}>⚙️ PARÂMETROS CORRETOS PARA RESOLVER</h4>
-                    
-                    <div style={{marginBottom:12}}>
-                       <label>Frequência de Fatias: <strong style={{color:'#64b5ff'}}>{glitchCorrectFrequency}</strong></label>
-                       <input
-                          type="range"
-                          min="1"
-                          max="50"
-                          value={glitchCorrectFrequency}
-                          onChange={e => setGlitchCorrectFrequency(parseInt(e.target.value))}
-                          disabled={loading}
-                          style={{width:'100%', accentColor:'#64b5ff'}}
-                       />
-                    </div>
-
-                    <div style={{marginBottom:12}}>
-                       <label>Intensidade de Deslocamento: <strong style={{color:'#64b5ff'}}>{glitchCorrectShift}%</strong></label>
-                       <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={glitchCorrectShift}
-                          onChange={e => setGlitchCorrectShift(parseInt(e.target.value))}
-                          disabled={loading}
-                          style={{width:'100%', accentColor:'#64b5ff'}}
-                       />
-                    </div>
-
-                    <div style={{marginBottom:12}}>
-                       <label>Corrupção Cromática: <strong style={{color:'#64b5ff'}}>{glitchCorrectChromatic}%</strong></label>
-                       <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={glitchCorrectChromatic}
-                          onChange={e => setGlitchCorrectChromatic(parseInt(e.target.value))}
-                          disabled={loading}
-                          style={{width:'100%', accentColor:'#64b5ff'}}
-                       />
-                    </div>
-
-                    <div style={{padding:10, background:'rgba(100,150,255,0.1)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', fontSize:11, color:'#888'}}>
-                       💡 <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
-                    </div>
-
-                              <div style={{marginTop:12, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
-                                 <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Tolerância de acerto (sliders)</h5>
-                                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:8}}>
-                                     <label style={{fontSize:12, color:'#ccc'}}>Freq. (±)
-                                        <input type="number" value={glitchToleranceFreq} onChange={e => setGlitchToleranceFreq(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={10} style={{width:'100%', marginTop:4}} />
-                                     </label>
-                                     <label style={{fontSize:12, color:'#ccc'}}>Shift (±)
-                                        <input type="number" value={glitchToleranceShift} onChange={e => setGlitchToleranceShift(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={20} style={{width:'100%', marginTop:4}} />
-                                     </label>
-                                     <label style={{fontSize:12, color:'#ccc'}}>Chroma (±)
-                                        <input type="number" value={glitchToleranceChroma} onChange={e => setGlitchToleranceChroma(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={20} style={{width:'100%', marginTop:4}} />
-                                     </label>
-                                 </div>
-                                 <small style={{display:'block', marginTop:6, color:'#777'}}>Valores menores deixam o puzzle mais preciso; maiores permitem folga ao alinhar.</small>
-                              </div>
                  </div>
 
                 {/* Briefing e dica rápida */}
@@ -1637,26 +1859,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       placeholder="Ex: Frequência baixa, deslocamento no terço inferior, cromática baixa."
                       style={{width:'100%', marginTop:4}}
                    />
-                </div>
-
-                {/* Valores iniciais para os sliders do jogador */}
-                <div style={{marginBottom:24}}>
-                   <h4 style={{color:'#64b5ff', marginTop:0}}>🎛️ PONTOS DE PARTIDA PARA O JOGADOR</h4>
-                   <p style={{fontSize:11, color:'#888', marginBottom:8}}>Defina de onde os controles começam para não entregar a resposta de imediato.</p>
-                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12}}>
-                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
-                         Frequência inicial
-                         <input type="number" value={glitchStartFrequency} onChange={e => setGlitchStartFrequency(parseInt(e.target.value) || 0)} min={1} max={50} style={{width:'100%', marginTop:4}} />
-                      </label>
-                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
-                         Deslocamento inicial (%)
-                         <input type="number" value={glitchStartShift} onChange={e => setGlitchStartShift(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
-                      </label>
-                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
-                         Cromática inicial (%)
-                         <input type="number" value={glitchStartChromatic} onChange={e => setGlitchStartChromatic(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
-                      </label>
-                   </div>
                 </div>
 
                 <div style={{marginBottom:20, padding:'12px', background:'rgba(18,24,40,0.7)', border:'1px solid rgba(100,150,255,0.25)', borderRadius:8}}>
@@ -1918,12 +2120,29 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       </div>
 
-      <div className="dossier-footer">
+      <div className="dossier-footer" style={{ pointerEvents: overlayActive ? 'none' : 'auto' }}>
            <button className="btn-cancel" onClick={onClose}>CANCELAR</button>
-           <button className="btn-save" onClick={handleSave} disabled={loading}>
-              {loading ? 'ARQUIVANDO...' : 'REGISTRAR EVIDÊNCIA'}
+           <button className="btn-save" onClick={handleSave} disabled={loading || videoUploading || audioHiddenUploading}>
+              {videoUploading ? '⏳ Aguardando upload de vídeo...' : loading ? '💾 Salvando...' : 'REGISTRAR EVIDÊNCIA'}
            </button>
         </div>
+        
+        {/* Progress bars */}
+        {(loading || videoUploading) && Object.keys(uploadProgress).length > 0 && (
+           <div style={{padding: '12px 20px', background: 'rgba(0,0,0,0.5)', borderTop: '1px solid rgba(100,150,255,0.2)'}}>
+              {Object.entries(uploadProgress).map(([key, value]) => (
+                 <div key={key} style={{marginBottom: 8}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginBottom: 4}}>
+                       <span>{key === 'image' ? 'Imagem' : key === 'video' ? 'Vídeo' : key === 'uv' ? 'UV' : key === 'filter' ? 'Filtro' : key}</span>
+                       <span>{value}%</span>
+                    </div>
+                    <div style={{height: 4, background: 'rgba(0,0,0,0.3)', borderRadius: 2, overflow: 'hidden'}}>
+                       <div style={{height: '100%', width: `${value}%`, background: 'linear-gradient(90deg, #64b5ff, #00ffaa)', transition: 'width 0.3s'}} />
+                    </div>
+                 </div>
+              ))}
+           </div>
+        )}
 
       {showMixer && (
          <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

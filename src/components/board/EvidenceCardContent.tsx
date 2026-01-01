@@ -17,11 +17,15 @@ interface EvidenceCardContentProps {
   hasUV?: boolean
   hasHiddenAudio?: boolean
   performanceMode?: boolean
+  blurred?: boolean
 }
 
 /**
  * EvidenceCardContent
  * Componente que encapsula a lógica de visão GM vs Player
+ * 
+ * Renderiza apenas o conteúdo DENTRO do container
+ * O container (.card-content-container) é gerenciado por EvidenceCard
  * 
  * GM View: Vê conteúdo normal
  * Player View (Locked): "ACESSO NEGADO" com grid de encriptação
@@ -38,15 +42,22 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   playerView = false,
   hasUV = false,
   hasHiddenAudio = false,
-  performanceMode = false
+  performanceMode = false,
+  blurred = false
 }) => {
-  // Determina se deve mostrar conteúdo ou restrição
-  const isPlayerViewingLockedContent = playerView && locked && !isGameMaster
-  const isPlayerViewingEncrypted = playerView && cardType === 'encrypted' && !isGameMaster
-  const isPlayerViewingGlitch = playerView && cardType === 'glitch' && !isGameMaster
+  // ✅ LÓGICA CORRIGIDA: Ordem de precedência clara
+  // 1. Se é Game Master E não está em modo player view, mostra tudo
+  const isGMViewFull = isGameMaster && !playerView;
+  
+  // 2. Se card está locked E estamos em modo player (ou visão de teste)
+  const isLockedView = locked && playerView && !isGameMaster;
+  
+  // 3. Se é glitch/encrypted E em modo player
+  const isGlitchView = (cardType === 'glitch' || cardType === 'encrypted') && playerView && !isGameMaster;
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const reducedMotion = performanceMode || prefersReducedMotion
+  const showBlur = blurred && !isGameMaster
 
   // Gera código de encriptação único
   const encryptionCode = useMemo(() => {
@@ -54,10 +65,10 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   }, [id])
 
   // ===== PLAYER VIEW - LOCKED CONTENT (Com Senha) =====
-  if (isPlayerViewingLockedContent) {
+  if (isLockedView) {
     if (reducedMotion) {
       return (
-        <div className="card-content-container locked-view">
+        <>
           <div className="lock-overlay encrypted-full">
             <div className="encryption-text-wrapper">
               <span className="lock-icon">🔐</span>
@@ -65,11 +76,11 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
               <div className="encryption-code">MODO ECONÔMICO</div>
             </div>
           </div>
-        </div>
+        </>
       )
     }
     return (
-      <div className="card-content-container locked-view">
+      <>
         <div className="encryption-grid" />
         <div className="lock-overlay encrypted-full">
           <div className="encryption-text-wrapper">
@@ -78,26 +89,26 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
             <div className="encryption-code">{encryptionCode}</div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
   // ===== PLAYER VIEW - ENCRYPTED/GLITCH (Sem conseguir ver) =====
-  if (isPlayerViewingEncrypted || isPlayerViewingGlitch) {
+  if (isGlitchView) {
     if (reducedMotion) {
       return (
-        <div className="card-content-container glitch-view">
+        <>
           <div className="glitch-text-overlay" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.6)' }}>
             <div className="glitch-chars" style={{ textAlign: 'center', color: '#ddd', letterSpacing: 1 }}>
               <div style={{ fontSize: 12, opacity: 0.9 }}>MODO PERFORMANCE</div>
               <div style={{ fontWeight: 700 }}>CONTEÚDO BLOQUEADO</div>
             </div>
           </div>
-        </div>
+        </>
       )
     }
     return (
-      <div className="card-content-container glitch-view">
+      <>
         {/* Múltiplas camadas de glitch para efeito intenso */}
         <div className="glitch-corruption">
           <div className="glitch-layer-1" style={{ animationDelay: '0s' }} />
@@ -139,17 +150,17 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
 
         {/* Efeito de scanlines */}
         <div className="scanlines" />
-      </div>
+      </>
     )
   }
 
   if (!image) {
-    return <div className="card-content-container loading-placeholder" />
+    return <div className="loading-placeholder-content" />
   }
 
   // ===== VISÃO COMPLETA / NORMAL (FALLBACK) =====
   return (
-    <div className="card-content-container gm-view">
+    <>
       {hasUV && isUV ? (
         <div className="uv-layer">
           <MysteryImage 
@@ -168,9 +179,10 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
             pointerLocal={undefined} 
           />
           {!reducedMotion && <div className="overlay-scan" />}
+          {showBlur && <div className="blur-overlay" aria-hidden />}
         </>
       )}
-    </div>
+    </>
   )
 }
 

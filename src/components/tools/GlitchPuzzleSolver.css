@@ -228,6 +228,26 @@
   border-left: 3px solid #0f0;
 }
 
+.keyword-panel {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.keyword-panel.attention {
+  background: linear-gradient(135deg, rgba(0, 255, 170, 0.12), rgba(0, 120, 90, 0.25));
+  border: 1px solid rgba(0, 255, 170, 0.7);
+  box-shadow: 0 0 12px rgba(0, 255, 170, 0.35);
+  animation: keyword-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes keyword-pulse {
+  from { box-shadow: 0 0 8px rgba(0, 255, 170, 0.25); }
+  to   { box-shadow: 0 0 18px rgba(0, 255, 170, 0.55); }
+}
+
 .slider-group {
   margin-bottom: 20px;
   position: relative;

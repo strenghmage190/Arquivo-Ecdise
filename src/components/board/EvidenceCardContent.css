@@ -22,6 +22,21 @@
   display: block;
 }
 
+.card-content-container.blurred-preview img,
+.card-content-container.blurred-preview canvas {
+  filter: blur(12px) saturate(0.8) brightness(0.9);
+  transform: scale(1.03);
+}
+
+.blur-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
+  border: 1px dashed rgba(0,243,255,0.25);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
 .uv-layer {
   width: 100%;
   height: 100%;
@@ -136,12 +151,6 @@
 
 .card-content-container.glitch-view {
   background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
-  animation: glitch-bg 4s infinite;
-}
-
-@keyframes glitch-bg {
-  0%, 100% { filter: hue-rotate(0deg) saturate(80%); }
-  50% { filter: hue-rotate(-5deg) saturate(120%); }
 }
 
 /* Camadas de glitch empilhadas */
@@ -180,7 +189,7 @@
 }
 
 .glitch-layer-2 {
-  animation: glitch-shift-reverse 0.25s infinite;
+  animation: glitch-shift 0.3s infinite;
   background: repeating-linear-gradient(
     90deg,
     rgba(0,255,255,0.2) 0px,
@@ -191,7 +200,7 @@
 }
 
 .glitch-layer-3 {
-  animation: glitch-shift 0.35s infinite;
+  animation: glitch-shift 0.3s infinite;
   background: repeating-linear-gradient(
     90deg,
     rgba(255,255,0,0.15) 0px,
@@ -381,5 +390,36 @@
 
   .access-denied {
     font-size: 14px;
+  }
+}
+
+/* =========================================
+   ACCESSIBILITY: Reduce Motion
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-view,
+  .glitch-view * {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .glitch-layer-1,
+  .glitch-layer-2,
+  .glitch-layer-3,
+  .corruption-pattern,
+  .scanlines,
+  .glitch-chars {
+    animation: none;
+    opacity: 0.4;
+  }
+  
+  .encryption-grid {
+    animation: none;
+    opacity: 0.2;
+  }
+  
+  .overlay-scan {
+    animation: none;
   }
 }

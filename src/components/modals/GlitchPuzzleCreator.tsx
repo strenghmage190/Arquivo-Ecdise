@@ -109,6 +109,65 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
         throw new Error('Falha ao fazer upload da imagem original');
       }
 
+      const mediaVisibility = {
+        audio_base: 'always',
+        audio_hidden: 'post_solve',
+        uv_layer: 'post_keyword',
+        visual: 'glitch_active',
+      };
+
+      const securityLayer = {
+        enabled: true,
+        reveal_logic: 'aligned_only',
+        require_keyword: false,
+        keyword: null,
+        reward_code: config.rewardCode,
+        signal_targets: { visual: true, audio: false },
+        slider_config: {
+          target_frequency: config.correctFrequency,
+          target_shift: config.correctShift,
+          target_chromatic: config.correctChromatic,
+          tolerance_frequency: 1,
+          tolerance_shift: 2,
+          tolerance_chromatic: 2,
+        },
+        start_values: {
+          frequency: 12,
+          shift: 20,
+          chromatic: 8,
+        },
+      } as const;
+
+      const glitchPuzzle = {
+        original_image_url: originalUrl,
+        corrupted_image_url: corruptedUrl || null,
+        correct_frequency: config.correctFrequency,
+        correct_shift: config.correctShift,
+        correct_chromatic: config.correctChromatic,
+        tolerance_frequency: 1,
+        tolerance_shift: 2,
+        tolerance_chromatic: 2,
+        start_frequency: 12,
+        start_shift: 20,
+        start_chromatic: 8,
+        hint: config.hint || undefined,
+        reward_code: config.rewardCode,
+        correct_keyword: null,
+        require_keyword_validation: false,
+        unlock_mode: 'code',
+        variant: 'standard_glitch',
+        manual_unlock_required: false,
+        hidden_uv_url: null,
+        hidden_audio_url: null,
+        hidden_video_url: null,
+        focused_image_url: null,
+        media_visibility: mediaVisibility,
+        audio_static_sync: false,
+        narrative_hints: { audio_guides_visual: false, visual_guides_code: false, hint_note: null },
+        security_layer: securityLayer,
+        solved: false,
+      };
+
       // Criar a pista como GLITCH_PUZZLE
       // IMPORTANTE: image_url recebe a imagem corrompida (ou vazia se não houver)
       // A imagem ORIGINAL é guardada exclusivamente no metadata para ser usada pelo Solver
@@ -121,18 +180,34 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
         x: initialX ?? 100,
         y: initialY ?? 100,
         metadata: {
-          glitch_puzzle: {
-            original_image_url: originalUrl, // A imagem VERDADEIRA fica aqui, protegida no metadata
-            corrupted_image_url: corruptedUrl || null,
-            correct_frequency: config.correctFrequency,
-            correct_shift: config.correctShift,
-            correct_chromatic: config.correctChromatic,
-            hint: config.hint,
-            reward_code: config.rewardCode,
-            solved: false,
+          glitch_puzzle: glitchPuzzle,
+          security_layer: securityLayer,
+          card_type: 'glitch_puzzle',
+          media_type: 'image',
+          reward_code: config.rewardCode,
+          media_visibility: mediaVisibility,
+          audio_static_sync: false,
+          narrative_hints: { audio_guides_visual: false, visual_guides_code: false, hint_note: null },
+          unified_media: {
+            base_media_type: 'image',
+            base_media_url: originalUrl,
+            uv_layer_url: null,
+            filter_layer_url: null,
+            hidden_layer_url: null,
+            video_url: null,
+            audio_base_url: null,
+            audio_hidden_url: null,
+            hide_preview_on_board: true,
+          },
+          masked_preview: true,
+          logic: 'glitch_sequential',
+          sequence: {
+            step_1: 'unlock_boot',
+            step_2: 'align_signal',
+            step_3: 'reveal',
           },
         },
-      };
+      } as const;
 
       await createInvestigationCard(cardData);
 

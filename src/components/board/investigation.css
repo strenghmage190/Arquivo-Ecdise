@@ -74,7 +74,7 @@ html, body {
   border: 1px solid rgba(100, 200, 255, 0.5);
   background: rgba(100, 200, 255, 0.1);
   pointer-events: none;
-  z-index: 2000;
+  z-index: var(--z-card-hover);
 }
 
 /* --- 3. ESTÉTICA DAS CARTAS (Polaroid / Dossier) --- */
@@ -177,7 +177,7 @@ html, body {
   align-items: center;
   gap: 12px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  z-index: 5000;
+  z-index: var(--z-dropdown);
   overflow: visible; /* allow dropdowns to escape the toolbar */
 }
 
@@ -539,7 +539,7 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5000;
+  z-index: var(--z-dropdown);
   
   display: flex;
   align-items: center;
@@ -677,7 +677,7 @@ body.space-panning .corkboard-canvas:active { cursor: grabbing; }
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5000;
+  z-index: var(--z-dropdown);
   display: flex;
   align-items: center;
   gap: 16px;

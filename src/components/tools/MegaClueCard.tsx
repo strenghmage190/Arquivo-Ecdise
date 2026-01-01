@@ -43,16 +43,32 @@ export default function MegaClueCard({
     return metadata;
   }, [metadata]);
 
+  const requiredPuzzleIds = useMemo(() => {
+    const ids = safeMetadata?.mega_clue?.required_puzzle_ids;
+    if (!Array.isArray(ids)) return [] as string[];
+    return ids.map((id: any) => String(id));
+  }, [safeMetadata]);
+
+  const initialSolvedIds = useMemo(() => {
+    const ids = safeMetadata?.mega_clue?.solved_puzzle_ids;
+    if (!Array.isArray(ids)) return [] as string[];
+    return ids.map((id: any) => String(id));
+  }, [safeMetadata]);
+
+  const requiredTotal = requiredPuzzleIds.length || requiredCodes;
+
   const initialCollected = (collectedCodesProp || safeMetadata?.mega_clue?.collected_codes || []).map((c) =>
     String(c).toUpperCase()
   );
   const [collectedCodes, setCollectedCodes] = useState<string[]>(initialCollected);
+  const [solvedIds, setSolvedIds] = useState<string[]>(initialSolvedIds);
   const [unlocked, setUnlocked] = useState<boolean>(
-    initialCollected.length >= requiredCodes || Boolean(safeMetadata?.mega_clue?.unlocked)
+    initialCollected.length >= requiredTotal || initialSolvedIds.length >= requiredTotal || Boolean(safeMetadata?.mega_clue?.unlocked)
   );
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [validCodes, setValidCodes] = useState<string[]>([]);
+  const [codeToPuzzleId, setCodeToPuzzleId] = useState<Record<string, string>>({});
   const [loadingCodes, setLoadingCodes] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [hasPrompted, setHasPrompted] = useState(false);
@@ -62,28 +78,39 @@ export default function MegaClueCard({
       String(c).toUpperCase()
     );
     setCollectedCodes(normalized);
-    setUnlocked(normalized.length >= requiredCodes || Boolean(safeMetadata?.mega_clue?.unlocked));
-  }, [collectedCodesProp, safeMetadata, requiredCodes]);
+    setSolvedIds(initialSolvedIds);
+    setUnlocked(
+      normalized.length >= requiredTotal ||
+      initialSolvedIds.length >= requiredTotal ||
+      Boolean(safeMetadata?.mega_clue?.unlocked)
+    );
+  }, [collectedCodesProp, safeMetadata, requiredTotal, initialSolvedIds]);
 
   const loadValidRewardCodes = useCallback(async () => {
     setLoadingCodes(true);
     try {
       const cards = await fetchCards(investigationId);
-      const rewards = (cards || [])
+      const rewards: string[] = [];
+      const codeMap: Record<string, string> = {};
+
+      (cards || [])
         .filter((c: any) => c.type === 'glitch_puzzle')
-        .map((c: any) => {
+        .forEach((c: any) => {
           try {
             const meta = c.metadata || (c.data && c.data.metadata) || {};
-            return meta?.glitch_puzzle?.reward_code;
+            const reward = meta?.glitch_puzzle?.reward_code;
+            if (reward) {
+              const upper = String(reward).toUpperCase();
+              rewards.push(upper);
+              codeMap[upper] = String(c.id);
+            }
           } catch (err) {
             console.error('Erro ao ler metadata do puzzle', err);
-            return null;
           }
-        })
-        .filter(Boolean)
-        .map((c: any) => String(c).toUpperCase());
+        });
 
       setValidCodes(Array.from(new Set(rewards)));
+      setCodeToPuzzleId(codeMap);
     } catch (err) {
       console.error('Erro ao buscar códigos válidos', err);
     } finally {
@@ -128,15 +155,30 @@ export default function MegaClueCard({
 
     try {
       const megaMeta = safeMetadata?.mega_clue || {};
-      const newCollectedCodes = [...collectedCodes, code];
-      const nowUnlocked = newCollectedCodes.length >= requiredCodes;
+      const matchedPuzzleId = codeToPuzzleId[code];
+      const enforceIds = requiredPuzzleIds.length > 0;
+      if (enforceIds && (!matchedPuzzleId || !requiredPuzzleIds.includes(matchedPuzzleId))) {
+        const message = '✗ CÓDIGO NÃO PERTENCE À LISTA DE QUEBRA-CABEÇAS EXIGIDOS';
+        setFeedback({ type: 'error', message });
+        return { success: false, message };
+      }
+
+      const newCollectedCodes = Array.from(new Set([...collectedCodes, code]));
+      const nextSolvedIds = matchedPuzzleId
+        ? Array.from(new Set([...(megaMeta.solved_puzzle_ids || []).map((id: any) => String(id)), matchedPuzzleId]))
+        : (megaMeta.solved_puzzle_ids || []).map((id: any) => String(id));
+      const progressCount = Math.max(newCollectedCodes.length, nextSolvedIds.length);
+      const totalRequired = requiredTotal || newCollectedCodes.length;
+      const nowUnlocked = totalRequired > 0 ? progressCount >= totalRequired : false;
 
       const updatedMetadata = {
         ...(safeMetadata || {}),
         mega_clue: {
           ...megaMeta,
           final_truth_text: megaMeta.final_truth_text ?? finalTruthText,
-          required_code_count: megaMeta.required_code_count ?? requiredCodes,
+          required_code_count: totalRequired,
+          required_puzzle_ids: requiredPuzzleIds,
+          solved_puzzle_ids: nextSolvedIds,
           collected_codes: newCollectedCodes,
           unlocked: nowUnlocked,
           unlocked_at: nowUnlocked ? new Date().toISOString() : megaMeta.unlocked_at,
@@ -146,18 +188,15 @@ export default function MegaClueCard({
       await updateInvestigationCard(cardId, { metadata: updatedMetadata });
 
       setCollectedCodes(newCollectedCodes);
+      setSolvedIds(nextSolvedIds);
       setUnlocked(nowUnlocked);
       const successMessage = nowUnlocked
-        ? `✓ DESBLOQUEIO COMPLETO! (${newCollectedCodes.length}/${requiredCodes})`
-        : `✓ CÓDIGO ACEITO! PROGRESSO: ${newCollectedCodes.length}/${requiredCodes}`;
+        ? `✓ DESBLOQUEIO COMPLETO! (${progressCount}/${totalRequired || progressCount})`
+        : `✓ CÓDIGO ACEITO! PROGRESSO: ${progressCount}/${totalRequired || progressCount}`;
       setFeedback({ type: 'success', message: successMessage });
 
       if (nowUnlocked) {
         setShowPrompt(false);
-      }
-
-      if (onRefresh) {
-        await onRefresh();
       }
 
       return { success: true, message: successMessage, closeModal: nowUnlocked };
@@ -171,8 +210,10 @@ export default function MegaClueCard({
     }
   };
 
-  const missingCodes = Math.max(0, requiredCodes - collectedCodes.length);
-  const progressPct = requiredCodes > 0 ? Math.min(100, (collectedCodes.length / requiredCodes) * 100) : 0;
+  const progressCount = Math.max(collectedCodes.length, solvedIds.length);
+  const displayRequired = requiredTotal || progressCount || 1;
+  const missingCodes = Math.max(0, displayRequired - progressCount);
+  const progressPct = displayRequired > 0 ? Math.min(100, (progressCount / displayRequired) * 100) : 0;
 
   const renderPrompt = () =>
     showPrompt && (
@@ -180,7 +221,7 @@ export default function MegaClueCard({
         onSubmit={handleSubmitCode}
         onClose={() => setShowPrompt(false)}
         title="ARQUIVO CRIPTOGRAFADO"
-        description={`CÓDIGOS COLETADOS: ${collectedCodes.length}/${requiredCodes}. Digite um código de recompensa para continuar.`}
+        description={`CÓDIGOS COLETADOS: ${progressCount}/${displayRequired}. Digite um código de recompensa para continuar.`}
       />
     );
 
@@ -267,7 +308,7 @@ export default function MegaClueCard({
           <div className="locked-description">
             <p>{description}</p>
             <p className="locked-progress-text">
-              ARQUIVO CRIPTOGRAFADO — CÓDIGOS COLETADOS: {collectedCodes.length}/{requiredCodes}
+              ARQUIVO CRIPTOGRAFADO — CÓDIGOS COLETADOS: {progressCount}/{displayRequired}
             </p>
           </div>
 
@@ -279,14 +320,14 @@ export default function MegaClueCard({
             </div>
 
             <div className="progress-text">
-              <strong>{collectedCodes.length}</strong> de <strong>{requiredCodes}</strong> códigos coletados
+              <strong>{progressCount}</strong> de <strong>{displayRequired}</strong> códigos coletados
             </div>
           </div>
 
           <div className="codes-needed">
             <h4>CÓDIGOS COLETADOS:</h4>
             <div className="codes-grid">
-              {Array.from({ length: requiredCodes }).map((_, idx) => {
+              {Array.from({ length: displayRequired }).map((_, idx) => {
                 const code = collectedCodes[idx];
                 return (
                   <div key={idx} className={`code-slot ${code ? 'unlocked' : 'locked'}`}>
@@ -328,7 +369,7 @@ export default function MegaClueCard({
             </small>
           </div>
 
-          {collectedCodes.length < requiredCodes && (
+          {progressCount < displayRequired && (
             <div className="missing-message">
               Você ainda precisa encontrar <strong>{missingCodes}</strong> código{missingCodes !== 1 ? 's' : ''} para desbloquear a verdade...
             </div>

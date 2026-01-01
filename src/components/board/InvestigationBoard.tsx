@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
-import CreateClueModal from '../modals/CreateClueModal';
+// Lazy load do modal pesado (2214 linhas) para reduzir bundle inicial
+const CreateClueModal = React.lazy(() => import('../modals/CreateClueModal'));
 import Sketchpad from '../tools/Sketchpad';
 import TerminalSearch from './TerminalSearch';
 import { playAudio } from '../../utils/audio';
@@ -568,6 +569,13 @@ export function InvestigationBoard({ investigationId }: Props) {
     }
 
     return () => {
+      Object.values(saveTimeouts.current).forEach(timeout => {
+        if (timeout) clearTimeout(timeout as any);
+      });
+      saveTimeouts.current = {};
+      saveQueueRef.current.clear();
+      if (positionFrameRef.current !== null) cancelAnimationFrame(positionFrameRef.current);
+      if (originFrameRef.current !== null) cancelAnimationFrame(originFrameRef.current);
       try {
         channels.forEach(ch => { try { ch.unsubscribe(); } catch (e) {} });
       } catch (e) { }
@@ -1295,17 +1303,16 @@ export function InvestigationBoard({ investigationId }: Props) {
     const unified = metadata?.unified_media || {};
     const baseType = unified.base_media_type || metadata?.media_type || card?.base_media_type || null;
     const baseUrl = unified.base_media_url || card?.base_media_url || null;
+    const glitchSolved = metadata?.glitch_puzzle?.solved === true;
+
+    const masked = !glitchSolved && (metadata?.masked_preview === true || (metadata?.security_layer?.enabled && baseUrl));
 
     const resolvedImage = (() => {
-      if (revealBase) {
-        if (baseType === 'image' && baseUrl) return baseUrl;
-        if (card?.image_url) return card.image_url;
-        if (unified.image_url) return unified.image_url;
-        return null;
-      }
-      const masked = metadata?.masked_preview === true || (metadata?.security_layer?.enabled && baseUrl);
-      if (masked) return LOCKED_PLACEHOLDER_IMG;
-      return card?.image_url || baseUrl || unified.image_url || null;
+      const baseImage = card?.image_url || baseUrl || unified.image_url || null;
+      if (glitchSolved && baseUrl) return baseUrl;
+      if (revealBase) return baseImage;
+      if (masked) return baseImage || LOCKED_PLACEHOLDER_IMG;
+      return baseImage;
     })();
 
     const resolvedVideo = (() => {
@@ -1332,6 +1339,7 @@ export function InvestigationBoard({ investigationId }: Props) {
       audio_url: resolvedAudio,
       audio_hidden_url: resolvedHiddenAudio,
       type: resolvedType || card?.type || null,
+      masked_preview: masked,
     };
   };
 
@@ -1959,7 +1967,7 @@ export function InvestigationBoard({ investigationId }: Props) {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };
             const metadata = parseCardMetadata(card);
             const unified = resolveUnifiedMedia(card, metadata, { revealBase: false });
-            const masked = metadata?.masked_preview === true || (metadata?.security_layer?.enabled && unified.base_media_url);
+            const masked = unified.masked_preview;
             const displayImage = unified.image_url || card.image_url || null;
             const fileType = unified.base_media_type || (card?.video_url || unified.video_url ? 'video' : (card?.audio_url || unified.audio_url ? 'audio' : card?.image_url ? 'image' : 'text'));
             const cardType = (() => {
@@ -2120,6 +2128,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                     hasThermal={Boolean(card?.metadata && card.metadata.thermal)}
                     hasStamp={Boolean(card?.stamp_text || (card?.metadata && card.metadata.stamp_text))}
                     hasExternalLink={Boolean(card?.metadata && card.metadata.external_link)}
+                    blurred={masked}
                     onToggleStatus={async (newStatus) => {
                       // map directly to existing toggle function
                       try {
@@ -2249,7 +2258,8 @@ export function InvestigationBoard({ investigationId }: Props) {
             </div>
           </div>
 
-          <CreateClueModal
+          <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
+            <CreateClueModal
         isOpen={createModalOpen}
         investigationId={investigationId}
         onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
@@ -2272,6 +2282,7 @@ export function InvestigationBoard({ investigationId }: Props) {
           }
         }}
       />
+          </Suspense>
 
       <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
       {sketchOpen && (

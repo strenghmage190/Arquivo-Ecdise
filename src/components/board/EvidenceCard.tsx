@@ -26,9 +26,10 @@ export interface EvidenceCardProps {
   hasExternalLink?: boolean
   cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal'
   performanceMode?: boolean
+  blurred?: boolean
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false }) => {
   // DEBUG: Log de props importantes
   if (cardType !== 'normal' || locked || isUV) {
     console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
@@ -93,8 +94,19 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
   const rootClass = `clue-card ${specialType} ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''} ${performanceMode ? 'performance-mode' : ''}`.trim();
 
+  // ✅ Determinar classe do content container
+  let contentContainerClass = 'card-content-container gm-view';
+  
+  if (locked && playerView && !isGameMaster) {
+    contentContainerClass = 'card-content-container locked-view';
+  } else if ((cardType === 'glitch' || cardType === 'encrypted') && playerView && !isGameMaster) {
+    contentContainerClass = 'card-content-container glitch-view';
+  } else if (!image) {
+    contentContainerClass = 'card-content-container loading-view';
+  }
+
   return (
-    <div ref={cardRef} className={rootClass} id={`card-${id}`}>
+    <div ref={cardRef} className={rootClass} id={`card-${id}`} data-testid={`card-${id}`} data-card-type={cardType} data-locked={locked} data-player-view={playerView}>
       <div className="scanner-line" />
 
       <div className="clue-image-container">
@@ -108,20 +120,24 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
         </div>
 
-        <EvidenceCardContent
-          id={id}
-          image={isVisible ? image : undefined}
-          hiddenSrc={hiddenSrc}
-          isUV={isUV}
-          locked={locked}
-          cardType={cardType}
-          isGameMaster={isGameMaster}
-          playerView={playerView}
-          hasUV={hasUV}
-          hasHiddenAudio={hasHiddenAudio}
-          fileType={fileType}
-          performanceMode={performanceMode}
-        />
+        {/* ✅ Content container with view classes - NO NESTING */}
+        <div className={contentContainerClass}>
+          <EvidenceCardContent
+            id={id}
+            image={isVisible ? image : undefined}
+            hiddenSrc={hiddenSrc}
+            isUV={isUV}
+            locked={locked}
+            cardType={cardType}
+            isGameMaster={isGameMaster}
+            playerView={playerView}
+            hasUV={hasUV}
+            hasHiddenAudio={hasHiddenAudio}
+            fileType={fileType}
+            performanceMode={performanceMode}
+            blurred={blurred}
+          />
+        </div>
       </div>
 
       <div className="clue-info">
@@ -165,7 +181,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred'
   ];
   return keys.every((k) => prev[k] === next[k]);
 };

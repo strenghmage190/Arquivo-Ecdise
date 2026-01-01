@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GlitchPuzzleForm from './forms/GlitchPuzzleForm';
 import MegaClueForm from './forms/MegaClueForm';
+import { modalManager } from '../../utils/ModalManager';
 import './UnifiedPuzzleCreatorModal.css';
 
 interface Props {
@@ -24,11 +25,19 @@ export default function UnifiedPuzzleCreatorModal({
 }: Props) {
   const [selectedType, setSelectedType] = useState<PuzzleType>('');
 
+  // ✅ Registra modal no ModalManager
+  useEffect(() => {
+    modalManager.register('unified-puzzle-creator-modal', 6);
+  }, []);
+
+  // ✅ Usa ModalManager para controle de abertura/fechamento
   useEffect(() => {
     if (isOpen) {
-      window.dispatchEvent(new Event('modal-opened'));
+      modalManager.open('unified-puzzle-creator-modal', () => {
+        setSelectedType('');
+      });
     } else {
-      window.dispatchEvent(new Event('modal-closed'));
+      modalManager.close('unified-puzzle-creator-modal');
     }
   }, [isOpen]);
 

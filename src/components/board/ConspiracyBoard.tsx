@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Excalidraw, MainMenu, WelcomeScreen } from '@excalidraw/excalidraw';
 import { fetchCards } from '../../api/investigations';
 import { fetchConspiracyBoard, saveConspiracyBoard } from '../../api/whiteboard';
 import { supabase } from '../../supabaseClient';
+import { eventManager } from '../../utils/EventManager';
 import './ConspiracyBoard.css';
 
 interface Props {
@@ -16,6 +17,8 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [remoteUpdate, setRemoteUpdate] = useState<any | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false); // ✅ Mutex para saves
+  const lastSaveTimeRef = useRef<number>(0); // ✅ Debouncing para saves
 
   // load initial board and cards
   useEffect(() => {
@@ -67,44 +70,121 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
     return () => { mounted = false; };
   }, [excalidrawAPI, investigationId]);
 
-  // realtime subscription for remote updates
+  // ✅ Realtime subscription com debouncing através do EventManager
   useEffect(() => {
     const channel = supabase
       .channel(`conspiracy-updates-${investigationId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'investigations', filter: `id=eq.${investigationId}` }, (payload: any) => {
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'investigations', 
+        filter: `id=eq.${investigationId}` 
+      }, (payload: any) => {
         const newData = payload.new?.conspiracy_board_data;
         if (!newData) return;
-        // don't auto-apply: notify user there's a remote update available
-        console.log('ConspiracyBoard: remote update received (pending)');
-        setRemoteUpdate(newData);
+        
+        console.log('[ConspiracyBoard] Remote update received');
+        
+        // ✅ Usa EventManager com debouncing para evitar updates excessivos
+        eventManager.emitDebounced('conspiracy:remote-update', 500, newData);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [investigationId]);
+    // ✅ Handler centralizado para updates remotos com queue fallback
+    const pendingUpdateRef = React.useRef<any>(null);
+    
+    const unsubscribe = eventManager.on('conspiracy:remote-update', (newData: any) => {
+      if (isSyncing) {
+        console.warn('[ConspiracyBoard] Sync in progress, queuing update');
+        pendingUpdateRef.current = newData;
+        return;
+      }
+      setRemoteUpdate(newData);
+    });
+    
+    useEffect(() => {
+      if (!isSyncing && pendingUpdateRef.current) {
+        const pending = pendingUpdateRef.current;
+        pendingUpdateRef.current = null;
+        setRemoteUpdate(pending);
+      }
+    }, [isSyncing]);
 
+    return () => {
+      supabase.removeChannel(channel);
+      unsubscribe();
+    };
+  }, [investigationId, isSyncing]);
+
+  // ✅ Save com mutex e debouncing
   const handleSave = async () => {
-    if (!excalidrawAPI) return;
+    if (!excalidrawAPI) {
+      console.warn('[ConspiracyBoard] Cannot save: excalidrawAPI not ready');
+      return;
+    }
+
+    // Mutex: previne saves simultâneos
+    if (isSyncing) {
+      console.warn('[ConspiracyBoard] Save already in progress');
+      alert('Sincronização já em andamento...');
+      return;
+    }
+
+    // Debouncing: previne saves muito frequentes (mínimo 2s entre saves)
+    const now = Date.now();
+    const timeSinceLastSave = now - lastSaveTimeRef.current;
+    if (timeSinceLastSave < 2000) {
+      console.warn('[ConspiracyBoard] Save too frequent, please wait');
+      alert(`Aguarde ${Math.ceil((2000 - timeSinceLastSave) / 1000)}s antes de sincronizar novamente`);
+      return;
+    }
+
+    setIsSyncing(true);
+    lastSaveTimeRef.current = now;
+
     try {
       const elements = excalidrawAPI.getSceneElements ? excalidrawAPI.getSceneElements() : [];
       const appState = excalidrawAPI.getAppState ? excalidrawAPI.getAppState() : {};
       const files = excalidrawAPI.getFiles ? excalidrawAPI.getFiles() : {};
+      
+      console.log('[ConspiracyBoard] Saving...', { elements: elements.length, files: Object.keys(files).length });
       await saveConspiracyBoard(investigationId, elements, appState, files);
+      
+      console.log('[ConspiracyBoard] Save successful');
       alert('Quadro Sincronizado com o Grupo!');
     } catch (e) {
-      console.error('handleSave failed', e);
+      console.error('[ConspiracyBoard] Save failed:', e);
       alert('Falha ao sincronizar quadro. Veja console.');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
-  // Apply a pending remote update that was received via realtime
+  // ✅ Apply remote update com validação
   const applyRemoteUpdate = () => {
-    if (!remoteUpdate || !excalidrawAPI || !excalidrawAPI.updateScene) return;
+    if (!remoteUpdate || !excalidrawAPI || !excalidrawAPI.updateScene) {
+      console.warn('[ConspiracyBoard] Cannot apply remote update: missing data or API');
+      return;
+    }
+
+    if (isSyncing) {
+      console.warn('[ConspiracyBoard] Cannot apply update: sync in progress');
+      alert('Aguarde a sincronização atual terminar');
+      return;
+    }
+
     try {
-      excalidrawAPI.updateScene({ elements: remoteUpdate.elements || [], appState: remoteUpdate.appState || {} });
+      console.log('[ConspiracyBoard] Applying remote update');
+      excalidrawAPI.updateScene({ 
+        elements: remoteUpdate.elements || [], 
+        appState: remoteUpdate.appState || {} 
+      });
       setRemoteUpdate(null);
       alert('Atualização remota aplicada.');
-    } catch (e) { console.error('applyRemoteUpdate failed', e); alert('Falha ao aplicar atualização remota. Veja console.'); }
+    } catch (e) { 
+      console.error('[ConspiracyBoard] Apply remote update failed:', e); 
+      alert('Falha ao aplicar atualização remota. Veja console.'); 
+    }
   };
 
   const dismissRemoteUpdate = () => { setRemoteUpdate(null); };
@@ -168,7 +248,14 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
         <div className="conspiracy-header">
           <h2>QUADRO DE CONSPIRAÇÃO COMPARTILHADO</h2>
           <div className="actions">
-               <button className="btn-save-conspiracy" onClick={handleSave}>💾 SINCRONIZAR COM GRUPO</button>
+               <button 
+                 className="btn-save-conspiracy" 
+                 onClick={handleSave}
+                 disabled={isSyncing}
+                 style={{ opacity: isSyncing ? 0.6 : 1 }}
+               >
+                 {isSyncing ? '⏳ SINCRONIZANDO...' : '💾 SINCRONIZAR COM GRUPO'}
+               </button>
                <button className="btn-save-conspiracy" onClick={() => {
                  // export current scene as JSON
                  const elements = excalidrawAPI?.getSceneElements?.() || [];

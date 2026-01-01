@@ -6,6 +6,7 @@ import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
 import GlitchPuzzleCard from '../tools/GlitchPuzzleCard';
 import MegaClueCard from '../tools/MegaClueCard';
+import { modalManager } from '../../utils/ModalManager';
 
 interface Props {
   open: boolean;
@@ -37,11 +38,21 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
 
   useEscapeClose(open, onClose);
   
+  // ✅ Registra modal no ModalManager
+  useEffect(() => {
+    modalManager.register('investigation-card-modal', 5);
+  }, []);
+
+  // ✅ Usa ModalManager para controle de abertura/fechamento
   useEffect(() => {
     if (open) {
-      window.dispatchEvent(new Event('modal-opened'));
+      modalManager.open('investigation-card-modal', () => {
+        // Callback de limpeza ao fechar
+        setPreviewUrl(null);
+        setSelectedFileName(null);
+      });
     } else {
-      window.dispatchEvent(new Event('modal-closed'));
+      modalManager.close('investigation-card-modal');
     }
   }, [open]);
   
@@ -207,7 +218,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             title={existing.title}
             description={existing.description_public || ''}
             imageUrl={existing.image_url}
-            requiredCodes={megaData.required_code_count || 3}
+            requiredCodes={megaData.required_puzzle_ids?.length || megaData.required_code_count || 3}
             finalTruthText={megaData.final_truth_text}
             collectedCodes={Array.isArray(megaData.collected_codes) ? megaData.collected_codes : []}
             metadata={metadata}

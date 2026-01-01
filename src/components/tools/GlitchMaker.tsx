@@ -7,6 +7,7 @@ export default function GlitchMaker({ onSave, onClose }: GlitchMakerProps): Reac
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<boolean>(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const maxCanvasWidth = 600;
   const maxCanvasHeight = 500;
   
@@ -15,10 +16,29 @@ export default function GlitchMaker({ onSave, onClose }: GlitchMakerProps): Reac
   const [shiftAmount, setShiftAmount] = useState<number>(20); // % do deslocamento
   const [colorCorruption, setColorCorruption] = useState<number>(10); // % de pixels afetados
 
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) {}
+      }
+      if (imgUrl) {
+        try { URL.revokeObjectURL(imgUrl); } catch (e) {}
+      }
+    };
+  }, []);
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    
+    // Revoke previous URL to prevent memory leak
+    if (previewUrl) {
+      try { URL.revokeObjectURL(previewUrl); } catch (e) {}
+    }
+    
     const url = URL.createObjectURL(f);
+    setPreviewUrl(url);
     setImgUrl(url);
     setLoaded(false);
   };

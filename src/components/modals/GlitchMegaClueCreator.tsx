@@ -89,7 +89,10 @@ export default function GlitchMegaClueCreator({
           mega_clue: {
             final_truth_text: config.finalTruthText,
             required_code_count: config.requiredCodeCount,
+            required_puzzle_ids: [],
+            solved_puzzle_ids: [],
             collected_codes: [],
+            unlocked: false,
           },
         },
       };
