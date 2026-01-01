@@ -7,9 +7,10 @@
   backdrop-filter: blur(8px);
   z-index: 15000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: 32px 20px;
+  overflow-y: auto;
   animation: fadeIn 0.2s ease;
 }
 
@@ -21,7 +22,7 @@
 .audio-mixer-container {
   width: 95%;
   max-width: 1400px;
-  max-height: 90vh;
+  max-height: 92vh;
   background: linear-gradient(145deg, #0a0e15, #050810);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 243, 255, 0.1);
@@ -32,6 +33,8 @@
   font-family: 'Share Tech Mono', monospace;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  position: relative;
 }
 
 @keyframes slideUp {
@@ -53,6 +56,12 @@
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .status-indicator-mixer {
@@ -191,12 +200,26 @@
   box-shadow: 0 4px 16px rgba(255, 0, 60, 0.4);
 }
 
+.btn-transport.forge {
+  background: linear-gradient(135deg, rgba(255, 185, 0, 0.16), rgba(255, 185, 0, 0.06));
+  border-color: rgba(255, 185, 0, 0.4);
+  color: #ffb900;
+  padding: 10px 16px;
+}
+
+.btn-transport.forge:hover {
+  background: linear-gradient(135deg, rgba(255, 185, 0, 0.24), rgba(255, 185, 0, 0.12));
+  border-color: #ffb900;
+  box-shadow: 0 4px 16px rgba(255, 185, 0, 0.3);
+}
+
 .effects-panel {
   padding: 16px 20px;
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .effects-grid {
@@ -293,6 +316,35 @@
   gap: 12px;
   justify-content: center;
   margin-top: 12px;
+}
+
+.audio-forge-panel {
+  margin-top: 16px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(255, 185, 0, 0.08), rgba(255, 185, 0, 0.03));
+  border: 1px solid rgba(255, 185, 0, 0.25);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color: #fbe6b3;
+}
+
+.audio-forge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forge-title {
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffde85;
+}
+
+.forge-subtitle {
+  font-size: 12px;
+  color: #d7c49c;
 }
 
 .btn-toggle {

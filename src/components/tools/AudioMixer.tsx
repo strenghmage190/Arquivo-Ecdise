@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import AudioForge from './AudioForge';
 import './AudioMixer.css';
 
 interface Props {
@@ -29,6 +30,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
   const [fadeIn, setFadeIn] = useState(0);
   const [fadeOut, setFadeOut] = useState(0);
   const [normalize, setNormalize] = useState(false);
+  const [showForge, setShowForge] = useState(false);
 
   // Selection
   const [selectionStart, setSelectionStart] = useState(0);
@@ -410,7 +412,12 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             <div className="status-indicator-mixer"></div>
             <h2 className="mixer-title">🎛️ ESTAÇÃO DE MIXAGEM PROFISSIONAL</h2>
           </div>
-          <button className="btn-close-mixer" onClick={onClose}>✕</button>
+          <div className="header-actions">
+            <button className="btn-transport forge" onClick={() => setShowForge((v) => !v)}>
+              {showForge ? 'Fechar Audio Forge' : 'Abrir Audio Forge'}
+            </button>
+            <button className="btn-close-mixer" onClick={onClose}>✕</button>
+          </div>
         </div>
 
         {/* Waveform Display */}
@@ -533,6 +540,27 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
               📊 NORMALIZAR
             </button>
           </div>
+
+          {showForge && (
+            <div className="audio-forge-panel">
+              <div className="audio-forge-header">
+                <div>
+                  <div className="forge-title">Audio Forge (Beta)</div>
+                  <div className="forge-subtitle">Refine, cortar e exportar como nova camada</div>
+                </div>
+                <button className="btn-transport" onClick={() => setShowForge(false)}>Fechar</button>
+              </div>
+              <AudioForge
+                spectrogramUrl={undefined}
+                triggerTime={selectionStart}
+                onClose={() => setShowForge(false)}
+                onSave={(file) => {
+                  onSave(file, selectionStart || 0);
+                  setShowForge(false);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Selection Info */}

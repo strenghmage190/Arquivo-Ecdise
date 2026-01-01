@@ -41,6 +41,77 @@
   background-size: 50px 50px;
 }
 
+/* Filtro para aumentar imersão durante resolução de Glitch Puzzle */
+.inspect-visual-area.is-glitching {
+  filter: sepia(0.5) contrast(1.2);
+  transition: filter 0.3s ease;
+}
+
+/* Layout para puzzles de glitch: deixa o conteúdo ocupar a altura total e permitir rolagem */
+.inspect-visual-area.glitch-mode {
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: auto;
+  padding: 8px;
+}
+
+/* Overlay do painel de sincronização (GlitchPuzzleSolver em modal separado) */
+.glitch-solver-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(4px);
+  z-index: 40000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.glitch-solver-modal {
+  width: min(1100px, 95vw);
+  height: min(760px, 92vh);
+  background: #05080a;
+  border: 1px solid #0f0;
+  box-shadow: 0 0 28px rgba(0, 255, 0, 0.25), inset 0 0 12px rgba(0, 255, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.glitch-solver-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+  color: #0f0;
+  background: linear-gradient(90deg, rgba(0, 255, 0, 0.08), rgba(0, 255, 0, 0));
+}
+
+.glitch-pill {
+  display: inline-block;
+  padding: 4px 8px;
+  background: rgba(0, 255, 0, 0.15);
+  border: 1px solid rgba(0, 255, 0, 0.4);
+  border-radius: 4px;
+  font-size: 11px;
+  margin-right: 8px;
+  letter-spacing: 1px;
+}
+
+.glitch-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.glitch-solver-body {
+  flex: 1;
+  background: #000;
+  overflow: hidden;
+}
+
 .inspect-visual-area .large-evidence-img,
 .inspect-visual-area canvas,
 .inspect-visual-area img {

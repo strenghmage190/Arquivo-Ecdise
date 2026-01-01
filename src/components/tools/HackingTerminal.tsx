@@ -10,6 +10,7 @@ interface Props {
 export default function HackingTerminal({ correctPassword, onUnlock, hint }: Props) {
   const [input, setInput] = useState('');
   const [attempts, setAttempts] = useState(0);
+  const [bootComplete, setBootComplete] = useState(false);
   const outputRef = useRef<HTMLDivElement | null>(null);
   const timers = useRef<number[]>([]);
 
@@ -17,6 +18,33 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     return () => {
       timers.current.forEach(t => clearTimeout(t));
     };
+  }, []);
+
+  // Boot sequence on mount
+  useEffect(() => {
+    const bootMessages = [
+      { delay: 300, text: '&gt; Verificando integridade do sistema...', type: 'system' },
+      { delay: 800, text: '&gt; [OK] Núcleo operacional estável', type: 'system' },
+      { delay: 1400, text: '&gt; Inicializando módulos de vídeo...', type: 'system' },
+      { delay: 2000, text: '&gt; [ERRO] Driver de vídeo corrompido detectado.', type: 'error' },
+      { delay: 2600, text: '&gt; Tentando bypass de segurança...', type: 'system' },
+      { delay: 3200, text: '&gt; Autenticação necessária para bypass.', type: 'warning' },
+      { delay: 3800, text: '&gt; Sistema aguardando credenciais.', type: 'system' }
+    ];
+
+    bootMessages.forEach(({ delay, text, type }) => {
+      const timer = window.setTimeout(() => {
+        addLog(text, type);
+      }, delay);
+      timers.current.push(timer);
+    });
+
+    const finalTimer = window.setTimeout(() => {
+      setBootComplete(true);
+    }, 4000);
+    timers.current.push(finalTimer);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function addLog(text: string, type = 'system'): HTMLDivElement | null {
@@ -117,19 +145,18 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
 
       <div className="glass-console">
         <div className="console-output" ref={outputRef} id="nexus-output">
-          <div className="log-entry system">&gt; Identificação Biométrica Confirmada.</div>
-          <div className="log-entry system">&gt; Bem-vindo à Sala do Servidor.</div>
-          <div className="log-entry archivist">"Query recebida. Aguardando input..."</div>
+          {/* Boot messages will be added dynamically */}
         </div>
 
-        <form className="console-input-wrapper" onSubmit={handleSubmit}>
+        <form className="console-input-wrapper" onSubmit={handleSubmit} style={{ opacity: bootComplete ? 1 : 0.3, pointerEvents: bootComplete ? 'auto' : 'none' }}>
           <span className="input-prefix">QUERY_INPUT_&gt;</span>
           <input
             id="nexus-input"
             autoComplete="off"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Solicite dados ou análise..."
+            placeholder={bootComplete ? "Digite a senha de bypass..." : "Aguardando boot..."}
+            disabled={!bootComplete}
           />
           <div className="scanline" />
         </form>

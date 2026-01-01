@@ -1,0 +1,177 @@
+.glitch-engine {
+  position: relative;
+  width: 100%;
+  background: radial-gradient(circle at 30% 30%, rgba(100,150,255,0.08), rgba(0,0,0,0.8));
+  border: 1px solid rgba(100,150,255,0.4);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.45), 0 0 22px rgba(100,150,255,0.15);
+}
+
+.glitch-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #050505;
+  overflow: hidden;
+}
+
+.glitch-base {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 90ms linear, transform 90ms linear, opacity 90ms linear;
+}
+
+.glitch-slices {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.glitch-slice {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  will-change: transform, filter, opacity;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+
+.glitch-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  transition: opacity 120ms linear;
+}
+
+.glitch-restored {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(30,255,120,0.12), rgba(0,0,0,0.75));
+  color: #b6ffd5;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  gap: 6px;
+  animation: restored-pulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.restored-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-shadow: 0 0 18px rgba(0,255,170,0.45);
+}
+
+.restored-sub {
+  font-size: 0.75rem;
+  color: #88f2c2;
+}
+
+@keyframes restored-pulse {
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 0.55; }
+}
+
+.glitch-meter {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  height: 12px;
+  border: 1px solid rgba(100,150,255,0.5);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  overflow: hidden;
+}
+
+.glitch-meter-bar {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(100,150,255,0.6), rgba(0,255,170,0.8));
+  transition: width 120ms linear;
+}
+
+.glitch-meter-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #d9e8ff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+}
+
+/* Decoding animation */
+.glitch-decoding {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(100,150,255,0.25), rgba(0,180,255,0.15));
+  border: 1px solid rgba(100,150,255,0.5);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 20px rgba(100,150,255,0.3);
+  backdrop-filter: blur(8px);
+  animation: decoding-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes decoding-pulse {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.75; }
+}
+
+.decoding-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(100,150,255,0.3);
+  border-top-color: #64b5ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.decoding-text {
+  flex: 1;
+  color: #cfe3ff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(100,150,255,0.6);
+}
+
+.decoding-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+}
+
+.decoding-bars .bar {
+  width: 4px;
+  height: 14px;
+  background: linear-gradient(180deg, #64b5ff, #00b4d8);
+  border-radius: 2px;
+  animation: bar-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes bar-bounce {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}

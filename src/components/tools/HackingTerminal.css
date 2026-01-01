@@ -109,6 +109,8 @@
 .log-entry.archivist { color:#fff; text-shadow:0 0 6px var(--nexus-blue); border-left:2px solid var(--nexus-blue); padding-left:10px; }
 .log-entry.user { color:#9aa; text-align:right; opacity:0.9; }
 .log-entry.glitch { color:var(--nexus-glitch); text-shadow: 2px 0 var(--nexus-blue), -2px 0 yellow; font-weight:bold; }
+.log-entry.error { color:#ff4444; font-weight:bold; text-shadow:0 0 5px #ff4444; }
+.log-entry.warning { color:#ffaa00; text-shadow:0 0 5px #ffaa00; }
 
 .console-input-wrapper { padding:14px; border-top:1px solid rgba(0,243,255,0.06); background: rgba(0,243,255,0.02); display:flex; align-items:center; }
 .input-prefix { color:var(--nexus-blue); margin-right:10px; }

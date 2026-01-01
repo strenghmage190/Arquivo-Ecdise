@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createInvestigationCard, fetchCardsForInvestigation } from '../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
+import { generateGlitchPlaceholder } from '../../utils/glitchPlaceholder';
 import UVEditor from '../tools/UVEditor';
 import ThermalEditor from '../tools/ThermalEditor';
 import AdvancedAudioLab from '../tools/AdvancedAudioLab';
@@ -183,21 +184,28 @@ export default function UnifiedClueCreatorModal({
   // Save: Glitch Puzzle
   // ============================================
   const saveGlitchPuzzle = async () => {
-    if (!originalImageFile || !corruptedImageFile) {
-      throw new Error('Você precisa de ambas as imagens: Original e Corrompida');
+    if (!originalImageFile) {
+      throw new Error('Envie a imagem ORIGINAL (limpa). A distorção será aplicada dinamicamente pelo motor de glitch.');
     }
 
     const originalUrl = await uploadInvestigationImage(
       originalImageFile,
       investigationId
     );
-    const corruptedUrl = await uploadInvestigationImage(
-      corruptedImageFile,
-      investigationId
-    );
+    const corruptedUrl = corruptedImageFile
+      ? await uploadInvestigationImage(corruptedImageFile, investigationId)
+      : null;
 
-    if (!originalUrl || !corruptedUrl) {
-      throw new Error('Falha ao fazer upload das imagens');
+    let finalCorruptedUrl = corruptedUrl;
+    if (!finalCorruptedUrl) {
+      const generated = await generateGlitchPlaceholder(originalImageFile);
+      if (generated) {
+        finalCorruptedUrl = await uploadInvestigationImage(generated, investigationId);
+      }
+    }
+
+    if (!originalUrl) {
+      throw new Error('Falha ao fazer upload da imagem original');
     }
 
     const cardData = {
@@ -205,13 +213,14 @@ export default function UnifiedClueCreatorModal({
       title,
       description,
       type: 'glitch_puzzle',
-      image_url: corruptedUrl,
+      // Nunca expor a imagem limpa no image_url. Use a corrompida (ou vazio se não houver).
+      image_url: finalCorruptedUrl || '',
       x: initialX ?? 100,
       y: initialY ?? 100,
       metadata: {
         glitch_puzzle: {
           original_image_url: originalUrl,
-          corrupted_image_url: corruptedUrl,
+          corrupted_image_url: finalCorruptedUrl || null,
           correct_frequency: correctFrequency,
           correct_shift: correctShift,
           correct_chromatic: correctChromatic,

@@ -15,6 +15,8 @@ import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
 
+const GlitchPuzzleSolverLazy = React.lazy(() => import('../tools/GlitchPuzzleSolver'));
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -42,11 +44,13 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
+    setShowGlitchSolver(false);
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [fullscreenOnlyTreatment, setFullscreenOnlyTreatment] = useState(false);
+  const [showGlitchSolver, setShowGlitchSolver] = useState(false);
   // audio handled as a visual mode tab now
   const [localThermal, setLocalThermal] = useState(false);
   const [brightness, setBrightness] = useState(100);
@@ -84,6 +88,17 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [videoUploadingInspection, setVideoUploadingInspection] = useState(false);
   // Novo estado: expande a área de áudio (modo "cinema")
   const [audioExpanded, setAudioExpanded] = useState(false);
+
+  const resolveUnifiedMedia = (cardObj: any, metadataObj: any) => {
+    const unified = metadataObj?.unified_media || {};
+    const baseType = unified.base_media_type || metadataObj?.media_type || cardObj?.base_media_type || null;
+    const baseUrl = unified.base_media_url || cardObj?.base_media_url || null;
+    const imageUrl = cardObj?.image_url || unified.image_url || (baseType === 'image' ? baseUrl : null) || null;
+    const videoUrl = cardObj?.video_url || unified.video_url || (baseType === 'video' ? baseUrl : null) || null;
+    const audioUrl = cardObj?.audio_url || unified.audio_base_url || (baseType === 'audio' ? baseUrl : null) || null;
+    const audioHiddenUrl = cardObj?.audio_hidden_url || unified.audio_hidden_url || null;
+    return { baseType, baseUrl, imageUrl, videoUrl, audioUrl, audioHiddenUrl };
+  };
 
   // Controle de qual ferramenta visual está ativa
   // 'image' | 'phone' | 'forense' | ...
@@ -322,12 +337,26 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     const currentCard = serverCard || card;
 
+    // Metadata pré-calculado para reuso
+    let parsedMetadata: any = {};
+    try {
+      parsedMetadata = currentCard?.metadata && typeof currentCard.metadata === 'object'
+        ? currentCard.metadata
+        : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
+    } catch { parsedMetadata = {}; }
+    const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
+    const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
+
     const cardLocked = isCardLocked(currentCard);
     const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
 
     // Renderizador inteligente da Área Visual
     const renderVisualContent = () => {
-      const chatRaw = currentCard.chat_data ?? currentCard.metadata?.chat_data ?? currentCard.metadata?.chat ?? null;
+      // Metadata seguro para detectar subtipos (ex: glitch_puzzle)
+      const metadataObj = parsedMetadata;
+      const isGlitchPuzzle = isGlitchPuzzleGlobal;
+
+      const chatRaw = currentCard.chat_data ?? metadataObj?.chat_data ?? metadataObj?.chat ?? null;
       let chatList: any[] = [];
       if (chatRaw) {
         if (typeof chatRaw === 'string') {
@@ -372,7 +401,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       if (currentCard.is_shredded) {
         return (
           <ShredderPuzzle
-            imgSrc={currentCard.image_url}
+            imgSrc={unifiedMedia.imageUrl || currentCard.image_url}
             rows={currentCard.metadata?.shred_rows || 1}
             cols={currentCard.metadata?.shred_cols || 8}
             onSolved={() => setPuzzleSolved(true)}
@@ -382,7 +411,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       }
 
       // visualMode === 'image'
-      if (visualMode === 'video' && currentCard.video_url) {
+      if (visualMode === 'video' && (unifiedMedia.videoUrl || currentCard.video_url)) {
         // Handlers to replace/remove video attached to this card
         const handleReplaceVideo = async (file: File) => {
           try {
@@ -416,20 +445,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           }
         };
 
+        const videoSrc = unifiedMedia.videoUrl || currentCard.video_url;
         return (
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#000'}}>
-            <CCTVPlayer src={currentCard.video_url} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
+            <CCTVPlayer src={videoSrc || ''} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
           </div>
         );
       }
 
       // audio visual mode
       if (visualMode === 'audio') {
-        const meta = (currentCard.metadata && typeof currentCard.metadata === 'object')
-          ? currentCard.metadata
-          : (typeof currentCard.metadata === 'string' ? (() => { try { return JSON.parse(currentCard.metadata); } catch { return {}; } })() : {});
-        const audioSrc = currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
-        const audioHidden = currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
+        const meta = metadataObj;
+        const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+        const audioHidden = unifiedMedia.audioHiddenUrl || currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
         const audioFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
 
         if (!audioSrc) {
@@ -452,7 +480,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         );
       }
 
-      if (currentCard.image_url) {
+      // INTERCEPTAR GLITCH PUZZLE - antes de renderizar imagem normal
+      if (unifiedMedia.imageUrl || currentCard.image_url) {
         return (
           <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
             <div className="grid-overlay" aria-hidden />
@@ -469,7 +498,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               return (
                 <>
                   <MysteryImage
-                    baseSrc={currentCard.image_url}
+                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                     hiddenSrc={currentCard.image_uv_url}
                     filterLayerSrc={currentCard.image_filter_layer}
                     filters={{ brightness, contrast, saturate: saturation }}
@@ -502,7 +531,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
                         <div style={{width:'90%', height:'90%', position:'relative'}}>
                           <MysteryImage
-                            baseSrc={currentCard.image_url}
+                            baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                             hiddenSrc={currentCard.image_uv_url}
                             filterLayerSrc={currentCard.image_filter_layer}
                             filters={{ brightness, contrast, saturate: saturation }}
@@ -705,6 +734,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}>🔦 LUZ UV</button>
 
+                {isGlitchPuzzleGlobal && (
+                  <button
+                    className={`btn-tool-tab ${showGlitchSolver ? 'active-green' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setShowGlitchSolver(true); }}
+                  >
+                    🧩 DECODIFICAR
+                  </button>
+                )}
+
                 {/* Group less-used tools under "Mais" */}
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button
@@ -796,7 +834,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           </div>
         ) : (
           <React.Fragment>
-            <div className="inspect-visual-area" style={{ position: 'relative' }}>
+            <div className={`inspect-visual-area ${isGlitchPuzzleGlobal && showGlitchSolver ? 'is-glitching glitch-mode' : ''}`} style={{ position: 'relative' }}>
               {renderVisualContent()}
               {visualMode === 'phone' && (
                 <button
@@ -1050,5 +1088,37 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     </div>
   );
 
-  return createPortal(modal, document.body);
+  const glitchPortal = showGlitchSolver && isGlitchPuzzleGlobal && parsedMetadata?.glitch_puzzle
+    ? createPortal(
+        <div className="glitch-solver-backdrop" onClick={() => setShowGlitchSolver(false)}>
+          <div className="glitch-solver-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="glitch-solver-header">
+              <div>
+                <span className="glitch-pill">GLITCH</span>
+                <span className="glitch-title">Painel de Sincronização</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)}>✖</button>
+              </div>
+            </div>
+            <div className="glitch-solver-body">
+              <React.Suspense fallback={<div style={{color:'#0f0', padding:20, textAlign:'center'}}>CARREGANDO DECODIFICADOR...</div>}>
+                <GlitchPuzzleSolverLazy
+                  config={parsedMetadata?.glitch_puzzle}
+                  investigationId={currentCard.investigation_id}
+                  cardId={currentCard.id}
+                  onSolved={() => setShowGlitchSolver(false)}
+                />
+              </React.Suspense>
+            </div>
+          </div>
+        </div>, document.body)
+    : null;
+
+  return (
+    <>
+      {createPortal(modal, document.body)}
+      {glitchPortal}
+    </>
+  );
 }

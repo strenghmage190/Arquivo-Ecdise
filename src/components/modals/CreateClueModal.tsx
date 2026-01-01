@@ -17,6 +17,9 @@ import DiegeticWindow from '../ui/DiegeticWindow';
 
 import { supabase } from '../../supabaseClient';
 import AudioForge from '../tools/AudioForge';
+import GlitchImageEngine from '../tools/GlitchImageEngine';
+
+const LOCKED_PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/xcAAwEB/aurbZkAAAAASUVORK5CYII=';
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
@@ -73,6 +76,22 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [audioHiddenUploading, setAudioHiddenUploading] = useState<boolean>(false);
   const [freq, setFreq] = useState(50);
    const [triggerTime, setTriggerTime] = useState<number>(0);
+   const [mediaVisibility, setMediaVisibility] = useState({
+      audioBase: 'always' as 'always' | 'glitch_only' | 'post_solve',
+      audioHidden: 'post_solve' as 'post_solve' | 'post_keyword',
+      visual: 'glitch_active' as 'glitch_active' | 'post_keyword',
+      uvLayer: 'post_keyword' as 'post_keyword' | 'always' | 'post_solve'
+   });
+   const [securityLayerEnabled, setSecurityLayerEnabled] = useState(false);
+   const [revealLogicMode, setRevealLogicMode] = useState<'always_visible' | 'aligned_only' | 'aligned_keyword'>('aligned_only');
+   const [signalTargets, setSignalTargets] = useState({ visual: true, audio: false });
+   const [hidePreviewOnBoard, setHidePreviewOnBoard] = useState(false);
+   const [audioStaticSync, setAudioStaticSync] = useState(false);
+   const [narrativeLinks, setNarrativeLinks] = useState({
+      audioHintsVisual: false,
+      visualHintsCode: false,
+      hintNote: ''
+   });
 
    const handleAudioBaseSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files && e.target.files[0];
@@ -157,14 +176,26 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
 
    // GLITCH PUZZLE STATES
-   const [glitchOriginalImageFile, setGlitchOriginalImageFile] = useState<File | null>(null);
-   const [glitchOriginalImagePreview, setGlitchOriginalImagePreview] = useState<string | null>(null);
-   const [glitchCorruptedImageFile, setGlitchCorruptedImageFile] = useState<File | null>(null);
-   const [glitchCorruptedImagePreview, setGlitchCorruptedImagePreview] = useState<string | null>(null);
    const [glitchCorrectFrequency, setGlitchCorrectFrequency] = useState(17);
    const [glitchCorrectShift, setGlitchCorrectShift] = useState(33);
    const [glitchCorrectChromatic, setGlitchCorrectChromatic] = useState(12);
    const [glitchRewardCode, setGlitchRewardCode] = useState('ALPHA-01');
+   const [glitchKeyword, setGlitchKeyword] = useState('');
+   const [glitchRequireKeyword, setGlitchRequireKeyword] = useState(false);
+   const [glitchUnlockMode, setGlitchUnlockMode] = useState<'code' | 'code_plus_keyword' | 'media' | 'media_and_code'>('code');
+   const [glitchToleranceFreq, setGlitchToleranceFreq] = useState(1);
+   const [glitchToleranceShift, setGlitchToleranceShift] = useState(2);
+   const [glitchToleranceChroma, setGlitchToleranceChroma] = useState(2);
+   const [glitchFocusedImageFile, setGlitchFocusedImageFile] = useState<File | null>(null);
+   const [glitchFocusedImagePreview, setGlitchFocusedImagePreview] = useState<string | null>(null);
+   const [showGlitchDesigner, setShowGlitchDesigner] = useState(false);
+   const [glitchHiddenAudioUrl, setGlitchHiddenAudioUrl] = useState('');
+   const [glitchHiddenVideoUrl, setGlitchHiddenVideoUrl] = useState('');
+   const [glitchHint, setGlitchHint] = useState('');
+   const [glitchAccessInstructions, setGlitchAccessInstructions] = useState('');
+   const [glitchStartFrequency, setGlitchStartFrequency] = useState(12);
+   const [glitchStartShift, setGlitchStartShift] = useState(20);
+   const [glitchStartChromatic, setGlitchStartChromatic] = useState(8);
 
    // MEGA CLUE STATES
    const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
@@ -172,6 +203,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [megaImagePreview, setMegaImagePreview] = useState<string | null>(null);
    const [megaRequiredPuzzleIds, setMegaRequiredPuzzleIds] = useState<string[]>([]);
    const [availablePuzzles, setAvailablePuzzles] = useState<Array<{ id: string; title: string }>>([]);
+   const [megaSelectedPuzzle, setMegaSelectedPuzzle] = useState<string>('');
 
    // Reset form fields when opening the modal to avoid reusing previous values
    const resetForm = () => {
@@ -207,6 +239,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setFreq(50);
       setAudioBasePreview(null);
       setAudioHiddenPreview(null);
+      setMediaVisibility({ audioBase: 'always', audioHidden: 'post_solve', visual: 'glitch_active', uvLayer: 'post_keyword' });
+      setSecurityLayerEnabled(false);
+      setRevealLogicMode('aligned_only');
+      setSignalTargets({ visual: true, audio: false });
+      setHidePreviewOnBoard(false);
+      setAudioStaticSync(false);
+      setNarrativeLinks({ audioHintsVisual: false, visualHintsCode: false, hintNote: '' });
 
       // basic flags
       setIsLocked(false);
@@ -259,16 +298,27 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       // evidence type and puzzle-specific fields
       setEvidenceType('document');
-      setGlitchOriginalImageFile(null);
-      if (glitchOriginalImagePreview) { try { URL.revokeObjectURL(glitchOriginalImagePreview); } catch(e){} }
-      setGlitchOriginalImagePreview(null);
-      setGlitchCorruptedImageFile(null);
-      if (glitchCorruptedImagePreview) { try { URL.revokeObjectURL(glitchCorruptedImagePreview); } catch(e){} }
-      setGlitchCorruptedImagePreview(null);
       setGlitchCorrectFrequency(17);
       setGlitchCorrectShift(33);
       setGlitchCorrectChromatic(12);
       setGlitchRewardCode('ALPHA-01');
+      setGlitchKeyword('');
+      setGlitchRequireKeyword(false);
+      setGlitchUnlockMode('code');
+      setGlitchToleranceFreq(1);
+      setGlitchToleranceShift(2);
+      setGlitchToleranceChroma(2);
+      setGlitchFocusedImageFile(null);
+      if (glitchFocusedImagePreview) { try { URL.revokeObjectURL(glitchFocusedImagePreview); } catch(e){} }
+      setGlitchFocusedImagePreview(null);
+      setShowGlitchDesigner(false);
+      setGlitchHiddenAudioUrl('');
+      setGlitchHiddenVideoUrl('');
+      setGlitchHint('');
+      setGlitchAccessInstructions('');
+      setGlitchStartFrequency(12);
+      setGlitchStartShift(20);
+      setGlitchStartChromatic(8);
 
       setMegaFinalTruthText('');
       setMegaImageFile(null);
@@ -390,12 +440,16 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");
 
+    const wantsSecurityLayer = securityLayerEnabled || evidenceType === 'glitch_puzzle';
+
     // Validate based on evidence type
-    if (evidenceType === 'glitch_puzzle') {
-       if (!glitchOriginalImageFile || !glitchCorruptedImageFile) {
-          return alert('Você precisa de ambas as imagens: Original e Corrompida para o quebra-cabeça de glitch');
+    if (wantsSecurityLayer) {
+       const hasAnyMedia = imgFile || videoFile || videoUrlInput || videoUrl || audioBase;
+       if (!hasAnyMedia) {
+          return alert('Envie uma imagem, vídeo ou áudio na aba Visual/Áudio para aplicar a camada de segurança.');
        }
-    } else if (evidenceType === 'mega_clue') {
+    }
+    if (evidenceType === 'mega_clue') {
        if (!megaFinalTruthText.trim()) {
           return alert('Defina o texto da verdade final para a mega-pista');
        }
@@ -412,7 +466,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          let filterUrl = null;
       if (imgFile) imgUrl = await uploadInvestigationImage(imgFile, investigationId);
          if (uvFile) uvUrl = await uploadInvestigationImage(uvFile, investigationId);
-         if (filterUrl) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
+         if (filterFile) filterUrl = await uploadInvestigationImage(filterFile, investigationId);
              // Prefer video URL input if provided, otherwise use uploaded video URL (uploaded on select). If user selected but upload didn't complete,
              // attempt a fallback upload here.
                    let finalVideoUrl: string | null = videoUrlInput || videoUrl || null;
@@ -435,12 +489,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             audHidUrl = await uploadAudio(audioHidden, investigationId);
          }
 
-         // Upload glitch puzzle images if needed
-         let glitchOriginalUrl = null;
-         let glitchCorruptedUrl = null;
-         if (evidenceType === 'glitch_puzzle') {
-            if (glitchOriginalImageFile) glitchOriginalUrl = await uploadInvestigationImage(glitchOriginalImageFile, investigationId);
-            if (glitchCorruptedImageFile) glitchCorruptedUrl = await uploadInvestigationImage(glitchCorruptedImageFile, investigationId);
+         // Upload glitch puzzle focused/hidden layer if provided
+         let glitchFocusedUrl = null;
+         if (glitchFocusedImageFile) {
+            glitchFocusedUrl = await uploadInvestigationImage(glitchFocusedImageFile, investigationId);
          }
 
          // Upload mega clue image if needed
@@ -448,6 +500,24 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          if (evidenceType === 'mega_clue' && megaImageFile) {
             megaImageUrl = await uploadInvestigationImage(megaImageFile, investigationId);
          }
+
+         const revealRequiresKeyword = revealLogicMode === 'aligned_keyword' || glitchRequireKeyword;
+         const baseMediaType = finalVideoUrl ? 'video' : audUrl ? 'audio' : imgUrl ? 'image' : 'unknown';
+         const baseMediaUrl = finalVideoUrl || audUrl || imgUrl || null;
+         const resolvedUnlockMode = revealLogicMode === 'aligned_keyword'
+            ? 'code_plus_keyword'
+            : revealLogicMode === 'always_visible'
+               ? 'media'
+               : glitchUnlockMode;
+         const resolvedCardType = (() => {
+           if (evidenceType === 'mega_clue') return 'mega_clue';
+           if (wantsSecurityLayer) {
+              if (finalVideoUrl) return 'encrypted_video';
+              if (audUrl || audioBase) return 'locked_audio';
+              if (imgUrl) return 'glitch_puzzle';
+           }
+           return evidenceType === 'document' ? null : evidenceType;
+         })();
 
              const metadata: Record<string, any> = {};
              metadata.image_filter_reveal = {
@@ -483,16 +553,106 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
             }
 
+            if (wantsSecurityLayer) {
+               metadata.unified_media = {
+                  base_media_type: baseMediaType,
+                  base_media_url: baseMediaUrl,
+                  uv_layer_url: uvUrl || null,
+                  filter_layer_url: filterUrl || null,
+                  hidden_layer_url: glitchFocusedUrl || null,
+                  video_url: finalVideoUrl || null,
+                  audio_base_url: audUrl || null,
+                  audio_hidden_url: audHidUrl || null,
+                  hide_preview_on_board: hidePreviewOnBoard,
+               };
+
+               metadata.masked_preview = hidePreviewOnBoard;
+
+               metadata.security_layer = {
+                  enabled: true,
+                  reveal_logic: revealLogicMode,
+                  require_keyword: revealRequiresKeyword,
+                  keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
+                  reward_code: glitchRewardCode || null,
+                  signal_targets: signalTargets,
+                  slider_config: {
+                     target_frequency: glitchCorrectFrequency,
+                     target_shift: glitchCorrectShift,
+                     target_chromatic: glitchCorrectChromatic,
+                     tolerance_frequency: glitchToleranceFreq,
+                     tolerance_shift: glitchToleranceShift,
+                     tolerance_chromatic: glitchToleranceChroma,
+                  },
+                  start_values: {
+                     frequency: glitchStartFrequency,
+                     shift: glitchStartShift,
+                     chromatic: glitchStartChromatic,
+                  },
+               };
+
+               metadata.card_type = resolvedCardType;
+               metadata.media_type = baseMediaType;
+               metadata.reward_code = glitchRewardCode || null;
+
+               metadata.logic = 'glitch_sequential';
+               metadata.sequence = {
+                  step_1: 'unlock_boot',
+                  step_2: 'align_signal',
+                  step_3: revealRequiresKeyword ? 'keyword_verification' : 'reveal',
+               };
+
+               metadata.media_visibility = {
+                  audio_base: mediaVisibility.audioBase,
+                  audio_hidden: mediaVisibility.audioHidden,
+                  uv_layer: mediaVisibility.uvLayer,
+                  visual: mediaVisibility.visual,
+               };
+               metadata.audio_static_sync = audioStaticSync;
+               metadata.narrative_hints = {
+                  audio_guides_visual: narrativeLinks.audioHintsVisual,
+                  visual_guides_code: narrativeLinks.visualHintsCode,
+                  hint_note: narrativeLinks.hintNote || null,
+               };
+            }
+
             // Add glitch puzzle metadata if needed
-            if (evidenceType === 'glitch_puzzle') {
+            if (wantsSecurityLayer) {
                metadata.glitch_puzzle = {
-                  original_image_url: glitchOriginalUrl,
-                  corrupted_image_url: glitchCorruptedUrl,
+                  original_image_url: baseMediaUrl || imgUrl || null,
                   correct_frequency: glitchCorrectFrequency,
                   correct_shift: glitchCorrectShift,
                   correct_chromatic: glitchCorrectChromatic,
+                  tolerance_frequency: glitchToleranceFreq,
+                  tolerance_shift: glitchToleranceShift,
+                  tolerance_chromatic: glitchToleranceChroma,
+                  start_frequency: glitchStartFrequency,
+                  start_shift: glitchStartShift,
+                  start_chromatic: glitchStartChromatic,
+                  access_instructions: glitchAccessInstructions || undefined,
+                  hint: glitchHint || undefined,
                   reward_code: glitchRewardCode,
+                  correct_keyword: revealRequiresKeyword ? (glitchKeyword || null) : null,
+                  require_keyword_validation: revealRequiresKeyword,
+                  unlock_mode: resolvedUnlockMode,
+                  variant: revealRequiresKeyword ? 'advanced_glitch' : 'standard_glitch',
+                  manual_unlock_required: revealRequiresKeyword,
+                  hidden_uv_url: uvUrl || null,
+                  hidden_audio_url: glitchHiddenAudioUrl || null,
+                  hidden_video_url: glitchHiddenVideoUrl || null,
+                  focused_image_url: glitchFocusedUrl || null,
                   solved: false,
+               };
+               metadata.media_visibility = {
+                  audio_base: mediaVisibility.audioBase,
+                  audio_hidden: mediaVisibility.audioHidden,
+                  uv_layer: mediaVisibility.uvLayer,
+                  visual: mediaVisibility.visual,
+               };
+               metadata.audio_static_sync = audioStaticSync;
+               metadata.narrative_hints = {
+                  audio_guides_visual: narrativeLinks.audioHintsVisual,
+                  visual_guides_code: narrativeLinks.visualHintsCode,
+                  hint_note: narrativeLinks.hintNote || null,
                };
             }
 
@@ -508,15 +668,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          // sanitize metadata to avoid sending unserializable objects
          const cleanMetadata = sanitizeForMetadata(metadata);
 
+            const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) ? LOCKED_PLACEHOLDER_IMG : (imgUrl || null);
+
          const payload: Record<string, any> = {
         investigation_id: investigationId,
         title,
-        type: evidenceType === 'document' ? null : evidenceType,
+            type: resolvedCardType,
         description_public: descPublic || null,
         description_hidden: descHidden || null,
         x: initialX ?? 100,
         y: initialY ?? 100,
-        image_url: evidenceType === 'glitch_puzzle' ? glitchCorruptedUrl : imgUrl,
+                  image_url: boardImageUrl,
         image_uv_url: uvUrl,
             image_filter_layer: filterUrl,
             image_filter_layer_transform: filterTransform || null,
@@ -586,24 +748,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
     }
   };
 
-  const handleGlitchOriginalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file) return;
-     try { if (glitchOriginalImagePreview) URL.revokeObjectURL(glitchOriginalImagePreview); } catch(e){}
-     const url = URL.createObjectURL(file);
-     setGlitchOriginalImageFile(file);
-     setGlitchOriginalImagePreview(url);
-  };
-
-  const handleGlitchCorruptedImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file) return;
-     try { if (glitchCorruptedImagePreview) URL.revokeObjectURL(glitchCorruptedImagePreview); } catch(e){}
-     const url = URL.createObjectURL(file);
-     setGlitchCorruptedImageFile(file);
-     setGlitchCorruptedImagePreview(url);
-  };
-
   const handleMegaImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
      if (!file) return;
@@ -664,7 +808,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL / UV / FX</button>
             <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO & EVP</button>
             <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS & PUZZLES</button>
-            {evidenceType === 'glitch_puzzle' && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🧩 CONFIG. GLITCH</button>}
+                  {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🧩 CONFIG. GLITCH</button>}
             {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}>🔐 CONFIG. MEGA-PISTA</button>}
           </div>
 
@@ -673,7 +817,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             {activeTab === 'geral' && (
               <>
                 <div className="field-block">
-                   <span className="field-title">📋 TIPO DE EVIDÊNCIA</span>
+                   <span className="field-title">📋 SUBTIPO DE EVIDÊNCIA</span>
                    <div style={{display:'flex', gap:10, marginBottom:15}}>
                       <button 
                          className={`upload-btn ${evidenceType === 'document' ? 'active' : ''}`}
@@ -699,6 +843,31 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    </div>
                 </div>
 
+                {evidenceType === 'glitch_puzzle' && (
+                  <div className="field-block" style={{background:'linear-gradient(135deg, rgba(18,24,40,0.8), rgba(0,0,0,0.7))', border:'1px solid rgba(100,150,255,0.3)', borderRadius:8}}>
+                    <span className="field-title" style={{color:'#64b5ff'}}>🧩 HUB GLITCH</span>
+                    <p style={{fontSize:12, color:'#9fb9ff', marginTop:6, lineHeight:1.5}}>
+                      Use a aba "CONFIG. GLITCH" para definir valores alvo. A imagem enviada aqui será mantida limpa e o motor aplicará a distorção para o jogador.
+                    </p>
+                              {previewUrl ? (
+                      <GlitchImageEngine
+                                    imageUrl={previewUrl}
+                        targetFrequency={glitchCorrectFrequency}
+                        targetShift={glitchCorrectShift}
+                        targetChromatic={glitchCorrectChromatic}
+                        playerFrequency={glitchStartFrequency}
+                        playerShift={glitchStartShift}
+                        playerChromatic={glitchStartChromatic}
+                        height={200}
+                      />
+                    ) : (
+                      <div style={{marginTop:10, padding:12, border:'1px dashed rgba(100,150,255,0.3)', color:'#8096c8', fontSize:12}}>
+                                    Envie a imagem na aba Visual para visualizar o efeito de glitch aqui.
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="field-block">
                    <span className="field-title">IDENTIFICAÇÃO</span>
                    <div style={{display:'flex', gap:15, marginBottom:10}}>
@@ -716,6 +885,61 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    <div style={{marginTop:15}}>
                       <label className="field-title" style={{display:'block', marginBottom:6}}>OBSERVAÇÕES DO MESTRE (Oculto)</label>
                       <textarea rows={2} value={descHidden} onChange={e=>setDescHidden(e.target.value)} style={{borderColor:'#c6a45f', background:'#1a1710'}} />
+                   </div>
+                </div>
+
+                <div className="field-block">
+                   <span className="field-title">🔒 CAMADA DE SEGURANÇA UNIVERSAL</span>
+                   <p style={{fontSize:11, color:'#888', marginBottom:10}}>
+                      Transforme qualquer mídia (imagem, vídeo ou áudio) em um artefato com camada de sinal/glitch e senha. Use os sliders na aba Glitch para calibrar quando ativado.
+                   </p>
+                   <div style={{display:'flex', flexWrap:'wrap', gap:12}}>
+                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                         <input type="checkbox" checked={securityLayerEnabled || evidenceType === 'glitch_puzzle'} onChange={e => setSecurityLayerEnabled(e.target.checked)} disabled={evidenceType === 'glitch_puzzle'} />
+                         <span style={{fontWeight:700, color:'#c6a45f'}}>Ativar criptografia de sinal</span>
+                      </label>
+                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                         <input type="checkbox" checked={hidePreviewOnBoard} onChange={e => setHidePreviewOnBoard(e.target.checked)} />
+                         <span style={{color:'#bbb'}}>Ocultar prévia no tabuleiro (mostrar ícone bloqueado)</span>
+                      </label>
+                   </div>
+
+                   <div style={{marginTop:12, display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10}}>
+                      <label style={{display:'flex', flexDirection:'column', gap:6}}>
+                         Lógica de revelação
+                         <select value={revealLogicMode} onChange={e => setRevealLogicMode(e.target.value as any)}>
+                            <option value="always_visible">Sempre visível (pista de percepção)</option>
+                            <option value="aligned_only">Apenas ao alinhar sliders</option>
+                            <option value="aligned_keyword">Sliders + senha manual</option>
+                         </select>
+                      </label>
+                      <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                         <span style={{fontSize:11, color:'#ccc'}}>Sliders controlam</span>
+                         <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+                            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
+                               <input type="checkbox" checked={signalTargets.visual} onChange={e => setSignalTargets(v => ({ ...v, visual: e.target.checked }))} />
+                               <span style={{fontSize:12}}>Imagem/Vídeo</span>
+                            </label>
+                            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
+                               <input type="checkbox" checked={signalTargets.audio} onChange={e => setSignalTargets(v => ({ ...v, audio: e.target.checked }))} />
+                               <span style={{fontSize:12}}>Áudio</span>
+                            </label>
+                         </div>
+                      </div>
+                      <label style={{display:'flex', flexDirection:'column', gap:6}}>
+                         Código final / cofre
+                         <input value={glitchRewardCode} onChange={e => setGlitchRewardCode(e.target.value.toUpperCase())} placeholder="ALPHA-01" />
+                      </label>
+                   </div>
+
+                   <div style={{marginTop:12, fontSize:11, color:'#888', display:'flex', gap:10, flexWrap:'wrap'}}>
+                      <span>Mídia atual: {(() => {
+                        if (videoPreviewUrl || videoUrlInput || videoUrl) return 'Vídeo';
+                        if (audioBase) return 'Áudio';
+                        if (imgFile) return 'Imagem';
+                        return 'Nenhuma';
+                      })()}</span>
+                      <span style={{color:'#64b5ff'}}>Aba Glitch continua sendo usada para calibrar sliders.</span>
                    </div>
                 </div>
 
@@ -881,6 +1105,36 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                          </div>
                       )}
                 </div>
+
+                {imgFile && evidenceType === 'glitch_puzzle' && previewUrl && (
+                  <div className="field-block" style={{borderColor:'rgba(100,150,255,0.3)'}}>
+                     <span className="field-title" style={{color:'#64b5ff'}}>🧩 DESIGNER DA CAMADA FOCO</span>
+                     <p style={{fontSize:11, color:'#9fb9ff', marginBottom:10}}>
+                        Use a imagem base para desenhar pistas que só aparecem quando o glitch é resolvido. O preview abaixo já aplica os sliders atuais.
+                     </p>
+                     <div style={{display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:10}}>
+                        <button className="upload-btn" onClick={() => setShowGlitchDesigner(true)}>
+                           🎨 DESIGNER DA CAMADA FOCO
+                        </button>
+                        {glitchFocusedImagePreview && (
+                           <span style={{fontSize:11, color:'#7bd7ff'}}>Camada salva — será exibida após alinhar.</span>
+                        )}
+                     </div>
+                     <GlitchImageEngine
+                        imageUrl={previewUrl}
+                        targetFrequency={glitchCorrectFrequency}
+                        targetShift={glitchCorrectShift}
+                        targetChromatic={glitchCorrectChromatic}
+                        playerFrequency={glitchStartFrequency}
+                        playerShift={glitchStartShift}
+                        playerChromatic={glitchStartChromatic}
+                        height={240}
+                     />
+                     <small style={{display:'block', marginTop:8, color:'#888'}}>
+                        A imagem acima é a base limpa. Ajuste os sliders na aba Glitch para calibrar a dificuldade enquanto vê o efeito aqui.
+                     </small>
+                  </div>
+                )}
 
                 {imgFile && (
                   <div style={{display:'flex', gap:15}}>
@@ -1276,42 +1530,27 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             {activeTab === 'glitch' && (
               <div className="field-block">
                  <span className="field-title">🧩 CONFIGURAÇÃO DO QUEBRA-CABEÇA DE GLITCH</span>
-                 
-                 {/* Seção de Upload de Imagens */}
-                 <div style={{marginBottom:20}}>
-                    <h4 style={{color:'#64b5ff', marginTop:0}}>📸 IMAGENS</h4>
-                    
-                    <div style={{marginBottom:15}}>
-                       <label>Imagem ORIGINAL (será revelada ao resolver):</label>
-                       <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                          <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleGlitchOriginalImageSelect} disabled={loading} /></label>
-                       </div>
-                       {glitchOriginalImagePreview && (
-                          <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)'}}>
-                             <div style={{display:'flex', alignItems:'center', gap:8}}>
-                                <span style={{fontSize:18}}>✓</span>
-                                <span style={{color:'#888', fontSize:11}}>{glitchOriginalImageFile?.name}</span>
-                             </div>
-                             <img src={glitchOriginalImagePreview} alt="Original" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
+                 <div style={{marginBottom:20, padding:'12px', background:'rgba(12,16,28,0.65)', border:'1px solid rgba(100,150,255,0.3)', borderRadius:8}}>
+                    <h4 style={{color:'#64b5ff', marginTop:0}}>📸 BASE VISUAL</h4>
+                    <p style={{fontSize:11, color:'#9fb9ff', marginBottom:8}}>
+                      Use apenas a aba Visual & Mídia para enviar imagem ou vídeo. Esta aba define apenas a lógica de destravamento.
+                    </p>
+                    {!previewUrl && (
+                      <div style={{padding:10, border:'1px dashed rgba(100,150,255,0.4)', borderRadius:6, color:'#8096c8', fontSize:11}}>
+                        Selecione a mídia na aba Visual para habilitar os controles de glitch.
+                      </div>
+                    )}
+                    {previewUrl && (
+                      <div style={{padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', display:'flex', flexDirection:'column', gap:8}}>
+                        <span style={{fontSize:11, color:'#9fb9ff'}}>Mídia conectada. Ajuste os sliders abaixo para definir o quebra-cabeça.</span>
+                        {glitchFocusedImagePreview && (
+                          <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+                             <span style={{fontSize:18}}>✓</span>
+                             <span style={{fontSize:11, color:'#7bd7ff'}}>Camada de foco pronta — criada no Designer da aba Visual.</span>
                           </div>
-                       )}
-                    </div>
-
-                    <div style={{marginBottom:15}}>
-                       <label>Imagem CORROMPIDA (o que o jogador vê):</label>
-                       <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                          <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleGlitchCorruptedImageSelect} disabled={loading} /></label>
-                       </div>
-                       {glitchCorruptedImagePreview && (
-                          <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)'}}>
-                             <div style={{display:'flex', alignItems:'center', gap:8}}>
-                                <span style={{fontSize:18}}>✓</span>
-                                <span style={{color:'#888', fontSize:11}}>{glitchCorruptedImageFile?.name}</span>
-                             </div>
-                             <img src={glitchCorruptedImagePreview} alt="Corrompida" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
-                          </div>
-                       )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                  </div>
 
                  {/* Seção de Parâmetros */}
@@ -1360,11 +1599,196 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     <div style={{padding:10, background:'rgba(100,150,255,0.1)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', fontSize:11, color:'#888'}}>
                        💡 <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
                     </div>
+
+                              <div style={{marginTop:12, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
+                                 <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Tolerância de acerto (sliders)</h5>
+                                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:8}}>
+                                     <label style={{fontSize:12, color:'#ccc'}}>Freq. (±)
+                                        <input type="number" value={glitchToleranceFreq} onChange={e => setGlitchToleranceFreq(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={10} style={{width:'100%', marginTop:4}} />
+                                     </label>
+                                     <label style={{fontSize:12, color:'#ccc'}}>Shift (±)
+                                        <input type="number" value={glitchToleranceShift} onChange={e => setGlitchToleranceShift(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={20} style={{width:'100%', marginTop:4}} />
+                                     </label>
+                                     <label style={{fontSize:12, color:'#ccc'}}>Chroma (±)
+                                        <input type="number" value={glitchToleranceChroma} onChange={e => setGlitchToleranceChroma(Math.max(0, parseInt(e.target.value) || 0))} min={0} max={20} style={{width:'100%', marginTop:4}} />
+                                     </label>
+                                 </div>
+                                 <small style={{display:'block', marginTop:6, color:'#777'}}>Valores menores deixam o puzzle mais preciso; maiores permitem folga ao alinhar.</small>
+                              </div>
                  </div>
+
+                {/* Briefing e dica rápida */}
+                <div style={{marginBottom:20}}>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}>🧭 BRIEFING DO PUZZLE</h4>
+                   <label>Como o jogador encontra/ativa este puzzle?</label>
+                   <textarea
+                      value={glitchAccessInstructions}
+                      onChange={e => setGlitchAccessInstructions(e.target.value)}
+                      rows={3}
+                      placeholder="Ex: Precisam abrir este card e usar o painel de decodificação para alinhar as barras..."
+                      style={{width:'100%', marginTop:4}}
+                   />
+
+                   <label style={{display:'block', marginTop:12}}>Dica curta (opcional)</label>
+                   <textarea
+                      value={glitchHint}
+                      onChange={e => setGlitchHint(e.target.value)}
+                      rows={2}
+                      placeholder="Ex: Frequência baixa, deslocamento no terço inferior, cromática baixa."
+                      style={{width:'100%', marginTop:4}}
+                   />
+                </div>
+
+                {/* Valores iniciais para os sliders do jogador */}
+                <div style={{marginBottom:24}}>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}>🎛️ PONTOS DE PARTIDA PARA O JOGADOR</h4>
+                   <p style={{fontSize:11, color:'#888', marginBottom:8}}>Defina de onde os controles começam para não entregar a resposta de imediato.</p>
+                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12}}>
+                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                         Frequência inicial
+                         <input type="number" value={glitchStartFrequency} onChange={e => setGlitchStartFrequency(parseInt(e.target.value) || 0)} min={1} max={50} style={{width:'100%', marginTop:4}} />
+                      </label>
+                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                         Deslocamento inicial (%)
+                         <input type="number" value={glitchStartShift} onChange={e => setGlitchStartShift(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
+                      </label>
+                      <label style={{display:'block', fontSize:12, color:'#ccc'}}>
+                         Cromática inicial (%)
+                         <input type="number" value={glitchStartChromatic} onChange={e => setGlitchStartChromatic(parseInt(e.target.value) || 0)} min={0} max={100} style={{width:'100%', marginTop:4}} />
+                      </label>
+                   </div>
+                </div>
+
+                <div style={{marginBottom:20, padding:'12px', background:'rgba(18,24,40,0.7)', border:'1px solid rgba(100,150,255,0.25)', borderRadius:8}}>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}>🔒 CONTROLE DE LIBERAÇÃO</h4>
+                   <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10}}>
+                      <label style={{fontSize:12, color:'#ccc', display:'flex', flexDirection:'column', gap:6}}>
+                         Áudio base
+                         <select value={mediaVisibility.audioBase} onChange={e => setMediaVisibility(v => ({ ...v, audioBase: e.target.value as any }))}>
+                            <option value="always">Sempre disponível</option>
+                            <option value="glitch_only">Apenas durante o glitch</option>
+                            <option value="post_solve">Só após resolver</option>
+                         </select>
+                      </label>
+                      <label style={{fontSize:12, color:'#ccc', display:'flex', flexDirection:'column', gap:6}}>
+                         Áudio secreto (EVP)
+                         <select value={mediaVisibility.audioHidden} onChange={e => setMediaVisibility(v => ({ ...v, audioHidden: e.target.value as any }))}>
+                            <option value="post_solve">Após estabilizar o sinal</option>
+                            <option value="post_keyword">Após senha/palavra-chave</option>
+                         </select>
+                      </label>
+                      <label style={{fontSize:12, color:'#ccc', display:'flex', flexDirection:'column', gap:6}}>
+                         Visual / Vídeo
+                         <select value={mediaVisibility.visual} onChange={e => setMediaVisibility(v => ({ ...v, visual: e.target.value as any }))}>
+                            <option value="glitch_active">Glitch ativo desde o início</option>
+                            <option value="post_keyword">Revelado por senha</option>
+                         </select>
+                      </label>
+                      <label style={{fontSize:12, color:'#ccc', display:'flex', flexDirection:'column', gap:6}}>
+                         Camada UV / Segredo
+                         <select value={mediaVisibility.uvLayer} onChange={e => setMediaVisibility(v => ({ ...v, uvLayer: e.target.value as any }))}>
+                            <option value="post_keyword">Só após assinatura</option>
+                            <option value="post_solve">Após alinhar sliders</option>
+                            <option value="always">Sempre visível</option>
+                         </select>
+                      </label>
+                   </div>
+                </div>
+
+                <div style={{marginBottom:20, padding:'12px', background:'rgba(15,20,30,0.7)', border:'1px solid rgba(100,150,255,0.2)', borderRadius:8}}>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}>🎧 LÓGICA DE PISTA SONORA</h4>
+                   <label style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#ccc', cursor:'pointer'}}>
+                      <input type="checkbox" checked={audioStaticSync} onChange={e => setAudioStaticSync(e.target.checked)} />
+                      <span>Sincronizar ruído/estática com os sliders (mais chiado longe da solução)</span>
+                   </label>
+                </div>
+
+                <div style={{marginBottom:20, padding:'12px', background:'rgba(12,12,18,0.7)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:8}}>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}>🧠 CONEXÕES NARRATIVAS</h4>
+                   <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                      <label style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#ccc'}}>
+                         <input type="checkbox" checked={narrativeLinks.audioHintsVisual} onChange={e => setNarrativeLinks(v => ({ ...v, audioHintsVisual: e.target.checked }))} />
+                         O áudio contém a dica para o ajuste visual
+                      </label>
+                      <label style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#ccc'}}>
+                         <input type="checkbox" checked={narrativeLinks.visualHintsCode} onChange={e => setNarrativeLinks(v => ({ ...v, visualHintsCode: e.target.checked }))} />
+                         A camada focada traz a senha/código final
+                      </label>
+                      <textarea
+                         rows={3}
+                         placeholder="Observação narrativa opcional (ex: A frequência está no chiado)"
+                         value={narrativeLinks.hintNote}
+                         onChange={e => setNarrativeLinks(v => ({ ...v, hintNote: e.target.value }))}
+                         style={{width:'100%', background:'rgba(0,0,0,0.45)', border:'1px solid rgba(100,150,255,0.2)', color:'#cde', fontSize:12}}
+                      />
+                   </div>
+                </div>
 
                  {/* Seção de Recompensa */}
                  <div>
                     <h4 style={{color:'#64b5ff', marginTop:0}}>🎁 RECOMPENSA AO RESOLVER</h4>
+                   <label>Modo de desbloqueio:</label>
+                   <select
+                      value={glitchUnlockMode}
+                      onChange={e => {
+                        const val = e.target.value as any;
+                        setGlitchUnlockMode(val);
+                        if (val === 'code') setGlitchRequireKeyword(false);
+                        if (val === 'code_plus_keyword') setGlitchRequireKeyword(true);
+                        if (val === 'media') setGlitchRequireKeyword(false);
+                        if (val === 'media_and_code') setGlitchRequireKeyword(true);
+                      }}
+                      disabled={loading}
+                      style={{width:'100%', marginTop:4, marginBottom:12}}
+                   >
+                      <option value="code">Código direto (após alinhar)</option>
+                      <option value="code_plus_keyword">Código + assinatura digitada</option>
+                      <option value="media">Só mídia oculta (sem código)</option>
+                      <option value="media_and_code">Mídia + código (exige assinatura)</option>
+                   </select>
+
+                   <div style={{marginBottom:12, padding:'10px', background:'rgba(100,150,255,0.08)', border:'1px solid rgba(100,150,255,0.2)', borderRadius:6}}>
+                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                        <input type="checkbox" checked={glitchRequireKeyword} onChange={e => setGlitchRequireKeyword(e.target.checked)} disabled={loading} />
+                        <span>Exigir digitação pós-ajuste (assinatura digital)</span>
+                      </label>
+                      <small style={{display:'block', marginTop:6, color:'#888'}}>Se marcado, alinhar os sliders apenas revela a imagem; o jogador precisa digitar a palavra/número escondido para liberar o código final.</small>
+                   </div>
+
+                   <label>Senha da Imagem (Input Key):</label>
+                   <input
+                      type="text"
+                      value={glitchKeyword}
+                      onChange={e => setGlitchKeyword(e.target.value)}
+                      disabled={loading}
+                      maxLength={120}
+                      placeholder="Ex: SALA 104, GATEWAY, PHOENIX"
+                      style={{width:'100%', marginTop:4, marginBottom:8}}
+                   />
+                   <small style={{display:'block', marginTop:2, color:'#777'}}>Palavra/número que o jogador deve extrair da imagem limpa (ou camada UV).</small>
+
+                   <div style={{marginTop:16, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
+                     <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Mídia Oculta (opcional)</h5>
+                     <label>URL de Áudio Secreto:</label>
+                     <input
+                        type="text"
+                        value={glitchHiddenAudioUrl}
+                        onChange={e => setGlitchHiddenAudioUrl(e.target.value)}
+                        disabled={loading}
+                        placeholder="https://.../secreto.mp3"
+                        style={{width:'100%', marginTop:4, marginBottom:8}}
+                     />
+                     <label>URL de Vídeo Secreto:</label>
+                     <input
+                        type="text"
+                        value={glitchHiddenVideoUrl}
+                        onChange={e => setGlitchHiddenVideoUrl(e.target.value)}
+                        disabled={loading}
+                        placeholder="https://.../secreto.mp4"
+                        style={{width:'100%', marginTop:4}}
+                     />
+                     <small style={{display:'block', marginTop:6, color:'#777'}}>Você também pode enviar uma camada UV na aba geral; ela será usada como pista oculta.</small>
+                   </div>
                     
                     <label>Código de Recompensa (ex: ALPHA-01, BETA-02):</label>
                     <input
@@ -1425,6 +1849,34 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  <div>
                     <h4 style={{color:'#ff6400', marginTop:0}}>🧩 QUEBRA-CABEÇAS NECESSÁRIOS PARA DESBLOQUEAR</h4>
                     <p style={{fontSize:11, color:'#888', marginBottom:12}}>Selecione quais Glitch Puzzles são necessários para desbloquear esta mega-pista.</p>
+
+                    {availablePuzzles.length > 0 && (
+                       <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:12}}>
+                          <select
+                            value={megaSelectedPuzzle}
+                            onChange={e => setMegaSelectedPuzzle(e.target.value)}
+                            style={{flex:1, padding:'8px', background:'#120c08', color:'#fff', border:'1px solid rgba(255,100,0,0.4)', borderRadius:4}}
+                          >
+                            <option value="">Escolha uma pista para vincular</option>
+                            {availablePuzzles.map(p => (
+                              <option key={p.id} value={p.id}>{p.title}</option>
+                            ))}
+                          </select>
+                          <button
+                            className="upload-btn"
+                            onClick={() => {
+                              if (megaSelectedPuzzle && !megaRequiredPuzzleIds.includes(megaSelectedPuzzle)) {
+                                setMegaRequiredPuzzleIds([...megaRequiredPuzzleIds, megaSelectedPuzzle]);
+                                setMegaSelectedPuzzle('');
+                              }
+                            }}
+                            disabled={!megaSelectedPuzzle}
+                            style={{minWidth:160}}
+                          >
+                            Adicionar
+                          </button>
+                       </div>
+                    )}
                     
                     {availablePuzzles.length === 0 ? (
                        <div style={{padding:12, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px dashed rgba(255,100,0,0.3)', color:'#888', fontSize:11, textAlign:'center'}}>
@@ -1505,6 +1957,24 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             </div>
          </div>
       )}
+
+             {showGlitchDesigner && previewUrl && (
+            <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'rgba(0,0,0,0.85)'}}>
+               <div style={{width:'min(1200px,96%)'}}>
+                 <UVEditor
+                            baseImageUrl={previewUrl}
+                   mode="uv"
+                   onSave={(file) => {
+                     if (glitchFocusedImagePreview) { try { URL.revokeObjectURL(glitchFocusedImagePreview); } catch(e){} }
+                     setGlitchFocusedImageFile(file);
+                     setGlitchFocusedImagePreview(URL.createObjectURL(file));
+                     setShowGlitchDesigner(false);
+                   }}
+                   onClose={() => setShowGlitchDesigner(false)}
+                 />
+               </div>
+            </div>
+         )}
       
       {showAudioForgeFor && (
          <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>

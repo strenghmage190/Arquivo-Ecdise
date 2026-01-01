@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
+import { generateGlitchPlaceholder } from '../../utils/glitchPlaceholder';
+import GlitchImageEngine from '../tools/GlitchImageEngine';
 import './GlitchPuzzleCreator.css';
 
 interface Props {
@@ -77,8 +79,8 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
   };
 
   const handleSave = async () => {
-    if (!config.originalImageFile || !config.corruptedImageFile) {
-      alert('Você precisa de ambas as imagens: Original e Corrompida');
+    if (!config.originalImageFile) {
+      alert('Envie a imagem ORIGINAL (a versão limpa). A corrupção será simulada pelo motor de glitch.');
       return;
     }
 
@@ -90,27 +92,38 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
     setLoading(true);
 
     try {
-      // Upload das imagens
+      // Upload das imagens (a original é sempre a fonte verdadeira)
       const originalUrl = await uploadInvestigationImage(config.originalImageFile!, investigationId);
-      const corruptedUrl = await uploadInvestigationImage(config.corruptedImageFile!, investigationId);
+      let corruptedUrl = config.corruptedImageFile
+        ? await uploadInvestigationImage(config.corruptedImageFile, investigationId)
+        : null;
 
-      if (!originalUrl || !corruptedUrl) {
-        throw new Error('Falha ao fazer upload das imagens');
+      if (!corruptedUrl) {
+        const generated = await generateGlitchPlaceholder(config.originalImageFile!);
+        if (generated) {
+          corruptedUrl = await uploadInvestigationImage(generated, investigationId);
+        }
+      }
+
+      if (!originalUrl) {
+        throw new Error('Falha ao fazer upload da imagem original');
       }
 
       // Criar a pista como GLITCH_PUZZLE
+      // IMPORTANTE: image_url recebe a imagem corrompida (ou vazia se não houver)
+      // A imagem ORIGINAL é guardada exclusivamente no metadata para ser usada pelo Solver
       const cardData = {
         investigation_id: investigationId,
         title: config.title,
         description: config.description,
         type: 'glitch_puzzle', // Tipo especial
-        image_url: corruptedUrl, // Mostra a imagem corrompida
+        image_url: corruptedUrl || '', // Mostra a imagem corrompida NO TABULEIRO (ou vazio se não houver)
         x: initialX ?? 100,
         y: initialY ?? 100,
         metadata: {
           glitch_puzzle: {
-            original_image_url: originalUrl,
-            corrupted_image_url: corruptedUrl,
+            original_image_url: originalUrl, // A imagem VERDADEIRA fica aqui, protegida no metadata
+            corrupted_image_url: corruptedUrl || null,
             correct_frequency: config.correctFrequency,
             correct_shift: config.correctShift,
             correct_chromatic: config.correctChromatic,
@@ -255,6 +268,25 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
             </div>
           </div>
 
+          {config.originalImagePreview && (
+            <div className="section">
+              <h3>👁️ PREVIEW DINÂMICO</h3>
+              <GlitchImageEngine
+                imageUrl={config.originalImagePreview}
+                targetFrequency={config.correctFrequency}
+                targetShift={config.correctShift}
+                targetChromatic={config.correctChromatic}
+                playerFrequency={Math.min(50, Math.max(1, config.correctFrequency - 8))}
+                playerShift={Math.min(100, Math.max(0, config.correctShift + 18))}
+                playerChromatic={Math.min(100, Math.max(0, config.correctChromatic + 22))}
+                height={260}
+              />
+              <small style={{ display: 'block', marginTop: 8, color: '#999' }}>
+                A prévia mostra a imagem limpa sendo corrompida pelo motor. Ajuste os valores-alvo para calibrar a dificuldade.
+              </small>
+            </div>
+          )}
+
           {/* Seção 3: Metadados */}
           <div className="section">
             <h3>📝 METADADOS DO QUEBRA-CABEÇA</h3>
@@ -321,7 +353,7 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
               <p>📌 <strong>Tipo:</strong> Quebra-cabeça de Glitch</p>
               <p>🎯 <strong>Objetivo:</strong> Jogador descobre parâmetros e decodifica</p>
               <p>🔧 <strong>Parâmetros corretos:</strong> {config.correctFrequency} fatias, {config.correctShift}% deslocamento, {config.correctChromatic}% cromática</p>
-              <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida</p>
+              <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida (opcional)</p>
               <p>🎁 <strong>Recompensa:</strong> <code style={{ background: '#333', padding: '2px 6px', borderRadius: 3, color: '#c6a45f' }}>{config.rewardCode}</code></p>
 
             </div>
@@ -339,7 +371,7 @@ export default function GlitchPuzzleCreator({ isOpen, onClose, investigationId, 
           <button 
             className="btn btn-save" 
             onClick={handleSave}
-            disabled={loading || !config.originalImageFile || !config.corruptedImageFile}
+            disabled={loading || !config.originalImageFile}
           >
             {loading ? 'CRIANDO...' : '✓ CRIAR QUEBRA-CABEÇA'}
           </button>

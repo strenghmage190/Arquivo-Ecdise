@@ -34,6 +34,7 @@ const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { va
     </button>
   );
 };
+const LOCKED_PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/xcAAwEB/aurbZkAAAAASUVORK5CYII=';
 interface Props {
   investigationId: string;
 }
@@ -189,6 +190,14 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [decoderUnlocked, setDecoderUnlocked] = useState(false);
   const [showDecoderModal, setShowDecoderModal] = useState(false);
   const [showCodePrompt, setShowCodePrompt] = useState(false);
+  const anyModalOpen = modalOpen || createModalOpen || inviteOpen || Boolean(inspectCard) || Boolean(unlockingCard) || terminalOpen || decoderOpen || showDecoderModal || showCodePrompt || sketchOpen;
+
+  // Hide HUD/header overlays while any modal is active
+  useEffect(() => {
+    const eventName = anyModalOpen ? 'modal-opened' : 'modal-closed';
+    window.dispatchEvent(new Event(eventName));
+    return () => { window.dispatchEvent(new Event('modal-closed')); };
+  }, [anyModalOpen]);
 
   const corkboardRef = useRef<HTMLDivElement>(null);
   // draggingRef stores info about the currently dragged card(s)
@@ -1281,6 +1290,51 @@ export function InvestigationBoard({ investigationId }: Props) {
     return meta;
   };
 
+  const resolveUnifiedMedia = (card: any, metadata: any, opts?: { revealBase?: boolean }) => {
+    const revealBase = opts?.revealBase === true;
+    const unified = metadata?.unified_media || {};
+    const baseType = unified.base_media_type || metadata?.media_type || card?.base_media_type || null;
+    const baseUrl = unified.base_media_url || card?.base_media_url || null;
+
+    const resolvedImage = (() => {
+      if (revealBase) {
+        if (baseType === 'image' && baseUrl) return baseUrl;
+        if (card?.image_url) return card.image_url;
+        if (unified.image_url) return unified.image_url;
+        return null;
+      }
+      const masked = metadata?.masked_preview === true || (metadata?.security_layer?.enabled && baseUrl);
+      if (masked) return LOCKED_PLACEHOLDER_IMG;
+      return card?.image_url || baseUrl || unified.image_url || null;
+    })();
+
+    const resolvedVideo = (() => {
+      if (baseType === 'video' && baseUrl) return baseUrl;
+      return unified.video_url || card?.video_url || null;
+    })();
+
+    const resolvedAudio = (() => {
+      if (baseType === 'audio' && baseUrl) return baseUrl;
+      return unified.audio_base_url || card?.audio_url || null;
+    })();
+
+    const resolvedHiddenAudio = unified.audio_hidden_url || card?.audio_hidden_url || null;
+
+    const resolvedType = card?.type || metadata?.card_type || (metadata?.security_layer?.enabled
+      ? (baseType === 'video' ? 'encrypted_video' : baseType === 'audio' ? 'locked_audio' : 'glitch_puzzle')
+      : null);
+
+    return {
+      base_media_type: baseType,
+      base_media_url: baseUrl,
+      image_url: resolvedImage,
+      video_url: resolvedVideo,
+      audio_url: resolvedAudio,
+      audio_hidden_url: resolvedHiddenAudio,
+      type: resolvedType || card?.type || null,
+    };
+  };
+
   const isCardLocked = (card: any, metadata: any) => {
     if (card?.is_locked === false || metadata?.unlocked_at) return false;
     const lockedFlag = card?.is_locked === true || card?.is_locked === 1 || (typeof card?.is_locked === 'string' && ['true','t','1'].includes(String(card.is_locked).toLowerCase()));
@@ -1300,6 +1354,8 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   const handleCardOpen = (card: any) => {
     const metadata = parseCardMetadata(card);
+    const hydratedMedia = resolveUnifiedMedia(card, metadata, { revealBase: true });
+    const cardForView = { ...card, ...hydratedMedia, metadata };
     const isMegaClue = card?.type === 'mega_clue' || metadata?.mega_clue;
     const megaMeta = metadata?.mega_clue || {};
     const requiredIds = Array.isArray(megaMeta.required_puzzle_ids) ? megaMeta.required_puzzle_ids.map((id: any) => String(id)) : [];
@@ -1310,21 +1366,21 @@ export function InvestigationBoard({ investigationId }: Props) {
     const alreadyUnlocked = megaMeta.unlocked === true || (requiredCount > 0 && progressCount >= requiredCount);
 
     if (isGameMaster && !playerView) {
-      openEvidenceViewer({ ...card, metadata });
+      openEvidenceViewer(cardForView);
       return;
     }
 
     if (isMegaClue && !alreadyUnlocked && requiredCount > 0) {
-      setUnlockingCard({ ...card, metadata });
+      setUnlockingCard(cardForView);
       return;
     }
 
     if (!isMegaClue && isCardLocked(card, metadata)) {
-      setUnlockingCard({ ...card, metadata });
+      setUnlockingCard(cardForView);
       return;
     }
 
-    openEvidenceViewer({ ...card, metadata });
+    openEvidenceViewer(cardForView);
   };
 
   const handleUnlockSubmit = async (submittedCode: string): Promise<CodePromptResult> => {
@@ -1901,6 +1957,18 @@ export function InvestigationBoard({ investigationId }: Props) {
 
           {cards.map((card) => {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };
+            const metadata = parseCardMetadata(card);
+            const unified = resolveUnifiedMedia(card, metadata, { revealBase: false });
+            const masked = metadata?.masked_preview === true || (metadata?.security_layer?.enabled && unified.base_media_url);
+            const displayImage = unified.image_url || card.image_url || null;
+            const fileType = unified.base_media_type || (card?.video_url || unified.video_url ? 'video' : (card?.audio_url || unified.audio_url ? 'audio' : card?.image_url ? 'image' : 'text'));
+            const cardType = (() => {
+              if (masked && (unified.base_media_type === 'video' || card?.type === 'encrypted_video')) return 'encrypted';
+              if (unified.type === 'glitch_puzzle' || card?.type === 'glitch_puzzle') return 'glitch';
+              if (unified.type === 'mega_clue' || card?.type === 'mega_clue') return 'mega-clue';
+              if (card?.is_locked || card?.lock_password) return 'encrypted';
+              return 'normal';
+            })();
             const isSelected = selectedIds.includes(card.id);
             const isNew = lastCreatedId === card.id;
             return (
@@ -2031,7 +2099,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                 <div style={{ width: 280 }}>
                   <EvidenceCard
                     id={card.id}
-                    image={card.image_url}
+                    image={displayImage}
                     hiddenSrc={card.image_uv_url}
                     title={card.title}
                     isUV={isUV}
@@ -2041,22 +2109,13 @@ export function InvestigationBoard({ investigationId }: Props) {
                     )}
                     isGameMaster={isGameMaster}
                     playerView={viewerMode}
-                    fileType={
-                      card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)) ? 'video' :
-                      (card?.metadata && (card.metadata.audio || card.metadata.audio_url)) ? 'audio' :
-                      card?.image_url ? 'image' : 'text'
-                    }
-                    cardType={
-                      (card?.is_locked || card?.lock_password) ? 'encrypted' :
-                      card?.metadata?.type === 'glitch_puzzle' ? 'glitch' :
-                      card?.metadata?.type === 'mega_clue' ? 'mega-clue' :
-                      'normal'
-                    }
+                    fileType={fileType as any}
+                    cardType={cardType as any}
                     hasRecord={Boolean(card?.metadata && (card.metadata.type === 'person' || card.metadata.person || card.metadata.person_meta))}
                     hasUV={Boolean(card?.image_uv_url)}
-                    hasHiddenAudio={Boolean(card?.audio_hidden_url || (card?.metadata && (card.metadata.audio_hidden_url || card.metadata.audio_hidden)))}
-                    hasAudio={Boolean(card?.audio_url || (card?.metadata && (card.metadata.audio || card.metadata.audio_url)))}
-                    hasVideo={Boolean(card?.video_url || (card?.metadata && (card.metadata.type === 'video' || card.metadata.video)))}
+                    hasHiddenAudio={Boolean(unified.audio_hidden_url || card?.audio_hidden_url || (metadata && (metadata.audio_hidden_url || metadata.audio_hidden)))}
+                    hasAudio={Boolean(unified.audio_url || card?.audio_url || (metadata && (metadata.audio || metadata.audio_url)))}
+                    hasVideo={Boolean(unified.video_url || card?.video_url || (metadata && (metadata.type === 'video' || metadata.video)))}
                     hasChat={Boolean(card?.chat_data || (card?.metadata && (card.metadata.chat_data || card.metadata.chat)))}
                     hasThermal={Boolean(card?.metadata && card.metadata.thermal)}
                     hasStamp={Boolean(card?.stamp_text || (card?.metadata && card.metadata.stamp_text))}

@@ -152,8 +152,8 @@ export default function GlitchPuzzleForm({
   };
 
   const handleSave = async () => {
-    if (!config.originalImageFile || !config.corruptedImageFile) {
-      alert('Você precisa de ambas as imagens: Original e Corrompida');
+    if (!config.originalImageFile) {
+      alert('Envie a imagem ORIGINAL. A versão corrompida será simulada pelo motor de glitch.');
       return;
     }
 
@@ -166,10 +166,12 @@ export default function GlitchPuzzleForm({
 
     try {
       const originalUrl = await uploadInvestigationImage(config.originalImageFile!, investigationId);
-      const corruptedUrl = await uploadInvestigationImage(config.corruptedImageFile!, investigationId);
+      const corruptedUrl = config.corruptedImageFile
+        ? await uploadInvestigationImage(config.corruptedImageFile, investigationId)
+        : null;
 
-      if (!originalUrl || !corruptedUrl) {
-        throw new Error('Falha ao fazer upload das imagens');
+      if (!originalUrl) {
+        throw new Error('Falha ao fazer upload da imagem original');
       }
 
       // Upload opcional de vídeo
@@ -197,7 +199,7 @@ export default function GlitchPuzzleForm({
       const metadata: Record<string, any> = {
         glitch_puzzle: {
           original_image_url: originalUrl,
-          corrupted_image_url: corruptedUrl,
+          corrupted_image_url: corruptedUrl || null,
           correct_frequency: config.correctFrequency,
           correct_shift: config.correctShift,
           correct_chromatic: config.correctChromatic,
@@ -240,7 +242,7 @@ export default function GlitchPuzzleForm({
         description_public: config.descPublic || config.description || null,
         description_hidden: config.descHidden || null,
         type: 'glitch_puzzle',
-        image_url: corruptedUrl,
+        image_url: originalUrl,
         x: initialX ?? 100,
         y: initialY ?? 100,
         tags: config.tags ? config.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
@@ -456,7 +458,7 @@ export default function GlitchPuzzleForm({
           <p>📌 <strong>Tipo:</strong> Quebra-cabeça de Glitch</p>
           <p>🎯 <strong>Objetivo:</strong> Jogador descobre parâmetros e decodifica</p>
           <p>🔧 <strong>Parâmetros corretos:</strong> {config.correctFrequency} fatias, {config.correctShift}% deslocamento, {config.correctChromatic}% cromática</p>
-          <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida</p>
+          <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida (opcional)</p>
           <p>🎁 <strong>Recompensa:</strong> <code style={{ background: '#333', padding: '2px 6px', borderRadius: 3, color: '#c6a45f' }}>{config.rewardCode}</code></p>
           </div>
         </div>
@@ -789,7 +791,7 @@ export default function GlitchPuzzleForm({
         <button 
           className="btn btn-save" 
           onClick={handleSave}
-          disabled={loading || !config.originalImageFile || !config.corruptedImageFile}
+          disabled={loading || !config.originalImageFile}
         >
           {loading ? 'CRIANDO...' : '✓ CRIAR QUEBRA-CABEÇA'}
         </button>
