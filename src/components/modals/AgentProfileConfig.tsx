@@ -70,17 +70,17 @@ export default function AgentProfileConfig({ onClose }: AgentProfileConfigProps)
 
       if (profile.id) {
         // Atualizar perfil existente
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('profiles')
-          .update(profileData)
+          .update(profileData as any)
           .eq('id', user.id);
 
         if (error) throw error;
       } else {
         // Criar novo perfil (upsert)
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('profiles')
-          .upsert([{ id: user.id, ...profileData }]);
+          .upsert([{ id: user.id, ...profileData } as any] as any);
 
         if (error) throw error;
       }

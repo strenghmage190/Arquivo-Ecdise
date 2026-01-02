@@ -54,9 +54,6 @@ export default function Investigation() {
           <h1 style={{margin:0, color:'#dff'}}>{investigation.title}</h1>
           <div style={{color:'var(--muted)', fontSize:13}}>{new Date(investigation.created_at).toLocaleString()}</div>
         </div>
-        <div>
-          <button className="btn-cancel" onClick={() => navigate('/')}>← ARQUIVOS</button>
-        </div>
       </div>
 
       <div style={{marginTop:18}}>

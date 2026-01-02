@@ -8,8 +8,16 @@ import ThermalEditor from '../tools/ThermalEditor';
 import { bufferToWav } from '../../utils/audioGenerator';
 import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import UrlRealTimeSpectrogram from '../tools/UrlRealTimeSpectrogram';
+import { 
+  fetchClueTemplates, 
+  createClueTemplate, 
+  deleteClueTemplate, 
+  sanitizeTemplateData,
+  ClueTemplate 
+} from '../../api/templates';
 
 import PhoneViewer from '../tools/PhoneViewer';
+import NumericKeypad from '../tools/NumericKeypad';
 import SpectrogramCreator from '../tools/SpectrogramCreator';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import './CreateClueModal.css';
@@ -18,8 +26,32 @@ import DiegeticWindow from '../ui/DiegeticWindow';
 import { supabase } from '../../supabaseClient';
 import AudioForge from '../tools/AudioForge';
 import GlitchImageEngine from '../tools/GlitchImageEngine';
+import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
+import ForensicChannelEditor, { ForensicConfig } from '../tools/ForensicChannelEditor';
 
 const LOCKED_PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/xcAAwEB/aurbZkAAAAASUVORK5CYII=';
+
+// Presets de Visibilidade de Campos
+const VISIBILITY_PRESETS = {
+  MINIMAL: {
+    fileProperties: { visibleFields: ['fileType', 'dateCreated'] },
+    glitchPuzzle: { visibleSections: ['calibrationControls', 'rewardCode'] },
+    megaClue: { visibleSections: ['progress'] },
+    customMetadata: { enableCustomFields: false, defaultVisibleCustomFields: [], hiddenByDefault: [] },
+  },
+  DEFAULT: {
+    fileProperties: { visibleFields: ['fileType', 'size', 'cameraModel', 'dateCreated', 'gpsCoords', 'ownerName'] },
+    glitchPuzzle: { visibleSections: ['accessInstructions', 'hint', 'calibrationControls', 'logs', 'rewardCode'] },
+    megaClue: { visibleSections: ['hints', 'progress'] },
+    customMetadata: { enableCustomFields: true, defaultVisibleCustomFields: ['audio_config', 'thermal_keyword', 'device_owner'], hiddenByDefault: ['internal_id'] },
+  },
+  FULL: {
+    fileProperties: { visibleFields: ['fileType', 'size', 'cameraModel', 'dateCreated', 'gpsCoords', 'ownerName', 'hexComment', 'technicalNote'] },
+    glitchPuzzle: { visibleSections: ['accessInstructions', 'hint', 'calibrationControls', 'logs', 'rewardCode', 'correctAnswerWhenSolved'] },
+    megaClue: { visibleSections: ['hints', 'progress', 'answer', 'requiredPuzzles'] },
+    customMetadata: { enableCustomFields: true, defaultVisibleCustomFields: [], hiddenByDefault: [] },
+  },
+};
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
@@ -46,7 +78,10 @@ interface EditingChatMessage {
 }
 
 export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
-  if (!isOpen) return null;
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
+
+  // ✅ MOUNTED FLAG: prevent setState calls after unmount
+  const mountedRef = React.useRef(true);
 
   const [title, setTitle] = useState('');
   const [descPublic, setDescPublic] = useState('');
@@ -99,107 +134,66 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const handleAudioBaseSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      if (audioBasePreview) {
-         try { URL.revokeObjectURL(audioBasePreview); } catch (err) {}
+      
+      // Revoke previous URL
+      revokeUrl(audioBasePreview);
+      
+      // Create and register new URL
+      const url = createAndRegisterBlobUrl(file);
+      if (url) {
+         setAudioBase(file);
+         setAudioBasePreview(url);
       }
-      const url = URL.createObjectURL(file);
-      setAudioBase(file);
-      setAudioBasePreview(url);
    };
 
    const handleAudioHiddenSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      if (audioHiddenPreview) {
-         try { URL.revokeObjectURL(audioHiddenPreview); } catch (err) {}
+      
+      // Revoke previous URL
+      revokeUrl(audioHiddenPreview);
+      
+      // Create and register new URL
+      const url = createAndRegisterBlobUrl(file);
+      if (url) {
+         setAudioHidden(file);
+         setAudioHiddenPreview(url);
       }
-      const url = URL.createObjectURL(file);
-      setAudioHidden(file);
-      setAudioHiddenPreview(url);
    };
    const [stamp, setStamp] = useState('');
    const [externalLink, setExternalLink] = useState('');
 
-      // Fake metadata fields for FileProperties / EXIF viewer
-      const [fakeDate, setFakeDate] = useState('');
-      const [fakeLocation, setFakeLocation] = useState('');
-      const [technicalNote, setTechnicalNote] = useState('');
-      const [fakeMeta, setFakeMeta] = useState<{ date?: string; cam?: string; gps?: string; owner?: string }>({});
+   // Fake metadata fields for FileProperties / EXIF viewer
+   const [fakeDate, setFakeDate] = useState('');
+   const [fakeLocation, setFakeLocation] = useState('');
+   const [technicalNote, setTechnicalNote] = useState('');
+   const [fakeMeta, setFakeMeta] = useState<{ date?: string; cam?: string; gps?: string; owner?: string }>({});
 
-      const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
-      const [showMixer, setShowMixer] = useState(false);
-           const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega'>('geral');
+   const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
+   const [showMixer, setShowMixer] = useState(false);
 
-           // Chat / Phone viewer states
-           const [showChatEditor, setShowChatEditor] = useState(false);
-           const [chatJson, setChatJson] = useState<string>('');
-           const [chatData, setChatData] = useState<EditingChatMessage[] | null>(null);
-           const [chatContactName, setChatContactName] = useState<string>('Desconhecido');
-            const [editingChatList, setEditingChatList] = useState<EditingChatMessage[]>([]);
-
-            useEffect(() => {
-               if (showChatEditor) {
-                  if (chatData && Array.isArray(chatData)) {
-                     setEditingChatList(chatData.map((m: any) => ({ sender: (m.sender || 'me') as ChatSender, type: m.type || 'text', text: m.text || '' })));
-                  } else {
-                     setEditingChatList([{ sender: 'me', type: 'text', text: '' }]);
-                  }
-               }
-            }, [showChatEditor]);
-
-           // Person dossier fields
-           const [isPerson, setIsPerson] = useState(false);
-           const [personName, setPersonName] = useState('');
-           const [personDob, setPersonDob] = useState('');
-           const [personStatus, setPersonStatus] = useState<'ALIVE'|'MIA'|'DEAD'|'UNKNOWN'>('UNKNOWN');
-           const [personOccupation, setPersonOccupation] = useState('');
-
-   const [isLocked, setIsLocked] = useState(false);
-   const [lockPass, setLockPass] = useState('');
-   const [filterRevealBrightness, setFilterRevealBrightness] = useState(150);
-   const [filterRevealContrast, setFilterRevealContrast] = useState(150);
-   const [filterRevealSaturate, setFilterRevealSaturate] = useState(100);
-   const [showAdvancedFilterSettings, setShowAdvancedFilterSettings] = useState(false);
-   // Thermal flag: whether this evidence should show a thermal overlay in inspection
-   const [thermalEnabled, setThermalEnabled] = useState(false);
-   const [thermalSecretText, setThermalSecretText] = useState('');
-   const [thermalKeyword, setThermalKeyword] = useState('');
-   const [thermalFontSize, setThermalFontSize] = useState(100);
-   const [thermalPositionY, setThermalPositionY] = useState(50);
-   const [showThermalEditor, setShowThermalEditor] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-   const [isShredded, setIsShredded] = useState(false);
-   const [shredRows, setShredRows] = useState(1);
-   const [shredCols, setShredCols] = useState(8);
-   const [realText, setRealText] = useState('');
-   const [cipherText, setCipherText] = useState('');
-
-   // EVIDÊNCIA TYPE SELECTOR
-   const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
-
-   // GLITCH PUZZLE STATES
-   const [glitchCorrectFrequency, setGlitchCorrectFrequency] = useState(17);
-   const [glitchCorrectShift, setGlitchCorrectShift] = useState(33);
-   const [glitchCorrectChromatic, setGlitchCorrectChromatic] = useState(12);
-   const [glitchRewardCode, setGlitchRewardCode] = useState('ALPHA-01');
-   const [glitchKeyword, setGlitchKeyword] = useState('');
-   const [glitchRequireKeyword, setGlitchRequireKeyword] = useState(false);
-   const [glitchUnlockMode, setGlitchUnlockMode] = useState<'code' | 'code_plus_keyword' | 'media' | 'media_and_code'>('code');
-   const [glitchDifficulty, setGlitchDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('hard');
-   const [glitchToleranceFreq, setGlitchToleranceFreq] = useState(1);
-   const [glitchToleranceShift, setGlitchToleranceShift] = useState(2);
-   const [glitchToleranceChroma, setGlitchToleranceChroma] = useState(2);
-   const [glitchFocusedImageFile, setGlitchFocusedImageFile] = useState<File | null>(null);
-   const [glitchFocusedImagePreview, setGlitchFocusedImagePreview] = useState<string | null>(null);
-   const [showGlitchDesigner, setShowGlitchDesigner] = useState(false);
-   const [glitchHiddenAudioUrl, setGlitchHiddenAudioUrl] = useState('');
-   const [glitchHiddenVideoUrl, setGlitchHiddenVideoUrl] = useState('');
-   const [glitchHint, setGlitchHint] = useState('');
-   const [glitchAccessInstructions, setGlitchAccessInstructions] = useState('');
-   const [glitchStartFrequency, setGlitchStartFrequency] = useState(12);
+   // Chat / Phone viewer states
+   const [showChatEditor, setShowChatEditor] = useState(false);
+   const [chatJson, setChatJson] = useState<string>('');
+   const [chatData, setChatData] = useState<EditingChatMessage[] | null>(null);
+   const [chatContactName, setChatContactName] = useState<string>('Desconhecido');
+   const [editingChatList, setEditingChatList] = useState<EditingChatMessage[]>([]);
+   const [quickChatText, setQuickChatText] = useState('');
+   const [quickChatSender, setQuickChatSender] = useState<ChatSender>('them');
+   const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega' | 'campos' | 'display' | 'forense'>('geral');
    const [glitchStartShift, setGlitchStartShift] = useState(20);
    const [glitchStartChromatic, setGlitchStartChromatic] = useState(8);
+
+   // FORENSE STATES (RGB Channel Steganography)
+   const [forensicBaseImage, setForensicBaseImage] = useState<File | null>(null);
+   const [forensicHiddenImage, setForensicHiddenImage] = useState<File | null>(null);
+   const [forensicBasePreview, setForensicBasePreview] = useState<string | null>(null);
+   const [forensicHiddenPreview, setForensicHiddenPreview] = useState<string | null>(null);
+   const [forensicTargetChannel, setForensicTargetChannel] = useState<'R' | 'G' | 'B'>('R');
+   const [forensicResultPreview, setForensicResultPreview] = useState<string | null>(null);
+   const [forensicProcessing, setForensicProcessing] = useState(false);
+   const [showForensicEditor, setShowForensicEditor] = useState(false);
+   const [forensicConfig, setForensicConfig] = useState<ForensicConfig | null>(null);
 
    // MEGA CLUE STATES
    const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
@@ -208,6 +202,246 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [megaRequiredPuzzleIds, setMegaRequiredPuzzleIds] = useState<string[]>([]);
    const [availablePuzzles, setAvailablePuzzles] = useState<Array<{ id: string; title: string }>>([]);
    const [megaSelectedPuzzle, setMegaSelectedPuzzle] = useState<string>('');
+
+   // FIELD VISIBILITY CONFIG
+   const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
+
+   // DISPLAY CONFIG (DisplayConfigPanel options)
+   const [displayConfig, setDisplayConfig] = useState({
+      puzzle: { showAccessInstructions: true, showHint: true, showCorrectAnswerWhenSolved: false, showRewardCode: true, showLogs: true },
+      fileProperties: { showFileType: true, showSize: true, showCameraModel: true, showDate: true, showGPS: true, showOwner: true, showHexComment: false, showStamp: true, showExternalLink: true, showLockStatus: true, showPersonInfo: true },
+      media: { showThermalData: false, showUVLayer: false, showFilterOverlay: true, showVideoPlayer: true, showAudioPlayer: true, showHiddenAudio: false, showChatData: true },
+      cipher: { showShredded: true, showCipherText: true, showRealText: false, showShredConfig: false },
+      megaClue: { showHints: true, showAnswer: false, showProgress: true },
+   });
+
+   // LOADING STATE
+   const [loading, setLoading] = useState(false);
+
+   // GLITCH PUZZLE - CORRECT SETTINGS
+   const [glitchCorrectFrequency, setGlitchCorrectFrequency] = useState(17);
+   const [glitchCorrectShift, setGlitchCorrectShift] = useState(33);
+   const [glitchCorrectChromatic, setGlitchCorrectChromatic] = useState(12);
+
+   // GLITCH PUZZLE - DIFFICULTY AND TOLERANCE
+   const [glitchDifficulty, setGlitchDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('hard');
+   const [glitchToleranceFreq, setGlitchToleranceFreq] = useState(1);
+   const [glitchToleranceShift, setGlitchToleranceShift] = useState(2);
+   const [glitchToleranceChroma, setGlitchToleranceChroma] = useState(2);
+
+   // GLITCH PUZZLE - FOCUSED IMAGE / DESIGNER
+   const [glitchFocusedImageFile, setGlitchFocusedImageFile] = useState<File | null>(null);
+   const [glitchFocusedImagePreview, setGlitchFocusedImagePreview] = useState<string | null>(null);
+   const [showGlitchDesigner, setShowGlitchDesigner] = useState(false);
+
+   // GLITCH PUZZLE - HIDDEN MEDIA
+   const [glitchHiddenAudioUrl, setGlitchHiddenAudioUrl] = useState('');
+   const [glitchHiddenVideoUrl, setGlitchHiddenVideoUrl] = useState('');
+
+   // GLITCH PUZZLE - TEXT AND HINT
+   const [glitchAccessInstructions, setGlitchAccessInstructions] = useState('');
+   const [glitchHint, setGlitchHint] = useState('');
+   const [glitchKeyword, setGlitchKeyword] = useState('');
+
+   // GLITCH PUZZLE - UNLOCK MODE AND REWARD
+   const [glitchUnlockMode, setGlitchUnlockMode] = useState<'code' | 'code_plus_keyword' | 'media' | 'media_and_code'>('code');
+   const [glitchRequireKeyword, setGlitchRequireKeyword] = useState(false);
+   const [glitchRewardCode, setGlitchRewardCode] = useState('ALPHA-01');
+   const [glitchStartFrequency, setGlitchStartFrequency] = useState(12);
+
+   // FILTER - REVEAL SETTINGS
+   const [filterRevealBrightness, setFilterRevealBrightness] = useState(150);
+   const [filterRevealContrast, setFilterRevealContrast] = useState(150);
+   const [filterRevealSaturate, setFilterRevealSaturate] = useState(100);
+   const [showAdvancedFilterSettings, setShowAdvancedFilterSettings] = useState(false);
+
+   // THERMAL EDITOR
+   const [thermalEnabled, setThermalEnabled] = useState(false);
+   const [thermalSecretText, setThermalSecretText] = useState('');
+   const [thermalFontSize, setThermalFontSize] = useState(100);
+   const [thermalPositionY, setThermalPositionY] = useState(50);
+   const [thermalKeyword, setThermalKeyword] = useState('');
+   const [showThermalEditor, setShowThermalEditor] = useState(false);
+
+   // SHREDDED / CIPHER
+   const [isShredded, setIsShredded] = useState(false);
+   const [shredRows, setShredRows] = useState(1);
+   const [shredCols, setShredCols] = useState(8);
+   const [realText, setRealText] = useState('');
+   const [cipherText, setCipherText] = useState('');
+
+   // HEX VIEWER
+   const [hexCode, setHexCode] = useState('');
+
+   // PERSON / DOSSIER
+   const [isPerson, setIsPerson] = useState(false);
+   const [personName, setPersonName] = useState('');
+   const [personDob, setPersonDob] = useState('');
+   const [personStatus, setPersonStatus] = useState<'UNKNOWN' | 'ALIVE' | 'DEAD' | 'MISSING'>('UNKNOWN');
+   const [personOccupation, setPersonOccupation] = useState('');
+
+   // LOCK / SECURITY (da pista)
+   const [isLocked, setIsLocked] = useState(false);
+   const [lockPass, setLockPass] = useState('');
+
+   // PHONE KEYPAD (do celular/PhoneViewer)
+   const [phoneHasKeypad, setPhoneHasKeypad] = useState(false);
+   const [phonePassword, setPhonePassword] = useState('');
+   const [showKeypadEditor, setShowKeypadEditor] = useState(false);
+
+   // EVIDENCE TYPE
+   const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
+
+   // ========== TEMPLATE SYSTEM ==========
+   const [templates, setTemplates] = useState<ClueTemplate[]>([]);
+   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+   // ✅ MOVE HOOKS BEFORE CONDITIONAL RETURN - MUST BE BEFORE if (!isOpen)
+   // Fetch available glitch puzzles when modal opens or evidenceType changes
+   useEffect(() => {
+      if (isOpen && evidenceType === 'mega_clue') {
+         fetchAvailablePuzzles();
+      }
+   }, [isOpen, evidenceType]);
+
+   useEffect(() => {
+      if (isOpen) {
+         resetForm();
+      }
+   }, [isOpen]);
+
+   // ✅ CLEANUP AND URL MANAGEMENT
+   const urlsRef = React.useRef<Set<string>>(new Set());
+   
+   /**
+    * Helper: Cria um URL de blob, registra no rastreador e retorna a string.
+    * Garante limpeza automática em caso de mudanças ou desmontagem.
+    */
+   const createAndRegisterBlobUrl = (file: File | null): string | null => {
+      if (!file) return null;
+      try {
+         const url = URL.createObjectURL(file);
+         urlsRef.current.add(url);
+         return url;
+      } catch (err) {
+         console.error('Failed to create blob URL:', err);
+         return null;
+      }
+   };
+   
+   const revokeUrl = (url: string | null | undefined) => {
+      if (url && urlsRef.current.has(url)) {
+         try { URL.revokeObjectURL(url); } catch (err) {}
+         urlsRef.current.delete(url);
+      }
+   };
+   
+   const registerUrl = (url: string | null | undefined) => {
+      if (url) urlsRef.current.add(url);
+   };
+   
+   useEffect(() => {
+      if (previewUrl) registerUrl(previewUrl);
+      return () => revokeUrl(previewUrl);
+   }, [previewUrl]);
+   
+   useEffect(() => {
+      if (videoPreviewUrl) registerUrl(videoPreviewUrl);
+      return () => revokeUrl(videoPreviewUrl);
+   }, [videoPreviewUrl]);
+   
+   useEffect(() => {
+      if (audioBasePreview) registerUrl(audioBasePreview);
+      if (audioHiddenPreview) registerUrl(audioHiddenPreview);
+      return () => { revokeUrl(audioBasePreview); revokeUrl(audioHiddenPreview); };
+   }, [audioBasePreview, audioHiddenPreview]);
+   
+   useEffect(() => {
+      if (glitchFocusedImagePreview) registerUrl(glitchFocusedImagePreview);
+      if (megaImagePreview) registerUrl(megaImagePreview);
+      if (filterPreviewUrl) registerUrl(filterPreviewUrl);
+      return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); };
+   }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl]);
+   
+   useEffect(() => {
+      mountedRef.current = true;
+      return () => {
+         mountedRef.current = false;
+         urlsRef.current.forEach((u) => { 
+            try { 
+               URL.revokeObjectURL(u); 
+            } catch (err) {
+               console.warn('URL revoke error on unmount:', err);
+            }
+         });
+         urlsRef.current.clear();
+      };
+   }, []);
+
+   useEffect(() => {
+      if (!isOpen) {
+         urlsRef.current.forEach((u) => {
+            try {
+               URL.revokeObjectURL(u);
+            } catch (err) {
+               console.warn('URL revoke error on modal close:', err);
+            }
+         });
+         urlsRef.current.clear();
+      }
+   }, [isOpen]);
+
+   // Filter/overlay interactive hooks - must be before any conditional returns
+   useEffect(() => {
+      if (!filterFile) return;
+      try { if (filterPreviewUrl) URL.revokeObjectURL(filterPreviewUrl); } catch (e) {}
+      const url = URL.createObjectURL(filterFile);
+      setFilterPreviewUrl(url);
+      // default: center overlay covering 50% width/height
+      setFilterTransform({ left: 25, top: 25, width: 50, height: 50 });
+      return () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+   }, [filterFile]);
+
+   // drag / resize refs (must be a hook)
+   const draggingRef = React.useRef<{ mode: 'move' | 'resize' | null; startX: number; startY: number; startTransform?: any } | null>(null);
+   const filterTransformRef = React.useRef(filterTransform);
+   
+   // Sync ref com state
+   React.useEffect(() => {
+      filterTransformRef.current = filterTransform;
+   }, [filterTransform]);
+
+   useEffect(() => {
+      const onMove = (e: MouseEvent) => {
+         if (!draggingRef.current || !filterTransformRef.current || !previewUrl) return;
+         const rect = document.querySelector('.image-edit-canvas') as HTMLElement | null;
+         if (!rect) return;
+         const bounds = rect.getBoundingClientRect();
+         const start = draggingRef.current;
+         const current = filterTransformRef.current;
+         
+         if (start.mode === 'move') {
+            const dx = e.clientX - start.startX;
+            const dy = e.clientY - start.startY;
+            const newLeft = ((start.startTransform.left / 100) * bounds.width + dx) / bounds.width * 100;
+            const newTop = ((start.startTransform.top / 100) * bounds.height + dy) / bounds.height * 100;
+            setFilterTransform({ ...current, left: Math.max(0, Math.min(100 - current.width, newLeft)), top: Math.max(0, Math.min(100 - current.height, newTop)) });
+         } else if (start.mode === 'resize') {
+            const dx = e.clientX - start.startX;
+            const dy = e.clientY - start.startY;
+            const deltaPctW = (dx / bounds.width) * 100;
+            const deltaPctH = (dy / bounds.height) * 100;
+            const newW = Math.max(5, Math.min(100 - start.startTransform.left, start.startTransform.width + deltaPctW));
+            const newH = Math.max(5, Math.min(100 - start.startTransform.top, start.startTransform.height + deltaPctH));
+            setFilterTransform({ ...current, width: newW, height: newH });
+         }
+      };
+      const onUp = () => { draggingRef.current = null; };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+   }, [previewUrl]);
 
    // Reset form fields when opening the modal to avoid reusing previous values
    const resetForm = () => {
@@ -251,9 +485,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setAudioStaticSync(false);
       setNarrativeLinks({ audioHintsVisual: false, visualHintsCode: false, hintNote: '' });
 
-      // basic flags
+      // basic flags (pista)
       setIsLocked(false);
       setLockPass('');
+      
+      // phone keypad
+      setPhoneHasKeypad(false);
+      setPhonePassword('');
+      setShowKeypadEditor(false);
+      
       setFilterRevealBrightness(150);
       setFilterRevealContrast(150);
       setFilterRevealSaturate(100);
@@ -285,6 +525,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setChatData(null);
       setChatContactName('Desconhecido');
       setEditingChatList([]);
+      setQuickChatText('');
+      setQuickChatSender('them');
 
       // person dossier
       setIsPerson(false);
@@ -299,6 +541,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setShredCols(8);
       setRealText('');
       setCipherText('');
+
+      // hex viewer
+      setHexCode('');
 
       // evidence type and puzzle-specific fields
       setEvidenceType('document');
@@ -330,18 +575,415 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (megaImagePreview) { try { URL.revokeObjectURL(megaImagePreview); } catch(e){} }
       setMegaImagePreview(null);
       setMegaRequiredPuzzleIds([]);
+
+      // Reset field visibility config to default
+      setFieldVisibilityConfig(defaultFieldVisibility);
+      
+      // Reset display config to default
+      setDisplayConfig({
+         puzzle: { showAccessInstructions: true, showHint: true, showCorrectAnswerWhenSolved: false, showRewardCode: true, showLogs: true },
+         fileProperties: { showFileType: true, showSize: true, showCameraModel: true, showDate: true, showGPS: true, showOwner: true, showHexComment: false, showStamp: true, showExternalLink: true, showLockStatus: true, showPersonInfo: true },
+         media: { showThermalData: false, showUVLayer: false, showFilterOverlay: true, showVideoPlayer: true, showAudioPlayer: true, showHiddenAudio: false, showChatData: true },
+         cipher: { showShredded: true, showCipherText: true, showRealText: false, showShredConfig: false },
+         megaClue: { showHints: true, showAnswer: false, showProgress: true },
+      });
    };
 
-   // Fetch available glitch puzzles when modal opens or evidenceType changes
-   useEffect(() => {
-      if (isOpen && evidenceType === 'mega_clue') {
-         fetchAvailablePuzzles();
-      }
-   }, [isOpen, evidenceType]);
+   /**
+    * Processa duas imagens para realizar steganografia em canal RGB
+    * A imagem oculta (em escala de cinza) é escrita no canal alvo (R, G ou B)
+    * mantendo os outros dois canais da imagem base intactos
+    */
+   const processRGBMerge = async (baseImage: File, hiddenImage: File, targetChannel: 'R' | 'G' | 'B'): Promise<Blob | null> => {
+      return new Promise((resolve) => {
+         const baseImg = new Image();
+         const hiddenImg = new Image();
+         let loadedCount = 0;
 
+         const onBothLoaded = () => {
+            try {
+               // Criar canvas com dimensões da imagem base
+               const canvas = document.createElement('canvas');
+               canvas.width = baseImg.width;
+               canvas.height = baseImg.height;
+               const ctx = canvas.getContext('2d');
+               if (!ctx) { resolve(null); return; }
+
+               // Desenhar imagem base
+               ctx.drawImage(baseImg, 0, 0);
+               const baseData = ctx.getImageData(0, 0, baseImg.width, baseImg.height);
+
+               // Criar canvas temporário para escala de cinza da imagem oculta
+               const tempCanvas = document.createElement('canvas');
+               tempCanvas.width = hiddenImg.width;
+               tempCanvas.height = hiddenImg.height;
+               const tempCtx = tempCanvas.getContext('2d');
+               if (!tempCtx) { resolve(null); return; }
+               tempCtx.drawImage(hiddenImg, 0, 0);
+               const hiddenData = tempCtx.getImageData(0, 0, hiddenImg.width, hiddenImg.height);
+
+               // Converter imagem oculta para escala de cinza
+               for (let i = 0; i < hiddenData.data.length; i += 4) {
+                  const r = hiddenData.data[i];
+                  const g = hiddenData.data[i + 1];
+                  const b = hiddenData.data[i + 2];
+                  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+                  hiddenData.data[i] = gray;
+                  hiddenData.data[i + 1] = gray;
+                  hiddenData.data[i + 2] = gray;
+               }
+
+               // Redimensionar imagem oculta para caber na base se necessário
+               let finalHiddenData = hiddenData;
+               if (hiddenImg.width !== baseImg.width || hiddenImg.height !== baseImg.height) {
+                  const resizeCanvas = document.createElement('canvas');
+                  resizeCanvas.width = baseImg.width;
+                  resizeCanvas.height = baseImg.height;
+                  const resizeCtx = resizeCanvas.getContext('2d');
+                  if (!resizeCtx) { resolve(null); return; }
+                  resizeCtx.drawImage(hiddenImg, 0, 0, baseImg.width, baseImg.height);
+                  const resized = resizeCtx.getImageData(0, 0, baseImg.width, baseImg.height);
+                  // Converter para cinza
+                  for (let i = 0; i < resized.data.length; i += 4) {
+                     const r = resized.data[i];
+                     const g = resized.data[i + 1];
+                     const b = resized.data[i + 2];
+                     const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+                     resized.data[i] = gray;
+                     resized.data[i + 1] = gray;
+                     resized.data[i + 2] = gray;
+                  }
+                  finalHiddenData = resized;
+               }
+
+               // Mesclar: colocar dados de cinza no canal alvo
+               const channelIndex = targetChannel === 'R' ? 0 : targetChannel === 'G' ? 1 : 2;
+               for (let i = 0; i < baseData.data.length; i += 4) {
+                  baseData.data[i + channelIndex] = finalHiddenData.data[i]; // Usar valor de cinza
+               }
+
+               // Atualizar canvas com dados mesclados
+               ctx.putImageData(baseData, 0, 0);
+
+               // Converter canvas para blob
+               canvas.toBlob((blob) => {
+                  resolve(blob);
+               }, 'image/png');
+            } catch (err) {
+               console.error('Erro ao processar RGB merge:', err);
+               resolve(null);
+            }
+         };
+
+         baseImg.onload = () => {
+            loadedCount++;
+            if (loadedCount === 2) onBothLoaded();
+         };
+
+         hiddenImg.onload = () => {
+            loadedCount++;
+            if (loadedCount === 2) onBothLoaded();
+         };
+
+         baseImg.onerror = () => resolve(null);
+         hiddenImg.onerror = () => resolve(null);
+
+         baseImg.src = URL.createObjectURL(baseImage);
+         hiddenImg.src = URL.createObjectURL(hiddenImage);
+      });
+   };
+
+   // ========== TEMPLATE MANAGEMENT FUNCTIONS ==========
+   
+   /**
+    * Fetch available templates when the modal opens
+    */
+   const loadTemplates = async () => {
+      setLoadingTemplates(true);
+      try {
+         const data = await fetchClueTemplates();
+         setTemplates(data);
+      } catch (error) {
+         console.error('Error loading templates:', error);
+         alert('Erro ao carregar templates. Veja o console para detalhes.');
+      } finally {
+         setLoadingTemplates(false);
+      }
+   };
+
+   /**
+    * Capture current form state and save as template
+    */
+   const handleSaveAsTemplate = async () => {
+      const templateName = window.prompt('Digite um nome para este template:');
+      if (!templateName || templateName.trim() === '') {
+         return;
+      }
+
+      const description = window.prompt('(Opcional) Digite uma descrição:');
+
+      // Capture current form state
+      const currentState = {
+         // Basic fields
+         title,
+         descPublic,
+         descHidden,
+         tags,
+         
+         // Evidence type
+         evidenceType,
+         
+         // Metadata fields
+         fakeDate,
+         fakeLocation,
+         technicalNote,
+         fakeMeta,
+         stamp,
+         externalLink,
+         
+         // Media visibility
+         mediaVisibility,
+         securityLayerEnabled,
+         revealLogicMode,
+         signalTargets,
+         hidePreviewOnBoard,
+         audioStaticSync,
+         narrativeLinks,
+         
+         // Audio settings
+         freq,
+         triggerTime,
+         
+         // Lock settings
+         isLocked,
+         lockPass,
+         
+         // Phone settings
+         phoneHasKeypad,
+         phonePassword,
+         
+         // Chat data
+         chatContactName,
+         chatData,
+         editingChatList,
+         
+         // Thermal
+         thermalEnabled,
+         thermalSecretText,
+         thermalFontSize,
+         thermalPositionY,
+         thermalKeyword,
+         
+         // Cipher/Shred
+         isShredded,
+         shredRows,
+         shredCols,
+         realText,
+         cipherText,
+         
+         // Person/Dossier
+         isPerson,
+         personName,
+         personDob,
+         personStatus,
+         personOccupation,
+         
+         // Glitch Puzzle settings
+         glitchStartFrequency,
+         glitchStartShift,
+         glitchStartChromatic,
+         glitchCorrectFrequency,
+         glitchCorrectShift,
+         glitchCorrectChromatic,
+         glitchDifficulty,
+         glitchToleranceFreq,
+         glitchToleranceShift,
+         glitchToleranceChroma,
+         glitchAccessInstructions,
+         glitchHint,
+         glitchKeyword,
+         glitchUnlockMode,
+         glitchRequireKeyword,
+         glitchRewardCode,
+         glitchHiddenAudioUrl,
+         glitchHiddenVideoUrl,
+         
+         // Filter settings
+         filterRevealBrightness,
+         filterRevealContrast,
+         filterRevealSaturate,
+         filterTransform,
+         
+         // Forensic
+         forensicTargetChannel,
+         
+         // Mega Clue
+         megaFinalTruthText,
+         megaRequiredPuzzleIds,
+         
+         // Field visibility config
+         fieldVisibilityConfig,
+         
+         // Display config
+         displayConfig,
+      };
+
+      // Sanitize to remove Files, Blobs, and blob URLs
+      const sanitizedData = sanitizeTemplateData(currentState);
+
+      try {
+         const newTemplate = await createClueTemplate({
+            name: templateName.trim(),
+            description: description?.trim() || undefined,
+            template_data: sanitizedData,
+            is_public: false,
+         });
+
+         // Refresh template list
+         await loadTemplates();
+         
+         alert(`✅ Template "${templateName}" salvo com sucesso!`);
+      } catch (error) {
+         console.error('Error saving template:', error);
+         alert('❌ Erro ao salvar template. Veja o console para detalhes.');
+      }
+   };
+
+   /**
+    * Load a template and populate the form
+    */
+   const handleLoadTemplate = (template: ClueTemplate) => {
+      const confirmed = window.confirm(
+         `Carregar o template "${template.name}" substituirá todos os campos atuais do formulário.\n\nDeseja continuar?`
+      );
+      
+      if (!confirmed) {
+         return;
+      }
+
+      const data = template.template_data;
+
+      // Apply all saved values to form state
+      if (data.title !== undefined) setTitle(data.title);
+      if (data.descPublic !== undefined) setDescPublic(data.descPublic);
+      if (data.descHidden !== undefined) setDescHidden(data.descHidden);
+      if (data.tags !== undefined) setTags(data.tags);
+      
+      if (data.evidenceType !== undefined) setEvidenceType(data.evidenceType);
+      
+      if (data.fakeDate !== undefined) setFakeDate(data.fakeDate);
+      if (data.fakeLocation !== undefined) setFakeLocation(data.fakeLocation);
+      if (data.technicalNote !== undefined) setTechnicalNote(data.technicalNote);
+      if (data.fakeMeta !== undefined) setFakeMeta(data.fakeMeta);
+      if (data.stamp !== undefined) setStamp(data.stamp);
+      if (data.externalLink !== undefined) setExternalLink(data.externalLink);
+      
+      if (data.mediaVisibility !== undefined) setMediaVisibility(data.mediaVisibility);
+      if (data.securityLayerEnabled !== undefined) setSecurityLayerEnabled(data.securityLayerEnabled);
+      if (data.revealLogicMode !== undefined) setRevealLogicMode(data.revealLogicMode);
+      if (data.signalTargets !== undefined) setSignalTargets(data.signalTargets);
+      if (data.hidePreviewOnBoard !== undefined) setHidePreviewOnBoard(data.hidePreviewOnBoard);
+      if (data.audioStaticSync !== undefined) setAudioStaticSync(data.audioStaticSync);
+      if (data.narrativeLinks !== undefined) setNarrativeLinks(data.narrativeLinks);
+      
+      if (data.freq !== undefined) setFreq(data.freq);
+      if (data.triggerTime !== undefined) setTriggerTime(data.triggerTime);
+      
+      if (data.isLocked !== undefined) setIsLocked(data.isLocked);
+      if (data.lockPass !== undefined) setLockPass(data.lockPass);
+      
+      if (data.phoneHasKeypad !== undefined) setPhoneHasKeypad(data.phoneHasKeypad);
+      if (data.phonePassword !== undefined) setPhonePassword(data.phonePassword);
+      
+      if (data.chatContactName !== undefined) setChatContactName(data.chatContactName);
+      if (data.chatData !== undefined) setChatData(data.chatData);
+      if (data.editingChatList !== undefined) setEditingChatList(data.editingChatList);
+      
+      if (data.thermalEnabled !== undefined) setThermalEnabled(data.thermalEnabled);
+      if (data.thermalSecretText !== undefined) setThermalSecretText(data.thermalSecretText);
+      if (data.thermalFontSize !== undefined) setThermalFontSize(data.thermalFontSize);
+      if (data.thermalPositionY !== undefined) setThermalPositionY(data.thermalPositionY);
+      if (data.thermalKeyword !== undefined) setThermalKeyword(data.thermalKeyword);
+      
+      if (data.isShredded !== undefined) setIsShredded(data.isShredded);
+      if (data.shredRows !== undefined) setShredRows(data.shredRows);
+      if (data.shredCols !== undefined) setShredCols(data.shredCols);
+      if (data.realText !== undefined) setRealText(data.realText);
+      if (data.cipherText !== undefined) setCipherText(data.cipherText);
+      
+      if (data.isPerson !== undefined) setIsPerson(data.isPerson);
+      if (data.personName !== undefined) setPersonName(data.personName);
+      if (data.personDob !== undefined) setPersonDob(data.personDob);
+      if (data.personStatus !== undefined) setPersonStatus(data.personStatus);
+      if (data.personOccupation !== undefined) setPersonOccupation(data.personOccupation);
+      
+      if (data.glitchStartFrequency !== undefined) setGlitchStartFrequency(data.glitchStartFrequency);
+      if (data.glitchStartShift !== undefined) setGlitchStartShift(data.glitchStartShift);
+      if (data.glitchStartChromatic !== undefined) setGlitchStartChromatic(data.glitchStartChromatic);
+      if (data.glitchCorrectFrequency !== undefined) setGlitchCorrectFrequency(data.glitchCorrectFrequency);
+      if (data.glitchCorrectShift !== undefined) setGlitchCorrectShift(data.glitchCorrectShift);
+      if (data.glitchCorrectChromatic !== undefined) setGlitchCorrectChromatic(data.glitchCorrectChromatic);
+      if (data.glitchDifficulty !== undefined) setGlitchDifficulty(data.glitchDifficulty);
+      if (data.glitchToleranceFreq !== undefined) setGlitchToleranceFreq(data.glitchToleranceFreq);
+      if (data.glitchToleranceShift !== undefined) setGlitchToleranceShift(data.glitchToleranceShift);
+      if (data.glitchToleranceChroma !== undefined) setGlitchToleranceChroma(data.glitchToleranceChroma);
+      if (data.glitchAccessInstructions !== undefined) setGlitchAccessInstructions(data.glitchAccessInstructions);
+      if (data.glitchHint !== undefined) setGlitchHint(data.glitchHint);
+      if (data.glitchKeyword !== undefined) setGlitchKeyword(data.glitchKeyword);
+      if (data.glitchUnlockMode !== undefined) setGlitchUnlockMode(data.glitchUnlockMode);
+      if (data.glitchRequireKeyword !== undefined) setGlitchRequireKeyword(data.glitchRequireKeyword);
+      if (data.glitchRewardCode !== undefined) setGlitchRewardCode(data.glitchRewardCode);
+      if (data.glitchHiddenAudioUrl !== undefined) setGlitchHiddenAudioUrl(data.glitchHiddenAudioUrl);
+      if (data.glitchHiddenVideoUrl !== undefined) setGlitchHiddenVideoUrl(data.glitchHiddenVideoUrl);
+      
+      if (data.filterRevealBrightness !== undefined) setFilterRevealBrightness(data.filterRevealBrightness);
+      if (data.filterRevealContrast !== undefined) setFilterRevealContrast(data.filterRevealContrast);
+      if (data.filterRevealSaturate !== undefined) setFilterRevealSaturate(data.filterRevealSaturate);
+      if (data.filterTransform !== undefined) setFilterTransform(data.filterTransform);
+      
+      if (data.forensicTargetChannel !== undefined) setForensicTargetChannel(data.forensicTargetChannel);
+      
+      if (data.megaFinalTruthText !== undefined) setMegaFinalTruthText(data.megaFinalTruthText);
+      if (data.megaRequiredPuzzleIds !== undefined) setMegaRequiredPuzzleIds(data.megaRequiredPuzzleIds);
+      
+      if (data.fieldVisibilityConfig !== undefined) setFieldVisibilityConfig(data.fieldVisibilityConfig);
+      if (data.displayConfig !== undefined) setDisplayConfig(data.displayConfig);
+
+      setShowTemplateDropdown(false);
+      alert(`✅ Template "${template.name}" carregado com sucesso!`);
+   };
+
+   /**
+    * Delete a template
+    */
+   const handleDeleteTemplate = async (templateId: string, templateName: string) => {
+      const confirmed = window.confirm(
+         `Tem certeza que deseja deletar o template "${templateName}"?\n\nEsta ação não pode ser desfeita.`
+      );
+      
+      if (!confirmed) {
+         return;
+      }
+
+      try {
+         await deleteClueTemplate(templateId);
+         await loadTemplates();
+         alert(`✅ Template "${templateName}" deletado com sucesso!`);
+      } catch (error) {
+         console.error('Error deleting template:', error);
+         alert('❌ Erro ao deletar template. Veja o console para detalhes.');
+      }
+   };
+
+   // Load templates when modal opens
    useEffect(() => {
-      if (isOpen) resetForm();
+      if (isOpen) {
+         loadTemplates();
+      }
    }, [isOpen]);
+
+   // CONDITIONAL RETURN AFTER ALL HOOKS
+   if (!isOpen) return null;
 
    const applyGlitchDifficulty = (level: 'easy' | 'normal' | 'hard' | 'custom') => {
       setGlitchDifficulty(level);
@@ -359,70 +1001,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          setGlitchToleranceChroma(2);
       }
    };
-
-   // ✅ Cleanup object URLs proactively using Set
-   const urlsRef = React.useRef<Set<string>>(new Set());
-   const revokeUrl = (url: string | null | undefined) => {
-      if (url && urlsRef.current.has(url)) {
-         try { URL.revokeObjectURL(url); } catch (err) {}
-         urlsRef.current.delete(url);
-      }
-   };
-   const registerUrl = (url: string | null | undefined) => {
-      if (url) urlsRef.current.add(url);
-   };
-   
-   useEffect(() => {
-      if (previewUrl) registerUrl(previewUrl);
-      return () => revokeUrl(previewUrl);
-   }, [previewUrl]);
-   
-   useEffect(() => {
-      if (videoPreviewUrl) registerUrl(videoPreviewUrl);
-      return () => revokeUrl(videoPreviewUrl);
-   }, [videoPreviewUrl]);
-   
-   useEffect(() => {
-      if (audioBasePreview) registerUrl(audioBasePreview);
-      if (audioHiddenPreview) registerUrl(audioHiddenPreview);
-      return () => { revokeUrl(audioBasePreview); revokeUrl(audioHiddenPreview); };
-   }, [audioBasePreview, audioHiddenPreview]);
-   
-   useEffect(() => {
-      if (glitchFocusedImagePreview) registerUrl(glitchFocusedImagePreview);
-      if (megaImagePreview) registerUrl(megaImagePreview);
-      if (filterPreviewUrl) registerUrl(filterPreviewUrl);
-      return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); };
-   }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl]);
-   
-   // ✅ Final cleanup on unmount: revoga todas as URLs rastreadas
-   useEffect(() => {
-      return () => {
-         urlsRef.current.forEach((u) => { 
-            try { 
-               URL.revokeObjectURL(u); 
-            } catch (err) {
-               console.warn('URL revoke error on unmount:', err);
-            }
-         });
-         urlsRef.current.clear();
-      };
-   }, []);
-
-   // ✅ Cleanup quando modal fecha: evita vazamento de URLs em caso de close rápido
-   useEffect(() => {
-      if (!isOpen) {
-         // Revoga imediatamente todas as URLs quando modal fecha
-         urlsRef.current.forEach((u) => {
-            try {
-               URL.revokeObjectURL(u);
-            } catch (err) {
-               console.warn('URL revoke error on modal close:', err);
-            }
-         });
-         urlsRef.current.clear();
-      }
-   }, [isOpen]);
 
    // Helper: sanitize metadata to ensure it's JSON-serializable before sending to server
    const sanitizeForMetadata = (input: any, maxDepth = 6) => {
@@ -455,6 +1033,86 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       return sanitize(input, maxDepth);
    };
 
+   // HANDLERS FORENSE (RGB Channel Steganography)
+   const handleForensicBaseImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      revokeUrl(forensicBasePreview);
+      const url = createAndRegisterBlobUrl(file);
+      if (url) {
+         setForensicBaseImage(file);
+         setForensicBasePreview(url);
+      }
+   };
+
+   const handleForensicHiddenImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      revokeUrl(forensicHiddenPreview);
+      const url = createAndRegisterBlobUrl(file);
+      if (url) {
+         setForensicHiddenImage(file);
+         setForensicHiddenPreview(url);
+      }
+   };
+
+   const handleProcessForensicMerge = async () => {
+      if (!forensicBaseImage || !forensicHiddenImage) {
+         alert('Por favor, selecione ambas as imagens (Base e Oculta)');
+         return;
+      }
+      
+      setForensicProcessing(true);
+      try {
+         const resultBlob = await processRGBMerge(forensicBaseImage, forensicHiddenImage, forensicTargetChannel);
+         if (resultBlob) {
+            const resultUrl = createAndRegisterBlobUrl(resultBlob as any);
+            if (resultUrl) {
+               revokeUrl(forensicResultPreview);
+               setForensicResultPreview(resultUrl);
+            }
+         } else {
+            alert('Erro ao processar imagens. Verifique se são PNG ou JPEG válidas.');
+         }
+      } catch (err) {
+         console.error('Erro ao processar merge RGB:', err);
+         alert('Erro ao processar. Veja o console para detalhes.');
+      } finally {
+         setForensicProcessing(false);
+      }
+   };
+
+   const handleUseForensicImage = async () => {
+      if (!forensicResultPreview) {
+         alert('Processe as imagens primeiro');
+         return;
+      }
+
+      try {
+         // Converter data URL para blob
+         const response = await fetch(forensicResultPreview);
+         const blob = await response.blob();
+         
+         // Criar um File a partir do blob
+         const timestamp = Date.now();
+         const newFile = new File([blob], `forensic_${forensicTargetChannel}_${timestamp}.png`, { type: 'image/png' });
+         
+         // Atualizar estado principal e preview
+         setImgFile(newFile);
+         const previewUrl = createAndRegisterBlobUrl(newFile);
+         if (previewUrl) {
+            revokeUrl(previewUrl);
+            setPreviewUrl(previewUrl);
+         }
+         
+         alert('✅ Imagem forense usada como imagem principal!');
+         setActiveTab('visual'); // Voltar para aba visual
+      } catch (err) {
+         console.error('Erro ao usar imagem forense:', err);
+         alert('Erro ao integrar imagem. Veja o console.');
+      }
+   };
+
    // Fetch available glitch puzzles from the database
    const fetchAvailablePuzzles = async () => {
       try {
@@ -462,74 +1120,21 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             .from('investigation_cards')
             .select('id, title, metadata')
             .eq('investigation_id', investigationId)
-            .eq('type', 'glitch_puzzle');
+            .eq('type', 'glitch_puzzle') as any;
          
          if (error) {
             console.error('Erro ao buscar puzzles:', error);
             return;
          }
 
-         const puzzles = (data || []).map(card => ({ id: card.id, title: card.title }));
+         const puzzles = (data || []).map((card: any) => ({ id: card.id, title: card.title }));
          setAvailablePuzzles(puzzles);
       } catch (err) {
          console.error('fetchAvailablePuzzles error:', err);
       }
    };
 
-      // Hooks that must always be declared in the same order.
-      // Move interactive hooks here (before any early returns) so React's
-      // hook ordering is preserved and we avoid "Rendered more hooks" errors.
 
-      // when a filterFile is set, create a preview URL and set a default transform
-      useEffect(() => {
-         if (!filterFile) return;
-         try { if (filterPreviewUrl) URL.revokeObjectURL(filterPreviewUrl); } catch (e) {}
-         const url = URL.createObjectURL(filterFile);
-         setFilterPreviewUrl(url);
-         // default: center overlay covering 50% width/height
-         setFilterTransform({ left: 25, top: 25, width: 50, height: 50 });
-         return () => { try { URL.revokeObjectURL(url); } catch (e) {} };
-      }, [filterFile]);
-
-      // drag / resize refs (must be a hook)
-      const draggingRef = React.useRef<{ mode: 'move' | 'resize' | null; startX: number; startY: number; startTransform?: any } | null>(null);
-      const filterTransformRef = React.useRef(filterTransform);
-      
-      // Sync ref com state
-      React.useEffect(() => {
-         filterTransformRef.current = filterTransform;
-      }, [filterTransform]);
-
-      useEffect(() => {
-         const onMove = (e: MouseEvent) => {
-            if (!draggingRef.current || !filterTransformRef.current || !previewUrl) return;
-            const rect = document.querySelector('.image-edit-canvas') as HTMLElement | null;
-            if (!rect) return;
-            const bounds = rect.getBoundingClientRect();
-            const start = draggingRef.current;
-            const current = filterTransformRef.current;
-            
-            if (start.mode === 'move') {
-               const dx = e.clientX - start.startX;
-               const dy = e.clientY - start.startY;
-               const newLeft = ((start.startTransform.left / 100) * bounds.width + dx) / bounds.width * 100;
-               const newTop = ((start.startTransform.top / 100) * bounds.height + dy) / bounds.height * 100;
-               setFilterTransform({ ...current, left: Math.max(0, Math.min(100 - current.width, newLeft)), top: Math.max(0, Math.min(100 - current.height, newTop)) });
-            } else if (start.mode === 'resize') {
-               const dx = e.clientX - start.startX;
-               const dy = e.clientY - start.startY;
-               const deltaPctW = (dx / bounds.width) * 100;
-               const deltaPctH = (dy / bounds.height) * 100;
-               const newW = Math.max(5, Math.min(100 - start.startTransform.left, start.startTransform.width + deltaPctW));
-               const newH = Math.max(5, Math.min(100 - start.startTransform.top, start.startTransform.height + deltaPctH));
-               setFilterTransform({ ...current, width: newW, height: newH });
-            }
-         };
-         const onUp = () => { draggingRef.current = null; };
-         window.addEventListener('mousemove', onMove);
-         window.addEventListener('mouseup', onUp);
-         return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-      }, [previewUrl]);
 
    const handleSave = async () => {
     if (!title) return alert("A pista precisa de um Título/Código.");
@@ -572,7 +1177,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       try {
          if (imgFile) {
             imgUrl = await uploadInvestigationImage(imgFile, investigationId, (progress) => {
-               setUploadProgress(prev => ({ ...prev, image: progress }));
+               if (mountedRef.current) {
+                  setUploadProgress(prev => ({ ...prev, image: progress }));
+               }
             });
          }
       } catch (e) {
@@ -582,7 +1189,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       try {
          if (uvFile) {
             uvUrl = await uploadInvestigationImage(uvFile, investigationId, (progress) => {
-               setUploadProgress(prev => ({ ...prev, uv: progress }));
+               if (mountedRef.current) {
+                  setUploadProgress(prev => ({ ...prev, uv: progress }));
+               }
             });
          }
       } catch (e) {
@@ -592,7 +1201,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       try {
          if (filterFile) {
             filterUrl = await uploadInvestigationImage(filterFile, investigationId, (progress) => {
-               setUploadProgress(prev => ({ ...prev, filter: progress }));
+               if (mountedRef.current) {
+                  setUploadProgress(prev => ({ ...prev, filter: progress }));
+               }
             });
          }
       } catch (e) {
@@ -668,21 +1279,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               contrast: filterRevealContrast,
               saturate: filterRevealSaturate
          };
-         // attach fake metadata fields if provided (prefer explicit fields, fallback to fakeMeta map)
-         if (fakeDate) metadata.date_created = fakeDate;
-         if (fakeLocation) metadata.gps_coords = fakeLocation;
-         if (technicalNote) {
-            metadata.technical_note = technicalNote;
-            metadata.hex_comment = technicalNote;
-         }
-         if (fakeMeta) {
-            if (fakeMeta.date) metadata.date_created = fakeMeta.date;
-            if (fakeMeta.gps) metadata.gps_coords = fakeMeta.gps;
-            if (fakeMeta.owner) metadata.device_owner = fakeMeta.owner;
-         }
-        // spectrograms are stored via `audio_hidden_url` only; do not add to metadata
+         // NOTE: Field values (date, location, owner, etc.) are now stored in metadata.field_values below
+         // Do NOT add them here - they should only appear in field_values
+         
          // optional external link + qr
          if (externalLink) metadata.external_link = externalLink;
+        // hex code for HexViewer
+        if (hexCode) metadata.hex_code = hexCode;
         // thermal metadata flag
         if (thermalEnabled) {
            metadata.thermal = true;
@@ -690,10 +1293,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            if (thermalKeyword) metadata.thermal_keyword = thermalKeyword;
            metadata.thermal_font_size = thermalFontSize;
            metadata.thermal_position_y = thermalPositionY;
-        }
-        // audio playback config: time (seconds) when hidden track should be triggered
-        if (typeof triggerTime !== 'undefined') {
-           metadata.audio_config = { trigger_time: Number(triggerTime) || 0 };
         }
 
         const mediaVisibilityConfig = {
@@ -808,6 +1407,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            };
         }
 
+        // Add actual field values to metadata (not visibility config)
+        // This stores the real data that was entered in the form
+        const fieldValues = {
+          // Fake EXIF metadata fields
+          date_created: fakeDate || fakeMeta.date || null,
+          gps_coords: fakeLocation || fakeMeta.gps || null,
+          device_owner: fakeMeta.owner || null,
+          camera_model: fakeMeta.cam || null,
+          technical_note: technicalNote || null,
+          // Chat/Phone data
+          chat_contact_name: chatContactName || null,
+          // Stamps and external info
+          stamp: stamp || null,
+          external_link: externalLink || null,
+        };
+        metadata.field_values = fieldValues;
+
          // sanitize metadata to avoid sending unserializable objects
          const cleanMetadata = sanitizeForMetadata(metadata);
 
@@ -826,6 +1442,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             is_locked: isLocked,
             lock_password: isLocked ? lockPass : null,
             metadata: cleanMetadata,
+        audio_url: audUrl,
         audio_hidden_url: audHidUrl,
             video_url: finalVideoUrl,
         audio_target_freq: freq
@@ -843,6 +1460,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    payload.metadata = payload.metadata || {};
                    payload.metadata.chat_data = sanitizeForMetadata(finalChatData);
                    payload.metadata.chat_contact_name = finalChatContact || null;
+                }
+                
+                // Phone keypad configuration (separate from pista lock)
+                // Save even if no chat data yet (user might add it later)
+                if (phoneHasKeypad && phonePassword) {
+                   payload.metadata = payload.metadata || {};
+                   payload.metadata.phone_locked = true;
+                   payload.metadata.phone_password = phonePassword;
                 }
 
          // attach person dossier metadata only for document evidence
@@ -902,22 +1527,41 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             return;
          }
          
-         if (previewUrl) {
-            try { URL.revokeObjectURL(previewUrl); } catch (err) {}
+         // Revoke previous URL
+         revokeUrl(previewUrl);
+         
+         // Create and register new URL
+         const newUrl = createAndRegisterBlobUrl(file);
+         if (newUrl) {
+            setImgFile(file);
+            setPreviewUrl(newUrl);
          }
-      setImgFile(e.target.files[0]);
-         setPreviewUrl(URL.createObjectURL(e.target.files[0]));
     }
   };
 
   const handleMegaImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
      if (!file) return;
-     try { if (megaImagePreview) URL.revokeObjectURL(megaImagePreview); } catch(e){}
-     const url = URL.createObjectURL(file);
-     setMegaImageFile(file);
-     setMegaImagePreview(url);
-  };
+      
+      // Revoke previous URL
+      revokeUrl(megaImagePreview);
+      
+      // Create and register new URL
+      const url = createAndRegisterBlobUrl(file);
+      if (url) {
+         setMegaImageFile(file);
+         setMegaImagePreview(url);
+      }
+   };
+
+   const handleQuickAddMessage = () => {
+      const text = (quickChatText || '').trim();
+      if (!text) return;
+      setEditingChatList((list) => [...list, { sender: quickChatSender, type: 'text', text }]);
+      setQuickChatText('');
+   };
+
+   const lockPreviewEnabled = phoneHasKeypad && Boolean(phonePassword);
 
    const onOverlayMouseDown = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -948,52 +1592,167 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          return;
       }
       
-      setVideoFile(f);
-      try { if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
-      const localUrl = URL.createObjectURL(f);
-      setVideoPreviewUrl(localUrl);
-
-      // Upload immediately and track promise
-      const uploadPromise = (async () => {
-         try {
-            setVideoUploading(true);
-            const ext = f.name.split('.').pop() || 'mp4';
-            const publicUrl = await uploadInvestigationFile(f, investigationId, ext, (progress) => {
-               setUploadProgress(prev => ({ ...prev, video: progress }));
-            });
-            if (publicUrl) {
-               setVideoUrl(publicUrl);
-               return publicUrl;
-            } else {
-               throw new Error('Upload retornou URL vazia');
-            }
-         } catch (err) {
-            console.error('Video upload failed', err);
-            setUploadErrors(prev => [...prev, `Vídeo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`]);
-            throw err;
-         } finally {
-            setVideoUploading(false);
-            setUploadProgress(prev => ({ ...prev, video: 100 }));
-         }
-      })();
+      // Revoke previous URL
+      revokeUrl(videoPreviewUrl);
       
-      setVideoUploadPromise(uploadPromise);
+      // Create and register new URL
+      const localUrl = createAndRegisterBlobUrl(f);
+      if (localUrl) {
+         setVideoFile(f);
+         setVideoPreviewUrl(localUrl);
+
+         // Upload immediately and track promise
+         const uploadPromise = (async () => {
+            try {
+               if (mountedRef.current) setVideoUploading(true);
+               const ext = f.name.split('.').pop() || 'mp4';
+               const publicUrl = await uploadInvestigationFile(f, investigationId, ext, (progress) => {
+                  if (mountedRef.current) {
+                     setUploadProgress(prev => ({ ...prev, video: progress }));
+                  }
+               });
+               if (publicUrl) {
+                  if (mountedRef.current) setVideoUrl(publicUrl);
+                  return publicUrl;
+               } else {
+                  throw new Error('Upload retornou URL vazia');
+               }
+            } catch (err) {
+               console.error('Video upload failed', err);
+               if (mountedRef.current) {
+                  setUploadErrors(prev => [...prev, `Vídeo: ${err instanceof Error ? err.message : 'Erro desconhecido'}`]);
+               }
+               throw err;
+            } finally {
+               if (mountedRef.current) {
+                  setVideoUploading(false);
+                  setUploadProgress(prev => ({ ...prev, video: 100 }));
+               }
+            }
+         })();
+         
+         setVideoUploadPromise(uploadPromise);
+      }
    };
 
    const overlayActive = showMixer || !!editorMode || showGlitchDesigner || !!showAudioForgeFor || showThermalEditor;
 
    return (
     <div className="modal-overlay">
-      <DiegeticWindow title="REGISTRO DE EVIDÊNCIA" onClose={onClose}>
-            <div className="dossier-body" style={{ padding: 0, pointerEvents: overlayActive ? 'none' : 'auto', position: 'relative' }}>
+      <DiegeticWindow 
+        title="REGISTRO DE EVIDÊNCIA" 
+        onClose={onClose}
+        extraHeaderContent={
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                style={{
+                  background: 'rgba(100,150,255,0.15)',
+                  border: '1px solid rgba(100,150,255,0.3)',
+                  color: '#64b5ff',
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                📂 {loadingTemplates ? '⏳' : ''}
+              </button>
+              {showTemplateDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '4px',
+                  background: 'rgba(10,15,25,0.98)',
+                  border: '1px solid rgba(0,243,255,0.3)',
+                  borderRadius: '6px',
+                  minWidth: '280px',
+                  maxHeight: '350px',
+                  overflowY: 'auto',
+                  zIndex: 10000,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.8)'
+                }}>
+                  {templates.length === 0 ? (
+                    <div style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '11px' }}>
+                      Nenhum template salvo
+                    </div>
+                  ) : (
+                    templates.map((template) => (
+                      <div key={template.id} style={{
+                        padding: '8px 10px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleLoadTemplate(template)}>
+                          <div style={{ color: '#00f3ff', fontSize: '11px', fontWeight: 500 }}>
+                            {template.name}
+                          </div>
+                          {template.description && (
+                            <div style={{ color: '#888', fontSize: '9px', marginTop: '2px' }}>
+                              {template.description}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteTemplate(template.id, template.name)}
+                          style={{
+                            background: 'rgba(255,50,50,0.2)',
+                            border: '1px solid rgba(255,50,50,0.4)',
+                            color: '#ff6666',
+                            padding: '3px 6px',
+                            fontSize: '9px',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleSaveAsTemplate}
+              style={{
+                background: 'rgba(100,200,100,0.15)',
+                border: '1px solid rgba(100,200,100,0.3)',
+                color: '#64c864',
+                padding: '4px 8px',
+                fontSize: '10px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              💾
+            </button>
+          </div>
+        }
+      >
+            <div className="dossier-body" style={{ padding: 0, pointerEvents: overlayActive ? 'none' : 'auto' }}>
 
           <div className="tabs-header">
-            <button className={`tab-btn ${activeTab==='geral'?'active':''}`} onClick={()=>setActiveTab('geral')}>📄 GERAL & DADOS</button>
-            <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL / UV / FX</button>
-            <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO & EVP</button>
-            <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS & PUZZLES</button>
-                  {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🧩 CONFIG. GLITCH</button>}
-            {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}>🔐 CONFIG. MEGA-PISTA</button>}
+            <button className={`tab-btn ${activeTab==='geral'?'active':''}`} onClick={()=>setActiveTab('geral')}>📄 GERAL</button>
+            <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL</button>
+            <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO</button>
+            <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS</button>
+            <button className={`tab-btn ${activeTab==='forense'?'active':''}`} onClick={()=>setActiveTab('forense')}>🔬 FORENSE</button>
+            <button className={`tab-btn ${activeTab==='campos'?'active':''}`} onClick={()=>setActiveTab('campos')}>👁️ CAMPOS</button>
+            <button className={`tab-btn ${activeTab==='display'?'active':''}`} onClick={()=>setActiveTab('display')}>⚙️ CONFIG</button>
+                  {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🎮 GLITCH</button>}
+            {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}>🔐 MEGA</button>}
           </div>
 
           <div className="tab-content">
@@ -1143,11 +1902,25 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 <div style={{display:'flex', gap:15}}>
                    <div className="field-block" style={{flex:1}}>
                       <span className="field-title">🔐 CRIPTOGRAFIA / BLOQUEIO</span>
-                      <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
-                         <input type="checkbox" checked={isLocked} onChange={e=>setIsLocked(e.target.checked)} />
-                         <label>ATIVAR SENHA DE ACESSO</label>
+                      
+                      {/* SENHA DA PISTA */}
+                      <div style={{marginBottom: 15, paddingBottom: 15, borderBottom: '1px solid #333'}}>
+                         <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
+                            <input type="checkbox" checked={isLocked} onChange={e=>setIsLocked(e.target.checked)} />
+                            <label style={{fontWeight: 'bold'}}>🔒 ATIVAR SENHA DE ACESSO (Pista)</label>
+                         </div>
+                         {isLocked && (
+                            <input 
+                               placeholder="Senha da pista (Ex: KIAN)" 
+                               value={lockPass} 
+                               onChange={e=>setLockPass(e.target.value)} 
+                               style={{borderColor:'red', color:'red', fontWeight:'bold', padding:'8px 12px', width: '100%'}} 
+                            />
+                         )}
                       </div>
-                      <div style={{marginTop:12, display:'flex', gap:10, alignItems:'center'}}>
+                      
+                      {/* OUTROS CONTROLES */}
+                      <div style={{marginTop:12, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap'}}>
                          <label style={{display:'flex', alignItems:'center', gap:8}}>
                             <input type="checkbox" checked={isPerson} onChange={e=>setIsPerson(e.target.checked)} />
                             <span>Tipo: Dossiê de Pessoa</span>
@@ -1156,44 +1929,138 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       </div>
 
                       {showChatEditor && (
-                         <div style={{marginTop:10}}>
-                            <label>Contato (nome)</label>
-                            <input value={chatContactName} onChange={e=>setChatContactName(e.target.value)} placeholder="Nome do contato" />
-
-                            <div style={{marginTop:8}}>
-                               <label>Mensagens</label>
-                               {editingChatList.map((m, idx) => (
-                                  <div key={idx} style={{display:'grid', gridTemplateColumns:'120px 1fr 72px', gap:8, marginBottom:8, alignItems:'start'}}>
-                                     <select value={m.sender} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], sender: e.target.value }; setEditingChatList(copy); }}>
-                                        <option value="me">Eu</option>
-                                        <option value="them">Contato</option>
-                                        <option value="system">Sistema</option>
-                                     </select>
-                                     <textarea rows={2} value={m.text} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], text: e.target.value }; setEditingChatList(copy); }} />
-                                     <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                                        <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx,1); setEditingChatList(copy); }}>Remover</button>
-                                        <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx+1,0,{ sender:'me', type:'text', text:'' }); setEditingChatList(copy); }}>Adicionar</button>
-                                     </div>
-                                  </div>
-                               ))}
-
-                               <div style={{display:'flex', gap:8, marginTop:6, alignItems:'center'}}>
-                                  <button className="upload-btn" onClick={() => { setChatData(editingChatList); setShowChatEditor(false); }}>Salvar Chat</button>
-                                  <button className="upload-btn" onClick={() => { setChatJson(''); setShowChatEditor(false); }}>Cancelar</button>
-                                  <button className="upload-btn" onClick={() => {
-                                     try {
-                                        const parsed = JSON.parse(chatJson || '[]');
-                                        if (Array.isArray(parsed)) {
-                                           setEditingChatList(parsed.map((m: any) => ({ sender: m.sender || 'me', type: m.type || 'text', text: m.text || '' })));
-                                        } else alert('JSON inválido');
-                                     } catch (e) { alert('JSON inválido'); }
-                                  }}>Importar JSON</button>
-                                  <input placeholder='Colar JSON aqui' value={chatJson} onChange={e=>setChatJson(e.target.value)} style={{flex:1}} />
+                         <div className="chat-editor-container">
+                            {/* LADO ESQUERDO: INPUTS */}
+                            <div className="chat-inputs">
+                               <div>
+                                  <label>Nome do Contato</label>
+                                  <input value={chatContactName} onChange={e=>setChatContactName(e.target.value)} placeholder="Nome do contato" />
                                </div>
 
-                               {editingChatList && editingChatList.length > 0 && (
-                                  <div style={{marginTop:8}}><small style={{color:'#ccc'}}>Pré-visualização:</small><div style={{marginTop:8}}><PhoneViewer chatData={editingChatList} contactName={chatContactName} /></div></div>
+                               <label>Mensagens</label>
+                               {editingChatList.length === 0 ? (
+                                  <div style={{padding:12, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px dashed rgba(100,150,255,0.3)', color:'#888', fontSize:11, textAlign:'center', marginBottom:10}}>
+                                     Nenhuma mensagem ainda. Clique em "➕ Adicionar" para começar!
+                                  </div>
+                               ) : (
+                                  editingChatList.map((m, idx) => (
+                                     <div key={idx} className="chat-message-row">
+                                        <select value={m.sender} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], sender: e.target.value }; setEditingChatList(copy); }}>
+                                           <option value="me">Eu</option>
+                                           <option value="them">Contato</option>
+                                           <option value="system">Sistema</option>
+                                        </select>
+                                        <textarea rows={2} value={m.text} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], text: e.target.value }; setEditingChatList(copy); }} />
+                                        <div className="chat-buttons">
+                                           <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx,1); setEditingChatList(copy); }}>✖</button>
+                                           <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx+1,0,{ sender:'me', type:'text', text:'' }); setEditingChatList(copy); }}>+</button>
+                                        </div>
+                                     </div>
+                                  ))
                                )}
+                               
+                               <button className="upload-btn" onClick={() => { setEditingChatList([...editingChatList, { sender:'me', type:'text', text:'' }]); }} style={{marginTop:10, width:'100%', background:'rgba(100,150,255,0.2)', border:'1px solid rgba(100,150,255,0.5)'}}>➕ Adicionar Mensagem</button>
+
+                               <div style={{display:'flex', gap:8, marginTop:10}}>
+                                  <button className="btn-save" onClick={() => { setChatData(editingChatList); setShowChatEditor(false); }}>✅ Salvar</button>
+                                  <button className="btn-cancel" onClick={() => { setChatJson(''); setShowChatEditor(false); }}>Cancelar</button>
+                               </div>
+
+                               <div style={{marginTop:10}}>
+                                  <label>Importar JSON</label>
+                                  <div style={{display:'flex', gap:8}}>
+                                     <input placeholder='Colar JSON aqui' value={chatJson} onChange={e=>setChatJson(e.target.value)} style={{flex:1}} />
+                                     <button className="upload-btn" onClick={() => {
+                                        try {
+                                           const parsed = JSON.parse(chatJson || '[]');
+                                           if (Array.isArray(parsed)) {
+                                              setEditingChatList(parsed.map((m: any) => ({ sender: m.sender || 'me', type: m.type || 'text', text: m.text || '' })));
+                                           } else alert('JSON inválido');
+                                        } catch (e) { alert('JSON inválido'); }
+                                     }}>Importar</button>
+                                  </div>
+                               </div>
+                            </div>
+
+                            {/* LADO DIREITO: PREVIEW DO CELULAR */}
+                            <div className="chat-phone-preview">
+                               <div className="chat-phone-inner">
+                                  <PhoneViewer 
+                                     chatData={editingChatList} 
+                                     contactName={chatContactName} 
+                                     isLocked={lockPreviewEnabled}
+                                     password={lockPreviewEnabled ? phonePassword : undefined}
+                                  />
+                               </div>
+                               <div className="chat-preview-label">Preview do Dispositivo</div>
+
+                               <div style={{marginTop:10, width:'100%', display:'flex', flexDirection:'column', gap:8, background:'rgba(0,0,0,0.25)', border:'1px solid rgba(100,150,255,0.25)', borderRadius:8, padding:10}}>
+                                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', color:'#9ac4ff', fontSize:11, textTransform:'uppercase', letterSpacing:0.5}}>
+                                     <span>Adicionar mensagem pelo preview</span>
+                                     <button className="btn-save" style={{padding:'6px 10px', fontSize:11}} onClick={handleQuickAddMessage}>Adicionar</button>
+                                  </div>
+                                  <div style={{display:'flex', gap:8, alignItems:'stretch', flexWrap:'wrap'}}>
+                                     <select value={quickChatSender} onChange={e => setQuickChatSender(e.target.value as ChatSender)} style={{minWidth:120}}>
+                                        <option value="them">Contato</option>
+                                        <option value="me">Eu</option>
+                                        <option value="system">Sistema</option>
+                                     </select>
+                                     <textarea 
+                                        rows={2} 
+                                        value={quickChatText} 
+                                        onChange={e => setQuickChatText(e.target.value)}
+                                        onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleQuickAddMessage(); } }}
+                                        placeholder="Digite a mensagem e clique em Adicionar"
+                                        style={{flex:1, minWidth:180}}
+                                     />
+                                  </div>
+                               </div>
+                               
+                               {/* CONTROLE DO KEYPAD DO TELEFONE (SEPARADO DA SENHA DA PISTA) */}
+                               <div style={{marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(100,100,100,0.3)', width: '100%'}}>
+                                  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
+                                     <input 
+                                        type="checkbox" 
+                                        checked={phoneHasKeypad} 
+                                        onChange={e=>setPhoneHasKeypad(e.target.checked)} 
+                                     />
+                                     <label style={{fontWeight: 'bold', fontSize: 12}}>📱 Telefone com Keypad</label>
+                                  </div>
+                                  
+                                  {phoneHasKeypad && (
+                                     <div>
+                                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom: 10}}>
+                                           <input 
+                                              placeholder="Senha do telefone (apenas números)" 
+                                              value={phonePassword} 
+                                              onChange={e=>setPhonePassword(e.target.value.replace(/\D/g, ''))}
+                                              maxLength={6}
+                                              style={{flex: 1, borderColor:'#00b894', color:'#00b894', fontWeight:'bold', padding:'6px 10px'}} 
+                                           />
+                                           <button 
+                                              className="upload-btn"
+                                              onClick={() => setShowKeypadEditor(!showKeypadEditor)}
+                                              style={{background: showKeypadEditor ? '#333' : '#00b894', color: '#fff', padding: '6px 12px'}}
+                                           >
+                                              {showKeypadEditor ? '⌨️' : '🔢'}
+                                           </button>
+                                        </div>
+                                        
+                                        {showKeypadEditor && phonePassword && (
+                                           <div style={{padding: 20, background: '#0a0a0a', borderRadius: 8}}>
+                                              <div style={{fontSize: 11, marginBottom: 10, color: '#888'}}>Preview do Keypad:</div>
+                                              <NumericKeypad 
+                                                 code={phonePassword} 
+                                                 onInput={(value) => setPhonePassword(value)}
+                                                 onUnlock={() => {
+                                                    setShowKeypadEditor(false);
+                                                 }} 
+                                              />
+                                           </div>
+                                        )}
+                                     </div>
+                                  )}
+                               </div>
                             </div>
                          </div>
                       )}
@@ -1222,9 +2089,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                <input value={personOccupation} onChange={e=>setPersonOccupation(e.target.value)} />
                             </div>
                          </div>
-                      )}
-                      {isLocked && (
-                         <input placeholder="SENHA (Ex: KIAN)" value={lockPass} onChange={e=>setLockPass(e.target.value)} style={{borderColor:'red', color:'red', fontWeight:'bold'}} />
                       )}
                    </div>
 
@@ -1752,28 +2616,31 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                    <div style={{marginTop:12, padding:'12px', background:'rgba(0,0,0,0.3)', borderRadius:'6px', border:'1px solid rgba(0,243,255,0.1)'}}>
                                       <SpectrogramCreator onGenerated={async (wavBlob, buffer) => {
                                           try {
-                                             if (audioHiddenPreview) { try { URL.revokeObjectURL(audioHiddenPreview); } catch (e) {} }
+                                             // Revoke and create new URL
+                                             revokeUrl(audioHiddenPreview);
                                              const file = new File([wavBlob], `spectrogram_${Date.now()}.wav`, { type: 'audio/wav' });
                                              setAudioHidden(file);
-                                             const localUrl = URL.createObjectURL(file);
-                                             setAudioHiddenPreview(localUrl);
-                                             setAudioHiddenUploadedUrl(null);
+                                             const localUrl = createAndRegisterBlobUrl(file);
+                                             if (localUrl) {
+                                                setAudioHiddenPreview(localUrl);
+                                                setAudioHiddenUploadedUrl(null);
 
-                                             setAudioHiddenUploading(true);
-                                             try {
-                                                const publicUrl = await uploadAudio(file, investigationId);
-                                                if (publicUrl) {
-                                                   setAudioHiddenUploadedUrl(publicUrl);
-                                                   try { URL.revokeObjectURL(localUrl); } catch (e) {}
-                                                   setAudioHiddenPreview(publicUrl);
-                                                } else {
-                                                   console.warn('Upload returned no publicUrl');
+                                                setAudioHiddenUploading(true);
+                                                try {
+                                                   const publicUrl = await uploadAudio(file, investigationId);
+                                                   if (publicUrl) {
+                                                      setAudioHiddenUploadedUrl(publicUrl);
+                                                      revokeUrl(localUrl);
+                                                      setAudioHiddenPreview(publicUrl);
+                                                   } else {
+                                                      console.warn('Upload returned no publicUrl');
+                                                   }
+                                                } catch (uploadErr) {
+                                                   console.error('Upload failed', uploadErr);
+                                                   alert('Falha ao enviar áudio gerado.');
+                                                } finally {
+                                                   setAudioHiddenUploading(false);
                                                 }
-                                             } catch (uploadErr) {
-                                                console.error('Upload failed', uploadErr);
-                                                alert('Falha ao enviar áudio gerado.');
-                                             } finally {
-                                                setAudioHiddenUploading(false);
                                              }
                                           } catch (e) {
                                              console.error('Failed to process generated audio', e);
@@ -1832,6 +2699,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  <div style={{ marginTop: 8 }}>
                     <label>TEXTO CIFRADO (opcional)</label>
                     <input value={cipherText} onChange={e => setCipherText(e.target.value)} placeholder="Deixe vazio para gerar símbolos automáticos" />
+                 </div>
+
+                 <div style={{ marginTop: 16, padding: '10px', background: 'rgba(100,100,255,0.08)', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                       <span style={{ fontSize: 14 }}>⌨️ CÓDIGO HEXADECIMAL</span>
+                    </label>
+                    <small style={{ display: 'block', marginTop: 6, color: '#888' }}>Mensagem que aparecerá no Inspetor Hexadecimal dentro do código aleatório.</small>
+                    <textarea 
+                       rows={2} 
+                       value={hexCode} 
+                       onChange={e => setHexCode(e.target.value)} 
+                       placeholder="Ex: SAFE_ROOM_LEVEL_7 ou CLASSIFIED_DATA_2025"
+                       style={{ width: '100%', marginTop: 6, background: '#0a0a1a', border: '1px solid rgba(100,100,255,0.3)', color: '#8fb', fontFamily: 'monospace', fontSize: 11 }}
+                    />
                  </div>
               </div>
             )}
@@ -2139,6 +3020,538 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               </div>
             )}
 
+            {activeTab === 'forense' && (
+              <div className="field-block">
+                <span className="field-title">🔬 EDITOR RGB (Steganografia em Canal)</span>
+                <p style={{ fontSize: 12, color: '#aaa', marginBottom: 15 }}>
+                  Esconda informações secretas (texto ou imagens) dentro de canais de cor específicos (R, G ou B).
+                  Use o editor interativo para maior controle ou o modo clássico de upload.
+                </p>
+
+                {/* Botão do Editor Interativo */}
+                <div style={{ marginBottom: 20 }}>
+                  <button
+                    onClick={() => {
+                      if (!imgFile && !forensicBaseImage) {
+                        alert('Por favor, primeiro selecione uma imagem base na aba GERAL ou na seção abaixo.');
+                        return;
+                      }
+                      setShowForensicEditor(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      background: 'linear-gradient(135deg, #00ff9d 0%, #00cc7a 100%)',
+                      color: '#0a0a0a',
+                      border: '2px solid #00ff9d',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      boxShadow: '0 0 20px rgba(0, 255, 157, 0.4)',
+                      transition: 'all 0.3s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #00ffaa 0%, #00dd88 100%)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 255, 157, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #00ff9d 0%, #00cc7a 100%)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 157, 0.4)';
+                    }}
+                  >
+                    🎨 ABRIR EDITOR INTERATIVO (RECOMENDADO)
+                  </button>
+                  <p style={{ fontSize: 11, color: '#888', marginTop: 8, textAlign: 'center' }}>
+                    Editor visual com controle total sobre posição, intensidade e overlay
+                  </p>
+                </div>
+
+                {/* Separador */}
+                <div style={{ 
+                  borderTop: '1px solid rgba(255,255,255,0.1)', 
+                  margin: '20px 0', 
+                  position: 'relative',
+                  textAlign: 'center'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    top: '-10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#0b0b0b',
+                    padding: '0 10px',
+                    fontSize: 11,
+                    color: '#666'
+                  }}>
+                    ou use o modo clássico
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 20 }}>
+                  {/* Coluna esquerda: Uploads e Configuração */}
+                  <div style={{ flex: 1 }}>
+                    {/* Upload Imagem Base */}
+                    <div className="field-block" style={{ marginBottom: 12 }}>
+                      <label>📷 IMAGEM BASE / VISÍVEL</label>
+                      <label className="upload-btn">
+                        SELECIONAR
+                        <input type="file" accept="image/*" hidden onChange={handleForensicBaseImageSelect} />
+                      </label>
+                      {forensicBasePreview && (
+                        <div style={{ marginTop: 8, maxWidth: '100%' }}>
+                          <img src={forensicBasePreview} alt="base" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6 }} />
+                          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Base (dimensão será usada como referência)</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload Imagem Oculta */}
+                    <div className="field-block" style={{ marginBottom: 12 }}>
+                      <label>🔍 IMAGEM OCULTA / SEGREDO</label>
+                      <label className="upload-btn">
+                        SELECIONAR
+                        <input type="file" accept="image/*" hidden onChange={handleForensicHiddenImageSelect} />
+                      </label>
+                      {forensicHiddenPreview && (
+                        <div style={{ marginTop: 8, maxWidth: '100%' }}>
+                          <img src={forensicHiddenPreview} alt="hidden" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6 }} />
+                          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Oculta (será redimensionada se necessário)</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Seletor de Canal */}
+                    <div className="field-block" style={{ marginBottom: 12 }}>
+                      <label>🎨 CANAL ALVO</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className={`btn-stamp ${forensicTargetChannel === 'R' ? 'active' : ''}`}
+                          onClick={() => setForensicTargetChannel('R')}
+                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'R' ? '#c0392b' : '#333' }}
+                        >
+                          🔴 VERMELHO (R)
+                        </button>
+                        <button
+                          className={`btn-stamp ${forensicTargetChannel === 'G' ? 'active' : ''}`}
+                          onClick={() => setForensicTargetChannel('G')}
+                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'G' ? '#27ae60' : '#333' }}
+                        >
+                          🟢 VERDE (G)
+                        </button>
+                        <button
+                          className={`btn-stamp ${forensicTargetChannel === 'B' ? 'active' : ''}`}
+                          onClick={() => setForensicTargetChannel('B')}
+                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'B' ? '#2980b9' : '#333' }}
+                        >
+                          🔵 AZUL (B)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Botão de Processamento */}
+                    <button
+                      onClick={handleProcessForensicMerge}
+                      disabled={forensicProcessing || !forensicBaseImage || !forensicHiddenImage}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: forensicProcessing ? '#555' : '#27ae60',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 6,
+                        cursor: forensicProcessing ? 'wait' : 'pointer',
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        marginTop: 12,
+                      }}
+                    >
+                      {forensicProcessing ? '⏳ PROCESSANDO...' : '⚙️ PROCESSAR MERGE'}
+                    </button>
+                  </div>
+
+                  {/* Coluna direita: Preview de Resultado */}
+                  <div style={{ flex: 1 }}>
+                    <div className="field-block" style={{ background: '#0a0a0a', padding: 12, borderRadius: 6 }}>
+                      <label>📊 RESULTADO DA MESCLAGEM</label>
+                      {forensicResultPreview ? (
+                        <>
+                          <img src={forensicResultPreview} alt="result" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 6, marginTop: 8, border: '2px solid #27ae60' }} />
+                          <div style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>
+                            ✅ Imagem processada com sucesso
+                          </div>
+                          <button
+                            onClick={handleUseForensicImage}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              marginTop: 12,
+                              background: '#f39c12',
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontWeight: 'bold',
+                            }}
+                          >
+                            ✨ USAR COMO IMAGEM PRINCIPAL
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>
+                          Clique em "PROCESSAR MERGE" para gerar o resultado
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'campos' && (
+              <div className="field-block config-visibility-tab">
+                <span className="field-title">👁️ CONFIGURAÇÃO DE PRIVACIDADE DA EVIDÊNCIA</span>
+                <p style={{ fontSize: 11, color: '#888', marginBottom: 15 }}>
+                  Determine quais informações o C.R.I.S. revelará ao jogador quando ele inspecionar esta pista.
+                </p>
+
+                {/* SEÇÃO DE PRESETS RÁPIDOS */}
+                <div className="presets-row" style={{ display: 'flex', gap: 8, marginBottom: 20, padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
+                  <span style={{ fontSize: 10, color: '#aaa', alignSelf: 'center', marginRight: 5 }}>🚀 PRESETS:</span>
+                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.MINIMAL as any)}>🔒 MÍNIMO</button>
+                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.DEFAULT as any)}>✅ PADRÃO</button>
+                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.FULL as any)} style={{ color: '#ff6464' }}>🔓 TUDO (CUIDADO)</button>
+                </div>
+
+                {/* GRID DE CONFIGURAÇÕES */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  
+                  {/* COLUNA 1: PROPRIEDADES DO ARQUIVO */}
+                  <div className="config-group">
+                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 PROPRIEDADES DO ARQUIVO</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {[
+                        { id: 'fileType', label: '📄 Tipo de Arquivo' },
+                        { id: 'size', label: '📊 Tamanho (Bytes)' },
+                        { id: 'cameraModel', label: '📷 Modelo da Câmera' },
+                        { id: 'dateCreated', label: '📅 Data de Criação' },
+                        { id: 'gpsCoords', label: '🗺️ Coordenadas GPS' },
+                        { id: 'ownerName', label: '👤 Proprietário do Arquivo' },
+                        { id: 'hexComment', label: '🔧 Comentários HEX' },
+                        { id: 'technicalNote', label: '📝 Notas Técnicas' },
+                        { id: 'stamp', label: '🔖 Carimbo/Stamp' },
+                        { id: 'externalLink', label: '🔗 Link Externo' },
+                        { id: 'fakeLocation', label: '📍 Localização Falsa' },
+                        { id: 'isLocked', label: '🔒 Bloqueado' },
+                        { id: 'lockPassword', label: '🔑 Senha de Desbloqueio' },
+                        { id: 'isPerson', label: '👤 Dossiê de Pessoa' },
+                        { id: 'personName', label: '📛 Nome da Pessoa' },
+                        { id: 'personDob', label: '🎂 Data de Nascimento' },
+                        { id: 'personStatus', label: '💓 Status Vital' },
+                        { id: 'personOccupation', label: '💼 Ocupação' },
+                      ].map(f => (
+                        <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={fieldVisibilityConfig.fileProperties.visibleFields.includes(f.id as any)}
+                            onChange={(e) => {
+                              const current = fieldVisibilityConfig.fileProperties.visibleFields;
+                              const next = e.target.checked ? [...current, f.id] : current.filter(x => x !== f.id);
+                              setFieldVisibilityConfig({ ...fieldVisibilityConfig, fileProperties: { visibleFields: next as any } });
+                            }}
+                          />
+                          {f.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COLUNA 2: PUZZLES E MEGA-PISTAS */}
+                  <div className="config-group">
+                    {evidenceType === 'glitch_puzzle' && (
+                      <>
+                        <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 ELEMENTOS DO PUZZLE</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 15 }}>
+                          {[
+                            { id: 'accessInstructions', label: '▶️ Instruções de Acesso' },
+                            { id: 'hint', label: '💡 Dica do Enigma' },
+                            { id: 'calibrationControls', label: '⚙️ Controles de Calibração' },
+                            { id: 'logs', label: '📜 Terminal de Logs' },
+                            { id: 'rewardCode', label: '🎁 Código de Recompensa' },
+                            { id: 'correctAnswerWhenSolved', label: '⚠️ Resposta Correta', warn: true },
+                            { id: 'keyword', label: '🔑 Palavra-chave' },
+                            { id: 'focusedImage', label: '🖼️ Imagem Focada' },
+                            { id: 'hiddenAudioUrl', label: '🎵 Áudio Oculto' },
+                            { id: 'hiddenVideoUrl', label: '🎬 Vídeo Oculto' },
+                            { id: 'unlockMode', label: '🔓 Modo de Desbloqueio' },
+                            { id: 'difficulty', label: '🎯 Dificuldade' },
+                            { id: 'toleranceSettings', label: '📏 Tolerâncias' },
+                            { id: 'correctParameters', label: '🎛️ Parâmetros Corretos', warn: true },
+                            { id: 'startParameters', label: '🎬 Parâmetros Iniciais' },
+                          ].map(f => (
+                            <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={fieldVisibilityConfig.glitchPuzzle.visibleSections.includes(f.id as any)}
+                                onChange={(e) => {
+                                  const current = fieldVisibilityConfig.glitchPuzzle.visibleSections;
+                                  const next = e.target.checked ? [...current, f.id] : current.filter(x => x !== f.id);
+                                  setFieldVisibilityConfig({ ...fieldVisibilityConfig, glitchPuzzle: { visibleSections: next as any } });
+                                }}
+                              />
+                              {f.label}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {evidenceType === 'mega_clue' && (
+                      <>
+                        <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 SEÇÕES DA MEGA-PISTA</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {[
+                            { id: 'hints', label: 'Lista de Dicas' },
+                            { id: 'progress', label: 'Barra de Progresso' },
+                            { id: 'answer', label: '⚠️ Resposta Final (Verdade)', warn: true },
+                            { id: 'requiredPuzzles', label: 'Puzzles Obrigatórios' },
+                          ].map(f => (
+                            <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={fieldVisibilityConfig.megaClue.visibleSections.includes(f.id as any)}
+                                onChange={(e) => {
+                                  const current = fieldVisibilityConfig.megaClue.visibleSections;
+                                  const next = e.target.checked ? [...current, f.id] : current.filter(x => x !== f.id);
+                                  setFieldVisibilityConfig({ ...fieldVisibilityConfig, megaClue: { visibleSections: next as any } });
+                                }}
+                              />
+                              {f.label}
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* METADADOS CUSTOMIZADOS */}
+                    <h4 style={{ fontSize: 12, color: '#b366ff', marginTop: 15, marginBottom: 10, borderBottom: '1px solid #333' }}>🧪 DADOS DO SISTEMA (JSON)</h4>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', marginBottom: 10, padding: 8, background: 'rgba(179, 102, 255, 0.1)', borderRadius: 4 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={fieldVisibilityConfig.customMetadata.enableCustomFields}
+                        onChange={(e) => setFieldVisibilityConfig({
+                          ...fieldVisibilityConfig,
+                          customMetadata: { ...fieldVisibilityConfig.customMetadata, enableCustomFields: e.target.checked }
+                        })}
+                      />
+                      <strong>✅ Ativar Metadados Customizados</strong>
+                    </label>
+
+                    {fieldVisibilityConfig.customMetadata.enableCustomFields && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflowY: 'auto', paddingRight: 8 }}>
+                        {[
+                          { id: 'audio_config', label: '🔊 Config de Áudio' },
+                          { id: 'thermal_keyword', label: '🔥 Palavra-chave Térmica' },
+                          { id: 'thermal_secret_text', label: '🔥 Texto Secreto' },
+                          { id: 'thermal_enabled', label: '🔥 Térmica Ativada' },
+                          { id: 'thermal_font_size', label: '🔤 Tamanho da Fonte' },
+                          { id: 'thermal_position_y', label: '📍 Posição Y' },
+                          { id: 'device_owner', label: '👤 Proprietário do Dispositivo' },
+                          { id: 'gps_coords', label: '🗺️ Coordenadas GPS' },
+                          { id: 'filter_transform', label: '🎨 Transformação do Filtro' },
+                          { id: 'filter_reveal_settings', label: '🔍 Config de Revelação' },
+                          { id: 'uv_layer', label: '💡 Camada UV' },
+                          { id: 'is_shredded', label: '📃 Fragmentado' },
+                          { id: 'shred_config', label: '✂️ Config de Fragmentação' },
+                          { id: 'real_text', label: '📝 Texto Real' },
+                          { id: 'cipher_text', label: '🔐 Texto Cifrado' },
+                          { id: 'chat_data', label: '💬 Dados de Chat' },
+                          { id: 'chat_contact_name', label: '👤 Nome do Contato' },
+                          { id: 'video_url', label: '🎬 URL de Vídeo' },
+                          { id: 'media_visibility', label: '👁️ Visibilidade de Mídia' },
+                          { id: 'security_layer', label: '🔒 Camada de Segurança' },
+                          { id: 'reveal_logic', label: '🔓 Lógica de Revelação' },
+                          { id: 'signal_targets', label: '📡 Alvos de Sinal' },
+                          { id: 'audio_static_sync', label: '📻 Sincronização Estática' },
+                          { id: 'narrative_links', label: '📖 Links Narrativos' },
+                          { id: 'hide_preview_board', label: '🙈 Ocultar Preview' },
+                          { id: 'trigger_time', label: '⏱️ Tempo de Gatilho' },
+                        ].map(f => (
+                          <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, cursor: 'pointer' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={fieldVisibilityConfig.customMetadata.defaultVisibleCustomFields.includes(f.id)}
+                              onChange={(e) => {
+                                const current = fieldVisibilityConfig.customMetadata.defaultVisibleCustomFields;
+                                const next = e.target.checked ? [...current, f.id] : current.filter(x => x !== f.id);
+                                setFieldVisibilityConfig({
+                                  ...fieldVisibilityConfig,
+                                  customMetadata: { ...fieldVisibilityConfig.customMetadata, defaultVisibleCustomFields: next }
+                                });
+                              }}
+                            />
+                            {f.label}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'display' && (
+              <div className="field-block config-display-tab">
+                <span className="field-title">⚙️ CONFIGURAÇÃO DE EXIBIÇÃO</span>
+                <p style={{ fontSize: 11, color: '#888', marginBottom: 15 }}>
+                  Controla O QUE É VISÍVEL quando o jogador inspecionar esta pista. Similar aos campos visíveis, mas com foco em ELEMENTOS DE UI.
+                </p>
+
+                {/* GRID 3 COLUNAS */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 15 }}>
+                  
+                  {/* COLUNA 1: PUZZLE */}
+                  {evidenceType === 'glitch_puzzle' && (
+                    <div className="config-group">
+                      <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 GLITCH PUZZLE</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {[
+                          { id: 'showAccessInstructions', label: '▶️ Como Acessar' },
+                          { id: 'showHint', label: '💡 Dica' },
+                          { id: 'showCorrectAnswerWhenSolved', label: '⚠️ Parâmetros Corretos', warn: true },
+                          { id: 'showRewardCode', label: '🎁 Código de Recompensa' },
+                          { id: 'showLogs', label: '📜 Logs/Terminal' },
+                        ].map(f => (
+                          <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={displayConfig.puzzle[f.id as keyof typeof displayConfig.puzzle]}
+                              onChange={(e) => setDisplayConfig({
+                                ...displayConfig,
+                                puzzle: { ...displayConfig.puzzle, [f.id]: e.target.checked }
+                              })}
+                            />
+                            {f.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* COLUNA 1/2: FILE PROPERTIES */}
+                  <div className="config-group">
+                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 METADADOS DE ARQUIVO</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {[
+                        { id: 'showFileType', label: '📄 Tipo de arquivo' },
+                        { id: 'showSize', label: '📊 Tamanho' },
+                        { id: 'showCameraModel', label: '📷 Câmera' },
+                        { id: 'showDate', label: '📅 Data' },
+                        { id: 'showGPS', label: '🗺️ GPS' },
+                        { id: 'showOwner', label: '👤 Dono' },
+                        { id: 'showHexComment', label: '🔧 HEX/Nota Técnica' },
+                        { id: 'showStamp', label: '🔖 Carimbo' },
+                        { id: 'showExternalLink', label: '🔗 Link Externo' },
+                        { id: 'showLockStatus', label: '🔒 Status de Bloqueio' },
+                        { id: 'showPersonInfo', label: '👤 Info de Pessoa' },
+                      ].map(f => (
+                        <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={displayConfig.fileProperties[f.id as keyof typeof displayConfig.fileProperties]}
+                            onChange={(e) => setDisplayConfig({
+                              ...displayConfig,
+                              fileProperties: { ...displayConfig.fileProperties, [f.id]: e.target.checked }
+                            })}
+                          />
+                          {f.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COLUNA 2: VISUAL & MÍDIA */}
+                  <div className="config-group">
+                    <h4 style={{ fontSize: 12, color: '#ff6db3', marginBottom: 10, borderBottom: '1px solid #333' }}>🎨 VISUAL & MÍDIA</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {[
+                        { id: 'showThermalData', label: '🔥 Dados Térmicos' },
+                        { id: 'showUVLayer', label: '💡 Camada UV' },
+                        { id: 'showFilterOverlay', label: '🎨 Overlay de Filtro' },
+                        { id: 'showVideoPlayer', label: '🎬 Player de Vídeo' },
+                        { id: 'showAudioPlayer', label: '🔊 Player de Áudio' },
+                        { id: 'showHiddenAudio', label: '🎵 Áudio Oculto' },
+                        { id: 'showChatData', label: '💬 Conversas de Chat' },
+                      ].map(f => (
+                        <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={displayConfig.media[f.id as keyof typeof displayConfig.media]}
+                            onChange={(e) => setDisplayConfig({
+                              ...displayConfig,
+                              media: { ...displayConfig.media, [f.id]: e.target.checked }
+                            })}
+                          />
+                          {f.label}
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* CIFRAS & FRAGMENTOS */}
+                    <h4 style={{ fontSize: 12, color: '#a366ff', marginTop: 15, marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 CIFRAS & FRAGMENTOS</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {[
+                        { id: 'showShredded', label: '📃 Documentos Fragmentados' },
+                        { id: 'showCipherText', label: '🔐 Texto Cifrado' },
+                        { id: 'showRealText', label: '⚠️ Texto Real', warn: true },
+                        { id: 'showShredConfig', label: '✂️ Config de Fragmentação' },
+                      ].map(f => (
+                        <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={displayConfig.cipher[f.id as keyof typeof displayConfig.cipher]}
+                            onChange={(e) => setDisplayConfig({
+                              ...displayConfig,
+                              cipher: { ...displayConfig.cipher, [f.id]: e.target.checked }
+                            })}
+                          />
+                          {f.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COLUNA 3: MEGA CLUE */}
+                  {evidenceType === 'mega_clue' && (
+                    <div className="config-group">
+                      <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔮 MEGA-PISTA</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {[
+                          { id: 'showHints', label: '💡 Dicas' },
+                          { id: 'showAnswer', label: '⚠️ Resposta', warn: true },
+                          { id: 'showProgress', label: '📊 Progresso' },
+                        ].map(f => (
+                          <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={displayConfig.megaClue[f.id as keyof typeof displayConfig.megaClue]}
+                              onChange={(e) => setDisplayConfig({
+                                ...displayConfig,
+                                megaClue: { ...displayConfig.megaClue, [f.id]: e.target.checked }
+                              })}
+                            />
+                            {f.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           </div>
 
       </div>
@@ -2207,9 +3620,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             baseImageUrl={previewUrl}
                    mode="uv"
                    onSave={(file) => {
-                     if (glitchFocusedImagePreview) { try { URL.revokeObjectURL(glitchFocusedImagePreview); } catch(e){} }
-                     setGlitchFocusedImageFile(file);
-                     setGlitchFocusedImagePreview(URL.createObjectURL(file));
+                     // Revoke previous URL
+                     revokeUrl(glitchFocusedImagePreview);
+                     
+                     // Create and register new URL
+                     const newUrl = createAndRegisterBlobUrl(file);
+                     if (newUrl) {
+                        setGlitchFocusedImageFile(file);
+                        setGlitchFocusedImagePreview(newUrl);
+                     }
                      setShowGlitchDesigner(false);
                    }}
                    onClose={() => setShowGlitchDesigner(false)}
@@ -2227,13 +3646,25 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   onClose={() => setShowAudioForgeFor(null)}
                   onSave={(file) => {
                      if (showAudioForgeFor === 'hidden') {
-                        setAudioHidden(file);
-                        try { if (audioHiddenPreview) URL.revokeObjectURL(audioHiddenPreview); } catch(e){}
-                        setAudioHiddenPreview(URL.createObjectURL(file));
+                        // Revoke previous URL
+                        revokeUrl(audioHiddenPreview);
+                        
+                        // Create and register new URL
+                        const newUrl = createAndRegisterBlobUrl(file);
+                        if (newUrl) {
+                           setAudioHidden(file);
+                           setAudioHiddenPreview(newUrl);
+                        }
                      } else {
-                        setAudioBase(file);
-                        try { if (audioBasePreview) URL.revokeObjectURL(audioBasePreview); } catch(e){}
-                        setAudioBasePreview(URL.createObjectURL(file));
+                        // Revoke previous URL
+                        revokeUrl(audioBasePreview);
+                        
+                        // Create and register new URL
+                        const newUrl = createAndRegisterBlobUrl(file);
+                        if (newUrl) {
+                           setAudioBase(file);
+                           setAudioBasePreview(newUrl);
+                        }
                      }
                      setShowAudioForgeFor(null);
                   }}
@@ -2254,6 +3685,39 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                setShowThermalEditor(false);
             }}
             onClose={() => setShowThermalEditor(false)}
+         />
+      )}
+
+      {showForensicEditor && (imgFile || forensicBaseImage) && (
+         <ForensicChannelEditor
+            baseImageUrl={forensicBasePreview || previewUrl}
+            initialConfig={forensicConfig || undefined}
+            onSave={async (compositeBlob, config) => {
+               // Save the composite image
+               const file = new File([compositeBlob], 'forensic_composite.png', { type: 'image/png' });
+               
+               // Revoke previous URLs
+               revokeUrl(previewUrl);
+               revokeUrl(forensicResultPreview);
+               
+               // Create new preview URLs
+               const newPreviewUrl = createAndRegisterBlobUrl(file);
+               const newResultUrl = createAndRegisterBlobUrl(compositeBlob as any);
+               
+               if (newPreviewUrl && newResultUrl) {
+                  // Update image file
+                  setImgFile(file);
+                  setPreviewUrl(newPreviewUrl);
+                  
+                  // Update forensic result
+                  setForensicResultPreview(newResultUrl);
+                  setForensicConfig(config);
+                  setForensicTargetChannel(config.targetChannel);
+               }
+               
+               setShowForensicEditor(false);
+            }}
+            onClose={() => setShowForensicEditor(false)}
          />
       )}
 

@@ -41,7 +41,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
         .order('created_at', { ascending: false });
       setCases(data || []);
       // navigate to new case
-      if (created?.id) navigate(`/case/${String(created.id).split(':')[0]}`);
+      if (created && created.id) navigate(`/case/${String(created.id).split(':')[0]}`);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('createInvestigation failed', e);

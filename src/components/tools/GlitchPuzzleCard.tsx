@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { updateInvestigationCard } from '../../api/investigations';
 import { addCollectedCode, isPuzzleSolved } from '../../utils/codeTracking';
+import { useDisplayConfig } from '../../config/displayConfig';
 import GlitchImageEngine from './GlitchImageEngine';
+import { validateGlitchPuzzleData } from '../../utils/validationSchemas';
 import './GlitchPuzzleCard.css';
 
 interface GlitchPuzzleData {
@@ -28,6 +30,7 @@ interface Props {
   puzzleData: GlitchPuzzleData;
   onSolved?: (rewardCode: string) => void;
   onClose?: () => void;
+  isGameMaster?: boolean;
 }
 
 export default function GlitchPuzzleCard({ 
@@ -35,8 +38,10 @@ export default function GlitchPuzzleCard({
   investigationId, 
   puzzleData, 
   onSolved,
-  onClose 
+  onClose,
+  isGameMaster = false
 }: Props) {
+  const displayConfig = useDisplayConfig();
   const [solved, setSolved] = useState(puzzleData.solved);
   const [showReveal, setShowReveal] = useState(false);
   const [playerFreq, setPlayerFreq] = useState(puzzleData.start_frequency ?? 17);
@@ -47,6 +52,21 @@ export default function GlitchPuzzleCard({
     '[LOG]: Decodificador iniciado. Ajuste os sliders até estabilizar a imagem.'
   ]);
   const [justSolved, setJustSolved] = useState(false);
+  
+  // ✅ EDIÇÃO DE PUZZLE - Estados de Edição
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedMetadata, setEditedMetadata] = useState<any>({
+    correct_frequency: puzzleData.correct_frequency,
+    correct_shift: puzzleData.correct_shift,
+    correct_chromatic: puzzleData.correct_chromatic,
+    start_frequency: puzzleData.start_frequency ?? 17,
+    start_shift: puzzleData.start_shift ?? 33,
+    start_chromatic: puzzleData.start_chromatic ?? 12,
+    hint: puzzleData.hint || '',
+    access_instructions: puzzleData.access_instructions || '',
+    difficulty: 'hard', // default
+  });
+  
   const baseImage = puzzleData.original_image_url || puzzleData.corrupted_image_url;
   const solvedOnceRef = useRef(false);
 
@@ -126,17 +146,312 @@ export default function GlitchPuzzleCard({
     }
   };
 
+  // ✅ EDIÇÃO DE PUZZLE - Handler para atualizar campos editados
+  const handleEditChange = (field: string, value: any) => {
+    setEditedMetadata((prev: any) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // ✅ EDIÇÃO DE PUZZLE - Handler para salvar mudanças
+  const handleSaveChanges = async () => {
+    setLoading(true);
+    try {
+      // Preparar dados para validação
+      const glitchData = {
+        frequency: editedMetadata.correct_frequency,
+        shift: editedMetadata.correct_shift,
+        chromatic_aberration: editedMetadata.correct_chromatic,
+        initial_frequency: editedMetadata.start_frequency,
+        initial_shift: editedMetadata.start_shift,
+        initial_chromatic_aberration: editedMetadata.start_chromatic,
+        hint: editedMetadata.hint,
+        access_instructions: editedMetadata.access_instructions,
+      };
+
+      // ✅ Validação com Zod
+      const validation = validateGlitchPuzzleData(glitchData);
+      if (!validation.success) {
+        const errorMsg = (validation.errors || []).join('\n');
+        alert(`❌ Erro de validação:\n${errorMsg}`);
+        setLoading(false);
+        return;
+      }
+
+      // Preparar objeto de atualização
+      const updates = {
+        metadata: {
+          glitch_puzzle: {
+            ...puzzleData,
+            correct_frequency: editedMetadata.correct_frequency,
+            correct_shift: editedMetadata.correct_shift,
+            correct_chromatic: editedMetadata.correct_chromatic,
+            start_frequency: editedMetadata.start_frequency,
+            start_shift: editedMetadata.start_shift,
+            start_chromatic: editedMetadata.start_chromatic,
+            hint: editedMetadata.hint,
+            access_instructions: editedMetadata.access_instructions,
+          },
+        },
+      };
+
+      // ✅ Chamada Supabase para atualizar o card
+      await updateInvestigationCard(cardId, updates);
+      
+      console.log('📝 Mudanças salvas:', updates);
+      alert('✅ Configurações salvas com sucesso!');
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Erro ao salvar mudanças:', err);
+      alert('❌ Erro ao salvar mudanças. Veja o console.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (solved && showReveal) {
     return (
       <div className="glitch-puzzle-card" data-puzzle-id={cardId}>
         <div className="puzzle-header">
           <h2>{puzzleData.title}</h2>
-          {onClose && (
-            <button className="close-btn" onClick={onClose}>✖</button>
-          )}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* ✅ Botão de Edição - Visível apenas para GMs */}
+            {isGameMaster && (
+              <button 
+                className="btn-edit" 
+                onClick={() => setIsEditing(true)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  background: 'rgba(0, 150, 136, 0.8)',
+                  border: '1px solid rgba(0, 200, 180, 0.3)',
+                  color: '#00ff88',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                title="Editar configurações do puzzle"
+              >
+                ⚙️ Editar
+              </button>
+            )}
+            {onClose && (
+              <button className="close-btn" onClick={onClose}>✖</button>
+            )}
+          </div>
         </div>
 
         <div className="puzzle-content solved">
+          {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+          {isEditing && (
+            <div style={{
+              background: 'rgba(0, 150, 136, 0.05)',
+              border: '2px solid rgba(0, 200, 180, 0.3)',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '16px',
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR CONFIGURAÇÕES</h3>
+              
+              {/* Parâmetros Corretos */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PARÂMETROS CORRETOS</h4>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Frequência Correta: <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_frequency}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_frequency}
+                    onChange={(e) => handleEditChange('correct_frequency', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_frequency}
+                    onChange={(e) => handleEditChange('correct_frequency', parseInt(e.target.value))}
+                    style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Deslocamento Correto (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_shift}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_shift}
+                    onChange={(e) => handleEditChange('correct_shift', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_shift}
+                    onChange={(e) => handleEditChange('correct_shift', parseInt(e.target.value))}
+                    style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Cromática Correta (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_chromatic}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_chromatic}
+                    onChange={(e) => handleEditChange('correct_chromatic', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.correct_chromatic}
+                    onChange={(e) => handleEditChange('correct_chromatic', parseInt(e.target.value))}
+                    style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Parâmetros Iniciais */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PARÂMETROS INICIAIS (Dificuldade)</h4>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Frequência Inicial: <strong style={{ color: '#00ff88' }}>{editedMetadata.start_frequency}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.start_frequency}
+                    onChange={(e) => handleEditChange('start_frequency', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Deslocamento Inicial (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.start_shift}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.start_shift}
+                    onChange={(e) => handleEditChange('start_shift', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                    Cromática Inicial (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.start_chromatic}</strong>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editedMetadata.start_chromatic}
+                    onChange={(e) => handleEditChange('start_chromatic', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Textos */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>TEXTOS E PISTAS</h4>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>Instruções de Acesso</label>
+                  <textarea
+                    value={editedMetadata.access_instructions}
+                    onChange={(e) => handleEditChange('access_instructions', e.target.value)}
+                    placeholder="Ex: Sintonize a frequência do sinal portador..."
+                    style={{
+                      width: '100%',
+                      minHeight: '60px',
+                      padding: '8px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(0,200,180,0.2)',
+                      color: '#0f0',
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      borderRadius: '4px',
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>Dica</label>
+                  <textarea
+                    value={editedMetadata.hint}
+                    onChange={(e) => handleEditChange('hint', e.target.value)}
+                    placeholder="Ex: Preste atenção ao padrão de interferência..."
+                    style={{
+                      width: '100%',
+                      minHeight: '60px',
+                      padding: '8px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(0,200,180,0.2)',
+                      color: '#0f0',
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      borderRadius: '4px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '11px',
+                    background: 'rgba(200, 50, 50, 0.8)',
+                    border: '1px solid rgba(255, 100, 100, 0.3)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  disabled={loading}
+                >
+                  ✕ Cancelar
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 150, 136, 0.8)',
+                    border: '1px solid rgba(0, 200, 180, 0.3)',
+                    color: '#00ff88',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  disabled={loading}
+                >
+                  💾 Salvar Mudanças
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="success-banner">
             <div className="success-animation">✓</div>
             <div className="success-text">DECODIFICAÇÃO COMPLETA</div>
@@ -157,23 +472,25 @@ export default function GlitchPuzzleCard({
             </p>
           </div>
 
-          <div className="solution-display">
-            <h3>⚙️ PARÂMETROS QUE FUNCIONARAM:</h3>
-            <div className="params-grid">
-              <div className="param-item">
-                <div className="param-label">Frequência</div>
-                <div className="param-value">{puzzleData.correct_frequency}</div>
-              </div>
-              <div className="param-item">
-                <div className="param-label">Deslocamento</div>
-                <div className="param-value">{puzzleData.correct_shift}%</div>
-              </div>
-              <div className="param-item">
-                <div className="param-label">Cromática</div>
-                <div className="param-value">{puzzleData.correct_chromatic}%</div>
+          {displayConfig.puzzle.showCorrectAnswerWhenSolved && (
+            <div className="solution-display">
+              <h3>⚙️ PARÂMETROS QUE FUNCIONARAM:</h3>
+              <div className="params-grid">
+                <div className="param-item">
+                  <div className="param-label">Frequência</div>
+                  <div className="param-value">{puzzleData.correct_frequency}</div>
+                </div>
+                <div className="param-item">
+                  <div className="param-label">Deslocamento</div>
+                  <div className="param-value">{puzzleData.correct_shift}%</div>
+                </div>
+                <div className="param-item">
+                  <div className="param-label">Cromática</div>
+                  <div className="param-value">{puzzleData.correct_chromatic}%</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {onClose && (
             <button className="btn btn-close" onClick={onClose}>
@@ -189,13 +506,244 @@ export default function GlitchPuzzleCard({
     <div className="glitch-puzzle-card" data-puzzle-id={cardId}>
       <div className="puzzle-header">
         <h2>{puzzleData.title}</h2>
-        {onClose && (
-          <button className="close-btn" onClick={onClose}>✖</button>
-        )}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* ✅ Botão de Edição - Visível apenas para GMs */}
+          {isGameMaster && (
+            <button 
+              className="btn-edit" 
+              onClick={() => setIsEditing(true)}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                background: 'rgba(0, 150, 136, 0.8)',
+                border: '1px solid rgba(0, 200, 180, 0.3)',
+                color: '#00ff88',
+                cursor: 'pointer',
+                borderRadius: '4px',
+              }}
+              title="Editar configurações do puzzle"
+            >
+              ⚙️ Editar
+            </button>
+          )}
+          {onClose && (
+            <button className="close-btn" onClick={onClose}>✖</button>
+          )}
+        </div>
       </div>
 
       <div className="puzzle-content">
         <p className="puzzle-description">{puzzleData.description}</p>
+
+        {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+        {isEditing && (
+          <div style={{
+            background: 'rgba(0, 150, 136, 0.05)',
+            border: '2px solid rgba(0, 200, 180, 0.3)',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR CONFIGURAÇÕES</h3>
+            
+            {/* Parâmetros Corretos */}
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PARÂMETROS CORRETOS</h4>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Frequência Correta: <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_frequency}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_frequency}
+                  onChange={(e) => handleEditChange('correct_frequency', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_frequency}
+                  onChange={(e) => handleEditChange('correct_frequency', parseInt(e.target.value))}
+                  style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Deslocamento Correto (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_shift}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_shift}
+                  onChange={(e) => handleEditChange('correct_shift', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_shift}
+                  onChange={(e) => handleEditChange('correct_shift', parseInt(e.target.value))}
+                  style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Cromática Correta (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.correct_chromatic}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_chromatic}
+                  onChange={(e) => handleEditChange('correct_chromatic', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.correct_chromatic}
+                  onChange={(e) => handleEditChange('correct_chromatic', parseInt(e.target.value))}
+                  style={{ marginTop: '4px', width: '100%', padding: '4px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,200,180,0.2)', color: '#0f0', fontSize: '11px' }}
+                />
+              </div>
+            </div>
+
+            {/* Parâmetros Iniciais */}
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PARÂMETROS INICIAIS (Dificuldade)</h4>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Frequência Inicial: <strong style={{ color: '#00ff88' }}>{editedMetadata.start_frequency}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.start_frequency}
+                  onChange={(e) => handleEditChange('start_frequency', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Deslocamento Inicial (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.start_shift}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.start_shift}
+                  onChange={(e) => handleEditChange('start_shift', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>
+                  Cromática Inicial (%): <strong style={{ color: '#00ff88' }}>{editedMetadata.start_chromatic}</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={editedMetadata.start_chromatic}
+                  onChange={(e) => handleEditChange('start_chromatic', parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            {/* Textos */}
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>TEXTOS E PISTAS</h4>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>Instruções de Acesso</label>
+                <textarea
+                  value={editedMetadata.access_instructions}
+                  onChange={(e) => handleEditChange('access_instructions', e.target.value)}
+                  placeholder="Ex: Sintonize a frequência do sinal portador..."
+                  style={{
+                    width: '100%',
+                    minHeight: '60px',
+                    padding: '8px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(0,200,180,0.2)',
+                    color: '#0f0',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    borderRadius: '4px',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#aaa' }}>Dica</label>
+                <textarea
+                  value={editedMetadata.hint}
+                  onChange={(e) => handleEditChange('hint', e.target.value)}
+                  placeholder="Ex: Preste atenção ao padrão de interferência..."
+                  style={{
+                    width: '100%',
+                    minHeight: '60px',
+                    padding: '8px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(0,200,180,0.2)',
+                    color: '#0f0',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    borderRadius: '4px',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setIsEditing(false)}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '11px',
+                  background: 'rgba(200, 50, 50, 0.8)',
+                  border: '1px solid rgba(255, 100, 100, 0.3)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                disabled={loading}
+              >
+                ✕ Cancelar
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '11px',
+                  background: 'rgba(0, 150, 136, 0.8)',
+                  border: '1px solid rgba(0, 200, 180, 0.3)',
+                  color: '#00ff88',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                disabled={loading}
+              >
+                💾 Salvar Mudanças
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="glitch-visual">
           <div className="glitch-visual-header">
@@ -228,7 +776,7 @@ export default function GlitchPuzzleCard({
         </div>
 
         {/* Como jogar */}
-        {puzzleData.access_instructions && (
+        {displayConfig.puzzle.showAccessInstructions && puzzleData.access_instructions && (
           <div className="hint-section">
             <div className="hint-title">▶ COMO ACESSAR</div>
             <div className="hint-text">{puzzleData.access_instructions}</div>
@@ -236,7 +784,7 @@ export default function GlitchPuzzleCard({
         )}
 
         {/* Dica */}
-        {puzzleData.hint && (
+        {displayConfig.puzzle.showHint && puzzleData.hint && (
           <div className="hint-section">
             <div className="hint-title">💡 DICA:</div>
             <div className="hint-text">{puzzleData.hint}</div>
@@ -299,13 +847,17 @@ export default function GlitchPuzzleCard({
         <div className="terminal">
           <div className="terminal-header">LOG DE RECUPERAÇÃO</div>
           <div className="terminal-body">
-            {logs.map((line, idx) => (
-              <div key={`${line}-${idx}`} className="terminal-line">{line}</div>
-            ))}
+            {displayConfig.puzzle.showLogs ? (
+              logs.map((line, idx) => (
+                <div key={`${line}-${idx}`} className="terminal-line">{line}</div>
+              ))
+            ) : (
+              <div className="terminal-line" style={{color:'#888'}}>🔒 Logs escondidos</div>
+            )}
           </div>
         </div>
 
-        {solved && (
+        {solved && displayConfig.puzzle.showRewardCode && (
           <div className="reward-section">
             <h3>🎁 CÓDIGO DE RECOMPENSA DESBLOQUEADO</h3>
             <div className="reward-code">

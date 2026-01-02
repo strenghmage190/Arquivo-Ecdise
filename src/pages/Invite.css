@@ -1,30 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+  --ordo-red: #b33030;
+  --ordo-red-glow: rgba(180, 50, 50, 0.4);
+  --ordo-gold: #daceaa;
+  --nexus-blue: #00f3ff;
+}
+
 .invite-screen {
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0a0a;
+  background-color: #050505;
   color: #fff;
-  font-family: 'Courier New', monospace;
+  font-family: 'Share Tech Mono', monospace;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Efeito de Scanlines CRT */
+.invite-screen::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Vinheta */
+.invite-screen::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: radial-gradient(circle, rgba(18, 16, 16, 0) 40%, rgba(0, 0, 0, 0.7) 100%);
+  z-index: 11;
+  pointer-events: none;
+}
+
 .invite-card {
   text-align: center;
-  padding: 40px;
-  border: 1px solid #b33;
-  max-width: 500px;
+  padding: 50px 40px;
+  max-width: 520px;
+  width: 90%;
+  background: rgba(10, 10, 12, 0.9);
+  border: 1px solid rgba(187, 51, 51, 0.3);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 1), inset 0 0 20px rgba(187, 51, 51, 0.05);
+  position: relative;
+  z-index: 20;
+  border-radius: 4px;
 }
-.invite-from {
-  color: #b33;
-  font-weight: bold;
-  letter-spacing: 2px;
+
+/* Cantoneiras decorativas */
+.invite-card::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 30px;
+  height: 30px;
+  border-top: 3px solid var(--ordo-red);
+  border-left: 3px solid var(--ordo-red);
 }
-.btn-accept {
-  background: #b33;
+
+.invite-card::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 30px;
+  height: 30px;
+  border-bottom: 3px solid var(--ordo-red);
+  border-right: 3px solid var(--ordo-red);
+}
+
+.invite-card h1 {
+  font-size: 1.8rem;
+  margin: 20px 0;
+  letter-spacing: 4px;
+  text-transform: uppercase;
   color: #fff;
-  border: none;
-  padding: 15px 30px;
+  text-shadow: 2px 2px 0px var(--ordo-red);
+  animation: flicker 4s infinite;
+}
+
+.invite-card p {
+  color: #8fa;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 20px 0;
+}
+
+.invite-from {
+  display: inline-block;
+  color: var(--ordo-gold);
+  font-weight: bold;
+  letter-spacing: 3px;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border: 1px solid var(--ordo-gold);
+  background: rgba(218, 206, 170, 0.05);
+  margin-bottom: 10px;
+}
+
+.btn-accept {
+  background: transparent;
+  color: var(--ordo-red);
+  border: 1px solid var(--ordo-red);
+  padding: 18px 40px;
   font-weight: bold;
   cursor: pointer;
-  font-size: 18px;
-  margin-top: 20px;
+  font-size: 16px;
+  margin-top: 25px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  transition: all 0.4s;
+  font-family: inherit;
+}
+
+.btn-accept:hover {
+  background: var(--ordo-red);
+  color: #fff;
+  box-shadow: 0 0 20px var(--ordo-red-glow);
+  letter-spacing: 6px;
+}
+
+.invite-card button:not(.btn-accept) {
+  background: transparent;
+  color: #8fa;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 24px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.invite-card button:not(.btn-accept):hover {
+  border-color: var(--nexus-blue);
+  color: var(--nexus-blue);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+}
+
+@keyframes flicker {
+  0% { opacity: 1; }
+  3% { opacity: 0.4; }
+  6% { opacity: 1; }
+  7% { opacity: 0.4; }
+  8% { opacity: 1; }
+  9% { opacity: 0.4; }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  85% { opacity: 0.8; }
+  100% { opacity: 1; }
 }

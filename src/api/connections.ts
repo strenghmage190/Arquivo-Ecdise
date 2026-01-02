@@ -54,9 +54,9 @@ export async function createInvestigationConnection(payload: { investigation_id:
     metadata: meta,
     created_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigation_connections')
-    .insert([insertPayload])
+    .insert([insertPayload] as any)
     .select()
     .single();
   if (error) throw error;

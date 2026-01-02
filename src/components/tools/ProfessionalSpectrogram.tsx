@@ -53,155 +53,146 @@ const getMagmaColor = (value: number) => {
 
 type Props = {
   audioUrl: string | null;
+  spectrogramHeight?: number;
+  horizontalScale?: number;
+  maxFreq?: number;
+  minDB?: number;
+  colorScheme?: 'hot' | 'cyan' | 'magma';
+  width: number;
+  analysisRequestId?: number;
+  onAnalysisComplete?: (result: { optimalMaxFreq: number; optimalMinDB: number }) => void;
 };
 
-type ColorScheme = 'hot' | 'cyan' | 'magma';
-
-export default function ProfessionalSpectrogram({ audioUrl }: Props) {
+export default function ProfessionalSpectrogram({
+  audioUrl,
+  spectrogramHeight = 350,
+  horizontalScale = 1,
+  maxFreq = 10000,
+  minDB = -60,
+  colorScheme = 'hot',
+  width,
+  analysisRequestId = 0,
+  onAnalysisComplete,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker | null>(null);
   const [status, setStatus] = useState('Sem áudio');
   const [progress, setProgress] = useState(0);
-  const [maxFreq, setMaxFreq] = useState(10000);
-  const [minDB, setMinDB] = useState(-60);
-  const [colorScheme, setColorScheme] = useState<ColorScheme>('hot');
-  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
-    if (!audioUrl || !canvasRef.current) {
+    if (!audioUrl || !canvasRef.current || width <= 0) {
       setStatus('Sem áudio');
+      setProgress(0);
       return;
     }
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
 
-    let cancelled = false;
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const canvas = canvasRef.current;
+    const canvasWidth = Math.max(1, Math.floor(width * horizontalScale));
+    const canvasHeight = spectrogramHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.width = `${width}px`;
 
-    const process = async () => {
-      try {
-        setStatus('Carregando...');
-        setProgress(0);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#05080a';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        const response = await fetch(audioUrl);
-        const arrayBuffer = await response.arrayBuffer();
+    const worker = new Worker(new URL('../../workers/spectrogram.worker.ts', import.meta.url));
+    workerRef.current = worker;
 
-        if (cancelled) return;
-        setStatus('Decodificando...');
-
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-        if (cancelled) return;
-        setStatus('Processando...');
-
-        const canvas = canvasRef.current!;
-        const channelData = audioBuffer.getChannelData(0);
-        const sampleRate = audioBuffer.sampleRate;
-        
-        // Calcula dimensões
-        const numFrames = Math.floor((channelData.length - FFT_SIZE) / HOP_SIZE);
-        const width = Math.min(numFrames, 2000);
-        const height = 512;
-        
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
-        if (!ctx) return;
-
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, width, height);
-
-        // OfflineContext para análise
-        const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, sampleRate);
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        
-        const analyser = offlineCtx.createAnalyser();
-        analyser.fftSize = FFT_SIZE;
-        analyser.smoothingTimeConstant = 0;
-        analyser.minDecibels = minDB;
-        analyser.maxDecibels = 0;
-        
-        source.connect(analyser);
-        analyser.connect(offlineCtx.destination);
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        const allFrames: Uint8Array[] = [];
-
-        // ScriptProcessor para capturar frames
-        const processor = offlineCtx.createScriptProcessor(HOP_SIZE, 1, 1);
-        analyser.connect(processor);
-        processor.connect(offlineCtx.destination);
-
-        processor.onaudioprocess = () => {
-          analyser.getByteFrequencyData(dataArray);
-          allFrames.push(new Uint8Array(dataArray));
-          
-          const percent = (allFrames.length / numFrames) * 100;
-          setProgress(Math.min(percent, 95));
-        };
-
-        source.start(0);
-        await offlineCtx.startRendering();
-
-        if (cancelled) return;
-        setStatus('Renderizando...');
-        setProgress(98);
-
-        // Renderiza
-        const imageData = ctx.createImageData(width, height);
-        const pixels = imageData.data;
-
-        const maxFreqBin = Math.floor((maxFreq / (sampleRate / 2)) * bufferLength);
-
-        for (let x = 0; x < width; x++) {
-          const frameIdx = Math.floor((x / width) * allFrames.length);
-          const frame = allFrames[frameIdx];
-          
-          if (!frame) continue;
-
-          for (let y = 0; y < height; y++) {
-            const freqRatio = 1 - (y / height);
-            const binIdx = Math.floor(freqRatio * maxFreqBin);
-            const value = frame[Math.max(0, Math.min(binIdx, bufferLength - 1))] || 0;
-            
-            const colorFunc = colorScheme === 'hot' ? getHotColor : 
-                             colorScheme === 'cyan' ? getCyanColor : getMagmaColor;
-            const [r, g, b] = colorFunc(value);
-            
-            const idx = (y * width + x) * 4;
-            pixels[idx] = r;
-            pixels[idx + 1] = g;
-            pixels[idx + 2] = b;
-            pixels[idx + 3] = 255;
-          }
+    const handleMessage = (event: MessageEvent<any>) => {
+      const { type, payload } = event.data;
+      switch (type) {
+        case 'analysisComplete':
+          if (onAnalysisComplete) onAnalysisComplete(payload);
+          break;
+        case 'progress':
+          setProgress(payload);
+          setStatus(payload < 100 ? `Processando... ${Math.floor(payload)}%` : '✓ Completo');
+          break;
+        case 'chunkProcessed': {
+          const { chunkData, startFrame, frames, totalFrames, height } = payload as {
+            chunkData: ArrayBuffer;
+            startFrame: number;
+            frames: number;
+            totalFrames: number;
+            height: number;
+          };
+          const imageData = new ImageData(new Uint8ClampedArray(chunkData), frames, height);
+          createImageBitmap(imageData).then((bitmap) => {
+            const x = (startFrame / totalFrames) * canvasWidth;
+            const drawWidth = Math.max(1, (frames / totalFrames) * canvasWidth);
+            ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+          });
+          break;
         }
-
-        ctx.putImageData(imageData, 0, 0);
-        setStatus('✓ Completo');
-        setProgress(100);
-
-      } catch (err) {
-        console.error(err);
-        setStatus('Erro');
+        case 'complete':
+          setStatus('✓ Completo');
+          setProgress(100);
+          break;
+        default:
+          break;
       }
     };
 
-    process();
+    worker.addEventListener('message', handleMessage);
+
+    const start = async () => {
+      try {
+        setStatus('Carregando áudio...');
+        setProgress(0);
+
+        const response = await fetch(audioUrl);
+        if (!response.ok) throw new Error(`Falha no fetch: ${response.statusText}`);
+
+        const arrayBuffer = await response.arrayBuffer();
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const channelCopy = new Float32Array(audioBuffer.getChannelData(0));
+        const transfer = channelCopy.buffer;
+
+        worker.postMessage(
+          {
+            channelData: transfer,
+            sampleRate: audioBuffer.sampleRate,
+            fftSize: FFT_SIZE,
+            hopSize: HOP_SIZE,
+            minDB,
+            maxFreq,
+            colorScheme,
+          },
+          [transfer]
+        );
+
+        audioCtx.close().catch(() => undefined);
+      } catch (err) {
+        console.error('[Spectrogram] Erro:', err);
+        setStatus(`Erro: ${err instanceof Error ? err.message : 'Desconhecido'}`);
+      }
+    };
+
+    start();
 
     return () => {
-      cancelled = true;
-      audioCtx.close();
+      worker.removeEventListener('message', handleMessage);
+      worker.terminate();
+      workerRef.current = null;
     };
-  }, [audioUrl, maxFreq, minDB, colorScheme]);
+  }, [audioUrl, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, analysisRequestId, onAnalysisComplete]);
 
   return (
     <div className="spectrogram-container">
-      {/* Header */}
       <div className="spectrogram-header">
         <div className="header-content">
           <div className="header-left">
-            <div className="status-indicator"></div>
-            <h3 className="header-title">ANALISADOR ESPECTRAL</h3>
+            <div className="status-indicator" />
+            <h3 className="header-title">ANÁLISE ESPECTRAL DE SINAL</h3>
           </div>
           <div className="header-right">
             <span className="status-text">{status}</span>
@@ -210,8 +201,6 @@ export default function ProfessionalSpectrogram({ audioUrl }: Props) {
             )}
           </div>
         </div>
-        
-        {/* Progress Bar */}
         {progress > 0 && progress < 100 && (
           <div className="progress-bar-container">
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
@@ -219,116 +208,20 @@ export default function ProfessionalSpectrogram({ audioUrl }: Props) {
         )}
       </div>
 
-      {/* Controls */}
-      <div className="spectrogram-controls">
-        <div className="control-grid">
-          <div className="control-group">
-            <div className="control-label-row">
-              <label className="control-label">FREQ MÁXIMA</label>
-              <span className="control-value">{(maxFreq/1000).toFixed(1)} kHz</span>
-            </div>
-            <input 
-              type="range" 
-              min={2000} 
-              max={22000} 
-              step={500}
-              value={maxFreq} 
-              onChange={e => setMaxFreq(Number(e.target.value))}
-              className="control-slider"
-            />
-          </div>
-
-          <div className="control-group">
-            <div className="control-label-row">
-              <label className="control-label">SENSIBILIDADE</label>
-              <span className="control-value">{minDB} dB</span>
-            </div>
-            <input 
-              type="range" 
-              min={-100} 
-              max={-20} 
-              step={5}
-              value={minDB} 
-              onChange={e => setMinDB(Number(e.target.value))}
-              className="control-slider"
-            />
-          </div>
-
-          <div className="control-group">
-            <div className="control-label-row">
-              <label className="control-label">PALETA DE CORES</label>
-            </div>
-            <div className="color-scheme-buttons">
-              <button 
-                className={`color-btn ${colorScheme === 'hot' ? 'active hot' : ''}`}
-                onClick={() => setColorScheme('hot')}
-              >
-                🔥 Hot
-              </button>
-              <button 
-                className={`color-btn ${colorScheme === 'cyan' ? 'active cyan' : ''}`}
-                onClick={() => setColorScheme('cyan')}
-              >
-                💠 Cyan
-              </button>
-              <button 
-                className={`color-btn ${colorScheme === 'magma' ? 'active magma' : ''}`}
-                onClick={() => setColorScheme('magma')}
-              >
-                🌋 Magma
-              </button>
-            </div>
-          </div>
-
-          <div className="control-group">
-            <div className="control-label-row">
-              <label className="control-label">ZOOM</label>
-              <span className="control-value">{zoom.toFixed(1)}x</span>
-            </div>
-            <input 
-              type="range" 
-              min={0.5} 
-              max={4} 
-              step={0.1}
-              value={zoom} 
-              onChange={e => setZoom(Number(e.target.value))}
-              className="control-slider"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Canvas Container */}
       <div className="canvas-container">
-        <div className="canvas-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-          <canvas 
-            ref={canvasRef}
-            className="spectrogram-canvas"
-          />
-        </div>
-        
-        {/* Frequency markers */}
+        <canvas ref={canvasRef} className="spectrogram-canvas" />
         <div className="frequency-markers">
-          <div className="freq-marker" style={{top: '10%'}}>
-            {(maxFreq * 0.9 / 1000).toFixed(0)}k
-          </div>
-          <div className="freq-marker" style={{top: '25%'}}>
-            {(maxFreq * 0.75 / 1000).toFixed(0)}k
-          </div>
-          <div className="freq-marker highlight" style={{top: '50%'}}>
-            {(maxFreq * 0.5 / 1000).toFixed(0)}k ← Texto aqui
-          </div>
-          <div className="freq-marker" style={{top: '75%'}}>
-            {(maxFreq * 0.25 / 1000).toFixed(0)}k
-          </div>
+          {[0.9, 0.75, 0.5, 0.25].map((p) => (
+            <div key={p} className="freq-marker" style={{ top: `${(1 - p) * 100}%` }}>
+              {(maxFreq * p / 1000).toFixed(1)}k
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Footer Info */}
       <div className="spectrogram-footer">
         <p className="footer-text">
-          💡 <strong>Dica:</strong> Texto esteganográfico aparece como padrões geométricos entre 2-8 kHz. 
-          Ajuste sensibilidade e paleta de cores para melhor visualização.
+          💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
         </p>
       </div>
     </div>

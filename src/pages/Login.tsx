@@ -72,8 +72,10 @@ export default function Login() {
   return (
     <div className="login-terminal">
       <div className="terminal-box">
-        <h1 className="ordo-logo">ORDO REALITAS</h1>
-        <div className="scan-line"></div>
+        <h1 className="ordo-logo">
+          Ordo Realitas
+          <span>Terminal de Acesso C.R.I.S. // Ver 4.0.2</span>
+        </h1>
         
         <p style={{ textAlign: 'center', marginBottom: 20, color: '#888' }}>
           {isSignUp ? 'RECRUTAMENTO DE NOVOS AGENTES' : 'ACESSO AO SISTEMA'}

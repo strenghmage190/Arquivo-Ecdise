@@ -1,7 +1,113 @@
-.invite-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 15000; display:flex; align-items:center; justify-content:center; }
-.invite-modal { width: 500px; background: #111; padding: 20px; border: 1px solid #444; color: #ddd; }
-.invite-form { display: flex; gap: 10px; margin: 20px 0; }
-.invite-form input { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 8px; }
-.invite-form button { background: #b33; color: #fff; border: none; padding: 8px 16px; cursor: pointer; }
-.members-list h3 { font-size: 12px; color: #666; }
-.member-item { padding: 6px 0; border-top: 1px dashed #222; color: #ccc; }
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+  --nexus-blue: #00f3ff;
+  --nexus-blue-glow: rgba(0, 243, 255, 0.4);
+  --ordo-red: #b33030;
+  --ordo-red-glow: rgba(180, 50, 50, 0.4);
+}
+
+.invite-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 10, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 15000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invite-modal {
+  width: 520px;
+  background: linear-gradient(180deg, rgba(5, 8, 10, 0.92), rgba(5, 8, 10, 0.85));
+  padding: 30px;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  color: #e9fcff;
+  border-radius: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.1);
+  position: relative;
+}
+
+.invite-modal h2 {
+  color: var(--nexus-blue);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+.invite-form {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  align-items: stretch;
+}
+
+.invite-form input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  color: #e9fcff;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.invite-form input:focus {
+  outline: none;
+  border-color: var(--nexus-blue);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.2);
+}
+
+.invite-form button {
+  background: transparent;
+  color: var(--ordo-red);
+  border: 1px solid var(--ordo-red);
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.invite-form button:hover {
+  background: var(--ordo-red);
+  color: #fff;
+  box-shadow: 0 0 15px var(--ordo-red-glow);
+}
+
+.members-list {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 243, 255, 0.1);
+}
+
+.members-list h3 {
+  font-size: 11px;
+  color: var(--nexus-blue);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.member-item {
+  padding: 10px 0;
+  border-top: 1px dashed rgba(0, 243, 255, 0.15);
+  color: rgba(233, 252, 255, 0.8);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-item::before {
+  content: '▸';
+  color: var(--nexus-blue);
+}

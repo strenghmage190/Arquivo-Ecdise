@@ -19,7 +19,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 0 0 10px rgba(198, 164, 95, 0.5);
-  font-family: 'Courier New', monospace;
+  font-family: 'Share Tech Mono', monospace;
 }
 
 .glitch-maker-input-group {
@@ -51,7 +51,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: 'Share Tech Mono', monospace;
 }
 
 .slider-control .param-value {

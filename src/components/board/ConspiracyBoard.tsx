@@ -17,63 +17,66 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [remoteUpdate, setRemoteUpdate] = useState<any | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false); // ✅ Mutex para saves
-  const lastSaveTimeRef = useRef<number>(0); // ✅ Debouncing para saves
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // ✅ TODOS os Refs declarados no topo do componente (fora de useEffect)
+  const lastSaveTimeRef = useRef<number>(0);
+  const pendingUpdateRef = useRef<any>(null);
+  const isInitialLoad = useRef(true);
+  
+  // ✅ Ref para o contêiner do Excalidraw
+  const excalidrawContainerRef = useRef<HTMLDivElement>(null);
 
-  // load initial board and cards
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      const [boardData, cardsData] = await Promise.all([fetchConspiracyBoard(investigationId), fetchCards(investigationId)]);
-      if (!mounted) return;
-      setCards(cardsData || []);
-      // If excalidraw API is already available, hydrate immediately.
-      if (boardData && excalidrawAPI && excalidrawAPI.updateScene) {
-        try {
-          excalidrawAPI.updateScene({ elements: boardData.elements || [], appState: boardData.appState || {} });
-          if (boardData.files && excalidrawAPI.addFiles) {
-            const files: any[] = Object.values(boardData.files || {});
-            if (files.length) excalidrawAPI.addFiles(files);
-          }
-        } catch (e) {
-          console.warn('failed to hydrate excalidraw scene', e);
-        }
-      }
-      setLoading(false);
-    }
-    load();
-    return () => { mounted = false; };
-  }, [investigationId]);
-
-  // If excalidraw API becomes available after initial load, ensure we hydrate the scene
-  useEffect(() => {
+  // Função auxiliar para aplicar dados ao Excalidraw com segurança
+  const applyToScene = (data: any) => {
     if (!excalidrawAPI) return;
+    try {
+      excalidrawAPI.updateScene({
+        elements: data.elements || [],
+        appState: data.appState || {},
+        commitToHistory: true
+      });
+      if (data.files) {
+        const filesArray = Object.values(data.files || {});
+        if (filesArray.length) excalidrawAPI.addFiles(filesArray);
+      }
+    } catch (e) {
+      console.error("[ConspiracyBoard] Erro ao aplicar cena:", e);
+    }
+  };
+
+  // 1. Carregar dados iniciais (Cards e Board)
+  useEffect(() => {
     let mounted = true;
-    async function hydrate() {
+    async function loadInitialData() {
+      setLoading(true);
       try {
-        const boardData = await fetchConspiracyBoard(investigationId);
-        if (!mounted || !boardData) return;
-        try {
-          excalidrawAPI.updateScene({ elements: boardData.elements || [], appState: boardData.appState || {} });
-          if (boardData.files && excalidrawAPI.addFiles) {
-            const files: any[] = Object.values(boardData.files || {});
-            if (files.length) excalidrawAPI.addFiles(files);
-          }
-        } catch (e) {
-          if (mounted) console.warn('failed to hydrate excalidraw scene on api ready', e);
+        const [boardData, cardsData] = await Promise.all([
+          fetchConspiracyBoard(investigationId),
+          fetchCards(investigationId)
+        ]);
+        
+        if (!mounted) return;
+        setCards(cardsData || []);
+
+        if (boardData && excalidrawAPI) {
+          applyToScene(boardData);
         }
       } catch (e) {
-        if (mounted) console.error('hydrate conspiracy board failed', e);
+        console.error("[ConspiracyBoard] Erro ao carregar dados iniciais:", e);
       }
+      if (mounted) setLoading(false);
     }
-    hydrate();
+    
+    if (excalidrawAPI) loadInitialData();
     return () => { mounted = false; };
-  }, [excalidrawAPI, investigationId]);
+  }, [investigationId, excalidrawAPI]);
 
-  // ✅ Realtime subscription com debouncing através do EventManager
+  // 2. Realtime: Ouvir mudanças de outros jogadores
   useEffect(() => {
+    let mounted = true;
     const channel = supabase
-      .channel(`conspiracy-updates-${investigationId}`)
+      .channel(`board:${investigationId}`)
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
@@ -83,61 +86,46 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
         if (!mounted) return;
         const newData = payload.new?.conspiracy_board_data;
         if (!newData) return;
-        
+
         console.log('[ConspiracyBoard] Remote update received');
         
-        // ✅ Usa EventManager com debouncing para evitar updates excessivos
-        eventManager.emitDebounced('conspiracy:remote-update', 500, newData);
+        // Se estamos salvando no momento, enfileiramos a atualização
+        if (isSyncing) {
+          console.warn('[ConspiracyBoard] Sync em progresso, enfileirando atualização');
+          pendingUpdateRef.current = newData;
+        } else {
+          setRemoteUpdate(newData);
+        }
       })
       .subscribe();
-
-    // ✅ Handler centralizado para updates remotos com queue fallback
-    const pendingUpdateRef = React.useRef<any>(null);
-    
-    const unsubscribe = eventManager.on('conspiracy:remote-update', (newData: any) => {
-      if (!mounted) return;
-      if (isSyncing) {
-        console.warn('[ConspiracyBoard] Sync in progress, queuing update');
-        pendingUpdateRef.current = newData;
-        return;
-      }
-      setRemoteUpdate(newData);
-    });
-    
-    // Processa fila de updates pendentes após sync finalizar
-    if (!isSyncing && pendingUpdateRef.current && mounted) {
-      const pending = pendingUpdateRef.current;
-      pendingUpdateRef.current = null;
-      setRemoteUpdate(pending);
-    }
 
     return () => {
       mounted = false;
       try { supabase.removeChannel(channel); } catch (e) {}
-      unsubscribe();
     };
   }, [investigationId, isSyncing]);
 
-  // ✅ Save com mutex e debouncing
+  // 3. Salvar o Quadro para o Grupo
   const handleSave = async () => {
     if (!excalidrawAPI) {
-      console.warn('[ConspiracyBoard] Cannot save: excalidrawAPI not ready');
+      console.warn('[ConspiracyBoard] Não é possível salvar: excalidrawAPI não está pronto');
       return;
     }
 
     // Mutex: previne saves simultâneos
     if (isSyncing) {
-      console.warn('[ConspiracyBoard] Save already in progress');
+      console.warn('[ConspiracyBoard] Save já em progresso');
       alert('Sincronização já em andamento...');
       return;
     }
 
-    // Debouncing: previne saves muito frequentes (mínimo 2s entre saves)
+    // Debouncing: previne saves muito frequentes (mínimo 3s entre saves)
     const now = Date.now();
     const timeSinceLastSave = now - lastSaveTimeRef.current;
-    if (timeSinceLastSave < 2000) {
-      console.warn('[ConspiracyBoard] Save too frequent, please wait');
-      alert(`Aguarde ${Math.ceil((2000 - timeSinceLastSave) / 1000)}s antes de sincronizar novamente`);
+    if (timeSinceLastSave < 3000) {
+      const waitTime = Math.ceil((3000 - timeSinceLastSave) / 1000);
+      console.warn('[ConspiracyBoard] Save muito frequente, aguarde', waitTime, 's');
+      alert(`Aguarde ${waitTime}s antes de sincronizar novamente`);
       return;
     }
 
@@ -145,146 +133,253 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
     lastSaveTimeRef.current = now;
 
     try {
-      const elements = excalidrawAPI.getSceneElements ? excalidrawAPI.getSceneElements() : [];
-      const appState = excalidrawAPI.getAppState ? excalidrawAPI.getAppState() : {};
-      const files = excalidrawAPI.getFiles ? excalidrawAPI.getFiles() : {};
+      const elements = excalidrawAPI.getSceneElements?.() || [];
+      const appState = excalidrawAPI.getAppState?.() || {};
+      const files = excalidrawAPI.getFiles?.() || {};
       
-      console.log('[ConspiracyBoard] Saving...', { elements: elements.length, files: Object.keys(files).length });
+      console.log('[ConspiracyBoard] Salvando...', { elements: elements.length, files: Object.keys(files).length });
       await saveConspiracyBoard(investigationId, elements, appState, files);
       
-      console.log('[ConspiracyBoard] Save successful');
+      console.log('[ConspiracyBoard] Save bem-sucedido');
       alert('Quadro Sincronizado com o Grupo!');
+      
+      // Se algo chegou enquanto salvávamos, limpa o aviso
+      pendingUpdateRef.current = null;
     } catch (e) {
-      console.error('[ConspiracyBoard] Save failed:', e);
+      console.error('[ConspiracyBoard] Save falhou:', e);
       alert('Falha ao sincronizar quadro. Veja console.');
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // ✅ Apply remote update com validação
+  // 4. Aplicar atualização remota (o jogador escolhe quando)
   const applyRemoteUpdate = () => {
-    if (!remoteUpdate || !excalidrawAPI || !excalidrawAPI.updateScene) {
-      console.warn('[ConspiracyBoard] Cannot apply remote update: missing data or API');
+    if (!remoteUpdate || !excalidrawAPI) {
+      console.warn('[ConspiracyBoard] Não é possível aplicar atualização remota: dados ausentes');
       return;
     }
 
     if (isSyncing) {
-      console.warn('[ConspiracyBoard] Cannot apply update: sync in progress');
+      console.warn('[ConspiracyBoard] Não é possível aplicar update: sync em progresso');
       alert('Aguarde a sincronização atual terminar');
       return;
     }
 
     try {
-      console.log('[ConspiracyBoard] Applying remote update');
-      excalidrawAPI.updateScene({ 
-        elements: remoteUpdate.elements || [], 
-        appState: remoteUpdate.appState || {} 
-      });
+      console.log('[ConspiracyBoard] Aplicando atualização remota');
+      applyToScene(remoteUpdate);
       setRemoteUpdate(null);
-      alert('Atualização remota aplicada.');
+      alert('Atualização remota aplicada com sucesso.');
     } catch (e) { 
-      console.error('[ConspiracyBoard] Apply remote update failed:', e); 
+      console.error('[ConspiracyBoard] Erro ao aplicar atualização remota:', e); 
       alert('Falha ao aplicar atualização remota. Veja console.'); 
     }
   };
 
   const dismissRemoteUpdate = () => { setRemoteUpdate(null); };
 
+  // 🎯 NOVA: Gera ícones de metadados (emojis) para o rodapé do card
+  const createMetadataIcons = (card: any, cardX: number, cardY: number, cardHeight: number, groupId: string): any[] => {
+    const icons: any[] = [];
+    const baseY = cardY + cardHeight - 25; // Posição do rodapé
+    let iconX = cardX + 10; // Primeira ícone a 10px do lado esquerdo
+    const iconSpacing = 25; // Espaçamento entre ícones
+    
+    // Mapeamento de metadados para emojis
+    const metadata = [
+      { key: 'locked', emoji: '🔒', label: 'Bloqueado' },
+      { key: 'hasAudio', emoji: '🔊', label: 'Áudio' },
+      { key: 'hasVideo', emoji: '📹', label: 'Vídeo' },
+      { key: 'hasUV', emoji: '🔦', label: 'UV' },
+      { key: 'hasRecord', emoji: '📄', label: 'Registro' },
+      { key: 'hasChat', emoji: '💬', label: 'Chat' },
+      { key: 'hasExternalLink', emoji: '🔗', label: 'Link' },
+    ];
+    
+    // Iteração pelos metadados e criação de elementos de texto para ícones
+    metadata.forEach((meta) => {
+      if (card[meta.key]) {
+        const iconElement = {
+          id: `icon-${meta.key}-${groupId}`,
+          type: "text" as const,
+          x: iconX,
+          y: baseY,
+          width: 20,
+          height: 20,
+          text: meta.emoji,
+          fontSize: 14,
+          fontFamily: 1,
+          textAlign: "center" as const,
+          verticalAlign: "middle" as const,
+          strokeColor: "#ffd700",
+          seed: Math.floor(Math.random() * 100000),
+          versionNonce: Math.floor(Math.random() * 1000000),
+        };
+        icons.push(iconElement);
+        iconX += iconSpacing; // Próxima ícone
+      }
+    });
+    
+    return icons;
+  };
+
+  // 5. Inserir Carta como Pista no Quadro (✅ VERSÃO FINAL: Design Melhorado + Metadados)
+  // 5. Inserir Carta como Pista no Quadro (VERSÃO DEFINITIVA E ESTÁVEL)
   const handleInsertCard = async (card: any) => {
-    if (!excalidrawAPI) return;
+    if (!excalidrawAPI || !excalidrawContainerRef.current) {
+      console.warn('[ConspiracyBoard] Abortando: API ou container do Excalidraw não estão prontos.');
+      return;
+    }
+
     try {
+      // PASSO 1: Cálculo e Validação Robusta de Coordenadas
+      const rect = excalidrawContainerRef.current.getBoundingClientRect();
+      let canvasWidth = rect.width;
+      let canvasHeight = rect.height;
+      if (!canvasWidth || canvasWidth <= 0 || !canvasHeight || canvasHeight <= 0) {
+        const sidebarWidth = sidebarOpen ? 280 : 50; 
+        canvasWidth = window.innerWidth - sidebarWidth;
+        canvasHeight = window.innerHeight - 60;
+      }
+
+      const appState = excalidrawAPI.getAppState?.() || {};
+      // ✅ Proteção crucial contra divisão por zero
+      const zoomValue = appState.zoom?.value || 1; 
+      if (zoomValue === 0) {
+        console.error("[ConspiracyBoard] FATAL: Zoom é zero, abortando para prevenir NaN.");
+        return;
+      }
+
+      const centerX = (canvasWidth / 2 - (appState.scrollX || 0)) / zoomValue;
+      const centerY = (canvasHeight / 2 - (appState.scrollY || 0)) / zoomValue;
+
+      // ✅ Validação final: se as coordenadas forem inválidas por qualquer motivo, não prosseguir.
+      if (isNaN(centerX) || isNaN(centerY)) {
+        console.error(`[ConspiracyBoard] FATAL: Coordenadas calculadas são NaN. centerX: ${centerX}, centerY: ${centerY}. Abortando.`);
+        alert("Erro ao calcular a posição da pista. Tente mover o quadro e adicionar novamente.");
+        return;
+      }
+
+      // PASSO 2: Geração de IDs Únicos
+      const uniqueGroupId = `card-group-${card.id}-${Date.now()}`;
+      let elementsToAdd: any[] = [];
+
+      // --- LÓGICA PARA INSERÇÃO DE IMAGEM ---
       if (card.image_url) {
         const resp = await fetch(card.image_url);
         const blob = await resp.blob();
         const reader = new FileReader();
+        
         reader.onloadend = () => {
           const base64data = reader.result as string;
-          const fileId = `card-${card.id}`;
-          const filesMap: Record<string, any> = {
-            [fileId]: { id: fileId, dataURL: base64data, mimeType: blob.type, created: Date.now() },
-          };
-          const currElements = excalidrawAPI.getSceneElements?.() || [];
-          const appState = excalidrawAPI.getAppState?.() || {};
-          const sx = appState.scrollX || 0;
-          const sy = appState.scrollY || 0;
-          const imageElement = {
-            type: 'image', fileId, status: 'saved', x: sx + 100, y: sy + 100, width: 240, height: 160,
-          };
-          const textElement = { type: 'text', x: imageElement.x, y: imageElement.y + imageElement.height + 8, text: card.title || '', fontSize: 18 };
+          const fileId = `card-img-file-${uniqueGroupId}`;
+          const fileData = { id: fileId, dataURL: base64data, mimeType: blob.type, created: Date.now() };
+          
+          const imageElement = { id: `img-${uniqueGroupId}`, type: "image", fileId, x: centerX - 125, y: centerY - 150, width: 250, height: 180, strokeColor: "#00f3ff", backgroundColor: "transparent", strokeWidth: 2, strokeStyle: "solid", groupIds: [uniqueGroupId] };
+          const textElement = { id: `txt-${uniqueGroupId}`, type: "text", x: centerX - 125, y: centerY + 40, width: 250, text: (card.title || "PISTA VISUAL").toUpperCase(), fontSize: 20, fontFamily: 2, textAlign: "center", verticalAlign: "top", color: "#e0e0e0", groupIds: [uniqueGroupId] };
 
-            try {
-              // merge with existing files and update scene atomically
-              const existingFiles = excalidrawAPI.getFiles?.() || {};
-              excalidrawAPI.updateScene({ elements: [...currElements, imageElement, textElement], files: { ...existingFiles, ...filesMap } });
-            } catch (e) { console.warn('updateScene failed', e); }
+          // Adiciona os arquivos primeiro
+          excalidrawAPI.addFiles([fileData]);
+          // ✅ USA a API correta e segura para adicionar elementos
+          excalidrawAPI.addElements([imageElement, textElement]);
         };
         reader.readAsDataURL(blob);
+        
+      // --- LÓGICA PARA PISTAS DE TEXTO ---
       } else {
-        const textElement = { type: 'text', x: (excalidrawAPI.getAppState?.().scrollX || 0) + 200, y: (excalidrawAPI.getAppState?.().scrollY || 0) + 200, text: `PISTA: ${card.title}\n\n${card.description_public || ''}`, fontSize: 18 };
-        try { excalidrawAPI.updateScene({ elements: [...(excalidrawAPI.getSceneElements?.() || []), textElement] }); } catch (e) { console.warn('updateScene failed', e); }
+        const cardWidth = 320, cardHeight = 220;
+        const cardX = centerX - cardWidth / 2, cardY = centerY - cardHeight / 2;
+
+        // Fundo e Header
+        elementsToAdd.push({ id: `bg-${uniqueGroupId}`, type: "rectangle", x: cardX, y: cardY, width: cardWidth, height: cardHeight, strokeColor: "rgba(0, 243, 255, 0.5)", backgroundColor: "rgba(10, 15, 20, 0.95)", fillStyle: "solid", strokeWidth: 1, strokeStyle: "solid", roundness: { type: 1, value: 8 }, groupIds: [uniqueGroupId] });
+        elementsToAdd.push({ id: `hdr-${uniqueGroupId}`, type: "rectangle", x: cardX, y: cardY, width: cardWidth, height: 40, strokeColor: "transparent", backgroundColor: "rgba(0, 243, 255, 0.1)", fillStyle: "solid", strokeWidth: 0, roundness: { type: 1, value: 8 }, groupIds: [uniqueGroupId] });
+        
+        // Título e Descrição com fallbacks
+        elementsToAdd.push({ id: `title-${uniqueGroupId}`, type: "text", x: cardX + 15, y: cardY + 10, width: cardWidth - 30, text: (card.title || "RELATÓRIO DE PISTA").toUpperCase(), fontSize: 18, fontFamily: 2, textAlign: "center", verticalAlign: "middle", color: "#e0e0e0", groupIds: [uniqueGroupId] });
+        elementsToAdd.push({ id: `desc-${uniqueGroupId}`, type: "text", x: cardX + 15, y: cardY + 55, width: cardWidth - 30, height: cardHeight - 100, text: card.description_public || "Nenhum detalhe adicional fornecido.", fontSize: 16, fontFamily: 1, textAlign: "left", verticalAlign: "top", color: "#cccccc", groupIds: [uniqueGroupId] });
+        
+        // Rodapé e Ícones
+        elementsToAdd.push({ id: `line-${uniqueGroupId}`, type: "line", x: cardX, y: cardY + cardHeight - 40, width: cardWidth, height: 0, strokeColor: "rgba(0, 243, 255, 0.2)", strokeWidth: 1, strokeStyle: "solid", points: [[0, 0], [cardWidth, 0]], groupIds: [uniqueGroupId] });
+        const metadataIcons = createMetadataIcons(card, cardX, cardY, cardHeight, uniqueGroupId);
+        elementsToAdd.push(...metadataIcons);
+
+        // ✅ USA a API correta e segura para adicionar elementos
+        excalidrawAPI.addElements(elementsToAdd);
       }
+
+      console.log(`[ConspiracyBoard] Inserção de '${card.title}' enviada para a API via addElements.`);
+
     } catch (e) {
-      console.error('Erro ao inserir imagem', e);
+      console.error('[ConspiracyBoard] Erro fatal ao inserir carta:', e);
+      alert('Ocorreu um erro ao inserir a pista. Veja o console para detalhes.');
     }
   };
 
   return (
     <div className="conspiracy-layout">
+      {/* Sidebar de Pistas */}
       <div className={`clue-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header"><h3>ARQUIVO DO CASO</h3><button onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? '<<' : '>>'}</button></div>
+        <div className="sidebar-header">
+          <h3>ARQUIVO DO CASO</h3>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? '❮' : '❯'}
+          </button>
+        </div>
         {sidebarOpen && (
           <div className="clue-list-scroll">
-            <p className="hint">Clique para adicionar ao quadro</p>
-            {cards.map(c => (
-              <div key={c.id} className="mini-card" onClick={() => handleInsertCard(c)}>
-                {c.image_url ? <div className="mini-thumb" style={{ backgroundImage: `url(${c.image_url})` }} /> : <div className="mini-thumb no-img">📝</div>}
-                <span>{c.title}</span>
-              </div>
-            ))}
+            {cards.length === 0 ? (
+              <p className="hint">Nenhuma pista disponível</p>
+            ) : (
+              <>
+                <p className="hint">Clique para adicionar ao quadro</p>
+                {cards.map(c => (
+                  <div key={c.id} className="mini-card" onClick={() => handleInsertCard(c)} title={c.title}>
+                    {c.image_url ? (
+                      <div className="mini-thumb" style={{ backgroundImage: `url(${c.image_url})` }} />
+                    ) : (
+                      <div className="mini-thumb no-img">📄</div>
+                    )}
+                    <span>{c.title}</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
 
       <div className="board-wrapper">
         <div className="conspiracy-header">
-          <h2>QUADRO DE CONSPIRAÇÃO COMPARTILHADO</h2>
+          <h2>QUADRO DE INVESTIGAÇÃO COMPARTILHADO</h2>
           <div className="actions">
-               <button 
-                 className="btn-save-conspiracy" 
-                 onClick={handleSave}
-                 disabled={isSyncing}
-                 style={{ opacity: isSyncing ? 0.6 : 1 }}
-               >
-                 {isSyncing ? '⏳ SINCRONIZANDO...' : '💾 SINCRONIZAR COM GRUPO'}
-               </button>
-               <button className="btn-save-conspiracy" onClick={() => {
-                 // export current scene as JSON
-                 const elements = excalidrawAPI?.getSceneElements?.() || [];
-                 const appState = excalidrawAPI?.getAppState?.() || {};
-                 const files = excalidrawAPI?.getFiles?.() || {};
-                 const bundle = { elements, appState, files };
-                 const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-                 const url = URL.createObjectURL(blob);
-                 const a = document.createElement('a');
-                 a.href = url; a.download = `conspiracy_${investigationId}_${Date.now()}.json`;
-                 document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-               }}>⬇️ EXPORTAR JSON</button>
-               <button className="btn-close-conspiracy" onClick={onClose}>SAIR</button>
+            {remoteUpdate && (
+              <button className="btn-update-available" onClick={applyRemoteUpdate}>
+                🔔 NOVA ATUALIZAÇÃO DISPONÍVEL
+              </button>
+            )}
+            <button 
+              className="btn-save-conspiracy" 
+              onClick={handleSave}
+              disabled={isSyncing}
+              style={{ opacity: isSyncing ? 0.6 : 1 }}
+            >
+              {isSyncing ? '⏳ SINCRONIZANDO...' : '💾 SINCRONIZAR COM GRUPO'}
+            </button>
+            <button className="btn-close-conspiracy" onClick={onClose}>SAIR</button>
           </div>
         </div>
-        {remoteUpdate && (
-          <div style={{ padding: 8, background: '#2a2a2a', color: '#ffd', display: 'flex', gap: 8, alignItems: 'center' }}>
-            <div>Há uma atualização remota disponível.</div>
-            <button onClick={applyRemoteUpdate} style={{ marginLeft: 8 }}>Aplicar</button>
-            <button onClick={dismissRemoteUpdate} style={{ marginLeft: 8 }}>Ignorar</button>
-          </div>
-        )}
-        <div className="excalidraw-container">
-          <Excalidraw excalidrawAPI={(api) => setExcalidrawAPI(api)} theme="dark">
+
+        <div className="excalidraw-container" ref={excalidrawContainerRef}>
+          <Excalidraw 
+            excalidrawAPI={(api) => setExcalidrawAPI(api)} 
+            theme="dark"
+          >
             <WelcomeScreen>
               <WelcomeScreen.Center>
-                <WelcomeScreen.Center.Heading>Arraste pistas do arquivo para conectar os pontos.</WelcomeScreen.Center.Heading>
+                <WelcomeScreen.Center.Heading>
+                  Arraste as pistas do arquivo para conectar os fatos.
+                </WelcomeScreen.Center.Heading>
               </WelcomeScreen.Center>
             </WelcomeScreen>
             <MainMenu>

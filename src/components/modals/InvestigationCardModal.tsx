@@ -4,6 +4,7 @@ import useEscapeClose from './useEscapeClose';
 import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
+import { validateMegaClueData } from '../../utils/validationSchemas';
 import GlitchPuzzleCard from '../tools/GlitchPuzzleCard';
 import MegaClueCard from '../tools/MegaClueCard';
 import { modalManager } from '../../utils/ModalManager';
@@ -35,6 +36,14 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [chatMessages, setChatMessages] = useState<any[] | null>(null);
   const [newMsgText, setNewMsgText] = useState('');
   const [newMsgSender, setNewMsgSender] = useState<'me'|'them'>('them');
+  // Mega-clue editing states
+  const [isEditingMegaClue, setIsEditingMegaClue] = useState(false);
+  const [tempMegaClueData, setTempMegaClueData] = useState<any>(null);
+  const [newRequiredId, setNewRequiredId] = useState('');
+  // Media layer states (UV/Thermal)
+  const [layerUploading, setLayerUploading] = useState<'uv' | 'thermal' | null>(null);
+  const [uvUrl, setUvUrl] = useState<string | null>((existing as any)?.metadata?.uv_layer?.url || null);
+  const [thermalUrl, setThermalUrl] = useState<string | null>((existing as any)?.metadata?.thermal_layer?.url || null);
 
   useEscapeClose(open, onClose);
   
@@ -78,6 +87,81 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const addInsight = () => setInsights((s) => [...s, emptyInsight()]);
   const updateInsight = (idx: number, patch: Partial<InvestigationCardInsight>) => setInsights((s) => s.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
   const removeInsight = (idx: number) => setInsights((s) => s.filter((_, i) => i !== idx));
+
+  // Mega-clue editing handlers
+  const initializeMegaClueEdit = () => {
+    const metadata = (existing as any)?.metadata;
+    const megaClueData = metadata?.mega_clue || {};
+    setTempMegaClueData({
+      final_truth_text: megaClueData.final_truth_text || '',
+      final_image_url: megaClueData.final_image_url || '',
+      required_puzzle_ids: Array.isArray(megaClueData.required_puzzle_ids) ? [...megaClueData.required_puzzle_ids] : [],
+    });
+    setIsEditingMegaClue(true);
+  };
+
+  const handleAddRequiredId = () => {
+    if (!newRequiredId.trim()) return;
+    setTempMegaClueData((prev: any) => ({
+      ...prev,
+      required_puzzle_ids: [...prev.required_puzzle_ids, newRequiredId.trim()],
+    }));
+    setNewRequiredId('');
+  };
+
+  const handleRemoveRequiredId = (index: number) => {
+    setTempMegaClueData((prev: any) => ({
+      ...prev,
+      required_puzzle_ids: prev.required_puzzle_ids.filter((_: string, i: number) => i !== index),
+    }));
+  };
+
+  const handleSaveMegaClueChanges = async () => {
+    if (!existing || !existing.id) return;
+    try {
+      // Preparar dados para validação
+      const megaClueData = {
+        final_truth_text: tempMegaClueData.final_truth_text,
+        final_image_url: tempMegaClueData.final_image_url,
+        required_puzzle_ids: tempMegaClueData.required_puzzle_ids,
+      };
+
+      // ✅ Validação com Zod
+      const validation = validateMegaClueData(megaClueData);
+      if (!validation.success) {
+        const errorMsg = (validation.errors || []).join('\n');
+        alert(`❌ Erro de validação:\n${errorMsg}`);
+        return;
+      }
+
+      const metadata = (existing as any)?.metadata || {};
+      const updates = {
+        metadata: {
+          ...metadata,
+          mega_clue: {
+            ...metadata.mega_clue,
+            final_truth_text: tempMegaClueData.final_truth_text,
+            final_image_url: tempMegaClueData.final_image_url,
+            required_puzzle_ids: tempMegaClueData.required_puzzle_ids,
+          },
+        },
+      };
+      await updateInvestigationCard(existing.id, updates);
+      setIsEditingMegaClue(false);
+      setTempMegaClueData(null);
+      setNewRequiredId('');
+      onSaved?.(existing);
+    } catch (error) {
+      console.error('Erro ao salvar alterações da Mega-Pista:', error);
+      alert('Erro ao salvar. Veja o console para detalhes.');
+    }
+  };
+
+  const handleCancelMegaClueEdit = () => {
+    setIsEditingMegaClue(false);
+    setTempMegaClueData(null);
+    setNewRequiredId('');
+  };
 
   const handleSave = async () => {
     const payload: any = {
@@ -162,6 +246,77 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     }
   };
 
+  // Handlers para upload de camadas UV/Térmica
+  const handleLayerUpload = async (layer: 'uv' | 'thermal', file: File) => {
+    const check = validateImageFile(file);
+    if (!check.ok) {
+      alert(check.reason);
+      return;
+    }
+
+    setLayerUploading(layer);
+    try {
+      const publicUrl = await uploadInvestigationImage(file, investigationId);
+      if (publicUrl) {
+        // Atualizar metadata com a URL da camada
+        const metadata = (existing as any)?.metadata || {};
+        const layerKey = layer === 'uv' ? 'uv_layer' : 'thermal_layer';
+        
+        const updates = {
+          metadata: {
+            ...metadata,
+            [layerKey]: { url: publicUrl, uploaded_at: new Date().toISOString() },
+          },
+        };
+
+        await updateInvestigationCard(existing.id, updates);
+        
+        if (layer === 'uv') {
+          setUvUrl(publicUrl);
+        } else {
+          setThermalUrl(publicUrl);
+        }
+        alert(`✅ Camada ${layer === 'uv' ? 'UV' : 'Térmica'} enviada com sucesso!`);
+      } else {
+        alert('Erro ao subir camada');
+      }
+    } catch (error) {
+      console.error(`Falha ao enviar camada ${layer}:`, error);
+      alert('Erro no upload: veja o console');
+    } finally {
+      setLayerUploading(null);
+    }
+  };
+
+  const handleRemoveLayer = async (layer: 'uv' | 'thermal') => {
+    if (!existing || !existing.id) return;
+    if (!confirm(`Tem certeza que deseja remover a camada ${layer === 'uv' ? 'UV' : 'Térmica'}?`)) return;
+
+    try {
+      const metadata = (existing as any)?.metadata || {};
+      const layerKey = layer === 'uv' ? 'uv_layer' : 'thermal_layer';
+      
+      const updates = {
+        metadata: {
+          ...metadata,
+          [layerKey]: null,
+        },
+      };
+
+      await updateInvestigationCard(existing.id, updates);
+      
+      if (layer === 'uv') {
+        setUvUrl(null);
+      } else {
+        setThermalUrl(null);
+      }
+      alert(`✅ Camada removida com sucesso!`);
+    } catch (error) {
+      console.error(`Falha ao remover camada ${layer}:`, error);
+      alert('Erro ao remover: veja o console');
+    }
+  };
+
   const handleDelete = async () => {
     if (!existing || !existing.id) return;
     if (!confirm('Tem certeza que deseja apagar esta pista?')) return;
@@ -195,6 +350,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             investigationId={investigationId}
             puzzleData={puzzleData}
             onClose={onClose}
+            isGameMaster={isGameMaster}
             onSolved={(rewardCode) => {
               console.log('Puzzle resolvido! Código:', rewardCode);
               onSaved?.(existing);
@@ -222,6 +378,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             finalTruthText={megaData.final_truth_text}
             collectedCodes={Array.isArray(megaData.collected_codes) ? megaData.collected_codes : []}
             metadata={metadata}
+            isGameMaster={isGameMaster}
             onRefresh={() => onSaved?.(existing)}
             onClose={onClose}
           />
@@ -283,6 +440,75 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                 )}
               </div>
             )}
+
+            {/* Mega-clue editor (only for game masters) */}
+            {isGameMaster && (existing as any)?.metadata?.mega_clue && (
+              <div style={{ marginTop: 12, borderTop: '1px solid #222', paddingTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong>🔐 Mega-Pista</strong>
+                  <button type="button" onClick={() => { if (isEditingMegaClue) handleCancelMegaClueEdit(); else initializeMegaClueEdit(); }} style={{ padding: '4px 8px' }}>{isEditingMegaClue ? 'Cancelar' : 'Editar'}</button>
+                </div>
+                {!isEditingMegaClue ? (
+                  <div style={{ fontSize: 13, color: '#ccc' }}>
+                    <div><strong>Texto da Verdade:</strong> {((existing as any)?.metadata?.mega_clue?.final_truth_text || 'Não definido').substring(0, 100)}{((existing as any)?.metadata?.mega_clue?.final_truth_text || '').length > 100 ? '...' : ''}</div>
+                    <div style={{ marginTop: 4 }}><strong>IDs Obrigatórios:</strong> {Array.isArray((existing as any)?.metadata?.mega_clue?.required_puzzle_ids) ? (existing as any)?.metadata?.mega_clue?.required_puzzle_ids.length : 0} puzzle(s)</div>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Texto da Verdade Final ({(tempMegaClueData?.final_truth_text || '').length}/2000)</label>
+                    <textarea
+                      value={tempMegaClueData?.final_truth_text || ''}
+                      onChange={(e) => {
+                        const text = e.target.value.substring(0, 2000);
+                        setTempMegaClueData((prev: any) => ({ ...prev, final_truth_text: text }));
+                      }}
+                      style={{ width: '100%', minHeight: 80, marginBottom: 8, padding: 8, border: '1px solid #444', borderRadius: 6, background: '#111', color: '#fff', fontSize: 13 }}
+                      placeholder="Escreva o texto final da verdade..."
+                    />
+                    
+                    <label style={{ display: 'block', marginBottom: 8 }}>URL da Imagem Final (opcional)</label>
+                    <input
+                      type="text"
+                      value={tempMegaClueData?.final_image_url || ''}
+                      onChange={(e) => setTempMegaClueData((prev: any) => ({ ...prev, final_image_url: e.target.value }))}
+                      style={{ width: '100%', marginBottom: 8, padding: '6px 8px', border: '1px solid #444', borderRadius: 6, background: '#111', color: '#fff', fontSize: 13 }}
+                      placeholder="https://..."
+                    />
+                    
+                    <label style={{ display: 'block', marginBottom: 8 }}><strong>IDs dos Puzzles Obrigatórios</strong></label>
+                    <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid #333', padding: 8, marginBottom: 8, borderRadius: 6, background: '#0a0a0a' }}>
+                      {(!tempMegaClueData?.required_puzzle_ids || tempMegaClueData.required_puzzle_ids.length === 0) ? (
+                        <div style={{ color: '#666', fontSize: 12 }}>Nenhum puzzle adicionado</div>
+                      ) : (
+                        tempMegaClueData.required_puzzle_ids.map((id: string, index: number) => (
+                          <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, padding: '6px', background: '#111', borderRadius: 4 }}>
+                            <span style={{ flex: 1, fontSize: 12, color: '#aaa', wordBreak: 'break-all' }}>{id}</span>
+                            <button type="button" onClick={() => handleRemoveRequiredId(index)} style={{ padding: '4px 8px', background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>🗑️ Remover</button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="text"
+                        value={newRequiredId}
+                        onChange={(e) => setNewRequiredId(e.target.value)}
+                        style={{ flex: 1, padding: '6px 8px', border: '1px solid #444', borderRadius: 6, background: '#111', color: '#fff', fontSize: 12 }}
+                        placeholder="Cole o UUID do puzzle..."
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddRequiredId(); }}
+                      />
+                      <button type="button" onClick={handleAddRequiredId} style={{ padding: '6px 10px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>➕ Adicionar</button>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={handleCancelMegaClueEdit} style={{ flex: 1, padding: '8px 12px', background: '#333', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                      <button type="button" onClick={handleSaveMegaClueChanges} style={{ flex: 1, padding: '8px 12px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✓ Salvar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div style={{ width: 320 }}>
             <label>Imagem (opcional)</label>
@@ -298,6 +524,123 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                 <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: 160, display: 'block' }} />
                 {imageDims && <div style={{ fontSize: 12, color: '#ccc' }}>Dimensões: {imageDims.w}x{imageDims.h}</div>}
               </div>
+            )}
+
+            {/* Media Layer Management (UV/Thermal) - Only for Game Masters in Edit Mode */}
+            {isGameMaster && (!existing || (existing as any)?.type === undefined || (existing as any)?.type === 'document') && (
+              <>
+                {/* UV Layer */}
+                <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #333' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span>📤 Camada UV (opcional)</span>
+                    {uvUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLayer('uv')}
+                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                      >
+                        🗑️ Remover
+                      </button>
+                    )}
+                  </label>
+                  {uvUrl ? (
+                    <div style={{ fontSize: 12, color: '#aaa' }}>
+                      ✅ Camada UV carregada
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e: any) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleLayerUpload('uv', file);
+                          };
+                          input.click();
+                        }}
+                        disabled={layerUploading === 'uv'}
+                        style={{ marginLeft: 8, padding: '4px 8px', fontSize: 12, background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                      >
+                        🔄 Substituir
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLayerUpload('uv', file);
+                        };
+                        input.click();
+                      }}
+                      disabled={layerUploading === 'uv'}
+                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                    >
+                      {layerUploading === 'uv' ? '⏳ Enviando...' : '⬆️ Fazer Upload'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Thermal Layer */}
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span>🌡️ Camada Térmica (opcional)</span>
+                    {thermalUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLayer('thermal')}
+                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                      >
+                        🗑️ Remover
+                      </button>
+                    )}
+                  </label>
+                  {thermalUrl ? (
+                    <div style={{ fontSize: 12, color: '#aaa' }}>
+                      ✅ Camada Térmica carregada
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e: any) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleLayerUpload('thermal', file);
+                          };
+                          input.click();
+                        }}
+                        disabled={layerUploading === 'thermal'}
+                        style={{ marginLeft: 8, padding: '4px 8px', fontSize: 12, background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                      >
+                        🔄 Substituir
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLayerUpload('thermal', file);
+                        };
+                        input.click();
+                      }}
+                      disabled={layerUploading === 'thermal'}
+                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                    >
+                      {layerUploading === 'thermal' ? '⏳ Enviando...' : '⬆️ Fazer Upload'}
+                    </button>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Status control */}

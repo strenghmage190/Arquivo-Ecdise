@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
 :root {
   --hacker-green: #0f0;
   --hacker-dim: #003300;
@@ -8,8 +10,6 @@
   --scanline-color: rgba(18, 16, 16, 0.5);
   --font-stack: 'Share Tech Mono', 'Courier New', monospace;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 .code-prompt-overlay {
   position: fixed;

@@ -1,0 +1,255 @@
+.signal-reconstructor {
+  background: rgba(5, 8, 10, 0.9);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  color: #00f3ff;
+  font-family: 'Share Tech Mono', monospace;
+  width: 100%;
+  max-width: 700px;
+  padding: 10px;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+  user-select: none;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 5px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #00f3ff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f3ff;
+}
+
+.terminal-title {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.system-stats {
+  font-size: 11px;
+  text-align: right;
+}
+
+.controls-panel {
+  display: flex;
+  gap: 20px;
+  background: #151518;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.freq-display {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 1;
+}
+
+.freq-display label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.freq-display input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.freq-display input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #00f3ff;
+  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f3ff;
+}
+
+.freq-display input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #00f3ff;
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 0 8px #00f3ff;
+}
+
+.freq-readout {
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 50px;
+  text-align: right;
+  color: #ff0000;
+}
+
+.freq-readout.locked {
+  color: #00f3ff;
+  animation: blink 0.5s infinite;
+}
+
+@keyframes blink { 
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; } 
+}
+
+.power-btn {
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.3s;
+}
+
+.power-btn:hover {
+  background: #333;
+  border-color: #555;
+}
+
+.power-btn.on {
+  background: #001a00;
+  border-color: #00f3ff;
+  color: #00f3ff;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.5);
+}
+
+.viewport {
+  position: relative;
+  height: 250px;
+  background: #000;
+  overflow: hidden;
+  border: 1px solid #222;
+  cursor: crosshair;
+}
+
+.viewport.scanning {
+  box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.1);
+}
+
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.noise-layer {
+  color: #224422;
+  z-index: 1;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.signal-layer {
+  color: #fff;
+  text-shadow: 0 0 10px #00f3ff;
+  z-index: 2;
+  pointer-events: none;
+  transition: filter 0.2s, opacity 0.2s;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.scan-reticle {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border: 2px solid #ff0000;
+  border-radius: 50%;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.2), 0 0 20px rgba(255, 0, 0, 0.4);
+  animation: pulse-reticle 0.6s infinite;
+}
+
+@keyframes pulse-reticle {
+  0%, 100% { 
+    box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.2), 0 0 20px rgba(255, 0, 0, 0.4);
+  }
+  50% { 
+    box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.1), 0 0 30px rgba(255, 0, 0, 0.6);
+  }
+}
+
+.scan-reticle[style*="borderColor: rgb(0, 255, 0)"] {
+  border-color: #00f3ff !important;
+  box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.3), 0 0 20px rgba(0, 243, 255, 0.5);
+}
+
+.reticle-label {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  white-space: nowrap;
+  letter-spacing: 1px;
+  background: #0a0a0c;
+  padding: 2px 6px;
+  border: 1px solid #333;
+}
+
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    linear-gradient(
+      0deg,
+      rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.3) 50%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.05),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.05)
+    );
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.terminal-footer {
+  font-size: 10px;
+  padding: 5px;
+  border-top: 1px solid #333;
+  color: #ff6666;
+  text-align: center;
+  letter-spacing: 1px;
+}

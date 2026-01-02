@@ -5,5 +5,5 @@ type Props = {
 };
 
 export default function UrlRealTimeSpectrogram({ audioUrl }: Props) {
-  return <ProfessionalSpectrogram audioUrl={audioUrl} />;
+  return <ProfessionalSpectrogram audioUrl={audioUrl} width={800} />;
 }

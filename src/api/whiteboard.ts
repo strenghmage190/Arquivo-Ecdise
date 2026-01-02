@@ -7,9 +7,9 @@ export async function saveConspiracyBoard(investigationId: string, elements: any
     try { const u = await supabase.auth.getUser(); userId = u.data.user?.id || null; } catch (e) { /* ignore */ }
     const payload = { elements, appState, files, _meta: { modified_by: userId, modified_at: new Date().toISOString() } };
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('investigations')
-      .update({ conspiracy_board_data: payload })
+      .update({ conspiracy_board_data: payload } as any)
       .eq('id', investigationId);
     if (error) console.error('Erro ao salvar quadro:', error);
     return { ok: !error, error };
@@ -21,7 +21,7 @@ export async function saveConspiracyBoard(investigationId: string, elements: any
 
 export async function fetchConspiracyBoard(investigationId: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('investigations')
       .select('conspiracy_board_data')
       .eq('id', investigationId)

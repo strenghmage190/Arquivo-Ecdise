@@ -45,7 +45,7 @@ export default function Home() {
     setCreating(true);
     try {
       const created = await createInvestigation(title, newDescription.trim() || undefined, coverUrl.trim() || undefined);
-      if (created?.id) {
+      if (created && created.id) {
         const newId = String(created.id).split(':')[0];
         setShowCreateModal(false);
         setNewTitle('');

@@ -33,7 +33,8 @@
   background: linear-gradient(180deg, #000000 0%, #05080a 100%);
   position: relative;
   min-height: 520px;
-  overflow: hidden;
+  max-height: calc(88vh - 160px);
+  overflow: auto;
   /* Sutil efeito grid Nexus */
   background-image:
     linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
@@ -394,9 +395,14 @@
 .inspect-file .phone-mockup,
 .inspect-file .chat-body {
   max-height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
-.inspect-file .phone-mockup .chat-body { overflow-y: auto; }
+.inspect-file .phone-mockup-wrapper {
+  padding: 8px;
+}
+.inspect-file .nexus-phone-mockup .chat-body { 
+  overflow-y: auto; 
+}
 
 /* Buttons/actions container should not push outside modal; allow wrapping inside its box */
 .inspect-header .actions { box-sizing: border-box; }

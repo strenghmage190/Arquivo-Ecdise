@@ -60,7 +60,7 @@ export default function InvitePage() {
     // Se não sou membro, continuo com o processo de inserção
     const { error } = await supabase
       .from('investigation_members')
-      .insert({ investigation_id: inviteInfo.investigation_id, user_id: user.id });
+      .insert({ investigation_id: inviteInfo.investigation_id, user_id: user.id } as any);
 
     if (error) {
       // se já existir (conflito), simplesmente redireciona sem mostrar erro

@@ -1,0 +1,213 @@
+/**
+ * DisplayConfigPanel.css
+ * Estilo para o painel de configuração de exibição
+ */
+
+.display-config-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 95%;
+  max-width: 600px;
+  max-height: 85vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(15, 52, 96, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  font-family: 'Arial', sans-serif;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+.panel-header {
+  background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+  border-bottom: 1px solid #0f3460;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #64b5ff;
+  text-shadow: 0 0 10px rgba(100, 181, 255, 0.3);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #888;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.config-section {
+  margin-bottom: 24px;
+}
+
+.config-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #64b5ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #0f3460;
+  padding-bottom: 8px;
+}
+
+.config-item {
+  margin-bottom: 12px;
+  padding: 10px;
+  background: rgba(15, 52, 96, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.config-item:hover {
+  background: rgba(15, 52, 96, 0.5);
+}
+
+.config-item.warning {
+  background: rgba(211, 47, 47, 0.1);
+  border-left: 3px solid #d32f2f;
+}
+
+.config-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.config-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #64b5ff;
+}
+
+.config-item small {
+  display: block;
+  margin-top: 4px;
+  margin-left: 24px;
+  font-size: 11px;
+  color: #999;
+}
+
+/* Scrollbar */
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: rgba(15, 52, 96, 0.2);
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(100, 181, 255, 0.5);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 181, 255, 0.7);
+}
+
+.panel-footer {
+  border-top: 1px solid #0f3460;
+  padding: 16px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saved-message {
+  text-align: center;
+  padding: 8px;
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.btn-reset {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: #fff;
+}
+
+.btn-reset:hover {
+  background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+  box-shadow: 0 0 15px rgba(255, 152, 0, 0.5);
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  color: #fff;
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+/* Mobile responsivo */
+@media (max-width: 600px) {
+  .display-config-panel {
+    width: 98%;
+    max-height: 90vh;
+  }
+
+  .panel-header h2 {
+    font-size: 16px;
+  }
+
+  .config-section h3 {
+    font-size: 12px;
+  }
+
+  .btn {
+    font-size: 11px;
+    padding: 8px;
+  }
+}

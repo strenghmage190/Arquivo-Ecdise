@@ -5,4 +5,5 @@ dist/
 .vscode/
 .DS_Store
 .gitignore
-sql
+sql/
+docs/

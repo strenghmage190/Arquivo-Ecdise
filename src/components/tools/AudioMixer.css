@@ -125,7 +125,7 @@
 }
 
 .time-display {
-  font-family: 'Courier New', monospace;
+  font-family: 'Share Tech Mono', monospace;
   font-size: 16px;
   font-weight: 700;
   color: var(--nexus-blue, #00f3ff);
@@ -258,7 +258,7 @@
 }
 
 .effect-value {
-  font-family: 'Courier New', monospace;
+  font-family: 'Share Tech Mono', monospace;
   font-size: 14px;
   color: #fff;
   background: rgba(0, 243, 255, 0.15);

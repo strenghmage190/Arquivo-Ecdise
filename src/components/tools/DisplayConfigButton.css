@@ -1,0 +1,45 @@
+/**
+ * DisplayConfigButton.css
+ * Botão flutuante para acessar o painel de configuração
+ */
+
+.display-config-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  border: 2px solid #64b5ff;
+  color: #64b5ff;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(100, 181, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.display-config-button:hover {
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+  box-shadow: 0 0 30px rgba(100, 181, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
+.display-config-button:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 600px) {
+  .display-config-button {
+    bottom: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}

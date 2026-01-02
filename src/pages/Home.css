@@ -9,7 +9,19 @@
   box-sizing: border-box;
 }
 
-.home-screen:before {
+/* Scanlines sutis no fundo */
+.home-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+  background-size: 100% 3px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.3;
+}
+
+.home-screen::after {
   content: '';
   position: absolute;
   inset: 12px;
@@ -17,6 +29,7 @@
   border-radius: 12px;
   pointer-events: none;
   box-shadow: 0 0 40px rgba(0,243,255,0.06);
+  z-index: 0;
 }
 
 .nexus-title-wrap {
@@ -142,8 +155,42 @@
   box-shadow: 0 10px 28px rgba(0,0,0,0.55);
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* Cantoneiras decorativas nos cards */
+.case-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-top: 2px solid rgba(0, 243, 255, 0.4);
+  border-left: 2px solid rgba(0, 243, 255, 0.4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.case-card::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 2px solid rgba(0, 243, 255, 0.4);
+  border-right: 2px solid rgba(0, 243, 255, 0.4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.case-card:hover::before,
+.case-card:hover::after {
+  opacity: 1;
 }
 
 .case-cover {
@@ -182,23 +229,10 @@
   overflow: hidden;
 }
 
-.case-card:before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(0,243,255,0.08), transparent 35%);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
 .case-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 14px 32px rgba(0,243,255,0.12);
   border-color: rgba(0,243,255,0.35);
-}
-
-.case-card:hover:before {
-  opacity: 1;
 }
 
 .case-card h2 {
@@ -206,6 +240,18 @@
   color: #e9fcff;
   font-size: 18px;
   letter-spacing: 0.5px;
+  position: relative;
+  z-index: 3;
+}
+
+.case-card:hover h2 {
+  animation: subtleFlicker 3s infinite;
+}
+
+@keyframes subtleFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+  75% { opacity: 0.98; }
 }
 
 .case-card .meta {

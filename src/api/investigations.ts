@@ -83,7 +83,7 @@ export async function fetchInvestigationById(id: string) {
 }
 
 export async function updateInvestigation(id: string, updates: any) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigations')
     .update(updates)
     .eq('id', id)
@@ -177,7 +177,7 @@ export async function createInvestigationCard(card: InvestigationCard) {
 }
 
 export async function updateCard(id: string, updates: any) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigation_cards')
     .update(updates)
     .eq('id', id)
@@ -188,9 +188,9 @@ export async function updateCard(id: string, updates: any) {
 }
 
 export async function updateInvestigationCard(id: string, patch: Partial<InvestigationCard>) {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigation_cards')
-    .update(patch)
+    .update(patch as any)
     .eq('id', id)
     .select()
     .single();
@@ -242,9 +242,9 @@ export async function fetchOrCreateInvestigationForCampaign(campaignId: string) 
 
     const userRes = await supabase.auth.getUser();
     const currentUserId = userRes.data?.user?.id || null;
-    const { data: created, error: insErr } = await supabase
+    const { data: created, error: insErr } = await (supabase as any)
       .from('investigations')
-      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', owner_id: currentUserId, created_by: currentUserId })
+      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', owner_id: currentUserId, created_by: currentUserId } as any)
       .select()
       .single();
 
@@ -295,7 +295,7 @@ export async function createNote(investigationId: string, payload: any) {
     x: payload.x ?? 100,
     y: payload.y ?? 100,
   };
-  const { data, error } = await supabase.from('investigation_notes').insert(body).select().single();
+  const { data, error } = await (supabase as any).from('investigation_notes').insert(body as any).select().single();
   if (error) {
     console.error('createNote error', error);
     throw error;
@@ -304,7 +304,7 @@ export async function createNote(investigationId: string, payload: any) {
 }
 
 export async function updateNote(id: string, updates: any) {
-  const { data, error } = await supabase.from('investigation_notes').update(updates).eq('id', id).select().single();
+  const { data, error } = await (supabase as any).from('investigation_notes').update(updates).eq('id', id).select().single();
   if (error) {
     console.error('updateNote error', error);
     throw error;
@@ -327,9 +327,9 @@ export async function createInvestigation(title: string, description?: string, c
   const user = userData?.user || null;
   if (!user) throw new Error('Usuário não autenticado');
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigations')
-    .insert([{ title, owner_id: user.id, description: description || null, cover_url: coverUrl || null }])
+    .insert([{ title, owner_id: user.id, description: description || null, cover_url: coverUrl || null } as any])
     .select()
     .single();
 
@@ -354,9 +354,9 @@ export async function createInviteLink(investigationId: string) {
 
   const invite_code = nanoid(10);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigation_invites')
-    .insert({ investigation_id: investigationId, invite_code, created_by: user.id })
+    .insert({ investigation_id: investigationId, invite_code, created_by: user.id } as any)
     .select()
     .single();
 

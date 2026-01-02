@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
 .terminal-wrapper {
   width: 100%; height: 100%;
   background-color: #050505;
-  color: #33ff33;
-  font-family: 'Courier New', monospace;
+  color: #00f3ff;
+  font-family: 'Share Tech Mono', monospace;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -23,27 +25,27 @@
 }
 
 .term-header {
-  border-bottom: 1px solid #33ff33;
+  border-bottom: 1px solid #00f3ff;
   display: flex; justify-content: space-between;
   margin-bottom: 20px; font-weight: bold; letter-spacing: 2px;
 }
 
 .ascii-lock {
   font-size: 40px; text-align: center; margin: 20px 0;
-  text-shadow: 0 0 10px #33ff33;
+  text-shadow: 0 0 10px #00f3ff;
 }
 
 .error-msg { color: #ff3333; margin: 15px 0; animation: shake 0.3s; }
-.success-msg { color: #33ff33; margin: 15px 0; text-shadow: 0 0 5px #33ff33; }
+.success-msg { color: #00f3ff; margin: 15px 0; text-shadow: 0 0 5px #00f3ff; }
 
 .input-line {
   display: flex; align-items: center;
-  background: rgba(0, 50, 0, 0.3);
-  padding: 10px; border: 1px solid #33ff33;
+  background: rgba(0, 50, 50, 0.3);
+  padding: 10px; border: 1px solid #00f3ff;
 }
 
 .input-line input {
-  background: transparent; border: none; color: #33ff33;
+  background: transparent; border: none; color: #00f3ff;
   font-family: inherit; font-size: 18px; width: 100%; outline: none; text-transform: uppercase;
 }
 
@@ -53,7 +55,6 @@
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
 .term-hint { margin-top: 12px; color: #bdb; font-size: 12px; }
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 :root {
   --nexus-blue: #00f3ff;

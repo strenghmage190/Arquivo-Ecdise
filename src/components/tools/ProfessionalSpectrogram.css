@@ -1,55 +1,32 @@
 /* Professional Spectrogram Styles */
 
 .spectrogram-container {
-  width: 100%;
-  background: linear-gradient(145deg, rgba(5,8,10,0.9), rgba(10,15,20,0.95));
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,243,255,0.1);
-  overflow: hidden;
-  border: 1px solid rgba(0,243,255,0.2);
-  font-family: 'Share Tech Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: #000;
+  border: 1px solid #333;
+  padding: 15px;
+  border-radius: 4px;
 }
 
 .spectrogram-header {
-  background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
-  backdrop-filter: blur(8px);
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(0,243,255,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .header-content {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--nexus-blue, #00f3ff);
-  animation: pulse 2s infinite;
-  box-shadow: 0 0 12px rgba(0,243,255,0.6);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
 }
 
 .header-title {
-  color: var(--nexus-blue, #00f3ff);
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: 2px;
+  color: #fff;
   margin: 0;
-  text-shadow: 0 0 10px rgba(0,243,255,0.3);
+  font-size: 14px;
+  text-transform: uppercase;
 }
 
 .header-right {
@@ -65,11 +42,25 @@
   font-weight: 600;
 }
 
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #00f3ff;
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
 .progress-percent {
   font-size: 12px;
   font-weight: 800;
-  color: var(--nexus-blue, #00f3ff);
-  background: rgba(0,243,255,0.1);
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.1);
   padding: 3px 8px;
   border-radius: 4px;
 }
@@ -77,22 +68,24 @@
 .progress-bar-container {
   margin-top: 10px;
   height: 3px;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--nexus-blue, #00f3ff), #0088ff);
+  background: linear-gradient(90deg, #00ffff, #0088ff);
   transition: width 0.3s ease;
-  box-shadow: 0 0 10px rgba(0,243,255,0.5);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
+/* Grid de Controles - Organiza os botões em colunas flexíveis */
 .spectrogram-controls {
-  padding: 20px;
-  background: rgba(0,0,0,0.2);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: #111;
+  padding: 15px;
+  border: 1px solid #222;
+  border-radius: 4px;
 }
 
 .control-grid {
@@ -109,181 +102,109 @@
 
 .control-label-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  font-size: 11px;
+  color: #888;
+  font-weight: bold;
 }
 
 .control-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--nexus-blue, #00f3ff);
+  color: #00f3ff;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .control-value {
-  font-size: 13px;
-  font-family: 'Courier New', monospace;
-  color: #fff;
-  background: rgba(0,243,255,0.15);
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-weight: 700;
+  color: #00f3ff;
 }
 
+/* Estilização dos Sliders */
 .control-slider {
   width: 100%;
-  height: 6px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 3px;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
   cursor: pointer;
+  accent-color: #00f3ff;
 }
 
-.control-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--nexus-blue, #00f3ff);
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(0,243,255,0.6);
-  transition: all 0.2s ease;
-}
-
-.control-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 20px rgba(0,243,255,0.9);
-  transform: scale(1.15);
-}
-
-.control-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--nexus-blue, #00f3ff);
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(0,243,255,0.6);
-  border: none;
-  transition: all 0.2s ease;
-}
-
-.control-slider::-moz-range-thumb:hover {
-  box-shadow: 0 0 20px rgba(0,243,255,0.9);
-  transform: scale(1.15);
-}
-
+/* Botões de Cores */
 .color-scheme-buttons {
   display: flex;
-  gap: 8px;
+  gap: 5px;
 }
 
 .color-btn {
   flex: 1;
-  padding: 8px 12px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #aaa;
-  border-radius: 6px;
+  background: #222;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 6px;
   cursor: pointer;
   font-size: 11px;
-  font-weight: 700;
-  transition: all 0.2s ease;
-  font-family: 'Share Tech Mono', monospace;
+  transition: all 0.2s;
 }
 
-.color-btn:hover {
-  border-color: rgba(255,255,255,0.3);
-  background: rgba(0,0,0,0.4);
-}
+.color-btn:hover { background: #333; }
 
-.color-btn.active {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
+.color-btn.active.hot { border-color: #ff4500; color: #ff4500; background: rgba(255, 69, 0, 0.1); }
+.color-btn.active.cyan { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.1); }
+.color-btn.active.magma { border-color: #ff00ff; color: #ff00ff; background: rgba(255, 0, 255, 0.1); }
 
-.color-btn.active.hot {
-  background: linear-gradient(135deg, #ff4500, #ff8800);
-  border-color: #ff6600;
-  color: #fff;
-}
-
-.color-btn.active.cyan {
-  background: linear-gradient(135deg, #00f3ff, #0088ff);
-  border-color: #00f3ff;
-  color: #051018;
-}
-
-.color-btn.active.magma {
-  background: linear-gradient(135deg, #ff00ff, #8800ff);
-  border-color: #ff00ff;
-  color: #fff;
-}
-
+/* Container do Canvas com Scroll Horizontal */
 .canvas-container {
   position: relative;
-  background: #000;
   overflow: auto;
-  min-height: 300px;
-  max-height: 500px;
+  background: #000;
+  border: 1px solid #00f3ff;
+  min-height: 200px;
 }
 
 .canvas-wrapper {
   display: inline-block;
-  transition: transform 0.2s ease;
 }
 
 .spectrogram-canvas {
   display: block;
-  image-rendering: pixelated;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: crisp-edges;
-  min-height: 300px;
 }
 
+/* Marcadores de Frequência */
 .frequency-markers {
   position: absolute;
-  inset: 0;
+  left: 0; top: 0; bottom: 0;
+  width: 50px;
   pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .freq-marker {
   position: absolute;
-  left: 8px;
+  left: 5px;
   font-size: 10px;
-  color: rgba(0,243,255,0.5);
-  font-family: 'Courier New', monospace;
-  background: rgba(0,0,0,0.6);
-  padding: 2px 6px;
-  border-radius: 3px;
-  backdrop-filter: blur(4px);
+  color: #666;
+  font-family: monospace;
 }
 
 .freq-marker.highlight {
-  background: rgba(0,243,255,0.15);
-  color: rgba(0,243,255,0.9);
-  border: 1px solid rgba(0,243,255,0.3);
-  font-weight: 700;
+  color: #ff00ff;
+  font-weight: bold;
 }
 
 .spectrogram-footer {
-  padding: 14px 20px;
-  background: rgba(0,0,0,0.4);
-  border-top: 1px solid rgba(0,243,255,0.15);
+  font-size: 11px;
+  color: #666;
+  border-top: 1px solid #222;
+  padding-top: 10px;
 }
 
 .footer-text {
   font-size: 11px;
-  color: #888888;
+  color: #666;
   text-align: center;
-  margin: 0;
-  line-height: 1.5;
 }
 
 .footer-text strong {
-  color: var(--nexus-blue, #00f3ff);
+  color: #00f3ff;
   font-weight: 700;
 }
 
@@ -292,26 +213,21 @@
   .control-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .header-title {
     font-size: 14px;
   }
-  
+
   .color-scheme-buttons {
     flex-direction: column;
   }
 
   .canvas-container {
     min-height: 250px;
-    max-height: 400px;
-  }
-
-  .spectrogram-canvas {
-    min-height: 250px;
   }
 
   .spectrogram-controls {
-    padding: 16px;
+    padding: 12px;
   }
 
   .control-grid {
@@ -322,25 +238,18 @@
 @media (max-width: 480px) {
   .header-title {
     font-size: 12px;
-    letter-spacing: 1px;
   }
 
   .canvas-container {
-    min-height: 200px;
-    max-height: 350px;
-  }
-
-  .spectrogram-canvas {
     min-height: 200px;
   }
 
   .control-value {
     font-size: 11px;
-    padding: 3px 8px;
   }
 
   .spectrogram-header {
-    padding: 12px 16px;
+    padding: 12px;
   }
 
   .spectrogram-controls {
@@ -348,18 +257,7 @@
   }
 
   .spectrogram-footer {
-    padding: 10px 16px;
-  }
-}
-
-@media (max-height: 700px) {
-  .canvas-container {
-    max-height: 350px;
-    min-height: 250px;
-  }
-
-  .spectrogram-canvas {
-    min-height: 250px;
+    padding: 10px;
   }
 }
 
@@ -370,14 +268,14 @@
 }
 
 .canvas-container::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .canvas-container::-webkit-scrollbar-thumb {
-  background: rgba(0,243,255,0.3);
+  background: rgba(0, 243, 255, 0.3);
   border-radius: 5px;
 }
 
 .canvas-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,243,255,0.5);
+  background: rgba(0, 243, 255, 0.5);
 }

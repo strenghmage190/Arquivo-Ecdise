@@ -303,9 +303,9 @@ export function InvestigationBoard({ investigationId }: Props) {
 
       if (thermalCard) {
         try {
-          const meta = typeof thermalCard.metadata === 'string' ? JSON.parse(thermalCard.metadata) : (thermalCard.metadata || {});
+          const meta = typeof (thermalCard as any).metadata === 'string' ? JSON.parse((thermalCard as any).metadata) : ((thermalCard as any).metadata || {});
           meta.thermal_unlocked = true;
-          await api.updateInvestigationCard(thermalCard.id, { metadata: meta } as any);
+          await api.updateInvestigationCard((thermalCard as any).id, { metadata: meta } as any);
           try { playAudio('/sounds/success_chime.mp3'); } catch {}
           await loadBoard();
           return { success: true, message: 'Modo termal desbloqueado com sucesso.', card: thermalCard };
@@ -448,33 +448,33 @@ export function InvestigationBoard({ investigationId }: Props) {
       }
 
       // Prioriza pistas ocultas, depois visíveis
-      const found = matches.find((m: any) => m.visibility === 'hidden') || matches[0];
+      const found = matches.find((m: any) => (m as any).visibility === 'hidden') || matches[0];
 
       // compute center position
       const centerX = origin.x + (window.innerWidth / 2) / zoom;
       const centerY = origin.y + (window.innerHeight / 2) / zoom;
 
       // Se for pista oculta, revelar
-      if (found.visibility === 'hidden') {
-        await api.updateInvestigationCard(found.id, { visibility: 'visible', x: Math.round(centerX), y: Math.round(centerY) } as any);
+      if ((found as any).visibility === 'hidden') {
+        await api.updateInvestigationCard((found as any).id, { visibility: 'visible', x: Math.round(centerX), y: Math.round(centerY) } as any);
         try { playAudio('/sounds/success_chime.mp3'); } catch {}
         try { playAudio('/sounds/paper_drop.mp3'); } catch {}
-        setTerminalMessage(`ARQUIVO RECUPERADO: "${found.title || found.id}"`);
+        setTerminalMessage(`ARQUIVO RECUPERADO: "${(found as any).title || (found as any).id}"`);
       } else {
         // Se já está visível, apenas focar nela
-        const cardX = found.x || centerX;
-        const cardY = found.y || centerY;
+        const cardX = (found as any).x || centerX;
+        const cardY = (found as any).y || centerY;
         setOrigin({ x: cardX - 400, y: cardY - 300 });
         try { playAudio('/sounds/success_chime.mp3'); } catch {}
         if (matches.length === 1) {
-          setTerminalMessage(`PISTA LOCALIZADA: "${found.title || found.id}"`);
+          setTerminalMessage(`PISTA LOCALIZADA: "${(found as any).title || (found as any).id}"`);
         } else {
-          setTerminalMessage(`${matches.length} PISTAS ENCONTRADAS. Focando: "${found.title || found.id}"`);
+          setTerminalMessage(`${matches.length} PISTAS ENCONTRADAS. Focando: "${(found as any).title || (found as any).id}"`);
         }
       }
       
       // mark to animate on next render
-      setLastCreatedId(found.id);
+      setLastCreatedId((found as any).id);
       await loadBoard();
       // clear highlight after a few seconds
       setTimeout(() => setLastCreatedId(null), 4200);
@@ -2338,9 +2338,9 @@ export function InvestigationBoard({ investigationId }: Props) {
                 payload.y = Math.round(cy - 160 / 2);
                 const created = await api.createInvestigationCard(payload as any);
                 await loadBoard();
-                if (created && created.id) {
-                  panToPosition((created.x || payload.x) + 110, (created.y || payload.y) + 80);
-                  setLastCreatedId(created.id);
+                if (created && (created as any).id) {
+                  panToPosition(((created as any).x || payload.x) + 110, ((created as any).y || payload.y) + 80);
+                  setLastCreatedId((created as any).id);
                   setTimeout(() => setLastCreatedId(null), 6000);
                 }
               }

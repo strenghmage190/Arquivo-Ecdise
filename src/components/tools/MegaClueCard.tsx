@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchCards, updateInvestigationCard } from '../../api/investigations';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
+import { validateMegaClueData } from '../../utils/validationSchemas';
 import './MegaClueCard.css';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   metadata?: any;
   onClose?: () => void;
   onRefresh?: () => void;
+  isGameMaster?: boolean;
 }
 
 export default function MegaClueCard({
@@ -29,6 +31,7 @@ export default function MegaClueCard({
   metadata,
   onClose,
   onRefresh,
+  isGameMaster = false,
 }: Props) {
   const safeMetadata = useMemo(() => {
     if (!metadata) return {} as any;
@@ -72,6 +75,13 @@ export default function MegaClueCard({
   const [loadingCodes, setLoadingCodes] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [hasPrompted, setHasPrompted] = useState(false);
+
+  // ✅ EDIÇÃO DE MEGA-PISTA - Estados de Edição
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedMetadata, setEditedMetadata] = useState<any>({
+    finalTruthText: finalTruthText || '',
+    requiredPuzzleIds: requiredPuzzleIds || [],
+  });
 
   useEffect(() => {
     const normalized = (collectedCodesProp || safeMetadata?.mega_clue?.collected_codes || []).map((c) =>
@@ -210,6 +220,76 @@ export default function MegaClueCard({
     }
   };
 
+  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para atualizar campos editados
+  const handleEditChange = (field: string, value: any) => {
+    setEditedMetadata((prev: any) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para adicionar/remover puzzle
+  const handleTogglePuzzle = (puzzleId: string) => {
+    setEditedMetadata((prev: any) => {
+      const currentIds = prev.requiredPuzzleIds || [];
+      if (currentIds.includes(puzzleId)) {
+        return {
+          ...prev,
+          requiredPuzzleIds: currentIds.filter((id: string) => id !== puzzleId),
+        };
+      } else {
+        return {
+          ...prev,
+          requiredPuzzleIds: [...currentIds, puzzleId],
+        };
+      }
+    });
+  };
+
+  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para salvar mudanças
+  const handleSaveChanges = async () => {
+    setSubmitting(true);
+    try {
+      // Preparar dados para validação
+      const megaClueData = {
+        final_truth_text: editedMetadata.finalTruthText,
+        required_puzzle_ids: editedMetadata.requiredPuzzleIds || [],
+      };
+
+      // ✅ Validação com Zod
+      const validation = validateMegaClueData(megaClueData);
+      if (!validation.success) {
+        const errorMsg = (validation.errors || []).join('\n');
+        alert(`❌ Erro de validação:\n${errorMsg}`);
+        setSubmitting(false);
+        return;
+      }
+
+      const updates = {
+        metadata: {
+          mega_clue: {
+            ...safeMetadata.mega_clue,
+            final_truth_text: editedMetadata.finalTruthText,
+            required_puzzle_ids: editedMetadata.requiredPuzzleIds || [],
+          },
+        },
+      };
+
+      // ✅ Chamada Supabase para atualizar o card
+      await updateInvestigationCard(cardId, updates);
+
+      console.log('📝 Mudanças salvas (Mega-Pista):', updates);
+      alert('✅ Configurações da Mega-Pista salvas com sucesso!');
+      setIsEditing(false);
+      onRefresh?.();
+    } catch (err) {
+      console.error('Erro ao salvar mudanças da Mega-Pista:', err);
+      alert('❌ Erro ao salvar mudanças. Veja o console.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const progressCount = Math.max(collectedCodes.length, solvedIds.length);
   const displayRequired = requiredTotal || progressCount || 1;
   const missingCodes = Math.max(0, displayRequired - progressCount);
@@ -231,12 +311,146 @@ export default function MegaClueCard({
         <div className="mega-clue-card">
           <div className="mega-header">
             <h2>{title}</h2>
-            {onClose && (
-              <button className="close-btn" onClick={onClose}>✖</button>
-            )}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* ✅ Botão de Edição - Visível apenas para GMs */}
+              {isGameMaster && (
+                <button 
+                  className="btn-edit" 
+                  onClick={() => setIsEditing(true)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: 'rgba(0, 150, 136, 0.8)',
+                    border: '1px solid rgba(0, 200, 180, 0.3)',
+                    color: '#00ff88',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  title="Editar configurações da mega-pista"
+                >
+                  ⚙️ Editar
+                </button>
+              )}
+              {onClose && (
+                <button className="close-btn" onClick={onClose}>✖</button>
+              )}
+            </div>
           </div>
 
           <div className="mega-content unlocked">
+            {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+            {isEditing && (
+              <div style={{
+                background: 'rgba(0, 150, 136, 0.05)',
+                border: '2px solid rgba(0, 200, 180, 0.3)',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px',
+              }}>
+                <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR MEGA-PISTA</h3>
+                
+                {/* Texto da Verdade Final */}
+                <div style={{ marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>TEXTO DA VERDADE FINAL</h4>
+                  <textarea
+                    value={editedMetadata.finalTruthText}
+                    onChange={(e) => handleEditChange('finalTruthText', e.target.value)}
+                    placeholder="Digite o texto de verdade final (até 2000 caracteres)..."
+                    maxLength={2000}
+                    style={{
+                      width: '100%',
+                      minHeight: '120px',
+                      padding: '8px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(0,200,180,0.2)',
+                      color: '#0f0',
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+                    {editedMetadata.finalTruthText.length}/2000 caracteres
+                  </small>
+                </div>
+
+                {/* Puzzles Necessários */}
+                <div style={{ marginBottom: '16px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PUZZLES NECESSÁRIOS</h4>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#aaa' }}>
+                    Selecione quais puzzles de glitch devem ser resolvidos para desbloquear a verdade:
+                  </p>
+                  <div style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(0,200,180,0.2)',
+                    borderRadius: '4px',
+                    padding: '8px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                  }}>
+                    {requiredPuzzleIds.length === 0 ? (
+                      <div style={{ color: '#666', fontSize: '11px', padding: '8px' }}>
+                        Nenhum puzzle configurado ainda.
+                      </div>
+                    ) : (
+                      requiredPuzzleIds.map((puzzleId: string) => (
+                        <div key={puzzleId} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px 0',
+                          borderBottom: '1px solid rgba(0,200,180,0.1)',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={editedMetadata.requiredPuzzleIds?.includes(puzzleId) || false}
+                            onChange={() => handleTogglePuzzle(puzzleId)}
+                            style={{ marginRight: '8px', cursor: 'pointer' }}
+                          />
+                          <label style={{ cursor: 'pointer', flex: 1, fontSize: '12px', color: '#0f0' }}>
+                            Puzzle: {puzzleId}
+                          </label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Botões de Ação */}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '11px',
+                      background: 'rgba(200, 50, 50, 0.8)',
+                      border: '1px solid rgba(255, 100, 100, 0.3)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                    }}
+                    disabled={submitting}
+                  >
+                    ✕ Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveChanges}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '11px',
+                      background: 'rgba(0, 150, 136, 0.8)',
+                      border: '1px solid rgba(0, 200, 180, 0.3)',
+                      color: '#00ff88',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                    }}
+                    disabled={submitting}
+                  >
+                    💾 Salvar Mudanças
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="unlock-banner">
               <div className="unlock-icon">🔓</div>
               <div className="unlock-text">MEGA-PISTA DESBLOQUEADA</div>
@@ -288,12 +502,146 @@ export default function MegaClueCard({
       <div className="mega-clue-card">
         <div className="mega-header">
           <h2>{title}</h2>
-          {onClose && (
-            <button className="close-btn" onClick={onClose}>✖</button>
-          )}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* ✅ Botão de Edição - Visível apenas para GMs */}
+            {isGameMaster && (
+              <button 
+                className="btn-edit" 
+                onClick={() => setIsEditing(true)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  background: 'rgba(0, 150, 136, 0.8)',
+                  border: '1px solid rgba(0, 200, 180, 0.3)',
+                  color: '#00ff88',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                }}
+                title="Editar configurações da mega-pista"
+              >
+                ⚙️ Editar
+              </button>
+            )}
+            {onClose && (
+              <button className="close-btn" onClick={onClose}>✖</button>
+            )}
+          </div>
         </div>
 
         <div className="mega-content locked">
+          {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+          {isEditing && (
+            <div style={{
+              background: 'rgba(0, 150, 136, 0.05)',
+              border: '2px solid rgba(0, 200, 180, 0.3)',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '16px',
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR MEGA-PISTA</h3>
+              
+              {/* Texto da Verdade Final */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>TEXTO DA VERDADE FINAL</h4>
+                <textarea
+                  value={editedMetadata.finalTruthText}
+                  onChange={(e) => handleEditChange('finalTruthText', e.target.value)}
+                  placeholder="Digite o texto de verdade final (até 2000 caracteres)..."
+                  maxLength={2000}
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: '8px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(0,200,180,0.2)',
+                    color: '#0f0',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    borderRadius: '4px',
+                  }}
+                />
+                <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+                  {editedMetadata.finalTruthText.length}/2000 caracteres
+                </small>
+              </div>
+
+              {/* Puzzles Necessários */}
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#ccc', fontSize: '12px' }}>PUZZLES NECESSÁRIOS</h4>
+                <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#aaa' }}>
+                  Selecione quais puzzles de glitch devem ser resolvidos para desbloquear a verdade:
+                </p>
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(0,200,180,0.2)',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                }}>
+                  {requiredPuzzleIds.length === 0 ? (
+                    <div style={{ color: '#666', fontSize: '11px', padding: '8px' }}>
+                      Nenhum puzzle configurado ainda.
+                    </div>
+                  ) : (
+                    requiredPuzzleIds.map((puzzleId: string) => (
+                      <div key={puzzleId} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px 0',
+                        borderBottom: '1px solid rgba(0,200,180,0.1)',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={editedMetadata.requiredPuzzleIds?.includes(puzzleId) || false}
+                          onChange={() => handleTogglePuzzle(puzzleId)}
+                          style={{ marginRight: '8px', cursor: 'pointer' }}
+                        />
+                        <label style={{ cursor: 'pointer', flex: 1, fontSize: '12px', color: '#0f0' }}>
+                          Puzzle: {puzzleId}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '11px',
+                    background: 'rgba(200, 50, 50, 0.8)',
+                    border: '1px solid rgba(255, 100, 100, 0.3)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  disabled={submitting}
+                >
+                  ✕ Cancelar
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 150, 136, 0.8)',
+                    border: '1px solid rgba(0, 200, 180, 0.3)',
+                    color: '#00ff88',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
+                  disabled={submitting}
+                >
+                  💾 Salvar Mudanças
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="lock-banner">
             <div className="lock-icon">🔐</div>
             <div className="lock-text">MEGA-PISTA PROTEGIDA</div>

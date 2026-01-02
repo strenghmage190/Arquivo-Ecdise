@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
 import HackingTerminal from '../tools/HackingTerminal';
-import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import ChannelIsolator from '../tools/ChannelIsolator';
 import HexViewer from '../tools/HexViewer';
 import PhoneViewer from '../tools/PhoneViewer';
@@ -10,6 +9,9 @@ import CCTVPlayer from '../tools/CCTVPlayer';
 import DecipherLens from '../tools/DecipherLens';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
 import UniversalDecoder from '../tools/UniversalDecoder';
+import NumericKeypad from '../tools/NumericKeypad';
+import AudioViewerModal from './AudioViewerModal';
+import WaveSurfer from 'wavesurfer.js';
 import './InspectionModal.css';
 import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
@@ -87,8 +89,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [serverCard, setServerCard] = useState<any | null>(null);
   const [showMoreTools, setShowMoreTools] = useState(false);
   const [videoUploadingInspection, setVideoUploadingInspection] = useState(false);
-  // Novo estado: expande a área de áudio (modo "cinema")
-  const [audioExpanded, setAudioExpanded] = useState(false);
+  // Novo estado: modal de áudio em tela cheia
+  const [audioExpanderOpen, setAudioExpanderOpen] = useState(false);
+  const [expanderAudioSrc, setExpanderAudioSrc] = useState<string>('');
+  // Flag para evitar múltiplos cliques simultâneos
+  const audioExpanderLockRef = useRef(false);
+
+  // Player compacto (modal principal)
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const [audioIsPlaying, setAudioIsPlaying] = useState(false);
+  const [audioPosition, setAudioPosition] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const waveformRef = useRef<HTMLDivElement | null>(null);
+  const waveSurferRef = useRef<any | null>(null);
 
   const resolveUnifiedMedia = (cardObj: any, metadataObj: any) => {
     const unified = metadataObj?.unified_media || {};
@@ -108,10 +121,20 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     const audioUrl = (() => {
       if (baseType === 'audio' && baseUrl) return baseUrl;
-      return cardObj?.audio_url || unified.audio_base_url || null;
+      // Check all possible audio URL locations
+      return cardObj?.audio_url || 
+             unified.audio_base_url || 
+             unified.audio_url || 
+             metadataObj?.audio_url || 
+             metadataObj?.audio ||
+             null;
     })();
 
-    const audioHiddenUrl = cardObj?.audio_hidden_url || unified.audio_hidden_url || null;
+    const audioHiddenUrl = cardObj?.audio_hidden_url || 
+                          unified.audio_hidden_url || 
+                          metadataObj?.audio_hidden_url ||
+                          metadataObj?.audio_hidden ||
+                          null;
     return { baseType, baseUrl, imageUrl, videoUrl, audioUrl, audioHiddenUrl, maskedPreview };
   };
 
@@ -127,22 +150,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   // Atualiza o modo visual quando o cartão muda (garante que PhoneViewer apareça se houver chat)
   React.useEffect(() => {
     try {
+      const unifiedMediaData = resolveUnifiedMedia(card, card?.metadata);
       if (card?.metadata?.type === 'phone' || card?.metadata?.chat_data) setVisualMode('phone');
       else if (card?.video_url) setVisualMode('video');
-      else if ((card?.audio_url || (card?.metadata && (card.metadata.audio || card.metadata.audio_url))) && !card?.image_url) setVisualMode('audio');
+      else if ((card?.audio_url || unifiedMediaData.audioUrl || (card?.metadata && (card.metadata.audio || card.metadata.audio_url))) && !card?.image_url) setVisualMode('audio');
       else setVisualMode('image');
     } catch (e) { setVisualMode('image'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card]);
-
-  // Se o usuário mudar de aba visual ou fechar o modal, assegura que o modo de áudio expandido seja resetado
-  React.useEffect(() => {
-    if (!isOpen && audioExpanded) setAudioExpanded(false);
-  }, [isOpen, audioExpanded]);
-
-  React.useEffect(() => {
-    if (visualMode !== 'audio' && audioExpanded) setAudioExpanded(false);
-  }, [visualMode, audioExpanded]);
 
   // initialize localThermal from card metadata when card changes
   React.useEffect(() => {
@@ -367,6 +382,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
     const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
 
+    // Phone keypad configuration (separate from card lock)
+    const phoneIsLocked = Boolean(parsedMetadata?.phone_locked);
+    const phonePassword = parsedMetadata?.phone_password || null;
+
     const securityLayer = parsedMetadata?.security_layer || null;
     const securityRevealLogic = securityLayer?.reveal_logic || 'aligned_only';
     const securityAlwaysVisible = securityRevealLogic === 'always_visible';
@@ -375,49 +394,117 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const cardLocked = isCardLocked(currentCard);
     const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
 
+    const audioSources = React.useMemo(() => {
+      const meta = parsedMetadata;
+      const src = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+      const hidden = unifiedMedia.audioHiddenUrl || currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
+      const targetFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
+      return { src, hidden, targetFreq };
+    }, [currentCard, parsedMetadata, unifiedMedia]);
+
+    React.useEffect(() => {
+      const el = audioElementRef.current;
+      if (!el) return;
+
+      if (!audioSources.src) {
+        el.pause();
+        setAudioIsPlaying(false);
+        setAudioPosition(0);
+        setAudioDuration(0);
+        return;
+      }
+
+      el.pause();
+      setAudioIsPlaying(false);
+      setAudioPosition(0);
+      setAudioDuration(0);
+      el.src = audioSources.src;
+      el.load();
+    }, [audioSources.src]);
+
+    React.useEffect(() => {
+      if (visualMode !== 'audio') {
+        const el = audioElementRef.current;
+        if (el) {
+          el.pause();
+          setAudioIsPlaying(false);
+        }
+      }
+    }, [visualMode]);
+
+    // Waveform mini-visualização
+    React.useEffect(() => {
+      if (visualMode !== 'audio') {
+        if (waveSurferRef.current) {
+          waveSurferRef.current.destroy();
+          waveSurferRef.current = null;
+        }
+        return;
+      }
+
+      if (!waveformRef.current || !audioSources.src) return;
+
+      if (waveSurferRef.current) {
+        waveSurferRef.current.destroy();
+        waveSurferRef.current = null;
+      }
+
+      const ws = WaveSurfer.create({
+        container: waveformRef.current,
+        waveColor: 'rgba(0, 243, 255, 0.4)',
+        progressColor: '#00f3ff',
+        cursorColor: '#ff0066',
+        height: 64,
+        responsive: true,
+        backend: 'MediaElement',
+        media: audioElementRef.current || undefined,
+        normalize: true,
+      });
+
+      waveSurferRef.current = ws;
+      ws.load(audioSources.src);
+
+      ws.on('ready', () => {
+        const dur = ws.getDuration() || 0;
+        setAudioDuration(dur);
+      });
+
+      ws.on('audioprocess', () => {
+        setAudioPosition(ws.getCurrentTime() || 0);
+      });
+
+      ws.on('timeupdate', () => {
+        setAudioPosition(ws.getCurrentTime() || 0);
+      });
+
+      ws.on('play', () => setAudioIsPlaying(true));
+      ws.on('pause', () => setAudioIsPlaying(false));
+      ws.on('finish', () => {
+        setAudioIsPlaying(false);
+        setAudioPosition(0);
+      });
+
+      return () => {
+        ws.destroy();
+        waveSurferRef.current = null;
+      };
+    }, [visualMode, audioSources.src]);
+
     // Renderizador inteligente da Área Visual
     const renderVisualContent = () => {
       // Metadata seguro para detectar subtipos (ex: glitch_puzzle)
       const metadataObj = parsedMetadata;
       const isGlitchPuzzle = isGlitchPuzzleGlobal;
 
-      const chatRaw = currentCard.chat_data ?? metadataObj?.chat_data ?? metadataObj?.chat ?? null;
-      let chatList: any[] = [];
-      if (chatRaw) {
-        if (typeof chatRaw === 'string') {
-          try {
-            const parsed = JSON.parse(chatRaw);
-            if (Array.isArray(parsed)) chatList = parsed;
-            else if (parsed && typeof parsed === 'object') {
-              // try to find an array inside common keys
-              if (Array.isArray(parsed.messages)) chatList = parsed.messages;
-              else if (Array.isArray(parsed.chat)) chatList = parsed.chat;
-              else if (Array.isArray(parsed.data)) chatList = parsed.data;
-              else {
-                // fallback: pick the first array value found
-                for (const k of Object.keys(parsed)) {
-                  if (Array.isArray((parsed as any)[k])) { chatList = (parsed as any)[k]; break; }
-                }
-              }
-            }
-          } catch {}
-        } else if (Array.isArray(chatRaw)) chatList = chatRaw;
-        else if (chatRaw && typeof chatRaw === 'object') {
-          if (Array.isArray(chatRaw.messages)) chatList = chatRaw.messages;
-          else if (Array.isArray((chatRaw as any).chat)) chatList = (chatRaw as any).chat;
-          else if (Array.isArray((chatRaw as any).data)) chatList = (chatRaw as any).data;
-          else {
-            for (const k of Object.keys(chatRaw)) {
-              if (Array.isArray((chatRaw as any)[k])) { chatList = (chatRaw as any)[k]; break; }
-            }
-          }
-        }
-      }
-
       if (visualMode === 'phone') {
         return (
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
-            <PhoneViewer chatData={chatList} contactName={currentCard.title} />
+            <PhoneViewer 
+              chatData={_headerChatList} 
+              contactName={currentCard.title}
+              isLocked={phoneIsLocked}
+              password={phonePassword}
+            />
           </div>
         );
       }
@@ -478,29 +565,95 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         );
       }
 
-      // audio visual mode
+      // audio visual mode (HUD compacto)
       if (visualMode === 'audio') {
-        const meta = metadataObj;
-        const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
-        const audioHidden = unifiedMedia.audioHiddenUrl || currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
-        const audioFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
+        const audioSrc = audioSources.src;
 
         if (!audioSrc) {
           return (<div style={{ color:'#ccc', padding:20 }}>Nenhum arquivo de áudio encontrado para esta evidência.</div>);
         }
 
+        const formatTime = (seconds: number) => {
+          if (!Number.isFinite(seconds)) return '00:00';
+          const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const ss = Math.floor(seconds % 60).toString().padStart(2, '0');
+          return `${mm}:${ss}`;
+        };
+
+        const handleTogglePlay = () => {
+          if (waveSurferRef.current) {
+            waveSurferRef.current.playPause();
+            return;
+          }
+          const el = audioElementRef.current;
+          if (!el) return;
+          if (audioIsPlaying) {
+            el.pause();
+            setAudioIsPlaying(false);
+          } else {
+            el.play().then(() => setAudioIsPlaying(true)).catch(err => console.warn('Audio play failed', err));
+          }
+        };
+
+        const handleSeek = (value: number) => {
+          if (waveSurferRef.current && (audioDuration || 0) > 0) {
+            const ratio = Math.min(Math.max(value / (audioDuration || 1), 0), 1);
+            waveSurferRef.current.seekTo(ratio);
+            return;
+          }
+          const el = audioElementRef.current;
+          if (!el) return;
+          el.currentTime = value;
+          setAudioPosition(value);
+        };
+
         return (
-          <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'stretch', justifyContent:'flex-start', background:'#000', padding:20, boxSizing:'border-box'}}>
-            <div style={{marginBottom:12, display:'flex', alignItems:'center', gap:12}}>
-              <div style={{color:'#ccc', fontSize:13}}>Clique em ▶ para reproduzir; use o painel abaixo para análise avançada.</div>
+          <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', gap:12, background:'#000', padding:'16px 18px', boxSizing:'border-box'}}>
+            <audio
+              ref={audioElementRef}
+              src={audioSrc || undefined}
+              preload="metadata"
+              style={{ display: 'none' }}
+              onEnded={() => setAudioIsPlaying(false)}
+              onTimeUpdate={(e) => setAudioPosition((e.target as HTMLAudioElement).currentTime || 0)}
+              onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
+            />
+
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+              <div style={{color:'#ccc', fontSize:13}}>Reprodutor básico. Use EXPANDIR para análise avançada.</div>
+              <a href={audioSrc} target="_blank" rel="noreferrer" style={{color:'#00f3ff', fontSize:12}}>baixar</a>
             </div>
-            <div style={{flex:1, minHeight:220}}>
-              <AdvancedAudioLab 
-                baseSrc={String(audioSrc)}
-                hiddenSrc={audioHidden ? String(audioHidden) : undefined}
-                triggerTime={meta?.audio_config?.trigger_time}
+
+            <div style={{width:'100%', minHeight:70}} ref={waveformRef} />
+
+            <div style={{display:'flex', alignItems:'center', gap:12, background:'rgba(0,0,0,0.4)', border:'1px solid rgba(0,243,255,0.15)', padding:'10px 12px', borderRadius:8}}>
+              <button
+                onClick={handleTogglePlay}
+                className="btn-tool-tab"
+                style={{minWidth:110}}
+              >
+                {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
+              </button>
+
+              <input
+                type="range"
+                min={0}
+                max={audioDuration || 0}
+                step={0.1}
+                value={Math.min(audioPosition, audioDuration || 0)}
+                onChange={(e) => handleSeek(Number(e.target.value))}
+                style={{flex:1, accentColor:'#00f3ff'}}
+                aria-label="Linha do tempo do áudio"
               />
+
+              <div style={{display:'flex', alignItems:'center', gap:6, color:'#00f3ff', fontFamily:'Share Tech Mono, monospace', fontSize:12}}>
+                <span>{formatTime(audioPosition)}</span>
+                <span style={{opacity:0.6}}>/</span>
+                <span>{formatTime(audioDuration)}</span>
+              </div>
             </div>
+
+            <div style={{color:'#777', fontSize:11}}>Dica: clique em 🎵 EXPANDIR para usar espectrograma e controles completos.</div>
           </div>
         );
       }
@@ -568,53 +721,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     style={{ height: '100%', width: '100%' }}
                     forensicChannel={forensicChannel}
                   />
-                  {fullscreenOpen && createPortal(
-                    <div style={{position:'fixed', inset:0, zIndex:30000, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column'}} onClick={() => setFullscreenOpen(false)}>
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:12}} onClick={(e)=>e.stopPropagation()}>
-                        <div style={{color:'#fff'}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,6)}</div>
-                        <div style={{display:'flex', gap:8}}>
-                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setLocalUV(prev=>!prev); }}>{localUV? 'UV ON':'UV OFF'}</button>
-                          <button className={`btn-tool-tab ${localThermal ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setLocalThermal(prev=>!prev); }}>{localThermal ? 'TERMAL ON' : 'TERMAL'}</button>
-                          <button className={`btn-tool-tab ${forensicMode !== 'none' ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setForensicMode(prev => prev === 'channel' ? 'none' : 'channel'); }}>{forensicMode !== 'none' ? 'FORENSE ON' : 'FORENSE'}</button>
-                          <select value={forensicChannel} onChange={e=>setForensicChannel(e.target.value as any)} style={{marginLeft:6}} onClick={e=>e.stopPropagation()}>
-                            <option value="all">ALL</option>
-                            <option value="r">R</option>
-                            <option value="g">G</option>
-                            <option value="b">B</option>
-                          </select>
-                          <button className={`btn-tool-tab ${fullscreenOnlyTreatment ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setFullscreenOnlyTreatment(prev=>!prev); }}>{fullscreenOnlyTreatment ? 'TRATAR SÓ NA EXPANSÃO' : 'TRATAR NA TELA'}</button>
-                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setBrightness(100); setContrast(100); setSaturation(100); }}>RESET</button>
-                          <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setFullscreenOpen(false); }}>FECHAR</button>
-                        </div>
-                      </div>
-                      <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
-                        <div style={{width:'90%', height:'90%', position:'relative'}}>
-                          <MysteryImage
-                            baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                            hiddenSrc={currentCard.image_uv_url}
-                            filterLayerSrc={currentCard.image_filter_layer}
-                            filters={{ brightness, contrast, saturate: saturation }}
-                            revealSettings={reveal}
-                            isUVMode={localUV}
-                            fit="contain"
-                            className="large-evidence-img"
-                            style={{ height: '100%', width: '100%' }}
-                            forensicChannel={forensicChannel}
-                          />
-                          {localThermal && (
-                            <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
-                          )}
-                        </div>
-                      </div>
-                      <div style={{padding:12, display:'flex', gap:12, alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
-                        <label style={{color:'#fff'}}>BRILHO {brightness}%</label>
-                        <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} />
-                        <label style={{color:'#fff'}}>CONTRASTE {contrast}%</label>
-                        <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} />
-                        <label style={{color:'#fff'}}>SAT {saturation}%</label>
-                        <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} />
-                      </div>
-                    </div>, document.body)}
                 </>
               );
             })()}
@@ -639,10 +745,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       }
 
       // Fallback: if no image but have chat, show phone
-      if (chatList && chatList.length > 0) {
+      if (_headerChatList && _headerChatList.length > 0) {
         return (
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
-            <PhoneViewer chatData={chatList} contactName={currentCard.title} />
+            <PhoneViewer 
+              chatData={_headerChatList} 
+              contactName={currentCard.title}
+              isLocked={phoneIsLocked}
+              password={phonePassword}
+            />
           </div>
         );
       }
@@ -753,7 +864,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const modal = (
     <div className="inspect-backdrop" onClick={onClose}>
       <div
-        className={`inspect-file ${audioExpanded ? 'audio-expanded' : ''}`}
+        className="inspect-file"
         ref={fileRef}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -782,12 +893,54 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                     {card.image_url && <button className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} onClick={() => setVisualMode('image')}>FOTO</button>}
                     {currentCard.video_url && <button className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} onClick={() => setVisualMode('video')}>VÍDEO</button>}
-                    {currentCard.audio_url && <button className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} onClick={() => setVisualMode('audio')}>ÁUDIO</button>}
+                    {(currentCard.audio_url || unifiedMedia.audioUrl || parsedMetadata?.audio_url || parsedMetadata?.audio || parsedMetadata?.audio_base_url) && <button className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} onClick={() => setVisualMode('audio')}>ÁUDIO</button>}
                     {_headerChatList && _headerChatList.length > 0 && <button className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} onClick={() => setVisualMode('phone')}>CHATS</button>}
                 </div>
               </div>
               <div className="actions">
-                <button className="btn-tool-tab" title="Expandir imagem" onClick={(e)=>{ e.stopPropagation(); setFullscreenOpen(true); }}>🔍 EXPANDIR</button>
+                <button 
+                  className="btn-tool-tab" 
+                  title={visualMode === 'audio' ? 'Expandir para tela cheia' : visualMode === 'phone' ? 'Expandir celular' : 'Expandir imagem'}
+                  onClick={(e)=>{ 
+                    e.stopPropagation();
+                    
+                    // Prevenir múltiplos cliques simultâneos
+                    if (audioExpanderLockRef.current) {
+                      console.warn('[InspectionModal] Clique bloqueado - já em processamento');
+                      return;
+                    }
+                    
+                    audioExpanderLockRef.current = true;
+                    console.log('[InspectionModal] Expandir button clicked, visualMode:', visualMode);
+                    
+                    if (visualMode === 'audio') {
+                      const meta = parsedMetadata;
+                      const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+                      console.log('[InspectionModal] Audio expand - audioSrc:', audioSrc);
+                      
+                      if (audioSrc) {
+                        console.log('[InspectionModal] Setting expanderAudioSrc to:', audioSrc);
+                        setExpanderAudioSrc(String(audioSrc));
+                        
+                        setTimeout(() => {
+                          setAudioExpanderOpen(true);
+                          console.log('[InspectionModal] Audio modal opened');
+                          audioExpanderLockRef.current = false;
+                        }, 50);
+                      } else {
+                        console.warn('[InspectionModal] No audio source found');
+                        audioExpanderLockRef.current = false;
+                      }
+                    } else {
+                      console.log('[InspectionModal] Opening fullscreen for visualMode:', visualMode);
+                      setFullscreenOpen(true);
+                      audioExpanderLockRef.current = false;
+                    }
+                  }}
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                >
+                  {visualMode === 'audio' ? '🎵 EXPANDIR' : visualMode === 'phone' ? '📱 EXPANDIR' : '🔍 EXPANDIR'}
+                </button>
 
                 <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}>🧪 TRATAMENTO</button>
 
@@ -859,16 +1012,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 {/* Phone open/close button removed per request */}
 
-                {/* Botão para expandir/compactar a visualização de áudio (Modo Cinema) */}
-                {visualMode === 'audio' && (
-                  <button
-                    className={`btn-tool-tab ${audioExpanded ? 'active-green' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setAudioExpanded(prev => !prev); }}
-                    title="Ocultar detalhes para focar no espectrograma"
-                  >
-                    {audioExpanded ? 'COMPACTAR' : 'EXPANDIR ÁUDIO'}
-                  </button>
-                )}
+                {/* Expandir button moved to main toolbar as contextual control */}
 
                 <button className="btn-close-modal" onClick={onClose}>&times;</button>
               </div>
@@ -884,12 +1028,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
         {/* --- CONTEÚDO PRINCIPAL --- */}
         {!(isUnlocked || isGameMaster) ? (
-          <div style={{ flex: 1, display: 'flex', background: '#000' }}>
-            <HackingTerminal
-              correctPassword={card.lock_password}
-              onUnlock={() => setIsUnlocked(true)}
-              hint={card.description_public}
-            />
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+            {(() => {
+              const lockPass = card.lock_password;
+              const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
+              if (isNumeric) {
+                return <NumericKeypad code={lockPass} onUnlock={() => setIsUnlocked(true)} />;
+              }
+              return (
+                <HackingTerminal
+                  correctPassword={lockPass}
+                  onUnlock={() => setIsUnlocked(true)}
+                  hint={card.description_public}
+                />
+              );
+            })()}
           </div>
         ) : (
           <React.Fragment>
@@ -980,12 +1133,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
               )}
 
-              
+              {forensicMode === 'hex' && (
+                <div className="tools-hud-panel">
+                  <div className="hud-title">⌨️ INSPETOR HEXADECIMAL</div>
+                  <div style={{ width: '100%' }}>
+                    <HexViewer hiddenMessage={currentCard.metadata?.hex_code || currentCard.metadata?.hex_hidden_message || ''} />
+                  </div>
+                </div>
+              )}
 
               {/* audio is displayed via the 'audio' visual mode/tab now */}
             </div>
 
-            {visualMode !== 'phone' && !audioExpanded && (
+            {visualMode !== 'phone' && (
               <div className="inspect-details">
            
            {/* Coluna com SCROLL automático */}
@@ -1005,40 +1165,61 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               )}
 
               {/* METADADOS LIMPOS E ORGANIZADOS */}
-                {card.metadata && Object.keys(card.metadata).length > 0 && (
+                {card.metadata && card.metadata.field_values && Object.keys(card.metadata.field_values).length > 0 && (
                   <div className="metadata-box">
                     <h4>METADADOS TÉCNICOS</h4>
-                     {Object.entries(card.metadata || {}).map(([key, val]: any) => {
-                      // Filtros:
-                      if(['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter'].includes(key)) return null;
-                      if (!val && val !== 0) return null;
-
-                      // 1. Tratamento bonito para JSONs complexos (como person)
-                      let displayVal: any = val;
-                      if (typeof val === 'object') {
-                        if (key === 'person' || key === 'person_meta') {
-                         displayVal = (
-                          <div style={{fontSize: 12, marginLeft: 5}}>
-                            <div style={{color:'#ddd'}}><b>Nome:</b> {val.name || '—'}</div>
-                            <div style={{color:'#ddd'}}><b>Profissão:</b> {val.occupation || '—'}</div>
-                            <div style={{color: val.status && String(val.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71'}}><b>Estado:</b> {val.status || '—'}</div>
+                    
+                    {/* Mostrar APENAS field_values com valores reais */}
+                    <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
+                      <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>📋 Informações do Arquivo</div>
+                      {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
+                        // Só mostra se tem valor real
+                        if (!val && val !== 0) return null;
+                        
+                        const labelMap: Record<string, string> = {
+                          date_created: '📅 Data',
+                          gps_coords: '📍 Localização',
+                          device_owner: '👤 Proprietário',
+                          camera_model: '📷 Câmera',
+                          technical_note: '🔧 Nota Técnica',
+                          chat_contact_name: '💬 Contato',
+                          stamp: '🔖 Carimbo',
+                          external_link: '🔗 Link Externo'
+                        };
+                        const label = labelMap[key] || key;
+                        return (
+                          <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #1a1a1a', padding:'6px 0'}}>
+                            <span style={{color:'#c6a45f', fontSize:11}}>{label}:</span>
+                            <div style={{color:'#ddd', fontSize:12, marginTop:2}}>
+                              {key === 'gps_coords' && typeof val === 'string' ? (
+                                <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" style={{color:'#4a9eff'}}>
+                                  {val}
+                                </a>
+                              ) : (
+                                String(val)
+                              )}
+                            </div>
                           </div>
-                         );
-                        } else {
-                         // stringify with indentation but render in a pre-wrap box so it doesn't overflow
-                         displayVal = JSON.stringify(val, null, 2);
-                        }
-                      }
-
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Mostrar person/person_meta se houver */}
+                {card.metadata && (card.metadata.person || card.metadata.person_meta) && (
+                  <div className="metadata-box" style={{ marginTop: 12 }}>
+                    <h4>PERFIL DE PESSOA</h4>
+                    {(() => {
+                      const personData = card.metadata.person || card.metadata.person_meta;
                       return (
-                        <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #222', padding:'6px 0'}}>
-                          <span style={{color:'#666', fontSize:11, textTransform:'uppercase'}}>{key}:</span>
-                          <div style={{color:'#aaa', fontSize:12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak:'break-word', marginTop:4}}>
-                            {displayVal}
-                          </div>
+                        <div style={{display:'flex', flexDirection:'column', gap: 8}}>
+                          <div><strong>Nome:</strong> {personData.name || '—'}</div>
+                          <div><strong>Profissão:</strong> {personData.occupation || '—'}</div>
+                          <div><strong>Status:</strong> <span style={{color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71'}}>{personData.status || '—'}</span></div>
                         </div>
-                      )
-                    })}
+                      );
+                    })()}
                   </div>
                 )}
            </div>
@@ -1088,7 +1269,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         <div className="metadata-box" style={{ marginTop: 12 }}>
                           <h4>METADADOS TÉCNICOS</h4>
                           {Object.entries(card.metadata || {}).map(([key, val]: any) => {
-                            if(['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter'].includes(key)) return null;
+                            if(['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter', 'phone_password', 'phone_locked', 'field_values'].includes(key)) return null;
                             if (!val && val !== 0) return null;
                             let displayVal: any = val;
                             if (typeof val === 'object') {
@@ -1185,6 +1366,90 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     <>
       {createPortal(modal, document.body)}
       {glitchPortal}
+      
+      {/* Fullscreen Modal para Imagens e Phone */}
+      {fullscreenOpen && createPortal(
+        <div style={{position:'fixed', inset:0, zIndex:30000, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column'}} onClick={() => setFullscreenOpen(false)}>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:12}} onClick={(e)=>e.stopPropagation()}>
+            <div style={{color:'#fff'}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,6)}</div>
+            <div style={{display:'flex', gap:8}}>
+              {visualMode !== 'phone' && (
+                <>
+                  <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setLocalUV(prev=>!prev); }}>{localUV? 'UV ON':'UV OFF'}</button>
+                  <button className={`btn-tool-tab ${localThermal ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setLocalThermal(prev=>!prev); }}>{localThermal ? 'TERMAL ON' : 'TERMAL'}</button>
+                  <button className={`btn-tool-tab ${forensicMode !== 'none' ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setForensicMode(prev => prev === 'channel' ? 'none' : 'channel'); }}>{forensicMode !== 'none' ? 'FORENSE ON' : 'FORENSE'}</button>
+                  <select value={forensicChannel} onChange={e=>setForensicChannel(e.target.value as any)} style={{marginLeft:6}} onClick={e=>e.stopPropagation()}>
+                    <option value="all">ALL</option>
+                    <option value="r">R</option>
+                    <option value="g">G</option>
+                    <option value="b">B</option>
+                  </select>
+                  <button className={`btn-tool-tab ${fullscreenOnlyTreatment ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setFullscreenOnlyTreatment(prev=>!prev); }}>{fullscreenOnlyTreatment ? 'TRATAR SÓ NA EXPANSÃO' : 'TRATAR NA TELA'}</button>
+                  <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setBrightness(100); setContrast(100); setSaturation(100); }}>RESET</button>
+                </>
+              )}
+              <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setFullscreenOpen(false); }}>FECHAR</button>
+            </div>
+          </div>
+          <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
+            {visualMode === 'phone' ? (
+              <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                <PhoneViewer 
+                  chatData={_headerChatList} 
+                  contactName={currentCard.title}
+                  isLocked={phoneIsLocked}
+                  password={phonePassword}
+                  fullscreen={true}
+                />
+              </div>
+            ) : (
+              <div style={{width:'90%', height:'90%', position:'relative'}}>
+                <MysteryImage
+                  baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                  hiddenSrc={currentCard.image_uv_url}
+                  filterLayerSrc={currentCard.image_filter_layer}
+                  filters={{ brightness, contrast, saturate: saturation }}
+                  revealSettings={(() => {
+                    let reveal: any = null;
+                    try {
+                      const m = currentCard.metadata && typeof currentCard.metadata === 'object'
+                        ? currentCard.metadata
+                        : (typeof currentCard.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
+                      reveal = m?.image_filter_reveal ?? null;
+                    } catch (e) { reveal = null; }
+                    return reveal;
+                  })()}
+                  isUVMode={localUV}
+                  fit="contain"
+                  className="large-evidence-img"
+                  style={{ height: '100%', width: '100%' }}
+                  forensicChannel={forensicChannel}
+                />
+                {localThermal && (
+                  <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
+                )}
+              </div>
+            )}
+          </div>
+          {visualMode !== 'phone' && (
+          <div style={{padding:12, display:'flex', gap:12, alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
+            <label style={{color:'#fff'}}>BRILHO {brightness}%</label>
+            <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} />
+            <label style={{color:'#fff'}}>CONTRASTE {contrast}%</label>
+            <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} />
+            <label style={{color:'#fff'}}>SAT {saturation}%</label>
+            <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} />
+          </div>
+          )}
+        </div>, document.body
+      )}
+      
+      <AudioViewerModal
+        isOpen={audioExpanderOpen}
+        onClose={() => setAudioExpanderOpen(false)}
+        audioSrc={expanderAudioSrc}
+        title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'}
+      />
     </>
   );
 }

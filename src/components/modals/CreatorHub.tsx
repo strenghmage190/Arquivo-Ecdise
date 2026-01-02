@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { fetchCardsForInvestigation } from '../../api/investigations';
-import UnifiedPuzzleCreatorModal from './UnifiedPuzzleCreatorModal';
 import CreateClueModal from './CreateClueModal';
 import './CreatorHub.css';
 
@@ -248,9 +247,9 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
         </div>
       </div>
 
-      {/* Modal de criação unificado (Puzzles) */}
+      {/* Modal de criação unificado - CreateClueModal agora suporta tudo */}
       {showCreatorModal && (
-        <UnifiedPuzzleCreatorModal
+        <CreateClueModal
           isOpen={showCreatorModal}
           onClose={() => setShowCreatorModal(false)}
           investigationId={investigationId}

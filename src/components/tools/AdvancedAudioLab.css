@@ -1,24 +1,727 @@
-/* AdvancedAudioLab - Modern UI Styles */
+/* =========================================
+   ESTAÇÃO DE ANÁLISE ESPECTRAL - NEXUS VOID
+   Hardware Recuperado de Campo
+   ========================================= */
 
-/* Overlay spectrogram enhancements */
-#advanced-spectrogram-overlay {
-  z-index: 20;
-  pointer-events: auto;
-  transition: opacity 0.3s ease, left 0.1s ease;
+:root {
+  --lab-purple: #8b5cf6;
+  --lab-cyan: #00f3ff;
+  --lab-emerald: #10b981;
+  --lab-dark: #030507;
+  --lab-grid: rgba(0, 243, 255, 0.05);
+  --lab-border: rgba(139, 92, 246, 0.2);
 }
 
-/* Mix blend for better overlay visibility */
+/* =============================================
+   1. CONTAINER MESTRE (O Rack de Equipamento)
+   ============================================= */
+
+.advanced-audio-lab-container {
+  background: var(--lab-dark);
+  border: 1px solid var(--lab-border);
+  padding: 12px;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+  /* Grid de fundo tipo tela CRT */
+  background-image: 
+    linear-gradient(var(--lab-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lab-grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Abas de Ventilação decorativas (parecer equipamento real) */
+.advanced-audio-lab-container::after {
+  content: "";
+  position: absolute;
+  top: 5px; 
+  right: 10px;
+  width: 40px; 
+  height: 3px;
+  background: repeating-linear-gradient(90deg, #333, #333 4px, transparent 4px, transparent 8px);
+  opacity: 0.5;
+  z-index: 1;
+}
+
+
+/* MODO EXPANSÃO (Modo Cinema) */
+.advanced-audio-lab-container.expanded {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 95vw;
+  max-width: 1600px;
+  height: auto;
+  max-height: 90vh;
+  z-index: 9999;
+  background: rgba(3, 5, 7, 0.98);
+  padding: 24px;
+  border: 2px solid var(--lab-cyan);
+  border-radius: 6px;
+  box-shadow: 
+    0 0 120px rgba(0, 243, 255, 0.5),
+    inset 0 0 60px rgba(0, 0, 0, 0.9);
+  overflow-y: auto;
+  animation: expand-cinema 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes expand-cinema {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3) rotate(-2deg);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.05) rotate(0.5deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* =============================================
+   2. HEADER - STATUS DA TRANSMISSÃO
+   ============================================= */
+
+.audio-header-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--lab-border);
+  margin-bottom: 10px;
+  position: relative;
+  clip-path: polygon(0 0, 100% 0, 100% 85%, 98% 100%, 0 100%);
+}
+
+/* LED de Sinal */
+.signal-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #444;
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.8);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.signal-led[data-active="true"] {
+  background: var(--lab-emerald);
+  box-shadow: 
+    0 0 12px rgba(16, 185, 129, 0.8), 
+    inset 0 0 5px rgba(16, 185, 129, 0.4);
+  animation: signal-pulse 2s ease-in-out infinite;
+}
+
+@keyframes signal-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* Timestamp Digital */
+.timestamp-digital {
+  font-family: 'Courier New', 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--lab-cyan);
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px rgba(0, 243, 255, 0.6);
+  font-weight: 700;
+}
+
+/* =============================================
+   3. WAVEFORM (Osciloscópio CRT)
+   ============================================= */
+
+.waveform-housing {
+  position: relative;
+  background: #050505;
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.05);
+  overflow: hidden;
+  margin-bottom: 12px;
+  padding: 6px;
+}
+
+/* Grid de fundo (scanlines) */
+.waveform-housing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#main-oscillator,
+#advanced-waveform {
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Linha de Playhead (Scanner) */
+.playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, 
+    rgba(255, 0, 0, 0) 0%,
+    rgba(255, 0, 0, 0.8) 20%,
+    rgba(255, 0, 0, 1) 50%,
+    rgba(255, 0, 0, 0.8) 80%,
+    rgba(255, 0, 0, 0) 100%
+  );
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 10;
+  transition: left 0.05s linear;
+}
+
+/* =============================================
+   4. CÂMARA ESPECTRAL (O Coração do Sistema)
+   ============================================= */
+
+.spectral-chamber {
+  position: relative;
+  background: rgba(5, 5, 5, 0.9);
+  border: 1px solid var(--lab-border);
+  border-radius: 4px;
+  overflow: auto; /* Mudado para auto - permite scroll se necessário */
+  min-height: 180px;
+  margin: 8px 0;
+}
+
+.base-spectrogram {
+  position: relative;
+  filter: hue-rotate(200deg) brightness(0.9);
+  width: 100%;
+  height: 100%;
+}
+
+/* =============================================
+   5. OVERLAY - O FANTASMA NA MÁQUINA
+   ============================================= */
+
+#advanced-spectrogram-overlay {
+  z-index: 50;
+  mix-blend-mode: screen; /* CRUCIAL: Funde os sinais visualmente */
+  border: 1px dashed rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.05);
+  transition: opacity 0.3s ease, left 0.15s ease-out;
+  cursor: grab;
+  position: absolute;
+  box-shadow: 
+    0 0 15px rgba(139, 92, 246, 0.15),
+    inset 0 0 10px rgba(139, 92, 246, 0.08);
+}
+
+#advanced-spectrogram-overlay:active { 
+  cursor: grabbing; 
+  transition: left 0s; /* Remove transition durante drag */
+}
+
+/* Efeito de Cintilação Paranormal */
+#advanced-spectrogram-overlay {
+  animation: signal-flicker 4s infinite;
+}
+
+@keyframes signal-flicker {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 1; filter: brightness(1.1) contrast(1.2); }
+  98% { filter: hue-rotate(0deg); }
+  99% { filter: hue-rotate(90deg) skewX(2deg); } /* Glitch raro */
+}
+
+/* Drag Handle Visual */
+#advanced-spectrogram-overlay::before {
+  content: "::: FREQ_SHIFT :::";
+  position: absolute;
+  top: -16px; 
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px; 
+  color: var(--lab-purple);
+  font-family: 'Courier New', 'Share Tech Mono', monospace;
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  text-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+  white-space: nowrap;
+  z-index: 100;
+}
+
+#advanced-spectrogram-overlay:hover::before {
+  opacity: 1;
+}
+
+.drag-handle-vertical {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 80px;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(0, 243, 255, 0.1) 20%,
+    rgba(0, 243, 255, 0.3) 50%,
+    rgba(0, 243, 255, 0.1) 80%,
+    transparent 100%
+  );
+  border-left: 2px dashed rgba(0, 243, 255, 0.4);
+  border-right: 2px dashed rgba(0, 243, 255, 0.4);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#advanced-spectrogram-overlay:hover .drag-handle-vertical {
+  opacity: 1;
+}
+
+/* Ghosting Effect */
+#advanced-spectrogram-overlay.ghosting {
+  transition: left 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  filter: blur(1px) brightness(0.95);
+}
+
+/* Sincronia Harmônica - Frequência Alinhada */
+#advanced-spectrogram-overlay[data-synced="true"] {
+  border-color: rgba(16, 185, 129, 0.8);
+  box-shadow: 
+    0 0 25px rgba(16, 185, 129, 0.4),
+    inset 0 0 15px rgba(16, 185, 129, 0.1);
+  animation: harmonic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes harmonic-pulse {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.2) saturate(1.3);
+    transform: scale(1.005);
+  }
+}
+
+/* Mix blend para melhor visibilidade do overlay */
 #advanced-spectrogram-overlay canvas {
   mix-blend-mode: screen;
   filter: contrast(1.15) brightness(1.05);
 }
 
-/* Grabbing cursor during drag */
+/* Cursor durante drag */
 #advanced-spectrogram-overlay.grabbing {
   cursor: grabbing !important;
+  transition: left 0s;
 }
 
-/* Highlight effect when enabled */
+/* =============================================
+   6. CONTROLES - PAINEL TÁTICO
+   ============================================= */
+
+.tactical-footer,
+.controls-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 12px;
+  border-radius: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* Botões Táticos */
+.btn-play-tactical,
+.btn-utility {
+  font-family: 'Courier New', 'Share Tech Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 9px 18px;
+  border: 1px solid var(--lab-purple);
+  background: linear-gradient(135deg, 
+    rgba(139, 92, 246, 0.25), 
+    rgba(139, 92, 246, 0.1)
+  );
+  color: var(--lab-purple);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+  text-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-play-tactical::before,
+.btn-utility::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(139, 92, 246, 0.3), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-play-tactical:hover::before,
+.btn-utility:hover::before {
+  left: 100%;
+}
+
+.btn-play-tactical:hover,
+.btn-utility:hover {
+  background: linear-gradient(135deg, 
+    rgba(139, 92, 246, 0.4), 
+    rgba(139, 92, 246, 0.2)
+  );
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+  border-color: var(--lab-cyan);
+  color: var(--lab-cyan);
+}
+
+.btn-play-tactical:active,
+.btn-utility:active {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
+}
+
+/* =============================================
+   7. PAINEL DE POTENCIÔMETROS ANALÓGICOS
+   ============================================= */
+
+/* O Container do Rack de Controles */
+.knob-rack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  margin-top: 15px;
+  position: relative;
+}
+
+/* Tira de metal decorativa para segurar os botões */
+.knob-rack::before {
+  content: "";
+  position: absolute;
+  top: 10px; 
+  left: 0; 
+  width: 100%; 
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+}
+
+.knob-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.knob-control label {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--lab-cyan);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 0 5px rgba(0, 243, 255, 0.3);
+  font-weight: 700;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+/* Label OVERLOAD quando opacity = 100% */
+.knob-control label[data-overload="true"] {
+  color: #ff0000;
+  animation: overload-blink 0.3s infinite;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+}
+
+@keyframes overload-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* === ESTILIZAÇÃO DO SLIDER (O KNOB) === */
+.nexus-knob {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 10px;
+  outline: none;
+  margin: 15px 0;
+  cursor: pointer;
+}
+
+/* O Botão Rotativo (Thumb) no Webkit */
+.nexus-knob::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  background: #151515;
+  border: 2px solid #333;
+  border-radius: 50%;
+  cursor: pointer;
+  /* Gradiente para parecer metal escovado circular */
+  background: radial-gradient(circle, #333 0%, #151515 100%);
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.8),
+    inset 0 1px 1px rgba(255,255,255,0.1);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* Hover e Active do Knob */
+.nexus-knob:hover::-webkit-slider-thumb {
+  border-color: var(--lab-purple);
+  box-shadow: 
+    0 0 15px rgba(139, 92, 246, 0.4),
+    0 4px 10px rgba(0,0,0,0.8),
+    inset 0 1px 1px rgba(255,255,255,0.1);
+}
+
+.nexus-knob:active::-webkit-slider-thumb {
+  transform: scale(0.9); /* Pequena "torção" visual ao girar */
+  border-color: var(--lab-cyan);
+  box-shadow: 
+    0 0 20px rgba(0, 243, 255, 0.6),
+    0 4px 10px rgba(0,0,0,0.8);
+}
+
+/* Para o Firefox */
+.nexus-knob::-moz-range-thumb {
+  width: 28px; 
+  height: 28px;
+  background: radial-gradient(circle, #333 0%, #151515 100%);
+  border: 2px solid #333;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.8),
+    inset 0 1px 1px rgba(255,255,255,0.1);
+  transition: all 0.2s ease;
+}
+
+.nexus-knob:hover::-moz-range-thumb {
+  border-color: var(--lab-purple);
+  box-shadow: 
+    0 0 15px rgba(139, 92, 246, 0.4),
+    0 4px 10px rgba(0,0,0,0.8);
+}
+
+.nexus-knob:active::-moz-range-thumb {
+  transform: scale(0.9);
+  border-color: var(--lab-cyan);
+  box-shadow: 
+    0 0 20px rgba(0, 243, 255, 0.6),
+    0 4px 10px rgba(0,0,0,0.8);
+}
+
+/* Valores de leitura */
+.knob-control span {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  text-align: center;
+  color: var(--lab-purple);
+  font-weight: 700;
+}
+
+/* =============================================
+   STATUS LIGHTS - LEDs de Indicação
+   ============================================= */
+
+.status-light {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  border: 1px solid #1a1a1a;
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.8);
+  transition: all 0.3s ease;
+}
+
+.status-light[data-on="true"] {
+  background: var(--lab-emerald);
+  box-shadow: 
+    0 0 10px rgba(16, 185, 129, 0.8),
+    inset 0 0 5px rgba(16, 185, 129, 0.4);
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.status-light[data-on="false"] {
+  background: #8b0000;
+  box-shadow: 
+    0 0 6px rgba(139, 0, 0, 0.5),
+    inset 0 0 3px rgba(139, 0, 0, 0.3);
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* =============================================
+   8. MAGNIFICAÇÃO - ZOOM INTELIGENTE
+   ============================================= */
+
+.zoom-magnification-container {
+  position: relative;
+}
+
+.zoom-magnification-container[data-zoom-level="high"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 0, 0, 0.03) 0px,
+      transparent 2px,
+      transparent 4px,
+      rgba(255, 0, 0, 0.03) 6px
+    );
+  pointer-events: none;
+  animation: sanity-decay 2s ease-in-out infinite;
+  z-index: 100;
+}
+
+@keyframes sanity-decay {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; transform: translateX(2px); }
+}
+
+/* =============================================
+   9. RUÍDO ESTÁTICO (Modo Cinema)
+   ============================================= */
+
+.cinema-static-noise {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  animation: static-drift 8s linear infinite;
+}
+
+@keyframes static-drift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-50px, -50px); }
+}
+
+/* =============================================
+   10. ANIMAÇÕES GLOBAIS
+   ============================================= */
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Labels com Flicker */
+.text-purple-400 {
+  color: var(--lab-cyan) !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  animation: label-flicker 2s infinite alternate;
+}
+
+@keyframes label-flicker {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; text-shadow: 0 0 8px var(--lab-cyan); }
+}
+
+/* =============================================
+   11. RESPONSIVIDADE
+   ============================================= */
+
+@media (max-width: 768px) {
+  .advanced-audio-lab-container.expanded {
+    width: 98vw;
+    padding: 16px;
+  }
+
+  .tactical-footer,
+  .controls-bar {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .btn-play-tactical,
+  .btn-utility {
+    padding: 7px 14px;
+    font-size: 10px;
+  }
+
+  .knob-control {
+    min-width: 100px;
+  }
+}
+
+/* =============================================
+   12. COMPATIBILIDADE COM COMPONENTES EXISTENTES
+   ============================================= */
+
+/* Spectrograma profissional */
+.professional-spectrogram-canvas {
+  border-radius: 4px;
+}
+
+.audio-expanded .professional-spectrogram-canvas {
+  height: 350px !important;
+}
+
+/* Checkbox e controles secundários */
+input[type="checkbox"] {
+  accent-color: var(--lab-purple);
+  cursor: pointer;
+}
+
+/* Links e textos auxiliares */
+.text-cyan-400 {
+  color: var(--lab-cyan) !important;
+}
+
+.text-emerald-400 {
+  color: var(--lab-emerald) !important;
+}
+
+/* Highlight effect quando enabled */
 .spectrogram-overlay-highlight {
   animation: pulseGlow 2s ease-in-out infinite;
 }
@@ -32,8 +735,4 @@
   }
 }
 
-/* Waveform styling */
-#advanced-waveform {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-}
 

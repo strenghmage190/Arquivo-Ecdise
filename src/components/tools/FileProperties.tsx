@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDisplayConfig } from '../../config/displayConfig';
 
 interface FilePropertiesProps {
   metaData?: Record<string, any>;
@@ -6,6 +7,7 @@ interface FilePropertiesProps {
 }
 
 export default function FileProperties({ metaData, filename }: FilePropertiesProps) {
+  const displayConfig = useDisplayConfig();
   const gps = metaData?.gps_coords || metaData?.gps || '';
   return (
     <div style={{ background: '#e0e0e0', color: '#000', padding: 10, fontFamily: 'Arial', fontSize: 12, width: 320, border: '1px solid #999', boxShadow: '5px 5px 15px rgba(0,0,0,0.5)' }}>
@@ -14,22 +16,50 @@ export default function FileProperties({ metaData, filename }: FilePropertiesPro
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 6 }}>
-        <strong>Tipo:</strong><div>Image File (JPEG)</div>
-        <strong>Tamanho:</strong><div>{metaData?.size || '—'}</div>
-        <hr style={{ gridColumn: 'span 2', width: '100%', borderColor: '#999' }} />
-        <strong>Câmera:</strong><div>{metaData?.camera_model || 'Device_Unknown_Ordo_Tech'}</div>
-        <strong>Data:</strong><div>{metaData?.date_created || metaData?.fake_date || 'Corrompido'}</div>
-        <strong>Local:</strong>
-        <div>
-          {gps ? <a href={`https://maps.google.com/?q=${gps}`} target="_blank" rel="noreferrer">{gps}</a> : '—'}
-        </div>
-        <strong>Owner:</strong><div style={{ color: 'red' }}>{metaData?.owner_name || 'Desconhecido'}</div>
+        {displayConfig.fileProperties.showFileType && (
+          <>
+            <strong>Tipo:</strong><div>Image File (JPEG)</div>
+          </>
+        )}
+        {displayConfig.fileProperties.showSize && (
+          <>
+            <strong>Tamanho:</strong><div>{metaData?.size || '—'}</div>
+          </>
+        )}
+        {(displayConfig.fileProperties.showFileType || displayConfig.fileProperties.showSize) && (
+          <hr style={{ gridColumn: 'span 2', width: '100%', borderColor: '#999' }} />
+        )}
+        {displayConfig.fileProperties.showCameraModel && (
+          <>
+            <strong>Câmera:</strong><div>{metaData?.camera_model || 'Device_Unknown_Ordo_Tech'}</div>
+          </>
+        )}
+        {displayConfig.fileProperties.showDate && (
+          <>
+            <strong>Data:</strong><div>{metaData?.date_created || metaData?.fake_date || 'Corrompido'}</div>
+          </>
+        )}
+        {displayConfig.fileProperties.showGPS && (
+          <>
+            <strong>Local:</strong>
+            <div>
+              {gps ? <a href={`https://maps.google.com/?q=${gps}`} target="_blank" rel="noreferrer">{gps}</a> : '—'}
+            </div>
+          </>
+        )}
+        {displayConfig.fileProperties.showOwner && (
+          <>
+            <strong>Owner:</strong><div style={{ color: 'red' }}>{metaData?.owner_name || 'Desconhecido'}</div>
+          </>
+        )}
       </div>
 
-      <div style={{ marginTop: 12, border: '1px inset #fff', padding: 8, background: '#fff', minHeight: 60 }}>
-        <em>Metadados HEX / Nota Técnica:</em>
-        <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 11 }}>{metaData?.hex_comment || metaData?.technical_note || '00 4F 52 44 4F 00 00'}</div>
-      </div>
+      {displayConfig.fileProperties.showHexComment && (
+        <div style={{ marginTop: 12, border: '1px inset #fff', padding: 8, background: '#fff', minHeight: 60 }}>
+          <em>Metadados HEX / Nota Técnica:</em>
+          <div style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 11 }}>{metaData?.hex_comment || metaData?.technical_note || '00 4F 52 44 4F 00 00'}</div>
+        </div>
+      )}
     </div>
   );
 }
