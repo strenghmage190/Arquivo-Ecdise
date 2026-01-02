@@ -1,25 +1,3 @@
-import React from 'react';
-import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
-
-type Props = {
-  validation: UseCreateClueStateReturn['validation'];
-};
-
-export default function ClueValidationTab({ validation }: Props) {
-  return (
-    <div className="p-4">
-      <h3 className="font-semibold mb-3">Validação</h3>
-      <button onClick={() => validation.validate()} className="px-3 py-1 bg-blue-500 text-white rounded">Rodar Validação</button>
-
-      <ul className="mt-4">
-        {validation.errors.length === 0 ? <li className="text-sm text-gray-500">Sem erros</li> : null}
-        {validation.errors.map((err, idx) => (
-          <li key={idx} className={`text-sm ${err.severity === 'error' ? 'text-red-600' : 'text-yellow-600'}`}>{err.field}: {err.message}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 /**
  * ✅ ClueValidationTab.tsx
  * Tab para validação de dados

@@ -1,32 +1,3 @@
-import React from 'react';
-import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
-
-type Props = {
-  formState: UseCreateClueStateReturn['formState'];
-  actions: UseCreateClueStateReturn['actions'];
-};
-
-export default function ClueMediaTab({ formState, actions }: Props) {
-  return (
-    <div className="p-4">
-      <label className="block mb-2">Imagem principal</label>
-      <input type="file" accept="image/*" onChange={actions.handleImageSelect} />
-      {formState.previewUrl ? <img src={formState.previewUrl} alt="preview" className="mt-2 max-w-xs" /> : null}
-
-      <hr className="my-4" />
-
-      <label className="block mb-2">Áudio base</label>
-      <input type="file" accept="audio/*" onChange={actions.handleAudioBaseSelect} />
-      {formState.audioBasePreview ? <audio src={formState.audioBasePreview} controls className="mt-2" /> : null}
-
-      <hr className="my-4" />
-
-      <label className="block mb-2">Vídeo</label>
-      <input type="file" accept="video/*" onChange={actions.handleVideoSelect} />
-      {formState.videoPreviewUrl ? <video src={formState.videoPreviewUrl} controls className="mt-2 max-w-md" /> : null}
-    </div>
-  );
-}
 /**
  * 🎨 ClueMediaTab.tsx
  * Tab para upload de mídia

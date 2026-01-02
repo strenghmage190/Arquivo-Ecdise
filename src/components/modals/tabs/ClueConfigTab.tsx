@@ -1,31 +1,3 @@
-import React from 'react';
-import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
-
-type Props = {
-  formState: UseCreateClueStateReturn['formState'];
-  actions: UseCreateClueStateReturn['actions'];
-};
-
-export default function ClueConfigTab({ formState, actions }: Props) {
-  return (
-    <div className="p-4">
-      <h3 className="font-semibold mb-3">Configuração</h3>
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={formState.displayConfig.media.showVideoPlayer} onChange={(e) => actions.setDisplayConfig({ ...formState.displayConfig, media: { ...formState.displayConfig.media, showVideoPlayer: e.target.checked } })} />
-          Mostrar player de vídeo
-        </label>
-      </div>
-
-      <div>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={formState.displayConfig.media.showAudioPlayer} onChange={(e) => actions.setDisplayConfig({ ...formState.displayConfig, media: { ...formState.displayConfig.media, showAudioPlayer: e.target.checked } })} />
-          Mostrar player de áudio
-        </label>
-      </div>
-    </div>
-  );
-}
 /**
  * 📊 ClueConfigTab.tsx
  * Tab para configurações avançadas

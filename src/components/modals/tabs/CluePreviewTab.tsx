@@ -1,22 +1,3 @@
-import React from 'react';
-import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
-
-type Props = {
-  formState: UseCreateClueStateReturn['formState'];
-};
-
-export default function CluePreviewTab({ formState }: Props) {
-  return (
-    <div className="p-4">
-      <h3 className="font-semibold mb-3">Preview</h3>
-      <div className="space-y-2">
-        <div><strong>Título:</strong> {formState.title || '—'}</div>
-        <div><strong>Descrição:</strong> {formState.descPublic || '—'}</div>
-        {formState.previewUrl ? <img src={formState.previewUrl} alt="preview" className="mt-2 max-w-sm" /> : null}
-      </div>
-    </div>
-  );
-}
 /**
  * 👁️ CluePreviewTab.tsx
  * Tab para preview ao vivo da pista
