@@ -1,3 +1,33 @@
+import React from 'react';
+import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
+
+type Props = {
+  formState: UseCreateClueStateReturn['formState'];
+  actions: UseCreateClueStateReturn['actions'];
+  validation: UseCreateClueStateReturn['validation'];
+};
+
+export default function ClueBasicsTab({ formState, actions }: Props) {
+  return (
+    <div className="p-4">
+      <label className="block mb-2">Tipo de Evidência</label>
+      <div className="flex gap-2 mb-4">
+        <button type="button" onClick={() => actions.setEvidenceType('document')} className="px-3 py-1 border rounded">Documento</button>
+        <button type="button" onClick={() => actions.setEvidenceType('glitch_puzzle')} className="px-3 py-1 border rounded">Glitch</button>
+        <button type="button" onClick={() => actions.setEvidenceType('mega_clue')} className="px-3 py-1 border rounded">Mega</button>
+      </div>
+
+      <label className="block mb-1">Título</label>
+      <input value={formState.title} onChange={(e) => actions.setTitle(e.target.value)} className="w-full p-2 border rounded mb-3" />
+
+      <label className="block mb-1">Descrição pública</label>
+      <textarea value={formState.descPublic} onChange={(e) => actions.setDescPublic(e.target.value)} className="w-full p-2 border rounded mb-3" />
+
+      <label className="block mb-1">Notas (ocultas)</label>
+      <textarea value={formState.descHidden} onChange={(e) => actions.setDescHidden(e.target.value)} className="w-full p-2 border rounded" />
+    </div>
+  );
+}
 /**
  * 📋 ClueBasicsTab.tsx
  * Tab para configuração básica da pista

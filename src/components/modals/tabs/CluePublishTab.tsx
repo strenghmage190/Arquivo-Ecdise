@@ -1,3 +1,24 @@
+import React from 'react';
+import type { UseCreateClueStateReturn } from '../../../hooks/useCreateClueState';
+
+type Props = {
+  formState: UseCreateClueStateReturn['formState'];
+  validation: UseCreateClueStateReturn['validation'];
+  onSave?: () => Promise<void> | void;
+};
+
+export default function CluePublishTab({ formState, validation, onSave }: Props) {
+  const ready = validation.errors.every((e) => e.severity !== 'error');
+
+  return (
+    <div className="p-4">
+      <h3 className="font-semibold mb-3">Publicar</h3>
+      <div className="mb-3">Resumo: <strong>{formState.title || '—'}</strong></div>
+      <div className="mb-3">Tipo: <strong>{formState.evidenceType}</strong></div>
+      <button disabled={!ready} onClick={() => onSave?.()} className={`px-3 py-2 rounded ${ready ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-700'}`}>Publicar Pista</button>
+    </div>
+  );
+}
 /**
  * 🚀 CluePublishTab.tsx
  * Tab para publicação final
