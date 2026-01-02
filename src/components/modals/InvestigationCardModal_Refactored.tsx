@@ -16,6 +16,10 @@ import InvestigationChatTab from './investigationTabs/InvestigationChatTab';
 import InvestigationMegaClueTab from './investigationTabs/InvestigationMegaClueTab';
 import InvestigationStatusTab from './investigationTabs/InvestigationStatusTab';
 
+// Styles
+import './InvestigationCardModal_Refactored.css';
+import './investigationTabs/investigationTabs.css';
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -379,48 +383,31 @@ export default function InvestigationCardModal_Refactored({
   }
 
   const modal = (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="investigation-modal-overlay" onClick={onClose}>
       <div
-        className="modal-content"
+        className="investigation-modal-dossier"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 1000, maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid #333', paddingBottom: 12 }}>
-          <h3>
+        <div className="investigation-dossier-header">
+          <h3 className="investigation-dossier-title">
             {isGameMaster ? (existing ? '✏️ EDITAR PISTA' : '➕ CRIAR PISTA') : '📋 DETALHES DA EVIDÊNCIA'}
           </h3>
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#fff',
-              fontSize: 24,
-              cursor: 'pointer',
-            }}
+            className="investigation-close-btn"
           >
             ×
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #333', paddingBottom: 8 }}>
+        <div className="investigation-tabs-header">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              style={{
-                padding: '10px 16px',
-                background: activeTab === tab.key ? '#27ae60' : '#222',
-                color: activeTab === tab.key ? '#fff' : '#aaa',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: activeTab === tab.key ? 'bold' : 'normal',
-                transition: 'all 0.2s',
-              }}
+              className={`investigation-tab-btn ${activeTab === tab.key ? 'active' : ''}`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -428,94 +415,89 @@ export default function InvestigationCardModal_Refactored({
         </div>
 
         {/* Tab Content */}
-        <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16, display: 'flex' }}>
-          {activeTab === 'basics' && (
-            <InvestigationBasicsTab
-              title={title}
-              setTitle={setTitle}
-              descriptionPublic={descriptionPublic}
-              setDescriptionPublic={setDescriptionPublic}
-              descriptionHidden={descriptionHidden}
-              setDescriptionHidden={setDescriptionHidden}
-              insights={insights}
-              setInsights={setInsights}
-              isGameMaster={isGameMaster}
-            />
-          )}
+        <div className="investigation-dossier-body">
+          <div className="investigation-tab-content">
+            {activeTab === 'basics' && (
+              <InvestigationBasicsTab
+                title={title}
+                setTitle={setTitle}
+                descriptionPublic={descriptionPublic}
+                setDescriptionPublic={setDescriptionPublic}
+                descriptionHidden={descriptionHidden}
+                setDescriptionHidden={setDescriptionHidden}
+                insights={insights}
+                setInsights={setInsights}
+                isGameMaster={isGameMaster}
+              />
+            )}
 
-          {activeTab === 'media' && (
-            <InvestigationMediaTab
-              imageUrl={imageUrl}
-              setImageUrl={setImageUrl}
-              previewUrl={previewUrl}
-              setPreviewUrl={setPreviewUrl}
-              selectedFileName={selectedFileName}
-              setSelectedFileName={setSelectedFileName}
-              imageDims={imageDims}
-              setImageDims={setImageDims}
-              uploading={uploading}
-              setUploading={setUploading}
-              uvUrl={uvUrl}
-              setUvUrl={setUvUrl}
-              thermalUrl={thermalUrl}
-              setThermalUrl={setThermalUrl}
-              layerUploading={layerUploading}
-              setLayerUploading={setLayerUploading}
-              handleFileChange={handleFileChange}
-              handleLayerUpload={handleLayerUpload}
-              handleRemoveLayer={handleRemoveLayer}
-              isGameMaster={isGameMaster}
-              cardType={cardType}
-            />
-          )}
+            {activeTab === 'media' && (
+              <InvestigationMediaTab
+                imageUrl={imageUrl}
+                setImageUrl={setImageUrl}
+                previewUrl={previewUrl}
+                setPreviewUrl={setPreviewUrl}
+                selectedFileName={selectedFileName}
+                setSelectedFileName={setSelectedFileName}
+                imageDims={imageDims}
+                setImageDims={setImageDims}
+                uploading={uploading}
+                setUploading={setUploading}
+                uvUrl={uvUrl}
+                setUvUrl={setUvUrl}
+                thermalUrl={thermalUrl}
+                setThermalUrl={setThermalUrl}
+                layerUploading={layerUploading}
+                setLayerUploading={setLayerUploading}
+                handleFileChange={handleFileChange}
+                handleLayerUpload={handleLayerUpload}
+                handleRemoveLayer={handleRemoveLayer}
+                isGameMaster={isGameMaster}
+                cardType={cardType}
+              />
+            )}
 
-          {activeTab === 'chat' && (
-            <InvestigationChatTab
-              chatMessages={chatMessages}
-              setChatMessages={setChatMessages}
-              newMsgText={newMsgText}
-              setNewMsgText={setNewMsgText}
-              newMsgSender={newMsgSender}
-              setNewMsgSender={setNewMsgSender}
-              isGameMaster={isGameMaster}
-            />
-          )}
+            {activeTab === 'chat' && (
+              <InvestigationChatTab
+                chatMessages={chatMessages}
+                setChatMessages={setChatMessages}
+                newMsgText={newMsgText}
+                setNewMsgText={setNewMsgText}
+                newMsgSender={newMsgSender}
+                setNewMsgSender={setNewMsgSender}
+                isGameMaster={isGameMaster}
+              />
+            )}
 
-          {activeTab === 'megaclue' && (
-            <InvestigationMegaClueTab
-              existing={existing}
-              isEditingMegaClue={isEditingMegaClue}
-              setIsEditingMegaClue={setIsEditingMegaClue}
-              tempMegaClueData={tempMegaClueData}
-              setTempMegaClueData={setTempMegaClueData}
-              newRequiredId={newRequiredId}
-              setNewRequiredId={setNewRequiredId}
-              isGameMaster={isGameMaster}
-              onSaveMegaClue={handleSaveMegaClueChanges}
-            />
-          )}
+            {activeTab === 'megaclue' && (
+              <InvestigationMegaClueTab
+                existing={existing}
+                isEditingMegaClue={isEditingMegaClue}
+                setIsEditingMegaClue={setIsEditingMegaClue}
+                tempMegaClueData={tempMegaClueData}
+                setTempMegaClueData={setTempMegaClueData}
+                newRequiredId={newRequiredId}
+                setNewRequiredId={setNewRequiredId}
+                isGameMaster={isGameMaster}
+                onSaveMegaClue={handleSaveMegaClueChanges}
+              />
+            )}
 
-          {activeTab === 'status' && (
-            <InvestigationStatusTab
-              status={status}
-              setStatus={setStatus}
-              isGameMaster={isGameMaster}
-            />
-          )}
+            {activeTab === 'status' && (
+              <InvestigationStatusTab
+                status={status}
+                setStatus={setStatus}
+                isGameMaster={isGameMaster}
+              />
+            )}
+          </div>
         </div>
 
         {/* Footer Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid #333', paddingTop: 12 }}>
+        <div className="investigation-dossier-footer">
           <button
             onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              background: '#333',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-            }}
+            className="investigation-btn-cancel"
           >
             FECHAR
           </button>
@@ -538,15 +520,7 @@ export default function InvestigationCardModal_Refactored({
               )}
               <button
                 onClick={handleSave}
-                style={{
-                  padding: '10px 20px',
-                  background: '#27ae60',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                }}
+                className="investigation-btn-save"
               >
                 ✓ SALVAR ALTERAÇÕES
               </button>
