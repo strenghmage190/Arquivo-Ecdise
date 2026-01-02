@@ -1,3 +1,405 @@
+import { useCallback, useMemo, useState } from 'react';
+import { z } from 'zod';
+
+export type EvidenceType = 'document' | 'glitch_puzzle' | 'mega_clue';
+
+export type ValidationSeverity = 'error' | 'warning';
+
+export type ValidationItem = {
+  field: string;
+  message: string;
+  severity: ValidationSeverity;
+};
+
+export type DisplayConfig = {
+  puzzle: Record<string, boolean>;
+  fileProperties: Record<string, boolean>;
+  media: Record<string, boolean>;
+  cipher: Record<string, boolean>;
+  megaClue: Record<string, boolean>;
+};
+
+export type UseCreateClueStateReturn = {
+  formState: {
+    title: string;
+    descPublic: string;
+    descHidden: string;
+    tags: string;
+    evidenceType: EvidenceType;
+
+    imgFile: File | null;
+    previewUrl: string | null;
+    uvFile: File | null;
+    previewUrl2: string | null;
+    thermalEnabled: boolean;
+    thermalSecretText: string;
+    filterFile: File | null;
+    filterPreviewUrl: string | null;
+
+    audioBase: File | null;
+    audioBasePreview: string | null;
+    audioHidden: File | null;
+    audioHiddenPreview: string | null;
+    showMixer: boolean;
+
+    videoFile: File | null;
+    videoPreviewUrl: string | null;
+    videoUrlInput: string;
+    videoUploading: boolean;
+    uploadProgress: Record<string, number>;
+
+    megaFinalTruthText: string;
+    megaRequiredPuzzleIds: string[];
+
+    glitchAccessInstructions: string;
+    glitchHint: string;
+    glitchKeyword: string;
+    glitchFocusedImageFile: File | null;
+
+    isLocked: boolean;
+    lockPass: string;
+
+    isPerson: boolean;
+    personName: string;
+
+    displayConfig: DisplayConfig;
+    fieldVisibilityConfig: Record<string, boolean>;
+
+    templates: unknown[];
+    loadingTemplates: boolean;
+    showTemplateDropdown: boolean;
+    loading: boolean;
+  };
+  actions: {
+    // setters
+    setTitle: (v: string) => void;
+    setDescPublic: (v: string) => void;
+    setDescHidden: (v: string) => void;
+    setTags: (v: string) => void;
+    setEvidenceType: (t: EvidenceType) => void;
+
+    // file handlers
+    handleImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleUVSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleFilterSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleAudioBaseSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleAudioHiddenSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleVideoSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+    // other setters
+    setThermalEnabled: (v: boolean) => void;
+    setThermalSecretText: (v: string) => void;
+    setShowMixer: (v: boolean) => void;
+    setVideoUrlInput: (v: string) => void;
+    setVideoUploading: (v: boolean) => void;
+    setUploadProgress: (p: Record<string, number>) => void;
+    setMegaFinalTruthText: (v: string) => void;
+    setMegaRequiredPuzzleIds: (v: string[]) => void;
+    setGlitchAccessInstructions: (v: string) => void;
+    setGlitchHint: (v: string) => void;
+    setGlitchKeyword: (v: string) => void;
+    setGlitchFocusedImageFile: (f: File | null) => void;
+    setIsLocked: (v: boolean) => void;
+    setLockPass: (v: string) => void;
+    setIsPerson: (v: boolean) => void;
+    setPersonName: (v: string) => void;
+    setDisplayConfig: (c: DisplayConfig) => void;
+    setFieldVisibilityConfig: (c: Record<string, boolean>) => void;
+    setTemplates: (t: unknown[]) => void;
+    setLoadingTemplates: (v: boolean) => void;
+    setShowTemplateDropdown: (v: boolean) => void;
+    setLoading: (v: boolean) => void;
+  };
+  validation: {
+    validate: () => ValidationItem[];
+    errors: ValidationItem[];
+    schema: z.ZodTypeAny;
+  };
+};
+
+const displayConfigDefault: DisplayConfig = {
+  puzzle: { showAccessInstructions: true, showHint: true, showCorrectAnswerWhenSolved: false, showRewardCode: true, showLogs: true },
+  fileProperties: { showFileType: true, showSize: true, showCameraModel: true, showDate: true, showGPS: true, showOwner: true, showHexComment: false, showStamp: true, showExternalLink: true, showLockStatus: true, showPersonInfo: true },
+  media: { showThermalData: false, showUVLayer: false, showFilterOverlay: true, showVideoPlayer: true, showAudioPlayer: true, showHiddenAudio: false, showChatData: true },
+  cipher: { showShredded: true, showCipherText: true, showRealText: false, showShredConfig: false },
+  megaClue: { showHints: true, showAnswer: false, showProgress: true },
+};
+
+export function useCreateClueState(investigationId?: string): UseCreateClueStateReturn {
+  // BASIC
+  const [title, setTitle] = useState('');
+  const [descPublic, setDescPublic] = useState('');
+  const [descHidden, setDescHidden] = useState('');
+  const [tags, setTags] = useState('');
+  const [evidenceType, setEvidenceType] = useState<EvidenceType>('document');
+
+  // IMAGE
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // UV
+  const [uvFile, setUvFile] = useState<File | null>(null);
+  const [previewUrl2, setPreviewUrl2] = useState<string | null>(null);
+
+  // THERMAL
+  const [thermalEnabled, setThermalEnabled] = useState(false);
+  const [thermalSecretText, setThermalSecretText] = useState('');
+
+  // FILTER
+  const [filterFile, setFilterFile] = useState<File | null>(null);
+  const [filterPreviewUrl, setFilterPreviewUrl] = useState<string | null>(null);
+
+  // AUDIO
+  const [audioBase, setAudioBase] = useState<File | null>(null);
+  const [audioBasePreview, setAudioBasePreview] = useState<string | null>(null);
+  const [audioHidden, setAudioHidden] = useState<File | null>(null);
+  const [audioHiddenPreview, setAudioHiddenPreview] = useState<string | null>(null);
+  const [showMixer, setShowMixer] = useState(false);
+
+  // VIDEO
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  // MEGA
+  const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
+  const [megaRequiredPuzzleIds, setMegaRequiredPuzzleIds] = useState<string[]>([]);
+
+  // GLITCH
+  const [glitchAccessInstructions, setGlitchAccessInstructions] = useState('');
+  const [glitchHint, setGlitchHint] = useState('');
+  const [glitchKeyword, setGlitchKeyword] = useState('');
+  const [glitchFocusedImageFile, setGlitchFocusedImageFile] = useState<File | null>(null);
+
+  // LOCK
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockPass, setLockPass] = useState('');
+
+  // PERSON
+  const [isPerson, setIsPerson] = useState(false);
+  const [personName, setPersonName] = useState('');
+
+  // CONFIG
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(displayConfigDefault);
+  const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<Record<string, boolean>>({});
+
+  // TEMPLATES
+  const [templates, setTemplates] = useState<unknown[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+
+  // LOADING
+  const [loading, setLoading] = useState(false);
+
+  // VALIDATION ERRORS
+  const [errors, setErrors] = useState<ValidationItem[]>([]);
+
+  // ZOD schema
+  const schema = useMemo(() => z.object({
+    title: z.string().min(1, 'Título é obrigatório'),
+    descPublic: z.string().optional(),
+    evidenceType: z.enum(['document', 'glitch_puzzle', 'mega_clue']),
+  }), []);
+
+  // Handlers
+  const handleFileSelect = useCallback((fileSetter: (f: File | null) => void, urlSetter: (u: string | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    fileSetter(file);
+    urlSetter(url);
+  }, []);
+
+  const handleImageSelect = handleFileSelect(setImgFile, setPreviewUrl);
+  const handleUVSelect = handleFileSelect(setUvFile, setPreviewUrl2);
+  const handleFilterSelect = handleFileSelect(setFilterFile, setFilterPreviewUrl);
+  const handleAudioBaseSelect = handleFileSelect(setAudioBase, setAudioBasePreview);
+  const handleAudioHiddenSelect = handleFileSelect(setAudioHidden, setAudioHiddenPreview);
+  const handleVideoSelect = handleFileSelect(setVideoFile, setVideoPreviewUrl);
+
+  const validate = useCallback((): ValidationItem[] => {
+    const items: ValidationItem[] = [];
+
+    const parsed = schema.safeParse({ title, descPublic, evidenceType });
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.errors;
+      fieldErrors.forEach((fe) => {
+        items.push({ field: fe.path.join('.') || 'title', message: fe.message, severity: 'error' });
+      });
+    }
+
+    if (evidenceType === 'glitch_puzzle' && !glitchAccessInstructions) {
+      items.push({ field: 'glitchAccessInstructions', message: 'Instruções de Glitch são obrigatórias', severity: 'error' });
+    }
+
+    if (evidenceType === 'mega_clue') {
+      if (!megaFinalTruthText) {
+        items.push({ field: 'megaFinalTruthText', message: 'Verdade final é obrigatória', severity: 'error' });
+      }
+      if (megaRequiredPuzzleIds.length === 0) {
+        items.push({ field: 'megaRequiredPuzzleIds', message: 'Selecione ao menos um puzzle', severity: 'error' });
+      }
+    }
+
+    // gentle warning for descPublic
+    if (!descPublic) {
+      items.push({ field: 'descPublic', message: 'Descrição é recomendada', severity: 'warning' });
+    }
+
+    setErrors(items);
+    return items;
+  }, [schema, title, descPublic, evidenceType, glitchAccessInstructions, megaFinalTruthText, megaRequiredPuzzleIds]);
+
+  const formState = useMemo(() => ({
+    title,
+    descPublic,
+    descHidden,
+    tags,
+    evidenceType,
+
+    imgFile,
+    previewUrl,
+    uvFile,
+    previewUrl2,
+    thermalEnabled,
+    thermalSecretText,
+    filterFile,
+    filterPreviewUrl,
+
+    audioBase,
+    audioBasePreview,
+    audioHidden,
+    audioHiddenPreview,
+    showMixer,
+
+    videoFile,
+    videoPreviewUrl,
+    videoUrlInput,
+    videoUploading,
+    uploadProgress,
+
+    megaFinalTruthText,
+    megaRequiredPuzzleIds,
+
+    glitchAccessInstructions,
+    glitchHint,
+    glitchKeyword,
+    glitchFocusedImageFile,
+
+    isLocked,
+    lockPass,
+
+    isPerson,
+    personName,
+
+    displayConfig,
+    fieldVisibilityConfig,
+
+    templates,
+    loadingTemplates,
+    showTemplateDropdown,
+    loading,
+  }), [
+    title,
+    descPublic,
+    descHidden,
+    tags,
+    evidenceType,
+    imgFile,
+    previewUrl,
+    uvFile,
+    previewUrl2,
+    thermalEnabled,
+    thermalSecretText,
+    filterFile,
+    filterPreviewUrl,
+    audioBase,
+    audioBasePreview,
+    audioHidden,
+    audioHiddenPreview,
+    showMixer,
+    videoFile,
+    videoPreviewUrl,
+    videoUrlInput,
+    videoUploading,
+    uploadProgress,
+    megaFinalTruthText,
+    megaRequiredPuzzleIds,
+    glitchAccessInstructions,
+    glitchHint,
+    glitchKeyword,
+    glitchFocusedImageFile,
+    isLocked,
+    lockPass,
+    isPerson,
+    personName,
+    displayConfig,
+    fieldVisibilityConfig,
+    templates,
+    loadingTemplates,
+    showTemplateDropdown,
+    loading,
+  ]);
+
+  const actions = useMemo(() => ({
+    setTitle,
+    setDescPublic,
+    setDescHidden,
+    setTags,
+    setEvidenceType,
+
+    handleImageSelect,
+    handleUVSelect,
+    handleFilterSelect,
+    handleAudioBaseSelect,
+    handleAudioHiddenSelect,
+    handleVideoSelect,
+
+    setThermalEnabled,
+    setThermalSecretText,
+    setShowMixer,
+    setVideoUrlInput,
+    setVideoUploading,
+    setUploadProgress,
+    setMegaFinalTruthText,
+    setMegaRequiredPuzzleIds,
+    setGlitchAccessInstructions,
+    setGlitchHint,
+    setGlitchKeyword,
+    setGlitchFocusedImageFile,
+    setIsLocked,
+    setLockPass,
+    setIsPerson,
+    setPersonName,
+    setDisplayConfig,
+    setFieldVisibilityConfig,
+    setTemplates,
+    setLoadingTemplates,
+    setShowTemplateDropdown,
+    setLoading,
+  }), [
+    handleImageSelect,
+    handleUVSelect,
+    handleFilterSelect,
+    handleAudioBaseSelect,
+    handleAudioHiddenSelect,
+    handleVideoSelect,
+  ]);
+
+  return {
+    formState,
+    actions,
+    validation: {
+      validate,
+      errors,
+      schema,
+    },
+  };
+}
+
+export default useCreateClueState;
 /**
  * 🎣 useCreateClueState Hook
  * 
