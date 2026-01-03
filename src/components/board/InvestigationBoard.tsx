@@ -5,7 +5,7 @@ import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
 // Lazy load do modal pesado (2214 linhas) para reduzir bundle inicial
-const CreateClueModal = React.lazy(() => import('../modals/CreateClueModal'));
+const CreateClueModal = React.lazy(() => import('../modals/CreateClueModal_Refactored'));
 import Sketchpad from '../tools/Sketchpad';
 import TerminalSearch from './TerminalSearch';
 import { playAudio } from '../../utils/audio';
@@ -2270,8 +2270,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         isOpen={createModalOpen}
         investigationId={investigationId}
         onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
-        initialX={createModalPos?.x}
-        initialY={createModalPos?.y}
+        
         onSaved={async (created?: any) => {
           try {
             // reload from server first

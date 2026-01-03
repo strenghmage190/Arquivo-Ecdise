@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchCardsForInvestigation } from '../../api/investigations';
-import CreateClueModal from './CreateClueModal';
+import CreateClueModal from './CreateClueModal_Refactored';
 import './CreatorHub.css';
 
 interface Props {

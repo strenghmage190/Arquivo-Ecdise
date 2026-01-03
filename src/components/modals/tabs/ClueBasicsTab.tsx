@@ -60,7 +60,7 @@ export default function ClueBasicsTab({
   const [savingTemplateName, setSavingTemplateName] = React.useState('');
 
   return (
-    <div className="field-block">
+    <div className="field-block createclue-basics createclue-tab-section">
       <span className="field-title">📌 TIPO DE EVIDÊNCIA</span>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         <button
@@ -114,10 +114,10 @@ export default function ClueBasicsTab({
       </div>
 
       {/* TEMPLATE SYSTEM */}
-      <div className="field-block" style={{ marginBottom: 20, padding: 12, background: 'rgba(100,200,255,0.05)', borderRadius: 6, border: '1px solid rgba(100,200,255,0.1)' }}>
+      <div className="field-block createclue-basics__templates" style={{ marginBottom: 20, padding: 12, background: 'rgba(100,200,255,0.05)', borderRadius: 6, border: '1px solid rgba(100,200,255,0.1)' }}>
         <span className="field-title">📚 TEMPLATES</span>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button
+        <div className="createclue-basics__template-controls" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button className="createclue-basics__template-apply"
             onClick={() => onShowTemplateDropdown(!showTemplateDropdown)}
             disabled={loading || loadingTemplates}
             style={{
@@ -132,7 +132,7 @@ export default function ClueBasicsTab({
           >
             {loadingTemplates ? '⏳ Carregando...' : '📂 Aplicar Template'}
           </button>
-          <button
+          <button className="createclue-basics__template-save"
             onClick={() => {
               const name = prompt('Nome do template:');
               if (name) onSaveTemplate(name);
@@ -154,10 +154,11 @@ export default function ClueBasicsTab({
         </div>
 
         {showTemplateDropdown && templates.length > 0 && (
-          <div style={{ background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, padding: 10, maxHeight: 200, overflowY: 'auto' }}>
+          <div className="createclue-basics__template-list" style={{ background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, padding: 10, maxHeight: 200, overflowY: 'auto' }}>
             {templates.map((template) => (
               <div
                 key={template.id}
+                className="createclue-basics__template-item"
                 style={{
                   padding: 8,
                   cursor: 'pointer',
@@ -185,20 +186,12 @@ export default function ClueBasicsTab({
       <div className="field-block">
         <label>🔤 TÍTULO / CÓDIGO</label>
         <input
+          className="input"
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           disabled={loading}
           placeholder="Ex: EVIDENCE-001"
-          style={{
-            width: '100%',
-            padding: 10,
-            background: '#1a1a1a',
-            border: '1px solid #444',
-            color: '#fff',
-            borderRadius: 6,
-            fontSize: 13,
-          }}
         />
       </div>
 
@@ -206,21 +199,11 @@ export default function ClueBasicsTab({
       <div className="field-block">
         <label>📖 DESCRIÇÃO (Visível ao Jogador)</label>
         <textarea
+          className="textarea"
           value={descPublic}
           onChange={(e) => onDescPublicChange(e.target.value)}
           disabled={loading}
           placeholder="O que o jogador vê quando clica nesta pista"
-          style={{
-            width: '100%',
-            minHeight: 80,
-            padding: 10,
-            background: '#1a1a1a',
-            border: '1px solid #444',
-            color: '#fff',
-            borderRadius: 6,
-            fontSize: 13,
-            fontFamily: 'monospace',
-          }}
         />
         <div style={{ fontSize: 11, color: '#888', marginTop: 5 }}>
           {descPublic.length} caracteres
@@ -231,21 +214,11 @@ export default function ClueBasicsTab({
       <div className="field-block">
         <label>🔐 DESCRIÇÃO (Oculta - Notas do GM)</label>
         <textarea
+          className="textarea"
           value={descHidden}
           onChange={(e) => onDescHiddenChange(e.target.value)}
           disabled={loading}
           placeholder="Notas privadas - não será mostrado ao jogador"
-          style={{
-            width: '100%',
-            minHeight: 80,
-            padding: 10,
-            background: '#1a1a1a',
-            border: '1px solid #444',
-            color: '#888',
-            borderRadius: 6,
-            fontSize: 13,
-            fontFamily: 'monospace',
-          }}
         />
         <div style={{ fontSize: 11, color: '#888', marginTop: 5 }}>
           {descHidden.length} caracteres

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchInvestigationById, fetchCardsForInvestigation, updateInvestigationCard } from '../../api/investigations';
 import { fetchConnectionsForInvestigation } from '../../api/connections';
-import { CreateClueModal, InvestigationCardModal } from '../modals';
+import { CreateClueModal_Refactored as CreateClueModal, InvestigationCardModal } from '../modals';
 
 type Card = any;
 type Connection = any;
@@ -327,7 +327,7 @@ export default function InvestigationBoard() {
       {/* Modals integration */}
       {id && (
         <>
-          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); setCreateModalPos(null); }} investigationId={id} onSaved={() => { refreshCards(); setCreateModalPos(null); }} initialX={createModalPos?.x} initialY={createModalPos?.y} />
+          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); setCreateModalPos(null); }} investigationId={id} onSaved={() => { refreshCards(); setCreateModalPos(null); }} />
           <InvestigationCardModal open={openEditModal} onClose={() => setOpenEditModal(false)} investigationId={id} existing={selectedCard || undefined} onSaved={(c) => { setOpenEditModal(false); refreshCards(); }} />
         </>
       )}

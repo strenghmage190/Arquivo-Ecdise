@@ -44,7 +44,7 @@ export default function CluePreviewTab({
   loading,
 }: CluePreviewTabProps) {
   return (
-    <div className="field-block">
+    <div className="field-block createclue-preview createclue-tab-section">
       <span className="field-title">👁️ PREVIEW</span>
 
       {/* WARNING: GM ONLY */}
@@ -63,15 +63,16 @@ export default function CluePreviewTab({
       </div>
 
       {/* PLAYER VIEW */}
-      <div
-        style={{
-          padding: 16,
-          background: '#0a0a0a',
-          border: '2px solid #2c3e50',
-          borderRadius: 8,
-          marginBottom: 20,
-        }}
-      >
+          <div
+            className="createclue-preview__player-card player-card"
+            style={{
+              padding: 16,
+              background: '#0a0a0a',
+              border: '2px solid #2c3e50',
+              borderRadius: 8,
+              marginBottom: 20,
+            }}
+          >
         <div style={{ fontSize: 13, fontWeight: 'bold', marginBottom: 12, color: '#ecf0f1' }}>
           🎮 COMO O JOGADOR VÊ:
         </div>

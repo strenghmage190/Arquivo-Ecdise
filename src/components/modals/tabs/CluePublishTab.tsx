@@ -34,7 +34,7 @@ export default function CluePublishTab({
   const isReadyToPublish = title && descPublic && mediaCount > 0 && errors.length === 0;
 
   return (
-    <div className="field-block">
+    <div className="field-block createclue-publish createclue-tab-section">
       <span className="field-title">🚀 PUBLICAÇÃO</span>
 
       {/* SUMMARY */}

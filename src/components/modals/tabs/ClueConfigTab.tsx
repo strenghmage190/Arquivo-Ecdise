@@ -81,7 +81,7 @@ export default function ClueConfigTab({
   };
 
   return (
-    <div className="field-block">
+    <div className="field-block createclue-config createclue-tab-section">
       <span className="field-title">⚙️ CONFIGURAÇÃO AVANÇADA</span>
 
       {/* PRESETS RÁPIDOS */}

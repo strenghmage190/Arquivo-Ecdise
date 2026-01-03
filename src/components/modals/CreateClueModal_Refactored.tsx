@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import './CreateClueModal_Refactored.css';
+import './createclueTabs/createclueTabs.css';
 import useCreateClueState from '../../hooks/useCreateClueState_v3';
 import { ClueBasicsTab, ClueMediaTab, ClueValidationTab, CluePreviewTab, ClueConfigTab, CluePublishTab } from './tabs';
 
