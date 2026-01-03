@@ -59,6 +59,10 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
   const [tags, setTags] = useState('');
   const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
 
+  // ===== HIDDEN CLUES =====
+  const [isHidden, setIsHidden] = useState(false);
+  const [discoveryCode, setDiscoveryCode] = useState('');
+
   // ===== VISUAL/IMAGE =====
   const [imgFile, setImgFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -208,6 +212,10 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
       alert('Título é obrigatório');
       return;
     }
+    if (isHidden && !discoveryCode.trim()) {
+      alert('Código de descoberta é obrigatório para pistas ocultas');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -293,6 +301,8 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
         description_hidden: descHidden,
         image_url: imageUrl,
         metadata,
+        is_hidden: isHidden,
+        discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
       });
 
       if (mountedRef.current) {

@@ -59,6 +59,8 @@ export interface InvestigationCard {
   audio_target_freq?: number | null;
   is_locked?: boolean;
   lock_password?: string | null;
+  is_hidden?: boolean;
+  discovery_code?: string | null;
 }
 
 // --- QUADRO (BOARD) ---
