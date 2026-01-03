@@ -169,6 +169,7 @@ export default function InvestigationBoard() {
 
       <div style={{ padding: 12, display: 'flex', gap: 8 }}>
         <button onClick={() => {
+          console.debug('Board: + Novo Caso / Pista clicked');
           if (!boardRef.current) { setOpenCreateModal(true); return; }
           const viewW = boardRef.current.clientWidth;
           const viewH = boardRef.current.clientHeight;

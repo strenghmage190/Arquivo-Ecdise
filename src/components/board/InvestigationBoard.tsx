@@ -1669,7 +1669,7 @@ export function InvestigationBoard({ investigationId }: Props) {
           {isGameMaster && !playerView && (
             <button 
               className="hud-btn primary" 
-              onClick={() => setCreateModalOpen(true)}
+              onClick={() => { console.debug('HUD: Criar EVIDÊNCIA clicked', { isGameMaster, playerView }); setCreateModalOpen(true); }}
               data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
               style={{ background: 'linear-gradient(135deg, #c6a45f 0%, #a88747 100%)', color: '#000' }}
             >
