@@ -70,7 +70,7 @@ export default function ClueConfigTab({
   loading,
 }: ClueConfigTabProps) {
   const handleToggleDisplayConfig = (section: string, field: string) => {
-    const updated = JSON.parse(JSON.stringify(displayConfig));
+    const updated = JSON.parse(JSON.stringify(displayConfig || {}));
     const parts = section.split('.');
     let obj: any = updated;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -79,6 +79,12 @@ export default function ClueConfigTab({
     obj[field] = !obj[field];
     onDisplayConfigChange(updated);
   };
+
+  // safe accessors for sections to avoid runtime errors when config is incomplete
+  const puzzleSection = (displayConfig && displayConfig.puzzle) ? displayConfig.puzzle : {};
+  const mediaSection = (displayConfig && displayConfig.media) ? displayConfig.media : {};
+  const cipherSection = (displayConfig && displayConfig.cipher) ? displayConfig.cipher : {};
+  const megaClueSection = (displayConfig && displayConfig.megaClue) ? displayConfig.megaClue : {};
 
   return (
     <div className="field-block createclue-config createclue-tab-section">
@@ -148,7 +154,7 @@ export default function ClueConfigTab({
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#e74c3c' }}>
               🎮 Puzzle
             </div>
-            {Object.entries(displayConfig.puzzle).map(([key, value]) => (
+            {Object.entries(puzzleSection).map(([key, value]) => (
               <label
                 key={key}
                 style={{
@@ -162,7 +168,7 @@ export default function ClueConfigTab({
               >
                 <input
                   type="checkbox"
-                  checked={value}
+                  checked={Boolean(value)}
                   onChange={() => handleToggleDisplayConfig('puzzle', key)}
                   disabled={loading}
                   style={{ cursor: 'pointer' }}
@@ -177,7 +183,7 @@ export default function ClueConfigTab({
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#3498db' }}>
               🎬 Mídia
             </div>
-            {Object.entries(displayConfig.media).map(([key, value]) => (
+            {Object.entries(mediaSection).map(([key, value]) => (
               <label
                 key={key}
                 style={{
@@ -191,7 +197,7 @@ export default function ClueConfigTab({
               >
                 <input
                   type="checkbox"
-                  checked={value}
+                  checked={Boolean(value)}
                   onChange={() => handleToggleDisplayConfig('media', key)}
                   disabled={loading}
                   style={{ cursor: 'pointer' }}
@@ -206,7 +212,7 @@ export default function ClueConfigTab({
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#9b59b6' }}>
               🔐 Cipher
             </div>
-            {Object.entries(displayConfig.cipher).map(([key, value]) => (
+            {Object.entries(cipherSection).map(([key, value]) => (
               <label
                 key={key}
                 style={{
@@ -220,7 +226,7 @@ export default function ClueConfigTab({
               >
                 <input
                   type="checkbox"
-                  checked={value}
+                  checked={Boolean(value)}
                   onChange={() => handleToggleDisplayConfig('cipher', key)}
                   disabled={loading}
                   style={{ cursor: 'pointer' }}
@@ -235,7 +241,7 @@ export default function ClueConfigTab({
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#f39c12' }}>
               💎 Mega-Pista
             </div>
-            {Object.entries(displayConfig.megaClue).map(([key, value]) => (
+            {Object.entries(megaClueSection).map(([key, value]) => (
               <label
                 key={key}
                 style={{
@@ -249,7 +255,7 @@ export default function ClueConfigTab({
               >
                 <input
                   type="checkbox"
-                  checked={value}
+                  checked={Boolean(value)}
                   onChange={() => handleToggleDisplayConfig('megaClue', key)}
                   disabled={loading}
                   style={{ cursor: 'pointer' }}

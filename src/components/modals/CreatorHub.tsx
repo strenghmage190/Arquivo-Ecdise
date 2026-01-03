@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchCardsForInvestigation } from '../../api/investigations';
-import CreateClueModal from './CreateClueModal_Refactored';
+import CreateClueModal_Refactored from './CreateClueModal_Refactored';
+import CreateClueModal from './CreateClueModal';
 import './CreatorHub.css';
 
 interface Props {
@@ -24,6 +25,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
   const [loading, setLoading] = useState(false);
   const [showCreatorModal, setShowCreatorModal] = useState(false);
   const [showCommonClueModal, setShowCommonClueModal] = useState(false);
+  const [selectedCreator, setSelectedCreator] = useState<'refactored' | 'legacy'>('refactored');
 
   useEffect(() => {
     if (isOpen) {
@@ -157,18 +159,32 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
           <div className="creator-hub-body">
             {/* Botões de criação */}
             <div className="create-section">
-              <button 
-                className="btn-create-new primary"
-                onClick={handleCommonClueClick}
-              >
-                📝 CRIAR PISTA COMUM
-              </button>
-              <button 
-                className="btn-create-new"
-                onClick={() => setShowCreatorModal(true)}
-              >
-                🧩 CRIAR PUZZLE/MEGA-PISTA
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    className={`btn-create-new${selectedCreator === 'refactored' ? ' selected' : ''}`}
+                    onClick={() => setSelectedCreator('refactored')}
+                  >
+                    🧩 REFACTORADO
+                  </button>
+                  <button
+                    className={`btn-create-new${selectedCreator === 'legacy' ? ' selected' : ''}`}
+                    onClick={() => setSelectedCreator('legacy')}
+                  >
+                    📝 LEGADO
+                  </button>
+                </div>
+
+                <button
+                  className="btn-create-new primary"
+                  onClick={() => {
+                    if (selectedCreator === 'refactored') setShowCreatorModal(true);
+                    else setShowCommonClueModal(true);
+                  }}
+                >
+                  ✨ CRIAR
+                </button>
+              </div>
             </div>
 
             {/* Lista de pistas existentes */}
@@ -249,7 +265,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
 
       {/* Modal de criação unificado - CreateClueModal agora suporta tudo */}
       {showCreatorModal && (
-        <CreateClueModal
+        <CreateClueModal_Refactored
           isOpen={showCreatorModal}
           onClose={() => setShowCreatorModal(false)}
           investigationId={investigationId}

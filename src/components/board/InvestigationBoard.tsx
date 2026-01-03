@@ -26,6 +26,7 @@ import UniversalDecoder from '../tools/UniversalDecoder';
 import GlitchMaker from '../tools/GlitchMaker';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
+import CreatorHub from '../modals/CreatorHub';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -1685,11 +1686,11 @@ export function InvestigationBoard({ investigationId }: Props) {
           {isGameMaster && !playerView && (
             <button 
               className="hud-btn primary" 
-              onClick={() => { console.debug('HUD: Criar EVIDÊNCIA clicked', { isGameMaster, playerView }); setCreateModalOpen(true); }}
+              onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView }); setCreateModalOpen(true); }}
               data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
               style={{ background: 'linear-gradient(135deg, #c6a45f 0%, #a88747 100%)', color: '#000' }}
             >
-              📝 CRIAR EVIDÊNCIA
+              ⚙️ HUB DE CRIAÇÃO
             </button>
           )}
 
@@ -2242,7 +2243,7 @@ export function InvestigationBoard({ investigationId }: Props) {
                   {/* Criar Evidência */}
                   {isGameMaster && (
                     <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
-                      <span>📝</span> CRIAR EVIDÊNCIA
+                      <span>⚙️</span> HUB DE CRIAÇÃO
                     </button>
                   )}
                   
@@ -2282,28 +2283,25 @@ export function InvestigationBoard({ investigationId }: Props) {
           </div>
 
           <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
-            <CreateClueModal
-        isOpen={createModalOpen}
-        investigationId={investigationId}
-        onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
-        
-        onSaved={async (created?: any) => {
-          try {
-            // reload from server first
-            await loadBoard();
-            if (created && created.id) {
-              // center view on created card (use returned coords if present)
-              const cx = (typeof created.x === 'number' ? created.x : created.x) + 220 / 2;
-              const cy = (typeof created.y === 'number' ? created.y : created.y) + 160 / 2;
-              panToPosition(cx, cy);
-              setLastCreatedId(created.id);
-              setTimeout(() => setLastCreatedId(null), 6000);
-            }
-          } catch (e) {
-            console.error('Error handling created card pan', e);
-          }
-        }}
-      />
+            <CreatorHub
+              isOpen={createModalOpen}
+              onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
+              investigationId={investigationId}
+              onPuzzleCreated={async (created?: any) => {
+                try {
+                  await loadBoard();
+                  if (created && created.id) {
+                    const cx = (typeof created.x === 'number' ? created.x : created.x) + 220 / 2;
+                    const cy = (typeof created.y === 'number' ? created.y : created.y) + 160 / 2;
+                    panToPosition(cx, cy);
+                    setLastCreatedId(created.id);
+                    setTimeout(() => setLastCreatedId(null), 6000);
+                  }
+                } catch (e) {
+                  console.error('Error handling created card pan', e);
+                }
+              }}
+            />
           </Suspense>
 
       <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
