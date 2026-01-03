@@ -1,0 +1,58 @@
+name: Cypress Tests
+
+on: [push]
+
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Save build folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          if-no-files-found: error
+          path: dist
+
+  cypress-run:
+    runs-on: ubuntu-24.04
+    needs: install
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: dist
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          start: npx serve dist -p 3000 -s
+          wait-on: 'http://localhost:3000'
+          record: true
+          parallel: true
+          group: 'UI-Electron'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

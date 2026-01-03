@@ -27,7 +27,7 @@ import GlitchMaker from '../tools/GlitchMaker';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 import CreatorHub from '../modals/CreatorHub';
-import GMOverwatch from './GMOverwatch';
+const GMOverwatch = React.lazy(() => import('./GMOverwatch'));
 import { useIsMobile } from '../../hooks/useIsMobile';
 import BottomSheet from '../ui/BottomSheet';
 // Local fallback for BoardButton (avoids missing module error)
@@ -45,7 +45,7 @@ interface Props {
   investigationId: string;
 }
 
-export function InvestigationBoard({ investigationId }: Props) {
+export const InvestigationBoard = React.memo(function InvestigationBoard({ investigationId }: Props) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
@@ -2584,6 +2584,8 @@ export function InvestigationBoard({ investigationId }: Props) {
       )}
     </div>
   );
-}
+});
+
+InvestigationBoard.displayName = 'InvestigationBoard';
 
 export default InvestigationBoard;

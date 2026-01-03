@@ -9,6 +9,7 @@ import GlitchPuzzleCard from '../tools/GlitchPuzzleCard';
 import MegaClueCard from '../tools/MegaClueCard';
 import { modalManager } from '../../utils/ModalManager';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useSwipeable } from 'react-swipeable';
 
 interface Props {
   open: boolean;
@@ -390,11 +391,19 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     );
   }
 
+  const swipeHandlers = useSwipeable({
+    onSwipedDown: () => {
+      if (isMobile) onClose();
+    },
+    trackMouse: false,
+  });
+
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>
       <div 
         className="modal-content" 
-        onClick={(e) => e.stopPropagation()} 
+        onClick={(e) => e.stopPropagation()}
+        {...(isMobile ? swipeHandlers : {})}
         style={{ 
           width: isMobile ? '100vw' : 720, 
           height: isMobile ? '100vh' : 'auto',

@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import InvestigationPage from './pages/Investigation';
 import InvitePage from './pages/Invite';
 import TestPage from './pages/TestPage';
+import MobileTestPage from './pages/MobileTestPage';
 import SystemOverlays from './components/ui/SystemOverlays';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             
             <Route path="/test" element={<TestPage />} />
+
+            <Route path="/mobile-test" element={<MobileTestPage />} />
 
             <Route
               path="/"
