@@ -92,10 +92,9 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
     try {
       // Use Supabase client instead of direct fetch for better reliability
       const updatePayload = { is_hidden: newHiddenStatus };
-      const { data, error } = await supabase
-        // @ts-ignore - Supabase types issue with update payload
+      const { data, error } = await (supabase as any)
         .from('investigation_cards')
-        .update(updatePayload)
+        .update(updatePayload as any)
         .eq('id', card.id)
         .select();
 

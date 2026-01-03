@@ -31,7 +31,7 @@ export const useIsTouchDevice = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setIsTouchDevice('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+    setIsTouchDevice(Boolean('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)));
   }, []);
 
   return isTouchDevice;

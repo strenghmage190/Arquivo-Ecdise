@@ -20,7 +20,6 @@ import './EvidenceCard.css';
 import EvidenceCard from './EvidenceCard';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
-import StickyNote from '../tools/StickyNote';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
@@ -300,14 +299,12 @@ export function InvestigationBoard({ investigationId }: Props) {
 
   const loadBoard = async () => {
     try {
-      const [cData, connData, notesData] = await Promise.all([
+      const [cData, connData] = await Promise.all([
         api.fetchCards(investigationId),
         connApi.fetchConnections(investigationId),
-        api.fetchNotes(investigationId),
       ]);
       console.debug('InvestigationBoard.loadBoard: fetched cards', cData);
       setCards(cData || []);
-      setNotes(notesData || []);
       // initialize localPositions for cards
       setLocalPositions((prev) => {
         const next = { ...prev };
@@ -608,27 +605,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     const channels: any[] = [];
 
     try {
-      // Notes channel
-      const notesChannel = supabase.channel(`notes:${investigationId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'investigation_notes', filter: `investigation_id=eq.${investigationId}` }, (payload) => {
-          if (!mounted) return;
-          try {
-            const ev = payload.eventType;
-            const row: any = payload.new || payload.old;
-            if (ev === 'INSERT') {
-              setNotes((prev: any[]) => {
-                if (prev.find((n: any) => n.id === row.id)) return prev;
-                return [...prev, row];
-              });
-            } else if (ev === 'UPDATE') {
-              setNotes((prev: any[]) => prev.map((n: any) => n.id === row.id ? row : n));
-            } else if (ev === 'DELETE') {
-              setNotes((prev: any[]) => prev.filter((n: any) => n.id !== row.id));
-            }
-          } catch (e) { console.error('notes realtime handler error', e); }
-        })
-        .subscribe();
-      channels.push(notesChannel);
+      // Notes realtime channel removed (post-it system disabled)
 
       // Cards channel: refresh cards on any change (simpler)
       const cardsChannel = supabase.channel(`cards:${investigationId}`)
@@ -1959,21 +1936,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         {/* Grupo 4: Ferramentas Avançadas */}
         <div className="toolbar-group">
           <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Conspiração">🕸️</button>
-          <button className="hud-btn icon-only" onClick={async () => {
-            try {
-              const boardRect = corkboardRef.current?.getBoundingClientRect();
-              const viewW = boardRect?.width ?? window.innerWidth;
-              const viewH = boardRect?.height ?? window.innerHeight;
-              const cx = viewW / 2;
-              const bx = origin.x + cx / zoom;
-              const by = origin.y + (viewH / 2) / zoom;
-              const newNote = await api.createNote(investigationId, { content: '', color: '#f1c40f', x: Math.round(bx), y: Math.round(by) });
-              setNotes(prev => [...prev, newNote]);
-            } catch (e) {
-              console.error('create note failed', e);
-              alert('Falha ao criar nota.');
-            }
-          }} data-tooltip="Post-it">🗒️</button>
+          {/* Post-it button removed */}
           
           <div style={{ position: 'relative' }}>
             <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas">⚙️</button>
@@ -2330,32 +2293,7 @@ export function InvestigationBoard({ investigationId }: Props) {
             );
           })}
 
-          {/* Sticky notes layer */}
-          {notes.map((note) => (
-            <div key={`note-${note.id}`} style={{ position: 'absolute', left: note.x, top: note.y, pointerEvents: 'auto' }}>
-              <StickyNote
-                note={note}
-                onUpdate={async (id: string, content: string) => {
-                  try {
-                    const updated = await api.updateNote(id, { content });
-                    setNotes(prev => prev.map(n => n.id === id ? updated : n));
-                  } catch (e) { console.error('updateNote failed', e); }
-                }}
-                onMove={async (id: string, x: number, y: number) => {
-                  try {
-                    const updated = await api.updateNote(id, { x, y });
-                    setNotes(prev => prev.map(n => n.id === id ? updated : n));
-                  } catch (e) { console.error('moveNote failed', e); }
-                }}
-                onDelete={async (id: string) => {
-                  try {
-                    await api.deleteNote(id);
-                    setNotes(prev => prev.filter(n => n.id !== id));
-                  } catch (e) { console.error('deleteNote failed', e); }
-                }}
-              />
-            </div>
-          ))}
+          {/* Sticky notes layer removed */}
 
           {/* Mobile-only floating controls to switch touch mode */}
           <div className="mobile-controls" aria-hidden={false}>

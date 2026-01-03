@@ -278,52 +278,8 @@ export async function fetchInvestigationDetails(id: string) {
   return data;
 }
 
-// --- NOTES (Sticky Post-its) ---
-export async function fetchNotes(investigationId: string) {
-  const { data, error } = await supabase
-    .from('investigation_notes')
-    .select('*')
-    .eq('investigation_id', investigationId);
-  if (error) {
-    console.error('fetchNotes error', error);
-    return [];
-  }
-  return data || [];
-}
-
-export async function createNote(investigationId: string, payload: any) {
-  const body = {
-    investigation_id: investigationId,
-    content: payload.content || null,
-    color: payload.color || '#f1c40f',
-    x: payload.x ?? 100,
-    y: payload.y ?? 100,
-  };
-  const { data, error } = await (supabase as any).from('investigation_notes').insert(body as any).select().single();
-  if (error) {
-    console.error('createNote error', error);
-    throw error;
-  }
-  return data;
-}
-
-export async function updateNote(id: string, updates: any) {
-  const { data, error } = await (supabase as any).from('investigation_notes').update(updates).eq('id', id).select().single();
-  if (error) {
-    console.error('updateNote error', error);
-    throw error;
-  }
-  return data;
-}
-
-export async function deleteNote(id: string) {
-  const { error } = await supabase.from('investigation_notes').delete().eq('id', id);
-  if (error) {
-    console.error('deleteNote error', error);
-    throw error;
-  }
-  return true;
-}
+// ...existing code...
+// ...existing code...
 
 // Create a new investigation and set current user as owner
 export async function createInvestigation(title: string, description?: string, coverUrl?: string) {
