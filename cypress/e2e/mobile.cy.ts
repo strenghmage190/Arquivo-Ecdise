@@ -1,5 +1,5 @@
 import 'cypress-axe';
-import { expect as chaiExpect } from 'chai';
+const chaiExpect = (expect as any);
 
 describe('Adaptação Mobile Avançada - Arquivo Ecdise', () => {
   const devices = ['iphone-x', 'samsung-s10']; 
