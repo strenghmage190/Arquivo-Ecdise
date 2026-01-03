@@ -73,3 +73,138 @@ body {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.3; }
 }
+
+/* --- MOBILE HELPERS: regras responsivas básicas --- */
+/* Aplicar essas regras para telas menores que 768px */
+@media (max-width: 768px) {
+  /* Layout containers devem ocupar toda a largura */
+  .container, .main-content {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  /* Evitar imagens vazando horizontalmente */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Tornar colunas em pilha vertical */
+  .flex-container, .columns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Menu de navegação: empilhar itens e centralizar */
+  nav ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+  }
+  nav li {
+    margin: 8px 0;
+  }
+
+  /* Ajustes específicos do quadro de investigação */
+  .mobile-hud {
+    position: fixed;
+    bottom: 14px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    z-index: 15000;
+    pointer-events: auto;
+  }
+
+  .mobile-modes .mode-btn {
+    font-size: 18px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  /* Hide explicit mode icons on touch devices — pan is always enabled */
+  .mobile-hud .mobile-modes {
+    display: none !important;
+  }
+
+  /* Bottom sheet children spacing */
+  .bottom-sheet .fab-item {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    text-align: left;
+    margin-bottom: 8px;
+  }
+}
+
+/* --- TOUCH / MOBILE UX IMPROVEMENTS --- */
+/* 1) Avoid hover styles on touch-only devices (prevents "ghost touch") */
+@media (hover: hover) and (pointer: fine) {
+  /* apply subtle hover only for devices with a real pointer */
+  a:hover, button:hover {
+    filter: brightness(1.03);
+    transition: filter 120ms ease;
+  }
+}
+
+/* 2) Touch target sizing and tap affordances for coarse pointers (fingers) */
+@media (pointer: coarse) {
+  .hud-btn, .board-button, .mode-btn, .fab-btn, .main-fab-trigger, .mobile-modes .mode-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
+
+  /* Make inputs comfortable for typing on iOS (avoid auto-zoom) */
+  input, textarea, select {
+    font-size: 16px;
+  }
+
+  /* Active feedback for touch interactions */
+  button:active {
+    transform: translateY(1px);
+    opacity: 0.98;
+  }
+
+  /* Remove tap highlight color for a cleaner look */
+  button, a {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+}
+
+/* 3) Full-screen sections: prefer dynamic viewport unit with fallback */
+.full-vh {
+  height: 100dvh;
+  min-height: 100vh; /* fallback for browsers that don't support dvh */
+}
+
+/* Corkboard canvas: handle touch-based panning ourselves and show grab cursor */
+.corkboard-canvas {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+}
+.corkboard-canvas:active {
+  cursor: grabbing;
+}
+
+/* 4) Readability: slightly larger line-height on small screens */
+@media (max-width: 768px) {
+  body {
+    line-height: 1.6;
+  }
+  .container { padding: 0 15px; }
+}
+
+/* 5) Image performance hint: encourage using responsive images via picture/srcset */
+/* Global guard for large images already handled above (max-width:100%). */

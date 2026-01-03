@@ -277,6 +277,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     startWorldY?: number;
   } | null>(null);
   const panningRef = useRef<any>(null);
+  const lastTapRef = useRef<number>(0);
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
   // Ref mirror of localPositions to avoid stale closures inside global listeners
   const localPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
@@ -2009,6 +2010,19 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       <div
         ref={corkboardRef}
         className="corkboard-canvas"
+        onTouchStart={(e) => {
+          try {
+            const t = (e.touches && e.touches[0]) as Touch | undefined;
+            if (!t) return;
+            // start pan when touching the background (not a card) — always enabled on mobile
+            if (e.target === corkboardRef.current || e.target === e.currentTarget) {
+              if (e.touches.length === 1) {
+                e.preventDefault();
+                panningRef.current = { startX: t.clientX, startY: t.clientY, originX: origin.x, originY: origin.y } as any;
+              }
+            }
+          } catch (err) { /* ignore */ }
+        }}
         onMouseMove={(e) => {
           if (!isUV || performanceMode) return;
           const boardRect = corkboardRef.current?.getBoundingClientRect();
@@ -2134,7 +2148,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 key={card.id}
                   className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''} ${card.is_hidden && showHiddenClues ? 'hidden-clue' : ''}`}
                   data-status={(card as any)?.metadata?.status || ''}
-                  style={{ left: pos.x, top: pos.y, pointerEvents: (isMobileDevice && touchMode === 'pan') ? 'none' : 'auto' }}
+                  style={{ left: pos.x, top: pos.y, pointerEvents: 'auto' }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -2194,6 +2208,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   if (!ev.shiftKey && !ev.ctrlKey && !ev.metaKey) toggleSelect(card.id, false);
                 }}
                 onTouchStart={(ev) => {
+                  ev.stopPropagation();
                   const t = ev.touches[0];
                   // On touch, default to selecting this card (no modifier keys)
                   const newSelected = [card.id];
@@ -2295,20 +2310,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
           {/* Sticky notes layer removed */}
 
-          {/* Mobile-only floating controls to switch touch mode */}
-          <div className="mobile-controls" aria-hidden={false}>
-            <button className={`fab-btn ${touchMode === 'pan' ? 'active' : ''}`} onClick={() => {
-              setTouchMode('pan');
-              setTouchModeNotice('🖐️ MODO: MOVER CÂMERA');
-              setTimeout(() => setTouchModeNotice(null), 1400);
-            }}>🖐️ MOVER CÂMERA</button>
-            <button className={`fab-btn ${touchMode === 'interact' ? 'active' : ''}`} onClick={() => {
-              setTouchMode('interact');
-              setTouchModeNotice('👆 MODO: MOVER PISTAS');
-              setTimeout(() => setTouchModeNotice(null), 1400);
-            }}>👆 MOVER PISTAS</button>
-          </div>
-
           {touchModeNotice && (
             <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
           )}
@@ -2386,9 +2387,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               🎯 LOCALIZAR
             </button>
             <h3>Zoom</h3>
-            <button onClick={() => zoomBy(1.2)} className="fab-item">🔍 ZOOM IN</button>
-            <button onClick={() => zoomBy(0.8)} className="fab-item">🔍 ZOOM OUT</button>
-            <button onClick={() => resetZoom()} className="fab-item">🎯 RESET ZOOM</button>
+            {isMobileDevice ? (
+              <div style={{ padding: '8px 0', color: '#888' }}>Use dois dedos para aproximar/afastar (pinch)</div>
+            ) : (
+              <>
+                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item">🔍 ZOOM IN</button>
+                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item">🔍 ZOOM OUT</button>
+                <button onClick={() => resetZoom()} className="fab-item">🎯 RESET ZOOM</button>
+              </>
+            )}
           </BottomSheet>
 
           <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>

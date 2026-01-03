@@ -5,7 +5,9 @@ describe('Mobile Responsiveness', () => {
   });
 
   it('should display mobile HUD on small screens', () => {
-    cy.get('.mobile-hud').should('be.visible');
+    // The container `.mobile-hud` is intentionally height:0 to avoid blocking clicks;
+    // assert the visible FAB which is the actual interactive element on mobile.
+    cy.get('.main-fab-trigger').should('be.visible');
   });
 
   it('should open bottom sheet menu', () => {
@@ -15,10 +17,11 @@ describe('Mobile Responsiveness', () => {
 
   it('should close bottom sheet on swipe down', () => {
     cy.get('.main-fab-trigger').click();
-    // Simulate swipe down on bottom sheet
-    cy.get('.bottom-sheet').trigger('pointerdown', { clientX: 200, clientY: 500 })
-      .trigger('pointermove', { clientX: 200, clientY: 300 })
-      .trigger('pointerup');
+    // Simulate a touch swipe down (start higher, move to larger Y)
+    cy.get('.bottom-sheet')
+      .trigger('touchstart', { touches: [{ clientX: 200, clientY: 200 }] })
+      .trigger('touchmove', { touches: [{ clientX: 200, clientY: 600 }] })
+      .trigger('touchend');
     cy.get('.bottom-sheet').should('not.have.class', 'open');
   });
 
