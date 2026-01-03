@@ -118,6 +118,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasThermal && <div className="type-badge small thermal" title="Termal">🌡️</div>}
           {hasStamp && <div className="type-badge small stamp" title="Carimbo">🏷️</div>}
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
+          {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta">👁️‍🗨️</div>}
         </div>
 
         {/* ✅ Content container with view classes - NO NESTING */}
@@ -154,7 +155,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             </span>
           )}
         </div>
-        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : title}</h3>
+        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
       </div>
 
       <div className="decision-bar">

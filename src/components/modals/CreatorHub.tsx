@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { fetchCardsForInvestigation } from '../../api/investigations';
+import { supabase } from '../../supabaseClient';
 import CreateClueModal_Refactored from './CreateClueModal_Refactored';
-import CreateClueModal from './CreateClueModal';
 import './CreatorHub.css';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
+  onOpenLegacyModal: () => void;
   onPuzzleCreated: () => void;
 }
 
@@ -18,14 +19,18 @@ interface CardSummary {
   rewardCode?: string;
   requiredPuzzleIds?: string[];
   description: string;
+  is_hidden?: boolean;
+  discovery_code?: string;
 }
 
-export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleCreated }: Props) {
+export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLegacyModal, onPuzzleCreated }: Props) {
   const [cards, setCards] = useState<CardSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreatorModal, setShowCreatorModal] = useState(false);
-  const [showCommonClueModal, setShowCommonClueModal] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<'refactored' | 'legacy'>('refactored');
+  const [createHiddenClue, setCreateHiddenClue] = useState(false);
+  const [showCommonClueModal, setShowCommonClueModal] = useState(false);
+  const [editingCard, setEditingCard] = useState<CardSummary | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,9 +42,11 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
   }, [isOpen, investigationId]);
 
   const loadCards = async () => {
+    console.log('CreatorHub: Loading cards for investigation:', investigationId);
     setLoading(true);
     try {
       const data = await fetchCardsForInvestigation(investigationId);
+      console.log('CreatorHub: Raw data from API:', data);
       
       const summaries: CardSummary[] = data.map((card: any) => {
         let summary: CardSummary = {
@@ -47,7 +54,10 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
           title: card.title || 'Sem título',
           type: card.type || 'unknown',
           description: card.description_public || card.description_hidden || '',
+          is_hidden: card.is_hidden || false,
+          discovery_code: card.discovery_code,
         };
+        console.log(`CreatorHub: Card ${card.id} - is_hidden: ${card.is_hidden}`);
 
         // Extrair informações específicas baseadas no tipo
         if (card.type === 'glitch_puzzle' && card.metadata?.glitch_puzzle) {
@@ -68,10 +78,42 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
     }
   };
 
-  const handlePuzzleCreated = () => {
-    loadCards(); // Recarregar a lista
-    onPuzzleCreated(); // Notificar o componente pai
-    setShowCreatorModal(false);
+  const handleEditCard = (card: CardSummary) => {
+    setEditingCard(card);
+    setShowCreatorModal(true);
+    onClose(); // Close CreatorHub when opening modal
+  };
+
+  const handleToggleHidden = async (card: CardSummary) => {
+    const newHiddenStatus = !card.is_hidden;
+
+    console.log('CreatorHub: Toggling hidden status for card:', card.id, 'from', card.is_hidden, 'to', newHiddenStatus);
+
+    try {
+      // Use Supabase client instead of direct fetch for better reliability
+      const { data, error } = await supabase
+        .from('investigation_cards')
+        .update({ is_hidden: newHiddenStatus })
+        .eq('id', card.id)
+        .select();
+
+      if (error) {
+        console.error('CreatorHub: Supabase update error:', error);
+        throw error;
+      }
+
+      console.log('CreatorHub: Supabase update success:', data);
+
+      // Update local state immediately instead of reloading all cards
+      setCards(prev => prev.map(c =>
+        c.id === card.id ? { ...c, is_hidden: newHiddenStatus } : c
+      ));
+
+      console.log('CreatorHub: Local state updated successfully');
+    } catch (err) {
+      console.error('CreatorHub: Error toggling hidden status:', err);
+      alert('Erro ao alterar status da pista: ' + err.message);
+    }
   };
 
   const handleCommonClueClick = () => {
@@ -178,31 +220,40 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
                 <button
                   className="btn-create-new primary"
                   onClick={() => {
-                    if (selectedCreator === 'refactored') setShowCreatorModal(true);
-                    else setShowCommonClueModal(true);
+                    if (selectedCreator === 'refactored') {
+                      console.log('Opening refactored modal');
+                      setCreateHiddenClue(false);
+                      setEditingCard(null);
+                      setShowCreatorModal(true);
+                      onClose(); // Close CreatorHub when opening modal
+                    } else {
+                      console.log('Opening legacy modal');
+                      onOpenLegacyModal();
+                      onClose(); // Close CreatorHub when opening modal
+                    }
                   }}
                 >
-                  ✨ CRIAR
+                  ✨ CRIAR NOVA PISTA
                 </button>
               </div>
             </div>
 
             {/* Lista de pistas existentes */}
             <div className="cards-list-section">
-              <h3>📋 PISTAS EXISTENTES ({cards.length})</h3>
+              <h3>📋 PISTAS EXISTENTES ({cards.filter(c => !c.is_hidden).length})</h3>
               
               {loading ? (
                 <div className="loading-state">
                   <p>Carregando pistas...</p>
                 </div>
-              ) : cards.length === 0 ? (
+              ) : cards.filter(c => !c.is_hidden).length === 0 ? (
                 <div className="empty-state">
-                  <p>Nenhuma pista criada ainda.</p>
+                  <p>Nenhuma pista visível criada ainda.</p>
                   <p>Clique em "Criar Nova Pista" para começar.</p>
                 </div>
               ) : (
                 <div className="cards-grid">
-                  {cards.map(card => (
+                  {cards.filter(c => !c.is_hidden).map(card => (
                     <div key={card.id} className="card-summary">
                       <div className="card-summary-header">
                         <span className="card-icon">{getTypeIcon(card.type)}</span>
@@ -234,8 +285,78 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
                           </div>
                         )}
                       </div>
+
+                      <div className="card-actions">
+                        <button 
+                          className="btn-action btn-edit" 
+                          onClick={() => handleEditCard(card)}
+                          title="Editar pista"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`} 
+                          onClick={() => handleToggleHidden(card)}
+                          title={card.is_hidden ? 'Tornar visível' : 'Tornar oculta'}
+                        >
+                          {card.is_hidden ? '👁️' : '👻'}
+                        </button>
+                      </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Pistas Ocultas */}
+              {cards.filter(c => c.is_hidden).length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <h3>👁️ PISTAS OCULTAS ({cards.filter(c => c.is_hidden).length})</h3>
+                  <div className="cards-grid">
+                    {cards.filter(c => c.is_hidden).map(card => (
+                      <div key={card.id} className="card-summary hidden-clue">
+                        <div className="card-summary-header">
+                          <span className="card-icon">👻</span>
+                          <div className="card-title-section">
+                            <h4>{card.title}</h4>
+                            <span className="card-type">OCULTA - {getTypeLabel(card.type)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="card-summary-body">
+                          {card.discovery_code && (
+                            <div className="card-meta">
+                              <span className="meta-label">🔍 Código:</span>
+                              <code className="reward-code">{card.discovery_code}</code>
+                            </div>
+                          )}
+                          
+                          {card.description && (
+                            <p className="card-description">
+                              {card.description.substring(0, 80)}
+                              {card.description.length > 80 ? '...' : ''}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="card-actions">
+                          <button 
+                            className="btn-action btn-edit" 
+                            onClick={() => handleEditCard(card)}
+                            title="Editar pista"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`} 
+                            onClick={() => handleToggleHidden(card)}
+                            title={card.is_hidden ? 'Tornar visível' : 'Tornar oculta'}
+                          >
+                            {card.is_hidden ? '👁️' : '👻'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -267,22 +388,19 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onPuzzleC
       {showCreatorModal && (
         <CreateClueModal_Refactored
           isOpen={showCreatorModal}
-          onClose={() => setShowCreatorModal(false)}
-          investigationId={investigationId}
-          onSaved={handlePuzzleCreated}
-        />
-      )}
-
-      {/* Modal de criação de pista comum */}
-      {showCommonClueModal && (
-        <CreateClueModal
-          isOpen={showCommonClueModal}
-          onClose={() => setShowCommonClueModal(false)}
-          investigationId={investigationId}
-          onSaved={(created?: any) => {
-            handlePuzzleCreated();
-            setShowCommonClueModal(false);
+          onClose={() => {
+            setShowCreatorModal(false);
+            setEditingCard(null);
           }}
+          investigationId={investigationId}
+          onSaved={(card) => {
+            loadCards(); // Recarregar a lista
+            onPuzzleCreated(); // Notificar o componente pai
+            setShowCreatorModal(false);
+            setEditingCard(null);
+          }}
+          defaultHidden={createHiddenClue}
+          existingCard={editingCard}
         />
       )}
     </>

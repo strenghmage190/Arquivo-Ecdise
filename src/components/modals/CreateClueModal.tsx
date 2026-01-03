@@ -87,6 +87,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
   const [descPublic, setDescPublic] = useState('');
   const [descHidden, setDescHidden] = useState('');
   const [tags, setTags] = useState('');
+  const [discoveryCode, setDiscoveryCode] = useState('');
+  const [isHidden, setIsHidden] = useState(false);
 
   const [imgFile, setImgFile] = useState<File | null>(null);
    const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -450,6 +452,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setDescPublic('');
       setDescHidden('');
       setTags('');
+      setDiscoveryCode('');
+      setIsHidden(false);
 
       // files / previews
       setImgFile(null);
@@ -1441,6 +1445,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
             lock_password: isLocked ? lockPass : null,
+            is_hidden: isHidden,
+            discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
             metadata: cleanMetadata,
         audio_url: audUrl,
         audio_hidden_url: audHidUrl,
@@ -1834,6 +1840,18 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                          <label>TAGS</label>
                          <input value={tags} onChange={e=>setTags(e.target.value)} placeholder="Sangue, Oculto..." />
                       </div>
+                   </div>
+                   <div style={{display:'flex', gap:15, marginBottom:10, alignItems:'center'}}>
+                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                         <input type="checkbox" checked={isHidden} onChange={e => setIsHidden(e.target.checked)} />
+                         <span>Pista oculta (descoberta por código)</span>
+                      </label>
+                      {isHidden && (
+                         <div style={{flex:1}}>
+                            <label>CÓDIGO DE DESCOBERTA</label>
+                            <input value={discoveryCode} onChange={e=>setDiscoveryCode(e.target.value.toUpperCase())} placeholder="EX: ALPHA-01" />
+                         </div>
+                      )}
                    </div>
                    <label>DESCRIÇÃO PÚBLICA</label>
                    <textarea rows={3} value={descPublic} onChange={e=>setDescPublic(e.target.value)} />

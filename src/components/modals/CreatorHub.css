@@ -249,6 +249,18 @@
   font-size: 13px;
 }
 
+/* === HIDDEN CLUES === */
+.card-summary.hidden-clue {
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.05));
+  opacity: 0.8;
+}
+
+.card-summary.hidden-clue:hover {
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+}
+
 .meta-label {
   color: #888888;
   font-weight: 500;
@@ -367,4 +379,68 @@
     padding: 14px 32px;
     font-size: 16px;
   }
+}
+
+/* === CARD ACTIONS === */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 243, 255, 0.1);
+}
+
+.btn-action {
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  background: rgba(0, 243, 255, 0.1);
+  color: #00f3ff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.btn-action:hover {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: rgba(0, 243, 255, 0.6);
+  transform: scale(1.05);
+}
+
+.btn-edit {
+  background: rgba(198, 164, 95, 0.1);
+  border-color: rgba(198, 164, 95, 0.3);
+  color: #c6a45f;
+}
+
+.btn-edit:hover {
+  background: rgba(198, 164, 95, 0.2);
+  border-color: rgba(198, 164, 95, 0.6);
+}
+
+.btn-hide {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #8b5cf6;
+}
+
+.btn-hide:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.btn-show {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.btn-show:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.6);
 }

@@ -6,6 +6,7 @@ import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
 // Lazy load do modal pesado (2214 linhas) para reduzir bundle inicial
 const CreateClueModal = React.lazy(() => import('../modals/CreateClueModal_Refactored'));
+const CreateClueModalLegacy = React.lazy(() => import('../modals/CreateClueModal'));
 import Sketchpad from '../tools/Sketchpad';
 import TerminalSearch from './TerminalSearch';
 import { playAudio } from '../../utils/audio';
@@ -27,6 +28,7 @@ import GlitchMaker from '../tools/GlitchMaker';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 import CreatorHub from '../modals/CreatorHub';
+import GMOverwatch from './GMOverwatch';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -53,6 +55,7 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [inviteLink, setInviteLink] = useState('');
   const [createModalPos, setCreateModalPos] = useState<{ x: number; y: number } | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
+  const [showLegacyModal, setShowLegacyModal] = useState(false);
 
   const [zoom, setZoom] = useState(0.9);
   const [isUV, setIsUV] = useState(false);
@@ -196,6 +199,8 @@ export function InvestigationBoard({ investigationId }: Props) {
   const EMBED_EXCALIDRAW_JSON_LIMIT = 8 * 1024; // 8KB
   const [showSharedBoard, setShowSharedBoard] = useState(false);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const [gmOverwatchOpen, setGmOverwatchOpen] = useState(false);
+  const [showHiddenClues, setShowHiddenClues] = useState(false);
   const [showFinder, setShowFinder] = useState(false);
   const [showOrganizeMenu, setShowOrganizeMenu] = useState(false);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
@@ -498,6 +503,62 @@ export function InvestigationBoard({ investigationId }: Props) {
     } catch (err: any) {
       console.error('TerminalSearch error', err);
       setTerminalMessage('Erro ao buscar no servidor');
+    }
+  };
+
+  // Hidden clues discovery: reveals a card based on discovery_code
+  const handleDiscoverHidden = async (code: string): Promise<{ success: boolean; message: string; card?: any }> => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) {
+      return { success: false, message: 'Código vazio.' };
+    }
+    try {
+      const { data, error } = await supabase
+        .from('investigation_cards')
+        .select('*')
+        .eq('investigation_id', investigationId)
+        .eq('is_hidden', true)
+        .eq('discovery_code', normalizedCode)
+        .limit(1);
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return { success: false, message: 'Código não corresponde a nenhum arquivo oculto.' };
+      }
+
+      const hiddenCard = data[0] as any;
+
+      // Compute center position for reveal
+      const centerX = origin.x + (window.innerWidth / 2) / zoom;
+      const centerY = origin.y + (window.innerHeight / 2) / zoom;
+
+      // Reveal the card
+      await api.updateInvestigationCard(hiddenCard.id, {
+        is_hidden: false,
+        x: Math.round(centerX),
+        y: Math.round(centerY)
+      } as any);
+
+      try { playAudio('/sounds/success_chime.mp3'); } catch {}
+      try { playAudio('/sounds/paper_drop.mp3'); } catch {}
+
+      // Show notification toast
+      showToast({ id: `discovered-${hiddenCard.id}`, message: `🔍 ARQUIVO RECUPERADO: ${hiddenCard.title || 'Documento Secreto'}` });
+
+      // Reload board to show the revealed card
+      await loadBoard();
+
+      // Focus camera on the new card
+      setOrigin({ x: Math.round(centerX) - 400, y: Math.round(centerY) - 300 });
+
+      // Mark for animation
+      setLastCreatedId(hiddenCard.id);
+      setTimeout(() => setLastCreatedId(null), 4200);
+
+      return { success: true, message: 'Arquivo revelado com sucesso.', card: hiddenCard };
+    } catch (err: any) {
+      console.error('DiscoverHidden error', err);
+      return { success: false, message: 'Erro ao acessar o servidor.' };
     }
   };
 
@@ -1716,6 +1777,20 @@ export function InvestigationBoard({ investigationId }: Props) {
               >
                  {playerView ? '🕶️' : '👁️'}
               </button>
+              <button 
+                 className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
+                 onClick={() => setShowHiddenClues(!showHiddenClues)}
+                 data-tooltip={showHiddenClues ? "Ocultar pistas ocultas" : "Mostrar pistas ocultas"}
+              >
+                 👁️‍🗨️
+              </button>
+              <button 
+                 className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
+                 onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
+                 data-tooltip="GM Overwatch"
+              >
+                 👑
+              </button>
             </>
           )}
         </div>
@@ -1987,7 +2062,7 @@ export function InvestigationBoard({ investigationId }: Props) {
             })()}
           </svg>
 
-          {cards.map((card) => {
+          {cards.filter(card => !card.is_hidden || (isGameMaster && showHiddenClues)).map((card) => {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };
             const metadata = parseCardMetadata(card);
             const unified = resolveUnifiedMedia(card, metadata, { revealBase: false });
@@ -1999,6 +2074,7 @@ export function InvestigationBoard({ investigationId }: Props) {
               if (unified.type === 'glitch_puzzle' || card?.type === 'glitch_puzzle') return 'glitch';
               if (unified.type === 'mega_clue' || card?.type === 'mega_clue') return 'mega-clue';
               if (card?.is_locked || card?.lock_password) return 'encrypted';
+              if (card?.is_hidden && showHiddenClues) return 'hidden';
               return 'normal';
             })();
             const isSelected = selectedIds.includes(card.id);
@@ -2006,7 +2082,7 @@ export function InvestigationBoard({ investigationId }: Props) {
             return (
                 <div
                 key={card.id}
-                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''}`}
+                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''} ${card.is_hidden && showHiddenClues ? 'hidden-clue' : ''}`}
                   data-status={(card as any)?.metadata?.status || ''}
                   style={{ left: pos.x, top: pos.y, pointerEvents: (isMobileDevice && touchMode === 'pan') ? 'none' : 'auto' }}
                 onContextMenu={(e) => {
@@ -2287,6 +2363,7 @@ export function InvestigationBoard({ investigationId }: Props) {
               isOpen={createModalOpen}
               onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
               investigationId={investigationId}
+              onOpenLegacyModal={() => setShowLegacyModal(true)}
               onPuzzleCreated={async (created?: any) => {
                 try {
                   await loadBoard();
@@ -2377,6 +2454,7 @@ export function InvestigationBoard({ investigationId }: Props) {
         cards={cards}
         onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
         onThermalUnlock={handleThermalUnlock}
+        onDiscoverHidden={handleDiscoverHidden}
       />
       {unlockingCard && (
         <CodePromptModal
@@ -2438,6 +2516,37 @@ export function InvestigationBoard({ investigationId }: Props) {
           description="Sistema de segurança detectado. Digite o código de acesso para desbloquear o Decodificador de Anomalias."
           onSubmit={handleDecoderCodeSubmit}
           onClose={() => setShowCodePrompt(false)}
+        />
+      )}
+
+      {/* Modal de criação legado */}
+      {showLegacyModal && (
+        <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
+          <CreateClueModalLegacy
+            isOpen={showLegacyModal}
+            onClose={() => setShowLegacyModal(false)}
+            investigationId={investigationId}
+            onSaved={(created?: any) => {
+              loadBoard();
+              if (created && created.id) {
+                const cx = (typeof created.x === 'number' ? created.x : created.x) + 220 / 2;
+                const cy = (typeof created.y === 'number' ? created.y : created.y) + 160 / 2;
+                panToPosition(cx, cy);
+                setLastCreatedId(created.id);
+                setTimeout(() => setLastCreatedId(null), 6000);
+              }
+              setShowLegacyModal(false);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* GM Overwatch Panel */}
+      {isGameMaster && (
+        <GMOverwatch
+          investigationId={investigationId}
+          isVisible={gmOverwatchOpen}
+          onToggle={() => setGmOverwatchOpen(!gmOverwatchOpen)}
         />
       )}
     </div>

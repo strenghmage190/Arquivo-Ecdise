@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import './CreateClueModal_Refactored.css';
 import './createclueTabs/createclueTabs.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
-import { createInvestigationCard } from '../../api/investigations';
+import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
 import {
@@ -23,6 +23,8 @@ type Props = {
   onClose: () => void;
   investigationId: string;
   onSaved?: (card: Record<string, any>) => void;
+  defaultHidden?: boolean;
+  existingCard?: any;
 };
 
 type ChatSender = 'me' | 'them' | 'system' | string;
@@ -49,7 +51,7 @@ const TABS = [
   { key: 'display', label: 'CONFIG', icon: '⚙️' },
 ];
 
-export default function CreateClueModal_Refactored({ isOpen, onClose, investigationId, onSaved }: Props) {
+export default function CreateClueModal_Refactored({ isOpen, onClose, investigationId, onSaved, defaultHidden = false, existingCard }: Props) {
   const mountedRef = React.useRef(true);
 
   // ===== BASIC INFO =====
@@ -60,8 +62,12 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
   const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
 
   // ===== HIDDEN CLUES =====
-  const [isHidden, setIsHidden] = useState(false);
+  const [isHidden, setIsHidden] = useState(defaultHidden);
   const [discoveryCode, setDiscoveryCode] = useState('');
+
+  useEffect(() => {
+    setIsHidden(defaultHidden);
+  }, [defaultHidden]);
 
   // ===== VISUAL/IMAGE =====
   const [imgFile, setImgFile] = useState<File | null>(null);
@@ -206,6 +212,31 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
     };
   }, [isOpen]);
 
+  // Load existing card data for editing
+  useEffect(() => {
+    if (existingCard && isOpen) {
+      // Load data from existing card
+      setTitle(existingCard.title || '');
+      setDescPublic(existingCard.description_public || '');
+      setDescHidden(existingCard.description_hidden || '');
+      setTags(existingCard.tags || '');
+      setEvidenceType(existingCard.type || 'document');
+      setIsHidden(existingCard.is_hidden || false);
+      setDiscoveryCode(existingCard.discovery_code || '');
+      // Load other fields as needed...
+    } else if (!existingCard && isOpen) {
+      // Reset form for new card
+      setTitle('');
+      setDescPublic('');
+      setDescHidden('');
+      setTags('');
+      setEvidenceType('document');
+      setIsHidden(defaultHidden);
+      setDiscoveryCode('');
+      // Reset other fields...
+    }
+  }, [existingCard, isOpen, defaultHidden]);
+
   // ===== HANDLERS =====
   const handleSave = async () => {
     if (!investigationId || !title) {
@@ -294,16 +325,31 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
         metadata.chat_contact_name = chatContactName;
       }
 
-      const card = await createInvestigationCard({
-        investigation_id: investigationId,
-        title,
-        description_public: descPublic,
-        description_hidden: descHidden,
-        image_url: imageUrl,
-        metadata,
-        is_hidden: isHidden,
-        discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
-      });
+      let card;
+      if (existingCard) {
+        // Update existing card
+        card = await updateInvestigationCard(existingCard.id, {
+          title,
+          description_public: descPublic,
+          description_hidden: descHidden,
+          image_url: imageUrl,
+          metadata,
+          is_hidden: isHidden,
+          discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
+        });
+      } else {
+        // Create new card
+        card = await createInvestigationCard({
+          investigation_id: investigationId,
+          title,
+          description_public: descPublic,
+          description_hidden: descHidden,
+          image_url: imageUrl,
+          metadata,
+          is_hidden: isHidden,
+          discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
+        });
+      }
 
       if (mountedRef.current) {
         onSaved?.(card);
@@ -336,7 +382,7 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
     <div className="createclue-modal-overlay" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()}>
         <DiegeticWindow
-          title={`${evidenceType === 'glitch_puzzle' ? '🎮' : evidenceType === 'mega_clue' ? '🔐' : '📋'} CRIAR EVIDÊNCIA`}
+          title={`${evidenceType === 'glitch_puzzle' ? '🎮' : evidenceType === 'mega_clue' ? '🔐' : '📋'} ${existingCard ? 'EDITAR' : 'CRIAR'} EVIDÊNCIA`}
           onClose={onClose}
         >
           <div className="createclue-container">
@@ -367,6 +413,10 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
                 setTags={setTags}
                 evidenceType={evidenceType}
                 setEvidenceType={setEvidenceType}
+                isHidden={isHidden}
+                setIsHidden={setIsHidden}
+                discoveryCode={discoveryCode}
+                setDiscoveryCode={setDiscoveryCode}
                 templates={templates}
                 loadingTemplates={loadingTemplates}
                 showTemplateDropdown={showTemplateDropdown}

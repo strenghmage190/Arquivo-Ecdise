@@ -7,7 +7,7 @@
   --nexus-glitch: #ff003c;
   --crt-scanline: rgba(18, 16, 16, 0.1);
   --muted: #8fa;
-  --z-modal-top: 20000;
+  --z-modal-top: 30000;
 }
 
 /* Estilos antigos removidos - usando apenas os estilos nexus abaixo */

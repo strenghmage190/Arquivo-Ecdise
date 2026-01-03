@@ -7,9 +7,10 @@ interface SystemTerminalProps {
   cards?: Array<any>;
   onOpenCard?: (card: any) => void;
   onThermalUnlock?: (keyword: string) => Promise<{ success: boolean; message: string; card?: any }>;
+  onDiscoverHidden?: (code: string) => Promise<{ success: boolean; message: string; card?: any }>;
 }
 
-export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onThermalUnlock }: SystemTerminalProps) {
+export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onThermalUnlock, onDiscoverHidden }: SystemTerminalProps) {
   const [history, setHistory] = useState<string[]>(['C.R.I.S. TERMINAL [VERSÃO 4.0.2]', 'DIGITE "HELP" PARA AJUDA.']);
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -33,6 +34,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
           'COMANDOS DISPONÍVEIS:',
           '  list - Lista arquivos no diretório atual',
           '  open <ID|NAME> - Abre um arquivo visual',
+          '  locate <CODE> - Localiza arquivo oculto por código',
           '  thermal <KEYWORD> - Desbloqueia modo termográfico',
           '  unlock <KEYWORD> - Alias para thermal',
           '  scan - Varredura de integridade',
@@ -95,6 +97,43 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
           return;
         } else {
           newHistory.push('ERRO: SISTEMA DE DESBLOQUEIO INDISPONÍVEL.');
+        }
+        break;
+      case 'locate':
+      case 'find':
+        if (!args[0]) {
+          newHistory.push('ERRO: CÓDIGO NECESSÁRIO.');
+          newHistory.push('USO: locate <CODE>');
+          setHistory(newHistory);
+          setInput('');
+          return;
+        }
+        if (onDiscoverHidden) {
+          setProcessing(true);
+          setHistory([...newHistory, 'LOCALIZANDO ARQUIVO OCULTO...']);
+          setInput('');
+          onDiscoverHidden(args.join(' ').toUpperCase()).then(result => {
+            const finalHistory = [...newHistory];
+            if (result.success) {
+              finalHistory.push('═══════════════════════════════════');
+              finalHistory.push('🔍 ARQUIVO ENCONTRADO');
+              finalHistory.push('═══════════════════════════════════');
+              finalHistory.push(`ASSET: ${result.card?.title || 'DESCONHECIDA'}`);
+              finalHistory.push('DECRYPTING ON BOARD...');
+              finalHistory.push('═══════════════════════════════════');
+            } else {
+              finalHistory.push('⚠️  ARQUIVO NÃO LOCALIZADO');
+              finalHistory.push(result.message);
+            }
+            setHistory(finalHistory);
+            setProcessing(false);
+          }).catch(() => {
+            setHistory([...newHistory, 'ERRO: FALHA NA BUSCA']);
+            setProcessing(false);
+          });
+          return;
+        } else {
+          newHistory.push('ERRO: SISTEMA DE LOCALIZAÇÃO INDISPONÍVEL.');
         }
         break;
       case 'scan':

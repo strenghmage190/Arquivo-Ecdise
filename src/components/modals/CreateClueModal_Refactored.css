@@ -8,6 +8,7 @@
   --nexus-dark: #0a0a0a;
   --muted: rgba(255,255,255,0.45);
   --panel-bg: rgba(10,10,10,0.85);
+  --z-modal-top: 30000;
   --glass: rgba(255,255,255,0.03);
   --gold-accent: #c6a45f;
   --radius: 8px;
@@ -21,7 +22,7 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  z-index:1200;
+  z-index: var(--z-modal-top);
 }
 
 .createclue-modal{
