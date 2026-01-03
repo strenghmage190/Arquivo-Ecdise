@@ -11,6 +11,8 @@ interface Props {
   title?: string;
 }
 
+type WaveSurferInstance = InstanceType<typeof WaveSurfer>;
+
 export default function AudioViewerModal({ 
   isOpen, 
   onClose, 
@@ -18,13 +20,14 @@ export default function AudioViewerModal({
   title = 'REPRODUTOR DE ÁUDIO'
 }: Props) {
   const waveformRef = useRef<HTMLDivElement | null>(null);
-  const wavesurferRef = useRef<any | null>(null);
+  const wavesurferRef = useRef<WaveSurferInstance | null>(null);
   const spectrogramContainerRef = useRef<HTMLDivElement | null>(null);
   const isSyncingRef = useRef(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
+  const [durationSec, setDurationSec] = useState<number>(0);
   const [spectrogramHeight, setSpectrogramHeight] = useState(350);
   const [horizontalScale, setHorizontalScale] = useState(1);
   
@@ -32,7 +35,12 @@ export default function AudioViewerModal({
   const [maxFreq, setMaxFreq] = useState(10000);
   const [minDB, setMinDB] = useState(-60);
   const [colorScheme, setColorScheme] = useState<'hot' | 'cyan' | 'magma'>('hot');
+  
+  // CORREÇÃO: Adicionado estado para saber se estamos esperando uma análise automática
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisRequestId, setAnalysisRequestId] = useState(0);
+
+  
 
   useEffect(() => {
     if (!isOpen || !waveformRef.current) {
@@ -45,7 +53,7 @@ export default function AudioViewerModal({
       wavesurferRef.current = null;
     }
 
-    const ws = (WaveSurfer as any).create({
+    const ws = WaveSurfer.create({
       container: waveformRef.current,
       waveColor: '#00ff00',
       progressColor: '#00ff00',
@@ -67,6 +75,7 @@ export default function AudioViewerModal({
 
     ws.on('ready', () => {
       setDuration(formatTime(ws.getDuration()));
+      setDurationSec(ws.getDuration());
     });
 
     const syncSpectrogramScroll = (progress: number) => {
@@ -150,9 +159,24 @@ export default function AudioViewerModal({
     };
   }, [isOpen]);
 
+  // CORREÇÃO CRÍTICA AQUI:
   const handleAutoAnalysis = (result: { optimalMaxFreq: number; optimalMinDB: number }) => {
-    setMaxFreq(result.optimalMaxFreq);
-    setMinDB(result.optimalMinDB);
+    // Só aceita a sugestão do filho se NÓS pedimos a análise (isAnalyzing == true)
+    if (isAnalyzing) {
+      setMaxFreq(result.optimalMaxFreq);
+      setMinDB(result.optimalMinDB);
+      setIsAnalyzing(false); // Desliga a espera, voltando o controle para o manual
+    }
+  };
+
+  const handleManualChangeMaxFreq = (val: number) => {
+    setIsAnalyzing(false); // Garante que o modo manual assuma
+    setMaxFreq(val);
+  };
+
+  const handleManualChangeMinDB = (val: number) => {
+    setIsAnalyzing(false); // Garante que o modo manual assuma
+    setMinDB(val);
   };
 
   if (!isOpen) {
@@ -238,8 +262,9 @@ export default function AudioViewerModal({
               min={2000} 
               max={22000} 
               step={500}
-              value={maxFreq} 
-              onChange={e => setMaxFreq(Number(e.target.value))}
+              value={maxFreq}
+              // CORREÇÃO: Usando a função manual protegida
+              onChange={e => handleManualChangeMaxFreq(Number(e.target.value))}
             />
             <span className="control-value">{(maxFreq/1000).toFixed(1)}kHz</span>
           </div>
@@ -251,8 +276,9 @@ export default function AudioViewerModal({
               min={-100} 
               max={-20} 
               step={5}
-              value={minDB} 
-              onChange={e => setMinDB(Number(e.target.value))}
+              value={minDB}
+              // CORREÇÃO: Usando a função manual protegida
+              onChange={e => handleManualChangeMinDB(Number(e.target.value))}
             />
             <span className="control-value">{minDB}dB</span>
           </div>
@@ -288,17 +314,19 @@ export default function AudioViewerModal({
             <button
               className="spectrum-action-btn"
               onClick={() => {
+                // CORREÇÃO: Sinalizamos que ESTAMOS esperando uma análise
+                setIsAnalyzing(true);
                 setAnalysisRequestId((prev) => prev + 1);
-                setMaxFreq(22000);
-                setMinDB(-100);
+                // Removi o reset forçado aqui, pois a função handleAutoAnalysis cuidará disso quando a análise voltar
               }}
-              title="Analisar áudio e ajustar visualização vertical automaticamente"
+              title="Analisar áudio e ajustar visualização automaticamente"
             >
               🔬 ANÁLISE RÁPIDA
             </button>
             <button 
               className="spectrum-action-btn"
               onClick={() => {
+                setIsAnalyzing(false);
                 setSpectrogramHeight(350);
                 setHorizontalScale(1);
                 setMaxFreq(10000);
@@ -325,6 +353,10 @@ export default function AudioViewerModal({
               width={containerWidth}
               analysisRequestId={analysisRequestId}
               onAnalysisComplete={handleAutoAnalysis}
+                  onSeek={(percentage: number) => {
+                    if (wavesurferRef.current) wavesurferRef.current.seekTo(percentage);
+                  }}
+                  duration={durationSec}
             />
           )}
         </div>

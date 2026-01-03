@@ -198,6 +198,8 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
 
   // keep triggerLocal in sync when parent prop changes
   useEffect(() => {
+    // don't override local value while the user is actively dragging the overlay
+    if (dragState.current && dragState.current.dragging) return;
     setTriggerLocal(triggerTime || 0);
   }, [triggerTime]);
 

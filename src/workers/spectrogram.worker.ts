@@ -211,7 +211,9 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
       for (let y = 0; y < maxFreqBin; y++) {
         const value = freqData[y] || 0;
         const [r, g, b] = colorFunc(value);
-        const idx = (y * chunkFrames + j) * 4;
+        // Inverter verticalmente: bin 0 (DC/baixa frequência) deve ficar embaixo
+        const flippedY = (maxFreqBin - 1 - y);
+        const idx = (flippedY * chunkFrames + j) * 4;
         chunkData[idx] = r;
         chunkData[idx + 1] = g;
         chunkData[idx + 2] = b;

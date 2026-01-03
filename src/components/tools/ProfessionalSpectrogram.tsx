@@ -58,9 +58,14 @@ type Props = {
   maxFreq?: number;
   minDB?: number;
   colorScheme?: 'hot' | 'cyan' | 'magma';
+  flipVertical?: boolean;
   width: number;
   analysisRequestId?: number;
   onAnalysisComplete?: (result: { optimalMaxFreq: number; optimalMinDB: number }) => void;
+  // Optional: allows parent to seek when user clicks the spectrogram (0..1)
+  onSeek?: (percentage: number) => void;
+  // Optional total duration in seconds to display time tooltip
+  duration?: number;
 };
 
 export default function ProfessionalSpectrogram({
@@ -70,14 +75,19 @@ export default function ProfessionalSpectrogram({
   maxFreq = 10000,
   minDB = -60,
   colorScheme = 'hot',
+  flipVertical = false,
   width,
   analysisRequestId = 0,
   onAnalysisComplete,
+  onSeek,
+  duration,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const [status, setStatus] = useState('Sem áudio');
   const [progress, setProgress] = useState(0);
+  const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; time: string; freq: string } | null>(null);
 
   useEffect(() => {
     if (!audioUrl || !canvasRef.current || width <= 0) {
@@ -128,7 +138,15 @@ export default function ProfessionalSpectrogram({
           createImageBitmap(imageData).then((bitmap) => {
             const x = (startFrame / totalFrames) * canvasWidth;
             const drawWidth = Math.max(1, (frames / totalFrames) * canvasWidth);
-            ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+            ctx.save();
+            if (flipVertical) {
+              ctx.translate(0, canvasHeight);
+              ctx.scale(1, -1);
+              ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+            } else {
+              ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+            }
+            ctx.restore();
           });
           break;
         }
@@ -186,6 +204,37 @@ export default function ProfessionalSpectrogram({
     };
   }, [audioUrl, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, analysisRequestId, onAnalysisComplete]);
 
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSeek || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const widthPx = rect.width || 1;
+    const percentage = Math.max(0, Math.min(1, x / widthPx));
+    onSeek(percentage);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const percentX = Math.max(0, Math.min(1, x / rect.width));
+    const percentY = Math.max(0, Math.min(1, 1 - y / rect.height));
+
+    const timeLabel = typeof duration === 'number' && duration > 0 ? formatTime(percentX * duration) : `${(percentX * 100).toFixed(1)}%`;
+    const freqHz = percentY * maxFreq;
+
+    setHoverInfo({ x, y, time: timeLabel, freq: `${(freqHz / 1000).toFixed(2)} kHz` });
+  };
+
+  const handleMouseLeave = () => setHoverInfo(null);
+
   return (
     <div className="spectrogram-container">
       <div className="spectrogram-header">
@@ -208,8 +257,16 @@ export default function ProfessionalSpectrogram({
         )}
       </div>
 
-      <div className="canvas-container">
+      <div
+        className="canvas-container"
+        ref={containerRef}
+        onClick={handleCanvasClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ cursor: onSeek ? 'crosshair' : 'default' }}
+      >
         <canvas ref={canvasRef} className="spectrogram-canvas" />
+
         <div className="frequency-markers">
           {[0.9, 0.75, 0.5, 0.25].map((p) => (
             <div key={p} className="freq-marker" style={{ top: `${(1 - p) * 100}%` }}>
@@ -217,6 +274,17 @@ export default function ProfessionalSpectrogram({
             </div>
           ))}
         </div>
+
+        {/* Crosshair overlays */}
+        {hoverInfo && (
+          <>
+            <div className="crosshair-v" style={{ left: `${hoverInfo.x}px` }} />
+            <div className="crosshair-h" style={{ top: `${hoverInfo.y}px` }} />
+            <div className="crosshair-tooltip" style={{ left: `${hoverInfo.x + 10}px`, top: `${hoverInfo.y - 30}px` }}>
+              {hoverInfo.freq} | {hoverInfo.time}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="spectrogram-footer">

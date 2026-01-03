@@ -279,3 +279,47 @@
 .canvas-container::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 243, 255, 0.5);
 }
+
+/* Custom Scrollbar - Cyberpunk Style */
+.canvas-container::-webkit-scrollbar {
+  height: 8px; /* Altura da barra horizontal */
+}
+
+.canvas-container::-webkit-scrollbar-track {
+  background: #05080a; /* Fundo escuro */
+  border-top: 1px solid #222;
+}
+
+.canvas-container::-webkit-scrollbar-thumb {
+  background: #004d52; /* Cor inativa escura */
+  border-radius: 0;
+  border: 1px solid #00f3ff; /* Borda neon */
+}
+
+.canvas-container::-webkit-scrollbar-thumb:hover {
+  background: #00f3ff; /* Aceso no hover */
+  box-shadow: 0 0 10px #00f3ff;
+}
+
+/* Crosshair inspector */
+.canvas-container { position: relative; cursor: crosshair; }
+.crosshair-v {
+  position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); pointer-events: none; z-index: 8;
+}
+.crosshair-h {
+  position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.5); pointer-events: none; z-index: 8;
+}
+.crosshair-tooltip {
+  position: absolute; background: rgba(0,0,0,0.85); color: #00f3ff;
+  padding: 4px 8px; border: 1px solid #00f3ff; border-radius: 4px;
+  font-size: 11px; font-family: monospace; pointer-events: none; z-index: 10;
+  white-space: nowrap;
+}
+
+/* Subtle grid when canvas is empty */
+.spectrogram-container {
+  background-image: 
+    linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
