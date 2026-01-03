@@ -44,7 +44,7 @@
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^5.1.2",
-    "cypress": "^4.2.0",
+    "cypress": "^15.0.0",
     "cypress-axe": "^0.14.0",
     "cypress-real-events": "^1.15.0",
     "identity-obj-proxy": "^3.0.0",
