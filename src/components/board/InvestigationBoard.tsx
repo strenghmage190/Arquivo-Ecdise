@@ -136,6 +136,22 @@ export function InvestigationBoard({ investigationId }: Props) {
     };
   }, []);
 
+  // DEV: delegated click logger for toolbar elements to diagnose inert buttons
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const toolbar = document.querySelector('.investigation-toolbar');
+    if (!toolbar) return;
+    const handler = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const btn = target.closest && (target.closest('.hud-btn') || target.closest('.board-button')) as HTMLElement | null;
+      if (btn) {
+        console.debug('DEV: toolbar click detected', { tag: target.tagName, classes: btn.className, text: btn.innerText });
+      }
+    };
+    toolbar.addEventListener('click', handler);
+    return () => toolbar.removeEventListener('click', handler);
+  }, []);
+
   // Refs to hold latest zoom and origin for global listeners (avoid stale closures)
   const zoomRef = useRef(zoom);
   const originRef = useRef(origin);
