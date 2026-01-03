@@ -59,6 +59,8 @@ export interface InvestigationCard {
   audio_target_freq?: number | null;
   is_locked?: boolean;
   lock_password?: string | null;
+  is_hidden?: boolean;
+  discovery_code?: string | null;
 }
 
 // --- QUADRO (BOARD) ---
@@ -140,6 +142,8 @@ export async function createInvestigationCard(card: InvestigationCard) {
     audio_target_freq: (card as any).audio_target_freq || null,
     is_locked: (card as any).is_locked || false,
     lock_password: (card as any).lock_password || null,
+    is_hidden: (card as any).is_hidden || false,
+    discovery_code: card.discovery_code || null,
     description_public: card.description_public || null,
     description_hidden: card.description_hidden || null,
     x: card.x ?? 0,

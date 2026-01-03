@@ -1,438 +1,658 @@
-/**
- * 🎯 CreateClueModal - Wrapper Refatorizado
- * 
- * Novos Componentes:
- * - ClueBasicsTab: Tipo, título, descrição, tags, templates
- * - ClueMediaTab: Upload de imagens, áudio, vídeo
- * - ClueValidationTab: Validação de campos
- * - CluePreviewTab: Preview de como o player vê
- * - ClueConfigTab: Display config e field visibility
- * - CluePublishTab: Resumo e botão de publicar
- */
-
 import React, { useState, useEffect } from 'react';
-import ClueBasicsTab from './tabs/ClueBasicsTab';
-import ClueMediaTab from './tabs/ClueMediaTab';
-import ClueValidationTab from './tabs/ClueValidationTab';
-import CluePreviewTab from './tabs/CluePreviewTab';
-import ClueConfigTab from './tabs/ClueConfigTab';
-import CluePublishTab from './tabs/CluePublishTab';
+import { createPortal } from 'react-dom';
+import './CreateClueModal_Refactored.css';
+import './createclueTabs/createclueTabs.css';
+import DiegeticWindow from '../ui/DiegeticWindow';
+import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
+import { uploadInvestigationImage } from '../../utils/storage';
+import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
+import {
+  ClueGeneralTab,
+  ClueVisualTab,
+  ClueAudioTab,
+  ClueCipherTab,
+  ClueGlitchTab,
+  ClueMegaTab,
+  ClueFieldsTab,
+  ClueDisplayTab,
+  ClueForensicTab
+} from './createclueTabs';
 
-// ⚠️ IMPORTANTE: Importar todo o state e lógica do CreateClueModal antigo
-// Este é um wrapper que coordena os tabs.
-// O estado real ainda está em CreateClueModal_Legacy.tsx
-
-type TabType = 'basics' | 'media' | 'validation' | 'preview' | 'config' | 'publish';
-
-interface CreateClueModalRefactorProps {
+type Props = {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
-  initialX?: number;
-  initialY?: number;
-  onSaved: (card: Record<string, any>) => void;
-  
-  // State props (passed from parent / CreateClueModal_Legacy)
-  title: string;
-  descPublic: string;
-  descHidden: string;
-  tags: string;
-  evidenceType: 'document' | 'glitch_puzzle' | 'mega_clue';
-  imgFile: File | null;
-  uvFile: File | null;
-  previewUrl: string | null;
-  previewUrl2: string | null;
-  thermalEnabled: boolean;
-  thermalSecretText: string;
-  filterFile: File | null;
-  filterPreviewUrl: string | null;
-  audioBase: File | null;
-  audioBasePreview: string | null;
-  audioHidden: File | null;
-  audioHiddenPreview: string | null;
-  videoFile: File | null;
-  videoPreviewUrl: string | null;
-  videoUrlInput: string;
-  videoUploading: boolean;
-  uploadProgress: Record<string, number>;
-  megaFinalTruthText: string;
-  megaRequiredPuzzleIds: string[];
-  showMixer: boolean;
-  loading: boolean;
-  displayConfig: any;
-  fieldVisibilityConfig: any;
-  templates: any[];
-  loadingTemplates: boolean;
-  glitchAccessInstructions: string;
-  glitchHint: string;
-  isLocked: boolean;
-  isPerson: boolean;
-  personName: string;
-  lockPass: string;
+  onSaved?: (card: Record<string, any>) => void;
+  defaultHidden?: boolean;
+  existingCard?: any;
+};
 
-  // Callback props
-  onTitleChange: (value: string) => void;
-  onDescPublicChange: (value: string) => void;
-  onDescHiddenChange: (value: string) => void;
-  onTagsChange: (value: string) => void;
-  onEvidenceTypeChange: (type: 'document' | 'glitch_puzzle' | 'mega_clue') => void;
-  onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onUVSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onThermalEnabledChange: (enabled: boolean) => void;
-  onThermalSecretTextChange: (text: string) => void;
-  onShowThermalEditorChange: (show: boolean) => void;
-  onFilterSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onAudioBaseSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onAudioHiddenSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onShowMixerChange: (show: boolean) => void;
-  onVideoSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onVideoUrlInputChange: (url: string) => void;
-  onMegaFinalTruthTextChange: (text: string) => void;
-  onMegaRequiredPuzzleIdsChange: (ids: string[]) => void;
-  onDisplayConfigChange: (config: any) => void;
-  onFieldVisibilityConfigChange: (config: any) => void;
-  onApplyTemplate: (template: any) => void;
-  onSaveTemplate: (name: string) => void;
-  onApplyPreset: (preset: 'MINIMAL' | 'DEFAULT' | 'FULL') => void;
-  onValidate: () => { field: string; message: string; severity: 'error' | 'warning' | 'info' }[];
-  onSave: () => Promise<void>;
-  onShowTemplateDropdownChange: (show: boolean) => void;
-  showTemplateDropdown: boolean;
-  glitchFocusedImageFile: File | null;
+type ChatSender = 'me' | 'them' | 'system' | string;
+interface EditingChatMessage {
+  sender: ChatSender;
+  type: string;
+  text: string;
 }
 
-export default function CreateClueModalRefactored({
-  isOpen,
-  onClose,
-  // State
-  title,
-  descPublic,
-  descHidden,
-  tags,
-  evidenceType,
-  imgFile,
-  uvFile,
-  previewUrl,
-  previewUrl2,
-  thermalEnabled,
-  thermalSecretText,
-  filterFile,
-  filterPreviewUrl,
-  audioBase,
-  audioBasePreview,
-  audioHidden,
-  audioHiddenPreview,
-  videoFile,
-  videoPreviewUrl,
-  videoUrlInput,
-  videoUploading,
-  uploadProgress,
-  megaFinalTruthText,
-  megaRequiredPuzzleIds,
-  loading,
-  displayConfig,
-  fieldVisibilityConfig,
-  templates,
-  loadingTemplates,
-  glitchAccessInstructions,
-  glitchHint,
-  isLocked,
-  isPerson,
-  personName,
-  lockPass,
-  showMixer,
-  showTemplateDropdown,
-  glitchFocusedImageFile,
-  // Callbacks
-  onTitleChange,
-  onDescPublicChange,
-  onDescHiddenChange,
-  onTagsChange,
-  onEvidenceTypeChange,
-  onImageSelect,
-  onUVSelect,
-  onThermalEnabledChange,
-  onThermalSecretTextChange,
-  onShowThermalEditorChange,
-  onFilterSelect,
-  onAudioBaseSelect,
-  onAudioHiddenSelect,
-  onShowMixerChange,
-  onVideoSelect,
-  onVideoUrlInputChange,
-  onMegaFinalTruthTextChange,
-  onMegaRequiredPuzzleIdsChange,
-  onDisplayConfigChange,
-  onFieldVisibilityConfigChange,
-  onApplyTemplate,
-  onSaveTemplate,
-  onApplyPreset,
-  onValidate,
-  onSave,
-  onShowTemplateDropdownChange,
-}: CreateClueModalRefactorProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('basics');
+interface ForensicConfig {
+  baseChannel: 'R' | 'G' | 'B';
+  hiddenChannel: 'R' | 'G' | 'B';
+  blendMode: 'screen' | 'multiply' | 'overlay';
+  opacity: number;
+}
+
+const TABS = [
+  { key: 'geral', label: 'GERAL', icon: '📄' },
+  { key: 'visual', label: 'VISUAL', icon: '👁️' },
+  { key: 'audio', label: 'ÁUDIO', icon: '🔊' },
+  { key: 'cifra', label: 'CIFRAS', icon: '🧩' },
+  { key: 'forense', label: 'FORENSE', icon: '🔬' },
+  { key: 'campos', label: 'CAMPOS', icon: '🎯' },
+  { key: 'display', label: 'CONFIG', icon: '⚙️' },
+];
+
+export default function CreateClueModal_Refactored({ isOpen, onClose, investigationId, onSaved, defaultHidden = false, existingCard }: Props) {
+  const mountedRef = React.useRef(true);
+
+  // ===== BASIC INFO =====
+  const [title, setTitle] = useState('');
+  const [descPublic, setDescPublic] = useState('');
+  const [descHidden, setDescHidden] = useState('');
+  const [tags, setTags] = useState('');
+  const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
+
+  // ===== HIDDEN CLUES =====
+  const [isHidden, setIsHidden] = useState(defaultHidden);
+  const [discoveryCode, setDiscoveryCode] = useState('');
+
+  useEffect(() => {
+    setIsHidden(defaultHidden);
+  }, [defaultHidden]);
+
+  // ===== VISUAL/IMAGE =====
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uvFile, setUvFile] = useState<File | null>(null);
+  const [uvFileUrl, setUvFileUrl] = useState<string | null>(null);
+  const [thermalEnabled, setThermalEnabled] = useState(false);
+  const [thermalSecretText, setThermalSecretText] = useState('');
+  const [thermalFontSize, setThermalFontSize] = useState(14);
+  const [thermalPositionY, setThermalPositionY] = useState(50);
+  const [thermalKeyword, setThermalKeyword] = useState('');
+  const [showThermalEditor, setShowThermalEditor] = useState(false);
+
+  // ===== FILTER/SECURITY =====
+  const [filterFile, setFilterFile] = useState<File | null>(null);
+  const [filterPreviewUrl, setFilterPreviewUrl] = useState<string | null>(null);
+  const [filterTransform, setFilterTransform] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [editorMode, setEditorMode] = useState<'uv' | 'filter' | null>(null);
+  const [filterRevealBrightness, setFilterRevealBrightness] = useState(0);
+  const [filterRevealContrast, setFilterRevealContrast] = useState(0);
+  const [filterRevealSaturate, setFilterRevealSaturate] = useState(0);
+  const [showAdvancedFilterSettings, setShowAdvancedFilterSettings] = useState(false);
+
+  // ===== VIDEO =====
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  // ===== AUDIO =====
+  const [audioBase, setAudioBase] = useState<File | null>(null);
+  const [audioBasePreview, setAudioBasePreview] = useState<string | null>(null);
+  const [audioHidden, setAudioHidden] = useState<File | null>(null);
+  const [audioHiddenPreview, setAudioHiddenPreview] = useState<string | null>(null);
+  const [audioHiddenUploadedUrl, setAudioHiddenUploadedUrl] = useState<string | null>(null);
+  const [audioHiddenUploading, setAudioHiddenUploading] = useState(false);
+  const [freq, setFreq] = useState(50);
+  const [showAudioForgeFor, setShowAudioForgeFor] = useState<null | 'hidden' | 'base'>(null);
+  const [showMixer, setShowMixer] = useState(false);
+  const [audioStaticSync, setAudioStaticSync] = useState(false);
+
+  // ===== MEDIA VISIBILITY =====
+  const [mediaVisibility, setMediaVisibility] = useState({
+    audioBase: 'always' as 'always' | 'glitch_only' | 'post_solve',
+    audioHidden: 'post_solve' as 'post_solve' | 'post_keyword',
+    visual: 'glitch_active' as 'glitch_active' | 'post_keyword',
+    uvLayer: 'post_keyword' as 'post_keyword' | 'always' | 'post_solve',
+  });
+
+  // ===== CIPHER/CRYPTO =====
+  const [isShredded, setIsShredded] = useState(false);
+  const [shredRows, setShredRows] = useState(4);
+  const [shredCols, setShredCols] = useState(4);
+  const [realText, setRealText] = useState('');
+  const [cipherText, setCipherText] = useState('');
+  const [hexCode, setHexCode] = useState('');
+
+  // ===== FORENSIC =====
+  const [forensicBaseImage, setForensicBaseImage] = useState<File | null>(null);
+  const [forensicBasePreview, setForensicBasePreview] = useState<string | null>(null);
+  const [forensicHiddenImage, setForensicHiddenImage] = useState<File | null>(null);
+  const [forensicHiddenPreview, setForensicHiddenPreview] = useState<string | null>(null);
+  const [forensicTargetChannel, setForensicTargetChannel] = useState<'R' | 'G' | 'B'>('R');
+  const [forensicResultPreview, setForensicResultPreview] = useState<string | null>(null);
+  const [forensicProcessing, setForensicProcessing] = useState(false);
+  const [showForensicEditor, setShowForensicEditor] = useState(false);
+  const [forensicConfig, setForensicConfig] = useState<ForensicConfig | null>(null);
+
+  // ===== GLITCH PUZZLE =====
+  const [securityLayerEnabled, setSecurityLayerEnabled] = useState(false);
+  const [glitchFocusedImageFile, setGlitchFocusedImageFile] = useState<File | null>(null);
+  const [glitchFocusedImagePreview, setGlitchFocusedImagePreview] = useState<string | null>(null);
+  const [showGlitchDesigner, setShowGlitchDesigner] = useState(false);
+  const [glitchStartFrequency, setGlitchStartFrequency] = useState(60);
+  const [glitchStartShift, setGlitchStartShift] = useState(30);
+  const [glitchStartChromatic, setGlitchStartChromatic] = useState(15);
+  const [glitchCorrectFrequency, setGlitchCorrectFrequency] = useState(60);
+  const [glitchCorrectShift, setGlitchCorrectShift] = useState(30);
+  const [glitchCorrectChromatic, setGlitchCorrectChromatic] = useState(15);
+  const [glitchDifficulty, setGlitchDifficulty] = useState<'easy' | 'normal' | 'hard' | 'custom'>('normal');
+  const [glitchToleranceFreq, setGlitchToleranceFreq] = useState(5);
+  const [glitchToleranceShift, setGlitchToleranceShift] = useState(5);
+  const [glitchToleranceChroma, setGlitchToleranceChroma] = useState(5);
+  const [glitchAccessInstructions, setGlitchAccessInstructions] = useState('');
+  const [glitchHint, setGlitchHint] = useState('');
+  const [glitchKeyword, setGlitchKeyword] = useState('');
+  const [glitchRewardCode, setGlitchRewardCode] = useState('');
+
+  // ===== MEGA CLUE =====
+  const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
+  const [megaImageFile, setMegaImageFile] = useState<File | null>(null);
+  const [megaImagePreview, setMegaImagePreview] = useState<string | null>(null);
+  const [megaRequiredPuzzleIds, setMegaRequiredPuzzleIds] = useState<string[]>([]);
+  const [availablePuzzles, setAvailablePuzzles] = useState<Array<{ id: string; title: string }>>([]);
+  const [megaSelectedPuzzle, setMegaSelectedPuzzle] = useState('');
+
+  // ===== LOCKED PHONE =====
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockPass, setLockPass] = useState('');
+  const [phoneHasKeypad, setPhoneHasKeypad] = useState(false);
+  const [phonePassword, setPhonePassword] = useState('');
+  const [showKeypadEditor, setShowKeypadEditor] = useState(false);
+
+  // ===== PERSON INFO =====
+  const [isPerson, setIsPerson] = useState(false);
+  const [personName, setPersonName] = useState('');
+  const [personDob, setPersonDob] = useState('');
+  const [personStatus, setPersonStatus] = useState<'UNKNOWN' | 'ALIVE' | 'DEAD' | 'MISSING'>('UNKNOWN');
+  const [personOccupation, setPersonOccupation] = useState('');
+
+  // ===== FIELD VISIBILITY & DISPLAY CONFIG =====
+  const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
+  const [displayConfig, setDisplayConfig] = useState({
+    puzzle: { showProgress: true, showHints: true },
+    fileProperties: { visibleFields: ['fileType', 'dateCreated'] },
+    media: { showThumbnail: true },
+    cipher: { showReal: false },
+    megaClue: { showHints: true },
+  });
+
+  // ===== CHAT =====
+  const [showChatEditor, setShowChatEditor] = useState(false);
+  const [chatData, setChatData] = useState<EditingChatMessage[]>([]);
+  const [chatContactName, setChatContactName] = useState('Desconhecido');
+
+  // ===== TEMPLATES =====
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // ===== UI STATE =====
+  const [activeTab, setActiveTab] = useState('geral');
+  const [loading, setLoading] = useState(false);
+
+  // ===== EFFECTS =====
+  useEffect(() => {
+    if (!isOpen) return;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [isOpen]);
+
+  // Load existing card data for editing
+  useEffect(() => {
+    if (existingCard && isOpen) {
+      // Load data from existing card
+      setTitle(existingCard.title || '');
+      setDescPublic(existingCard.description_public || '');
+      setDescHidden(existingCard.description_hidden || '');
+      setTags(existingCard.tags || '');
+      setEvidenceType(existingCard.type || 'document');
+      setIsHidden(existingCard.is_hidden || false);
+      setDiscoveryCode(existingCard.discovery_code || '');
+      // Load other fields as needed...
+    } else if (!existingCard && isOpen) {
+      // Reset form for new card
+      setTitle('');
+      setDescPublic('');
+      setDescHidden('');
+      setTags('');
+      setEvidenceType('document');
+      setIsHidden(defaultHidden);
+      setDiscoveryCode('');
+      // Reset other fields...
+    }
+  }, [existingCard, isOpen, defaultHidden]);
+
+  // ===== HANDLERS =====
+  const handleSave = async () => {
+    if (!investigationId || !title) {
+      alert('Título é obrigatório');
+      return;
+    }
+    if (isHidden && !discoveryCode.trim()) {
+      alert('Código de descoberta é obrigatório para pistas ocultas');
+      return;
+    }
+    setLoading(true);
+
+    try {
+      let imageUrl: string | null = null;
+      let uvUrl: string | null = null;
+
+      if (imgFile) {
+        imageUrl = await uploadInvestigationImage(imgFile, investigationId);
+      }
+      if (uvFile) {
+        uvUrl = await uploadInvestigationImage(uvFile, investigationId);
+      }
+
+      const metadata: Record<string, any> = {
+        evidence_type: evidenceType,
+        field_visibility: fieldVisibilityConfig,
+        display_config: displayConfig,
+      };
+
+      if (thermalEnabled) {
+        metadata.thermal_layer = {
+          enabled: true,
+          secretText: thermalSecretText,
+          fontSize: thermalFontSize,
+          positionY: thermalPositionY,
+          keyword: thermalKeyword,
+        };
+      }
+
+      if (securityLayerEnabled && evidenceType === 'glitch_puzzle') {
+        metadata.glitch_puzzle = {
+          focusedImage: glitchFocusedImageFile ? 'uploaded' : null,
+          startFrequency: glitchStartFrequency,
+          startShift: glitchStartShift,
+          startChromatic: glitchStartChromatic,
+          correctFrequency: glitchCorrectFrequency,
+          correctShift: glitchCorrectShift,
+          correctChromatic: glitchCorrectChromatic,
+          difficulty: glitchDifficulty,
+          toleranceFreq: glitchToleranceFreq,
+          toleranceShift: glitchToleranceShift,
+          toleranceChroma: glitchToleranceChroma,
+          accessInstructions: glitchAccessInstructions,
+          hint: glitchHint,
+          keyword: glitchKeyword,
+          rewardCode: glitchRewardCode,
+        };
+      }
+
+      if (evidenceType === 'mega_clue') {
+        metadata.mega_clue = {
+          finalTruthText: megaFinalTruthText,
+          requiredPuzzleIds: megaRequiredPuzzleIds,
+        };
+      }
+
+      if (isLocked) {
+        metadata.locked_phone = {
+          password: lockPass,
+          hasKeypad: phoneHasKeypad,
+          keypadPassword: phonePassword,
+        };
+      }
+
+      if (isPerson) {
+        metadata.person_info = {
+          name: personName,
+          dob: personDob,
+          status: personStatus,
+          occupation: personOccupation,
+        };
+      }
+
+      if (chatData.length > 0) {
+        metadata.chat_data = chatData;
+        metadata.chat_contact_name = chatContactName;
+      }
+
+      let card;
+      if (existingCard) {
+        // Update existing card
+        card = await updateInvestigationCard(existingCard.id, {
+          title,
+          description_public: descPublic,
+          description_hidden: descHidden,
+          image_url: imageUrl,
+          metadata,
+          is_hidden: isHidden,
+          discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
+        });
+      } else {
+        // Create new card
+        card = await createInvestigationCard({
+          investigation_id: investigationId,
+          title,
+          description_public: descPublic,
+          description_hidden: descHidden,
+          image_url: imageUrl,
+          metadata,
+          is_hidden: isHidden,
+          discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
+        });
+      }
+
+      if (mountedRef.current) {
+        onSaved?.(card);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      alert('Erro ao salvar evidência');
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  };
+
+  const handleImgSelect = async (file: File) => {
+    setImgFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPreviewUrl(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const visibleTabs = TABS.filter((tab) => {
+    if (tab.key === 'glitch' && !securityLayerEnabled && evidenceType !== 'glitch_puzzle') return false;
+    if (tab.key === 'mega' && evidenceType !== 'mega_clue') return false;
+    return true;
+  });
 
   if (!isOpen) return null;
 
-  const mediaCount = [imgFile, uvFile, filterFile, audioBase, audioHidden, videoFile].filter(
-    (f) => f !== null
-  ).length;
-
-  const displayConfigsEnabled = (Object.values(displayConfig || {}) as any[]).reduce(
-    (acc: number, section: any) => {
-      if (typeof section === 'object' && section !== null) {
-        return acc + Object.values(section).filter((v: any) => v === true).length;
-      }
-      return acc;
-    },
-    0
-  ) as number;
-
-  const totalDisplayConfigs = (Object.values(displayConfig || {}) as any[]).reduce(
-    (acc: number, section: any) => {
-      if (typeof section === 'object' && section !== null) {
-        return acc + Object.keys(section).length;
-      }
-      return acc;
-    },
-    0
-  ) as number;
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: '#0b0b0b',
-          border: '2px solid #2c3e50',
-          borderRadius: 8,
-          width: '90%',
-          maxWidth: 1000,
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* HEADER */}
-        <div
-          style={{
-            padding: 16,
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%)',
-            borderBottom: '1px solid #444',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+  const modal = (
+    <div className="createclue-modal-overlay" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}>
+        <DiegeticWindow
+          title={`${evidenceType === 'glitch_puzzle' ? '🎮' : evidenceType === 'mega_clue' ? '🔐' : '📋'} ${existingCard ? 'EDITAR' : 'CRIAR'} EVIDÊNCIA`}
+          onClose={onClose}
         >
-          <h2 style={{ margin: 0, fontSize: 18, color: '#fff' }}>✨ CRIAR PISTA</h2>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            style={{
-              background: 'transparent',
-              color: '#aaa',
-              border: 'none',
-              fontSize: 24,
-              cursor: loading ? 'default' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            ✕
-          </button>
-        </div>
+          <div className="createclue-container">
+          {/* Tabs Navigation */}
+          <div className="createclue-tabs-header">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`createclue-tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
 
-        {/* TAB NAVIGATION */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 2,
-            padding: '8px 16px',
-            background: '#1a1a1a',
-            borderBottom: '1px solid #333',
-            overflowX: 'auto',
-          }}
-        >
-          {[
-            { id: 'basics' as TabType, label: '📌 Básico', icon: '📋' },
-            { id: 'media' as TabType, label: '🎬 Mídia', icon: '📸' },
-            { id: 'validation' as TabType, label: '✓ Validação', icon: '✅' },
-            { id: 'preview' as TabType, label: '👁️ Preview', icon: '👀' },
-            { id: 'config' as TabType, label: '⚙️ Configuração', icon: '⚙️' },
-            { id: 'publish' as TabType, label: '🚀 Publicar', icon: '🎯' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              disabled={loading}
-              style={{
-                padding: '8px 16px',
-                background: activeTab === tab.id ? '#2c3e50' : 'transparent',
-                color: activeTab === tab.id ? '#fff' : '#888',
-                border: 'none',
-                borderRadius: 4,
-                cursor: loading ? 'default' : 'pointer',
-                fontSize: 12,
-                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                whiteSpace: 'nowrap',
-              }}
-              title={tab.label}
-            >
-              {tab.icon}
+          {/* Tab Content */}
+          <div className="createclue-body">
+            {activeTab === 'geral' && (
+              <ClueGeneralTab
+                title={title}
+                setTitle={setTitle}
+                descPublic={descPublic}
+                setDescPublic={setDescPublic}
+                descHidden={descHidden}
+                setDescHidden={setDescHidden}
+                tags={tags}
+                setTags={setTags}
+                evidenceType={evidenceType}
+                setEvidenceType={setEvidenceType}
+                isHidden={isHidden}
+                setIsHidden={setIsHidden}
+                discoveryCode={discoveryCode}
+                setDiscoveryCode={setDiscoveryCode}
+                templates={templates}
+                loadingTemplates={loadingTemplates}
+                showTemplateDropdown={showTemplateDropdown}
+                setShowTemplateDropdown={setShowTemplateDropdown}
+              />
+            )}
+
+            {activeTab === 'visual' && (
+              <ClueVisualTab
+                imgFile={imgFile}
+                handleImgSelect={handleImgSelect}
+                previewUrl={previewUrl}
+                uvFile={uvFile}
+                setUvFile={setUvFile}
+                uvFileUrl={uvFileUrl}
+                setUvFileUrl={setUvFileUrl}
+                thermalEnabled={thermalEnabled}
+                setThermalEnabled={setThermalEnabled}
+                thermalSecretText={thermalSecretText}
+                setThermalSecretText={setThermalSecretText}
+                thermalFontSize={thermalFontSize}
+                setThermalFontSize={setThermalFontSize}
+                thermalPositionY={thermalPositionY}
+                setThermalPositionY={setThermalPositionY}
+                thermalKeyword={thermalKeyword}
+                setThermalKeyword={setThermalKeyword}
+                showThermalEditor={showThermalEditor}
+                setShowThermalEditor={setShowThermalEditor}
+                filterFile={filterFile}
+                setFilterFile={setFilterFile}
+                filterPreviewUrl={filterPreviewUrl}
+                setFilterPreviewUrl={setFilterPreviewUrl}
+                editorMode={editorMode}
+                setEditorMode={setEditorMode}
+                filterRevealBrightness={filterRevealBrightness}
+                setFilterRevealBrightness={setFilterRevealBrightness}
+                filterRevealContrast={filterRevealContrast}
+                setFilterRevealContrast={setFilterRevealContrast}
+                filterRevealSaturate={filterRevealSaturate}
+                setFilterRevealSaturate={setFilterRevealSaturate}
+                showAdvancedFilterSettings={showAdvancedFilterSettings}
+                setShowAdvancedFilterSettings={setShowAdvancedFilterSettings}
+                videoFile={videoFile}
+                setVideoFile={setVideoFile}
+                videoPreviewUrl={videoPreviewUrl}
+                setVideoPreviewUrl={setVideoPreviewUrl}
+                videoUrlInput={videoUrlInput}
+                setVideoUrlInput={setVideoUrlInput}
+                videoUploading={videoUploading}
+                setVideoUploading={setVideoUploading}
+                uploadProgress={uploadProgress}
+                setUploadProgress={setUploadProgress}
+              />
+            )}
+
+            {activeTab === 'audio' && (
+              <ClueAudioTab
+                audioBase={audioBase}
+                setAudioBase={setAudioBase}
+                audioBasePreview={audioBasePreview}
+                setAudioBasePreview={setAudioBasePreview}
+                audioHidden={audioHidden}
+                setAudioHidden={setAudioHidden}
+                audioHiddenPreview={audioHiddenPreview}
+                setAudioHiddenPreview={setAudioHiddenPreview}
+                audioHiddenUploading={audioHiddenUploading}
+                setAudioHiddenUploading={setAudioHiddenUploading}
+                freq={freq}
+                setFreq={setFreq}
+                showAudioForgeFor={showAudioForgeFor}
+                setShowAudioForgeFor={setShowAudioForgeFor}
+                showMixer={showMixer}
+                setShowMixer={setShowMixer}
+                audioStaticSync={audioStaticSync}
+                setAudioStaticSync={setAudioStaticSync}
+                mediaVisibility={mediaVisibility}
+                setMediaVisibility={setMediaVisibility}
+                investigationId={investigationId}
+              />
+            )}
+
+            {activeTab === 'cifra' && (
+              <ClueCipherTab
+                isShredded={isShredded}
+                setIsShredded={setIsShredded}
+                shredRows={shredRows}
+                setShredRows={setShredRows}
+                shredCols={shredCols}
+                setShredCols={setShredCols}
+                realText={realText}
+                setRealText={setRealText}
+                cipherText={cipherText}
+                setCipherText={setCipherText}
+                hexCode={hexCode}
+                setHexCode={setHexCode}
+              />
+            )}
+
+            {activeTab === 'forense' && (
+              <ClueForensicTab
+                forensicBaseImage={forensicBaseImage}
+                setForensicBaseImage={setForensicBaseImage}
+                forensicBasePreview={forensicBasePreview}
+                setForensicBasePreview={setForensicBasePreview}
+                forensicHiddenImage={forensicHiddenImage}
+                setForensicHiddenImage={setForensicHiddenImage}
+                forensicHiddenPreview={forensicHiddenPreview}
+                setForensicHiddenPreview={setForensicHiddenPreview}
+                forensicTargetChannel={forensicTargetChannel}
+                setForensicTargetChannel={setForensicTargetChannel}
+                forensicResultPreview={forensicResultPreview}
+                setForensicResultPreview={setForensicResultPreview}
+                forensicProcessing={forensicProcessing}
+                setForensicProcessing={setForensicProcessing}
+                showForensicEditor={showForensicEditor}
+                setShowForensicEditor={setShowForensicEditor}
+                forensicConfig={forensicConfig}
+                setForensicConfig={setForensicConfig}
+              />
+            )}
+
+            {activeTab === 'campos' && (
+              <ClueFieldsTab
+                fieldVisibilityConfig={fieldVisibilityConfig}
+                setFieldVisibilityConfig={setFieldVisibilityConfig}
+              />
+            )}
+
+            {activeTab === 'display' && (
+              <ClueDisplayTab
+                displayConfig={displayConfig}
+                setDisplayConfig={setDisplayConfig}
+                showChatEditor={showChatEditor}
+                setShowChatEditor={setShowChatEditor}
+                chatData={chatData}
+                setChatData={setChatData}
+                chatContactName={chatContactName}
+                setChatContactName={setChatContactName}
+                isLocked={isLocked}
+                setIsLocked={setIsLocked}
+                lockPass={lockPass}
+                setLockPass={setLockPass}
+                phoneHasKeypad={phoneHasKeypad}
+                setPhoneHasKeypad={setPhoneHasKeypad}
+                phonePassword={phonePassword}
+                setPhonePassword={setPhonePassword}
+                showKeypadEditor={showKeypadEditor}
+                setShowKeypadEditor={setShowKeypadEditor}
+                isPerson={isPerson}
+                setIsPerson={setIsPerson}
+                personName={personName}
+                setPersonName={setPersonName}
+                personDob={personDob}
+                setPersonDob={setPersonDob}
+                personStatus={personStatus}
+                setPersonStatus={setPersonStatus}
+                personOccupation={personOccupation}
+                setPersonOccupation={setPersonOccupation}
+              />
+            )}
+
+            {activeTab === 'glitch' && securityLayerEnabled && (
+              <ClueGlitchTab
+                glitchFocusedImageFile={glitchFocusedImageFile}
+                setGlitchFocusedImageFile={setGlitchFocusedImageFile}
+                glitchFocusedImagePreview={glitchFocusedImagePreview}
+                setGlitchFocusedImagePreview={setGlitchFocusedImagePreview}
+                showGlitchDesigner={showGlitchDesigner}
+                setShowGlitchDesigner={setShowGlitchDesigner}
+                glitchStartFrequency={glitchStartFrequency}
+                setGlitchStartFrequency={setGlitchStartFrequency}
+                glitchStartShift={glitchStartShift}
+                setGlitchStartShift={setGlitchStartShift}
+                glitchStartChromatic={glitchStartChromatic}
+                setGlitchStartChromatic={setGlitchStartChromatic}
+                glitchCorrectFrequency={glitchCorrectFrequency}
+                setGlitchCorrectFrequency={setGlitchCorrectFrequency}
+                glitchCorrectShift={glitchCorrectShift}
+                setGlitchCorrectShift={setGlitchCorrectShift}
+                glitchCorrectChromatic={glitchCorrectChromatic}
+                setGlitchCorrectChromatic={setGlitchCorrectChromatic}
+                glitchDifficulty={glitchDifficulty}
+                setGlitchDifficulty={setGlitchDifficulty}
+                glitchToleranceFreq={glitchToleranceFreq}
+                setGlitchToleranceFreq={setGlitchToleranceFreq}
+                glitchToleranceShift={glitchToleranceShift}
+                setGlitchToleranceShift={setGlitchToleranceShift}
+                glitchToleranceChroma={glitchToleranceChroma}
+                setGlitchToleranceChroma={setGlitchToleranceChroma}
+                glitchAccessInstructions={glitchAccessInstructions}
+                setGlitchAccessInstructions={setGlitchAccessInstructions}
+                glitchHint={glitchHint}
+                setGlitchHint={setGlitchHint}
+                glitchKeyword={glitchKeyword}
+                setGlitchKeyword={setGlitchKeyword}
+                glitchRewardCode={glitchRewardCode}
+                setGlitchRewardCode={setGlitchRewardCode}
+              />
+            )}
+
+            {activeTab === 'mega' && evidenceType === 'mega_clue' && (
+              <ClueMegaTab
+                megaFinalTruthText={megaFinalTruthText}
+                setMegaFinalTruthText={setMegaFinalTruthText}
+                megaImageFile={megaImageFile}
+                setMegaImageFile={setMegaImageFile}
+                megaImagePreview={megaImagePreview}
+                setMegaImagePreview={setMegaImagePreview}
+                megaRequiredPuzzleIds={megaRequiredPuzzleIds}
+                setMegaRequiredPuzzleIds={setMegaRequiredPuzzleIds}
+                availablePuzzles={availablePuzzles}
+                setAvailablePuzzles={setAvailablePuzzles}
+                megaSelectedPuzzle={megaSelectedPuzzle}
+                setMegaSelectedPuzzle={setMegaSelectedPuzzle}
+              />
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="createclue-footer">
+            <button className="createclue-btn-cancel" onClick={onClose}>
+              ✕ CANCELAR
             </button>
-          ))}
+            <button 
+              className="createclue-btn-save" 
+              onClick={handleSave}
+              disabled={loading || !title}
+            >
+              {loading ? '⏳ SALVANDO...' : '✓ SALVAR EVIDÊNCIA'}
+            </button>
+          </div>
         </div>
-
-        {/* TAB CONTENT */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: 20,
-            background: '#0b0b0b',
-          }}
-        >
-          {activeTab === 'basics' && (
-            <ClueBasicsTab
-              evidenceType={evidenceType}
-              onEvidenceTypeChange={onEvidenceTypeChange}
-              title={title}
-              onTitleChange={onTitleChange}
-              descPublic={descPublic}
-              onDescPublicChange={onDescPublicChange}
-              descHidden={descHidden}
-              onDescHiddenChange={onDescHiddenChange}
-              tags={tags}
-              onTagsChange={onTagsChange}
-              templates={templates}
-              loadingTemplates={loadingTemplates}
-              showTemplateDropdown={showTemplateDropdown}
-              onShowTemplateDropdown={onShowTemplateDropdownChange}
-              onApplyTemplate={onApplyTemplate}
-              onSaveTemplate={onSaveTemplate}
-              loading={loading}
-            />
-          )}
-
-          {activeTab === 'media' && (
-            <ClueMediaTab
-              imgFile={imgFile}
-              onImageSelect={onImageSelect}
-              previewUrl={previewUrl}
-              uvFile={uvFile}
-              onUVSelect={onUVSelect}
-              previewUrl2={previewUrl2}
-              thermalEnabled={thermalEnabled}
-              onThermalEnabledChange={onThermalEnabledChange}
-              thermalSecretText={thermalSecretText}
-              onThermalSecretTextChange={onThermalSecretTextChange}
-              showThermalEditor={false} // Passar do estado se necessário
-              onShowThermalEditorChange={onShowThermalEditorChange}
-              filterFile={filterFile}
-              onFilterSelect={onFilterSelect}
-              filterPreviewUrl={filterPreviewUrl}
-              audioBase={audioBase}
-              onAudioBaseSelect={onAudioBaseSelect}
-              audioBasePreview={audioBasePreview}
-              audioHidden={audioHidden}
-              onAudioHiddenSelect={onAudioHiddenSelect}
-              audioHiddenPreview={audioHiddenPreview}
-              showMixer={showMixer}
-              onShowMixerChange={onShowMixerChange}
-              videoFile={videoFile}
-              onVideoSelect={onVideoSelect}
-              videoPreviewUrl={videoPreviewUrl}
-              videoUrlInput={videoUrlInput}
-              onVideoUrlInputChange={onVideoUrlInputChange}
-              videoUploading={videoUploading}
-              uploadProgress={uploadProgress}
-              loading={loading}
-            />
-          )}
-
-          {activeTab === 'validation' && (
-            <ClueValidationTab
-              evidenceType={evidenceType}
-              title={title}
-              imgFile={imgFile}
-              videoUrlInput={videoUrlInput}
-              videoUrl={null} // Passar do estado se necessário
-              audioBase={audioBase}
-              securityLayerEnabled={false} // Passar do estado
-              megaFinalTruthText={megaFinalTruthText}
-              megaRequiredPuzzleIds={megaRequiredPuzzleIds}
-              glitchFocusedImageFile={glitchFocusedImageFile}
-              glitchAccessInstructions={glitchAccessInstructions}
-              glitchHint={glitchHint}
-              glitchKeyword={''} // Passar do estado
-              isLocked={isLocked}
-              lockPass={lockPass}
-              onValidate={onValidate}
-              loading={loading}
-            />
-          )}
-
-          {activeTab === 'preview' && (
-            <CluePreviewTab
-              title={title}
-              descPublic={descPublic}
-              descHidden={descHidden}
-              previewUrl={previewUrl}
-              evidenceType={evidenceType}
-              glitchAccessInstructions={glitchAccessInstructions}
-              glitchHint={glitchHint}
-              megaFinalTruthText={megaFinalTruthText}
-              thermalEnabled={thermalEnabled}
-              thermalSecretText={thermalSecretText}
-              uvFile={uvFile}
-              isLocked={isLocked}
-              isPerson={isPerson}
-              personName={personName}
-              loading={loading}
-            />
-          )}
-
-          {activeTab === 'config' && (
-            <ClueConfigTab
-              displayConfig={displayConfig}
-              onDisplayConfigChange={onDisplayConfigChange}
-              fieldVisibilityConfig={fieldVisibilityConfig}
-              onFieldVisibilityConfigChange={onFieldVisibilityConfigChange}
-              onApplyPreset={onApplyPreset}
-              loading={loading}
-            />
-          )}
-
-          {activeTab === 'publish' && (
-            <CluePublishTab
-              title={title}
-              descPublic={descPublic}
-              evidenceType={evidenceType}
-              mediaCount={mediaCount}
-              displayConfigsEnabled={displayConfigsEnabled}
-              totalDisplayConfigs={totalDisplayConfigs}
-              loading={loading}
-              onSave={onSave}
-              errors={onValidate().filter((e) => e.severity === 'error').map((e) => e.message)}
-            />
-          )}
-        </div>
+      </DiegeticWindow>
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

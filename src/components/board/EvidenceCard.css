@@ -46,6 +46,26 @@
     border-color: rgba(0, 243, 255, 0.4) !important;
 }
 
+/* === HIDDEN CLUES (GM SPECTER MODE) === */
+.card-node.hidden-clue {
+    opacity: 0.7 !important;
+    border-style: dashed !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.04)) !important;
+    box-shadow: 
+        0 0 20px rgba(139, 92, 246, 0.3),
+        inset 0 1px 0 rgba(139, 92, 246, 0.1) !important;
+}
+
+.card-node.hidden-clue:hover {
+    transform: none !important;
+    box-shadow: 
+        0 0 30px rgba(139, 92, 246, 0.5),
+        0 10px 40px rgba(0,0,0,0.9), 
+        inset 0 1px 0 rgba(139, 92, 246, 0.2) !important;
+    border-color: rgba(139, 92, 246, 0.8) !important;
+}
+
 /* === SCANNER LINE ANIMATION === */
 .scanner-line {
     position: absolute;
@@ -162,13 +182,19 @@
 .type-badge.uv { border-color: #9b59b6; color: #9b59b6; box-shadow: 0 0 10px rgba(155,89,182,0.4); }
 .type-badge.hidden-audio { border-color: #ff6f61; color: #ff6f61; box-shadow: 0 0 10px rgba(255,111,97,0.4); }
 .type-badge.chat { border-color: #6cc644; color: #6cc644; box-shadow: 0 0 10px rgba(108,198,68,0.4); }
-.type-badge.thermal { border-color: #e67e22; color: #e67e22; box-shadow: 0 0 10px rgba(230,126,34,0.4); }
+.type-badge.thermal { border-color: #e67e22; color: #e67e22; box-shadow: 0 0 10px rgba(255,126,34,0.4); }
 .type-badge.stamp { border-color: #3498db; color: #3498db; box-shadow: 0 0 10px rgba(52,152,219,0.4); }
 .type-badge.link { border-color: #f1c40f; color: #f1c40f; box-shadow: 0 0 10px rgba(241,196,15,0.4); }
+.type-badge.hidden { border-color: #8b5cf6; color: #8b5cf6; box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); animation: pulse-purple 2s infinite; }
 
 @keyframes pulse-red {
     0%, 100% { box-shadow: 0 0 18px rgba(255, 0, 60, 0.7); opacity: 1; }
     50% { box-shadow: 0 0 30px rgba(255, 0, 60, 1); opacity: 0.8; }
+}
+
+@keyframes pulse-purple {
+    0%, 100% { box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); opacity: 1; }
+    50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.9); opacity: 0.9; }
 }
 
 /* === LOCK OVERLAY === */

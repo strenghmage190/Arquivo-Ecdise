@@ -91,7 +91,7 @@ export default function ClueMediaTab({
   loading,
 }: ClueMediaTabProps) {
   return (
-    <div className="field-block">
+    <div className="field-block createclue-media createclue-tab-section">
       <span className="field-title">🎬 MÍDIA</span>
 
       {/* IMAGE */}

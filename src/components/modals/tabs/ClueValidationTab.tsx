@@ -68,7 +68,7 @@ export default function ClueValidationTab({
   const isValid = errorCount === 0;
 
   return (
-    <div className="field-block">
+    <div className="field-block createclue-validation createclue-tab-section">
       <span className="field-title">✓ VALIDAÇÃO</span>
 
       <button
@@ -126,6 +126,7 @@ export default function ClueValidationTab({
                 {errors.map((error, idx) => (
                   <div
                     key={idx}
+                    className={`createclue-validation__error-item ${error.severity}`}
                     style={{
                       padding: 10,
                       borderRadius: 6,

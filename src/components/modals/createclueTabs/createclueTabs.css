@@ -1,0 +1,35 @@
+/* Tab-specific styles for CreateClueModal */
+.createclue-tab-section{ padding:12px; background:transparent; border-radius:6px; }
+
+/* Basics */
+.createclue-basics .template-list{ margin-top:8px; background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; }
+
+/* BEM-specific basics */
+.createclue-basics__templates { }
+.createclue-basics__template-controls { display:flex; gap:8px; }
+.createclue-basics__template-apply { }
+.createclue-basics__template-save { }
+.createclue-basics__template-list { margin-top:8px; }
+.createclue-basics__template-item { padding:8px; }
+
+/* Media */
+.createclue-media .upload-preview{ display:flex; gap:10px; align-items:center; }
+.createclue-media img{ max-height:120px; border-radius:6px; }
+
+/* Validation */
+.createclue-validation .error-item{ padding:10px; border-radius:6px; margin-bottom:8px; }
+.createclue-validation .error-item.error{ background:rgba(231,76,60,0.08); border:1px solid rgba(231,76,60,0.15); }
+.createclue-validation .error-item.warning{ background:rgba(243,156,18,0.06); border:1px solid rgba(243,156,18,0.12); }
+
+/* Preview */
+.createclue-preview .player-card{ background:rgba(255,255,255,0.02); padding:12px; border-radius:8px; }
+
+/* Config */
+.createclue-config .preset-buttons{ display:flex; gap:8px; }
+
+/* Publish */
+.createclue-publish .summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+@media(max-width:700px){
+  .createclue-publish .summary-grid{ grid-template-columns:1fr; }
+}
