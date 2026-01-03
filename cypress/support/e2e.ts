@@ -16,3 +16,5 @@
 // Import commands.js using ES2015 syntax:
 import './commands'
 import 'cypress-axe'
+// Habilita eventos reais (touch/gesture) usados em testes mobile
+import 'cypress-real-events/support'
