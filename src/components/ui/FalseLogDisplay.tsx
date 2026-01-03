@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
 
 const FAKE_LOGS = [
   '[NEXUS.KERNEL] Membrane pressure: 94.2% CRITICAL',
@@ -37,7 +38,7 @@ export const FalseLogDisplay: React.FC<Props> = ({ opacity = 0.06 }) => {
         ...prev.slice(1),
         FAKE_LOGS[Math.floor(Math.random() * FAKE_LOGS.length)],
       ]);
-    }, 2000);
+    }, getOptimizedInterval(2000, 5)); // 2000ms normal, 10000ms in performance mode
 
     return () => clearInterval(interval);
   }, []);

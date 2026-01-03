@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './CCTVPlayer.css';
+import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
 
 interface CCTVPlayerProps {
   src?: string | null;
@@ -20,7 +21,7 @@ export default function CCTVPlayer({ src, allowManage = false, onReplace, onRemo
 
   // Relógio do Sistema de Câmera
   useEffect(() => {
-   const timer = setInterval(() => setTime(new Date()), 1000);
+   const timer = setInterval(() => setTime(new Date()), getOptimizedInterval(1000, 10)); // 1000ms normal, 10000ms in performance mode
    return () => clearInterval(timer);
   }, []);
 

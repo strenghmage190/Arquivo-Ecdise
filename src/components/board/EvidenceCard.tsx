@@ -24,7 +24,7 @@ export interface EvidenceCardProps {
   hasThermal?: boolean
   hasStamp?: boolean
   hasExternalLink?: boolean
-  cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal'
+  cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal' | 'hidden'
   performanceMode?: boolean
   blurred?: boolean
 }

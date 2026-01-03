@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCardsForInvestigation } from '../../api/investigations';
+import { fetchCardsForInvestigation, InvestigationCard } from '../../api/investigations';
 import { supabase } from '../../supabaseClient';
 import CreateClueModal_Refactored from './CreateClueModal_Refactored';
 import './CreatorHub.css';
@@ -91,9 +91,11 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
 
     try {
       // Use Supabase client instead of direct fetch for better reliability
+      const updatePayload = { is_hidden: newHiddenStatus };
       const { data, error } = await supabase
+        // @ts-ignore - Supabase types issue with update payload
         .from('investigation_cards')
-        .update({ is_hidden: newHiddenStatus })
+        .update(updatePayload)
         .eq('id', card.id)
         .select();
 

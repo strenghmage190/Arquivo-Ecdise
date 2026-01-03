@@ -11,7 +11,7 @@ interface EvidenceCardContentProps {
   locked?: boolean
   hasRecord?: boolean
   fileType?: 'video' | 'audio' | 'image' | 'text' | 'glitch_puzzle' | 'mega_clue'
-  cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal'
+  cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal' | 'hidden'
   isGameMaster?: boolean
   playerView?: boolean
   hasUV?: boolean

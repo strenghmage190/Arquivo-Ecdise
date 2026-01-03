@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { isExtendedPerformanceMode } from '../../utils/performance';
 
 type Props = {
   audioBuffer: AudioBuffer | null;
@@ -127,7 +128,24 @@ export default function RealTimeSpectrogram({ audioBuffer, minFreq = 1000, maxFr
       rafRef.current = requestAnimationFrame(draw);
     };
 
-    rafRef.current = requestAnimationFrame(draw);
+    const startDraw = () => {
+      if (isExtendedPerformanceMode()) {
+        // Reduce animation frequency in performance mode
+        const drawLoop = () => {
+          draw();
+          setTimeout(() => {
+            if (rafRef.current) {
+              rafRef.current = requestAnimationFrame(drawLoop);
+            }
+          }, 100); // 10 FPS instead of 60 FPS
+        };
+        drawLoop();
+      } else {
+        rafRef.current = requestAnimationFrame(draw);
+      }
+    };
+
+    startDraw();
   }
 
   return (

@@ -1,52 +1,163 @@
 /* ============================================================================
-   PERFORMANCE MODE OPTIMIZATIONS
+   PERFORMANCE MODE v2.0 (Safe Layout)
    ========================================================================== */
 
-/* Disable animations and transitions in performance mode */
-body.performance-mode * {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  transition-delay: 0ms !important;
-}
-
-/* Keep essential transitions for UX but make them instant */
-body.performance-mode .hud-btn,
-body.performance-mode .board-button,
-body.performance-mode button {
-  transition: background-color 0.01ms, color 0.01ms, border-color 0.01ms;
-}
-
-/* Disable expensive visual effects */
-body.performance-mode .glitch-effect,
-body.performance-mode .scanline,
-body.performance-mode .pulse-animation {
+/* 1. ANIMAÇÕES (Corta tudo que se move) */
+body.performance-mode *,
+body.performance-mode *::before,
+body.performance-mode *::after {
   animation: none !important;
+  transition: none !important;
+  /* Não desabilite 'transform' globalmente, pois quebra layout! */
 }
 
-/* Reduce box-shadow complexity */
+/* 2. EFEITOS PESADOS (Glow, Blur, Neon) - Os verdadeiros vilões */
 body.performance-mode * {
-  box-shadow: none !important;
-}
-
-/* Disable backdrop-filter for better performance */
-body.performance-mode * {
-  backdrop-filter: none !important;
+  box-shadow: none !important;            /* Mata neons */
+  text-shadow: none !important;           /* Mata brilho de texto */
+  backdrop-filter: none !important;       /* Mata blur (vidro) */
   -webkit-backdrop-filter: none !important;
+  filter: none !important;                /* Mata outros filtros */
 }
 
-/* Disable transform3d and other GPU-intensive properties */
-body.performance-mode * {
-  transform: none !important;
-  will-change: auto !important;
+/* 3. SUBSTITUIÇÃO VISUAL (Fallback para Glassmorphism) */
+/* Quando tiramos o blur, o fundo fica invisível ou feio. Vamos colocar um fundo sólido. */
+body.performance-mode .investigation-toolbar,
+body.performance-mode .modal-content,
+body.performance-mode .glass-panel,
+body.performance-mode .toolbar {
+  background-color: #05080a !important; /* Cor sólida escura (Nexus Dark) */
+  border: 1px solid #1e40af !important; /* Borda simples para definição */
 }
 
-/* Simplify gradients and complex backgrounds */
+/* 4. PERFORMANCE GRÁFICA */
 body.performance-mode * {
+  /* Remove renderizações complexas de background */
   background-image: none !important;
+  /* Volta com cantos quadrados (menos antialiasing para a GPU calcular) */
+  border-radius: 0 !important;
 }
 
-/* Disable text-shadow for better performance */
+/* 5. PROTEÇÃO DE LAYOUT (O que não quebra centralização) */
+/* Reabilitar interações básicas para botões não parecerem quebrados */
+body.performance-mode button:active,
+body.performance-mode .clickable:active {
+  opacity: 0.7 !important; /* Feedback visual simples em vez de animado */
+}
+
+/* 6. CORREÇÃO ESPECÍFICA: TOOLBAR E POSICIONAMENTO */
+/* Garante que elementos de layout ainda possam usar flex e grid corretamente */
+body.performance-mode {
+  /* Evita repaint de scroll suave */
+  scroll-behavior: auto !important;
+}
+
+/* -----------------------------------------------------------
+   OVERRIDES DE SEGURANÇA (Se precisar manter alguma imagem/transform)
+   ----------------------------------------------------------- */
+
+/* Se você usa transform para centralizar, mantenha ele habilitado */
+body.performance-mode .fixed-center,
+body.performance-mode [style*="transform"], /* Tenta manter inline styles */
+body.performance-mode .center-xy {
+   /* Não forçar 'transform: none' aqui */
+}
+
+/* Permitir seleção de texto (IMPORTANTE para puzzles) */
 body.performance-mode * {
-  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Impedir seleção apenas em UI */
+body.performance-mode button,
+body.performance-mode .nav-item {
+  user-select: none !important;
+}
+
+/* Disable pointer events on decorative elements */
+body.performance-mode .decorative,
+body.performance-mode .background-effect,
+body.performance-mode .particle-effect {
+  pointer-events: none !important;
+}
+
+/* Simplify text rendering */
+body.performance-mode * {
+  font-variant-ligatures: none !important;
+  font-feature-settings: normal !important;
+}
+
+/* Disable CSS containment for better performance */
+body.performance-mode * {
+  contain: none !important;
+}
+
+/* Reduce GPU memory usage */
+body.performance-mode canvas {
+  image-rendering: pixelated !important;
+}
+
+/* Disable expensive CSS properties */
+body.performance-mode * {
+  mix-blend-mode: normal !important;
+  isolation: auto !important;
+}
+
+/* Simplify border images */
+body.performance-mode * {
+  border-image: none !important;
+  border-image-source: none !important;
+  border-image-slice: none !important;
+}
+
+/* Disable CSS counters */
+body.performance-mode * {
+  counter-reset: none !important;
+  counter-increment: none !important;
+}
+
+/* Disable CSS quotes */
+body.performance-mode * {
+  quotes: none !important;
+}
+
+/* Disable CSS widows/orphans */
+body.performance-mode * {
+  widows: auto !important;
+  orphans: auto !important;
+}
+
+/* Disable CSS page breaks */
+body.performance-mode * {
+  page-break-after: auto !important;
+  page-break-before: auto !important;
+  page-break-inside: auto !important;
+}
+
+/* Disable CSS columns */
+body.performance-mode * {
+  column-count: auto !important;
+  column-gap: normal !important;
+  column-rule: none !important;
+}
+
+/* Disable CSS flexbox/grid complexity */
+body.performance-mode * {
+  flex-shrink: 1 !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+}
+
+/* Disable CSS transforms that create layers */
+body.performance-mode * {
+  perspective: none !important;
+  backface-visibility: visible !important;
+}
+
+/* Disable CSS animations on pseudo-elements */
+body.performance-mode *::before,
+body.performance-mode *::after {
+  animation: none !important;
+  transition: none !important;
 }

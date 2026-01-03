@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { isExtendedPerformanceMode } from '../../utils/performance';
 
 type Props = {
   audioSourceNode: AudioNode | null;
@@ -79,7 +80,24 @@ const SpectrogramAnalyzer: React.FC<Props> = ({ audioSourceNode, audioContext })
       animationRef.current = requestAnimationFrame(render);
     };
 
-    render();
+    const startRender = () => {
+      if (isExtendedPerformanceMode()) {
+        // Reduce animation frequency in performance mode (10 FPS instead of 60 FPS)
+        const renderLoop = () => {
+          render();
+          setTimeout(() => {
+            if (animationRef.current) {
+              animationRef.current = requestAnimationFrame(renderLoop);
+            }
+          }, 100);
+        };
+        renderLoop();
+      } else {
+        render();
+      }
+    };
+
+    startRender();
 
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);

@@ -8,6 +8,7 @@ import { validateMegaClueData } from '../../utils/validationSchemas';
 import GlitchPuzzleCard from '../tools/GlitchPuzzleCard';
 import MegaClueCard from '../tools/MegaClueCard';
 import { modalManager } from '../../utils/ModalManager';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface Props {
 const emptyInsight = (): InvestigationCardInsight => ({ id: String(Date.now()), skill: '', cost: 1, text: '', visibility: 'hidden', reveal_to: [] });
 
 export default function InvestigationCardModal({ open, onClose, investigationId, existing, onSaved, isGameMaster = false }: Props) {
+  const isMobile = useIsMobile();
   const [title, setTitle] = useState(existing?.title || '');
   const [descriptionPublic, setDescriptionPublic] = useState(existing?.description_public || '');
   const [descriptionHidden, setDescriptionHidden] = useState(existing?.description_hidden || '');
@@ -390,7 +392,17 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
 
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: 720, maxWidth: '95vw' }}>
+      <div 
+        className="modal-content" 
+        onClick={(e) => e.stopPropagation()} 
+        style={{ 
+          width: isMobile ? '100vw' : 720, 
+          height: isMobile ? '100vh' : 'auto',
+          maxWidth: isMobile ? '100vw' : '95vw',
+          maxHeight: isMobile ? '100vh' : '90vh',
+          overflowY: isMobile ? 'auto' : 'visible'
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{isGameMaster ? (existing ? 'EDITAR PISTA' : 'CRIAR PISTA') : 'DETALHES DA EVIDÊNCIA'}</h3>
           <button onClick={onClose}>×</button>

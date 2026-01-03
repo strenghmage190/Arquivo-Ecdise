@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
 
 interface Props {
   targetTime: number | null; // ms since epoch
@@ -24,7 +25,7 @@ export default function DoomsdayClock({ targetTime, isGameMaster, onUpdate }: Pr
       setTimeLeft(`${h}:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`);
     };
     tick();
-    const iv = setInterval(tick, 1000);
+    const iv = setInterval(tick, getOptimizedInterval(1000, 5)); // 1000ms normal, 5000ms in performance mode
     return () => clearInterval(iv);
   }, [targetTime]);
 

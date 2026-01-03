@@ -29,6 +29,8 @@ import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 import CreatorHub from '../modals/CreatorHub';
 import GMOverwatch from './GMOverwatch';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import BottomSheet from '../ui/BottomSheet';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -192,10 +194,15 @@ export function InvestigationBoard({ investigationId }: Props) {
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
   const [playerView, setPlayerView] = useState<boolean>(() => true);
+  const isMobile = useIsMobile();
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
-  const isMobileDevice = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  const isMobileDevice = isMobile;
   const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
   const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
+  // Pinch-to-zoom states
+  const [isPinching, setIsPinching] = useState(false);
+  const [initialDistance, setInitialDistance] = useState(0);
+  const [initialZoom, setInitialZoom] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const selectedIdsRef = useRef<string[]>([]);
 
@@ -1649,7 +1656,7 @@ export function InvestigationBoard({ investigationId }: Props) {
     setOrigin({ x: 0, y: 0 });
   }, []);
 
-  // Wheel-based zoom (Ctrl/Cmd + wheel) and scroll-pan when not holding Ctrl
+  // Wheel-based zoom (Ctrl/Cmd + wheel) and scroll-pan when not holding Ctrl, plus pinch-to-zoom
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -1680,10 +1687,62 @@ export function InvestigationBoard({ investigationId }: Props) {
       setOrigin(prev => ({ x: prev.x + e.deltaX / zoom, y: prev.y + e.deltaY / zoom }));
     };
 
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        setIsPinching(true);
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+        setInitialDistance(distance);
+        setInitialZoom(zoom);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && isPinching) {
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+        const newZoom = initialZoom * (distance / initialDistance);
+        setZoom(Math.max(0.1, Math.min(3, newZoom)));
+        // Center zoom on midpoint of touches
+        const boardRect = corkboardRef.current?.getBoundingClientRect();
+        if (boardRect) {
+          const midX = (touch1.clientX + touch2.clientX) / 2;
+          const midY = (touch1.clientY + touch2.clientY) / 2;
+          const worldX = origin.x + (midX - boardRect.left) / zoom;
+          const worldY = origin.y + (midY - boardRect.top) / zoom;
+          const newOriginX = worldX - (midX - boardRect.left) / newZoom;
+          const newOriginY = worldY - (midY - boardRect.top) / newZoom;
+          setOrigin({ x: newOriginX, y: newOriginY });
+        }
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        setIsPinching(false);
+      }
+    };
+
     const boardEl = corkboardRef.current;
-    if (boardEl) boardEl.addEventListener('wheel', handleWheel, { passive: false });
-    return () => { if (boardEl) boardEl.removeEventListener('wheel', handleWheel as any); };
-  }, [zoom]);
+    if (boardEl) {
+      boardEl.addEventListener('wheel', handleWheel, { passive: false });
+      boardEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+      boardEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+      boardEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+    }
+    return () => {
+      if (boardEl) {
+        boardEl.removeEventListener('wheel', handleWheel as any);
+        boardEl.removeEventListener('touchstart', handleTouchStart as any);
+        boardEl.removeEventListener('touchmove', handleTouchMove as any);
+        boardEl.removeEventListener('touchend', handleTouchEnd as any);
+      }
+    };
+  }, [zoom, origin, isPinching, initialDistance, initialZoom]);
 
   return (
     <div className="investigation-board" data-performance-mode={performanceMode ? 'on' : 'off'}>
@@ -2315,6 +2374,25 @@ export function InvestigationBoard({ investigationId }: Props) {
           {touchModeNotice && (
             <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
           )}
+
+          {/* Pinch overlay */}
+          {isPinching && (
+            <div className="pinch-overlay" style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0,0,0,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+              zIndex: 1000
+            }}>
+              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}>🔍 Pinch to Zoom</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2339,52 +2417,41 @@ export function InvestigationBoard({ investigationId }: Props) {
               </button>
             </div>
 
-            {/* 2. MENU EXPANSÍVEL (HUB) */}
+            {/* 2. BOTTOM SHEET MENU */}
             <div className="mobile-fab-container">
-              {/* O Menu que abre para cima */}
-              {mobileMenuOpen && (
-                <div className="mobile-fab-menu">
-                  {/* Criar Evidência */}
-                  {isGameMaster && (
-                    <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
-                      <span>⚙️</span> HUB DE CRIAÇÃO
-                    </button>
-                  )}
-                  
-                  {/* Grupo Ferramentas */}
-                  <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
-                    <span>🔗</span> {connectionMode ? 'PARAR' : 'CONECTAR'}
-                  </button>
-                  
-                  <button onClick={() => setShowFinder(true)} className="fab-item">
-                    <span>🔍</span> BUSCAR
-                  </button>
-
-                  <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
-                    <span>🔦</span> LUZ UV
-                  </button>
-
-                  <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
-                    <span>🎯</span> LOCALIZAR
-                  </button>
-                  
-                  <div className="fab-divider"></div>
-                  
-                  <button onClick={() => setMobileMenuOpen(false)} className="fab-item close">
-                    FECHAR X
-                  </button>
-                </div>
-              )}
-
-              {/* O Botão Principal (Gatilho) */}
               <button 
-                className={`main-fab-trigger ${mobileMenuOpen ? 'open' : ''}`} 
+                className="main-fab-trigger" 
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
-                {mobileMenuOpen ? '✖' : '☰'}
+                ☰
               </button>
             </div>
           </div>
+
+          <BottomSheet isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} title="Ferramentas de Investigação">
+            <h3>Ferramentas</h3>
+            {isGameMaster && (
+              <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
+                ⚙️ HUB DE CRIAÇÃO
+              </button>
+            )}
+            <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
+              🔗 {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
+            </button>
+            <button onClick={() => setShowFinder(true)} className="fab-item">
+              🔍 BUSCAR
+            </button>
+            <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
+              🔦 LUZ UV
+            </button>
+            <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
+              🎯 LOCALIZAR
+            </button>
+            <h3>Zoom</h3>
+            <button onClick={() => zoomBy(1.2)} className="fab-item">🔍 ZOOM IN</button>
+            <button onClick={() => zoomBy(0.8)} className="fab-item">🔍 ZOOM OUT</button>
+            <button onClick={() => resetZoom()} className="fab-item">🎯 RESET ZOOM</button>
+          </BottomSheet>
 
           <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
             <CreatorHub
