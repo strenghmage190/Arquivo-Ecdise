@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './CreateClueModal_Refactored.css';
 import './createclueTabs/createclueTabs.css';
 import useCreateClueState from '../../hooks/useCreateClueState_v3';
@@ -12,7 +12,23 @@ type Props = {
 };
 
 export default function CreateClueModal_Refactored({ isOpen, onClose, investigationId, onSaved }: Props) {
-  const { formState, actions, validation } = useCreateClueState(investigationId);
+  let formState: any = {};
+  let actions: any = {};
+  let validation: any = { validate: async () => {}, errors: [] };
+  try {
+    const hook = useCreateClueState(investigationId);
+    formState = hook.formState;
+    actions = hook.actions;
+    validation = hook.validation;
+  } catch (err) {
+    console.error('useCreateClueState error in CreateClueModal_Refactored:', err);
+    // fail-safe: keep modal closed if hook crashes
+    return null;
+  }
+
+  useEffect(() => {
+    if (isOpen) console.debug('CreateClueModal_Refactored opened', { investigationId });
+  }, [isOpen, investigationId]);
   const [tab, setTab] = useState<number>(0);
 
   if (!isOpen) return null;
