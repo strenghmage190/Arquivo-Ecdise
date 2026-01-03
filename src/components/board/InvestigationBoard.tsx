@@ -2017,7 +2017,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             // start pan when touching the background (not a card) — always enabled on mobile
             if (e.target === corkboardRef.current || e.target === e.currentTarget) {
               if (e.touches.length === 1) {
-                e.preventDefault();
                 panningRef.current = { startX: t.clientX, startY: t.clientY, originX: origin.x, originY: origin.y } as any;
               }
             }
@@ -2337,24 +2336,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
           {/* --- HUD EXCLUSIVO PARA CELULAR --- */}
           <div className="mobile-hud">
-         
-            {/* 1. SELETOR DE MODO (Sempre visível para alternar rápido) */}
-            <div className="mobile-modes">
-              <button 
-                className={`mode-btn ${touchMode === 'pan' ? 'active' : ''}`} 
-                onClick={() => setTouchMode('pan')}
-                title="Mover Câmera"
-              >
-                🖐️
-              </button>
-              <button 
-                className={`mode-btn ${touchMode === 'interact' ? 'active' : ''}`} 
-                onClick={() => setTouchMode('interact')}
-                title="Mover/Selecionar Pistas"
-              >
-                👆
-              </button>
-            </div>
+
+            {/* mobile mode toggles removed — pan is the default on touch devices */}
 
             {/* 2. BOTTOM SHEET MENU */}
             <div className="mobile-fab-container">
