@@ -1,0 +1,18 @@
+name: Testes Mobile (Cypress)
+
+on: [push]
+
+jobs:
+  mobile-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências e rodar Mobile Tests
+        uses: cypress-io/github-action@v6
+        with:
+          start: npm run dev
+          wait-on: 'http://localhost:5173'
+          config: viewportWidth=375,viewportHeight=667
+          spec: cypress/e2e/mobile.cy.ts

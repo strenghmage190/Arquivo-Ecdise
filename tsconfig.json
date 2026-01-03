@@ -14,7 +14,7 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "types": ["cypress"]
+    "types": ["cypress", "node"]
   },
   "include": ["src", "cypress"]
 }
