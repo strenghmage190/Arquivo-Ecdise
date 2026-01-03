@@ -1,0 +1,52 @@
+/* ============================================================================
+   PERFORMANCE MODE OPTIMIZATIONS
+   ========================================================================== */
+
+/* Disable animations and transitions in performance mode */
+body.performance-mode * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}
+
+/* Keep essential transitions for UX but make them instant */
+body.performance-mode .hud-btn,
+body.performance-mode .board-button,
+body.performance-mode button {
+  transition: background-color 0.01ms, color 0.01ms, border-color 0.01ms;
+}
+
+/* Disable expensive visual effects */
+body.performance-mode .glitch-effect,
+body.performance-mode .scanline,
+body.performance-mode .pulse-animation {
+  animation: none !important;
+}
+
+/* Reduce box-shadow complexity */
+body.performance-mode * {
+  box-shadow: none !important;
+}
+
+/* Disable backdrop-filter for better performance */
+body.performance-mode * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Disable transform3d and other GPU-intensive properties */
+body.performance-mode * {
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Simplify gradients and complex backgrounds */
+body.performance-mode * {
+  background-image: none !important;
+}
+
+/* Disable text-shadow for better performance */
+body.performance-mode * {
+  text-shadow: none !important;
+}

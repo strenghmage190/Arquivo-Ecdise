@@ -5,6 +5,7 @@ import App from './App';
 import './index.css';
 import './styles/nexus.css';
 import './styles/animations.css';
+import './styles/performance.css';
 // import { setupGlobalMouseListeners } from './hooks/useGlobalMouseEvents'; // Desabilitado - cursor customizado removido
 import { validatePolyfills, logValidationResults } from './utils/validatePolyfills';
 

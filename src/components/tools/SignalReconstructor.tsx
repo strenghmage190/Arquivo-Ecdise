@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './SignalReconstructor.css';
+import { isExtendedPerformanceMode } from '../../utils/performance';
 
 interface Props {
   realText: string;
@@ -15,6 +16,11 @@ export default function SignalReconstructor({ realText, targetFreq = 115 }: Prop
 
   // Gera texto aleatório que muda constantemente (efeito hacker)
   useEffect(() => {
+    if (isExtendedPerformanceMode()) {
+      setGlitchedText(realText); // Show real text directly in performance mode
+      return;
+    }
+
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*§ØΔΩ";
     const interval = setInterval(() => {
       let res = realText.split('').map(char => 

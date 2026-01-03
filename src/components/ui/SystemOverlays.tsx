@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { eventManager } from '../../utils/EventManager';
 import { audioManager } from '../../utils/AudioManager';
+import { isExtendedPerformanceMode } from '../../utils/performance';
 
 // ✅ Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
 let systemOverlaysInstanceCount = 0;
@@ -43,6 +44,8 @@ export default function SystemOverlays() {
 
   // Integrity simulation
   useEffect(() => {
+    if (isExtendedPerformanceMode()) return; // Skip integrity simulation in extended performance mode
+
     let alive = true;
     let current = 99.4;
     function setIntegrity(v: number, danger = false) {

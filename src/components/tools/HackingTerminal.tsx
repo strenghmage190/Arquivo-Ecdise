@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './HackingTerminal.css';
+import { isExtendedPerformanceMode } from '../../utils/performance';
 
 interface Props {
   correctPassword?: string;
@@ -63,7 +64,7 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     if (!outputRef.current) return;
     outputRef.current.appendChild(el);
     let i = 0;
-    const speed = 22;
+    const speed = isExtendedPerformanceMode() ? 5 : 22; // Faster typing in performance mode
     function type() {
       if (i < text.length) {
         el.innerHTML += text.charAt(i);

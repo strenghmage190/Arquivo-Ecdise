@@ -74,6 +74,17 @@ export function InvestigationBoard({ investigationId }: Props) {
     }
   });
 
+  // Add a new state for extended performance optimizations
+  const [extendedPerformanceMode, setExtendedPerformanceMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const stored = window.localStorage.getItem('investigation_extended_performance_mode');
+      return stored === '1';
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     try {
       window.localStorage.setItem('investigation_performance_mode', performanceMode ? '1' : '0');
@@ -83,8 +94,25 @@ export function InvestigationBoard({ investigationId }: Props) {
   }, [performanceMode]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem('investigation_extended_performance_mode', extendedPerformanceMode ? '1' : '0');
+    } catch {
+      // ignore persistence errors
+    }
+  }, [extendedPerformanceMode]);
+
+  // Update the performance mode toggle to include extended mode
+  const togglePerformanceMode = () => {
+    setPerformanceMode((prev) => !prev);
+    setExtendedPerformanceMode((prev) => !prev); // Toggle extended mode alongside
+  };
+
+  // Apply performance mode class to body for global CSS optimizations
+  useEffect(() => {
     if (performanceMode) {
-      setOverlayPos(null);
+      document.body.classList.add('performance-mode');
+    } else {
+      document.body.classList.remove('performance-mode');
     }
   }, [performanceMode]);
 
@@ -1904,8 +1932,8 @@ export function InvestigationBoard({ investigationId }: Props) {
           </div>
           <button
             className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
-            onClick={() => setPerformanceMode((s) => !s)}
-            data-tooltip={performanceMode ? 'Modo performance ativado' : 'Ativar modo performance (reduz efeitos)'}
+            onClick={togglePerformanceMode}
+            data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
           >
             ⚡
           </button>

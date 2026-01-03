@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import AudioForge from './AudioForge';
 import './AudioMixer.css';
+import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
 
 interface Props {
   baseAudioFile?: File;
@@ -184,6 +185,8 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
   useEffect(() => {
     if (!isPlaying || !audioContext) return;
 
+    const updateInterval = getOptimizedInterval(50, 4); // 50ms normal, 200ms in performance mode
+
     const interval = setInterval(() => {
       const elapsed = audioContext.currentTime - startTimeRef.current;
       setCurrentTime(elapsed);
@@ -193,7 +196,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
         setCurrentTime(0);
         pauseTimeRef.current = 0;
       }
-    }, 50);
+    }, updateInterval);
 
     return () => clearInterval(interval);
   }, [isPlaying, audioContext, duration]);
