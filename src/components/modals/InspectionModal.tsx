@@ -83,6 +83,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   };
   const [puzzleSolved, setPuzzleSolved] = useState(false);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const fileRef = React.useRef<HTMLDivElement | null>(null);
   const thermalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
@@ -94,6 +95,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [expanderAudioSrc, setExpanderAudioSrc] = useState<string>('');
   // Flag para evitar múltiplos cliques simultâneos
   const audioExpanderLockRef = useRef(false);
+
+  React.useEffect(() => {
+    setCurrentPageIndex(0);
+  }, [card]);
 
   // Player compacto (modal principal)
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -372,6 +377,18 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     const currentCard = serverCard || card;
 
+    // Atualiza o campo chat_contact_name (e não o title) para preservar título separado
+    const handleContactNameChange = async (newName: string) => {
+      try {
+        if (!currentCard || !currentCard.id) return;
+        const updated = await updateInvestigationCard(currentCard.id, { chat_contact_name: newName });
+        setServerCard(updated);
+      } catch (err) {
+        console.error('Falha ao atualizar nome do contato:', err);
+        try { alert('Falha ao atualizar nome do contato'); } catch (e) {}
+      }
+    };
+
     // Metadata pré-calculado para reuso
     let parsedMetadata: any = {};
     try {
@@ -379,6 +396,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ? currentCard.metadata
         : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
     } catch { parsedMetadata = {}; }
+    const multiPageData = parsedMetadata?.multiPageDocument;
+    const hasMultiplePages = Boolean(multiPageData && Array.isArray(multiPageData.pages) && multiPageData.pages.length > 0);
     const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
     const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
 
@@ -499,11 +518,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       if (visualMode === 'phone') {
         return (
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
-            <PhoneViewer 
+              <PhoneViewer 
               chatData={_headerChatList} 
-              contactName={currentCard.title}
+              contactName={contactNameInferred || currentCard.title}
               isLocked={phoneIsLocked}
               password={phonePassword}
+              onContactNameChange={handleContactNameChange}
             />
           </div>
         );
@@ -709,8 +729,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               } catch (e) { reveal = null; }
               return (
                 <>
-                  <MysteryImage
-                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                  {/* If card has multi-page document, prefer current page media */}
+                  {(() => {
+                    const pageData = hasMultiplePages ? (multiPageData.pages[currentPageIndex] || null) : null;
+                    const pageImage = pageData?.image_url || null;
+                    const baseSrc = pageImage || unifiedMedia.imageUrl || currentCard.image_url;
+                    return (
+                      <MysteryImage
+                        baseSrc={baseSrc}
                     hiddenSrc={currentCard.image_uv_url}
                     filterLayerSrc={currentCard.image_filter_layer}
                     filters={{ brightness, contrast, saturate: saturation }}
@@ -721,6 +747,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     style={{ height: '100%', width: '100%' }}
                     forensicChannel={forensicChannel}
                   />
+                    );
+                  })()}
                 </>
               );
             })()}
@@ -750,9 +778,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
             <PhoneViewer 
               chatData={_headerChatList} 
-              contactName={currentCard.title}
+              contactName={contactNameInferred || currentCard.title}
               isLocked={phoneIsLocked}
               password={phonePassword}
+              onContactNameChange={handleContactNameChange}
             />
           </div>
         );
@@ -1152,10 +1181,55 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
            <div className="text-col">
               <h2>{card.title}</h2>
               
-              <span className="desc-title">DESCRIÇÃO:</span>
-              <p className="public-desc">
-                 {card.description_public || "Nenhuma descrição fornecida."}
-              </p>
+              {hasMultiplePages ? (
+                <>
+                  <span className="desc-title">{multiPageData.pages[currentPageIndex]?.title || `PÁGINA ${currentPageIndex + 1}`}</span>
+                  <p className="public-desc">
+                    {multiPageData.pages[currentPageIndex]?.content || "Esta página está em branco."}
+                  </p>
+
+                  {multiPageData.pages[currentPageIndex]?.audio_url && (
+                    <div style={{ marginTop: 12 }}>
+                      <audio controls src={multiPageData.pages[currentPageIndex].audio_url} style={{ width: '100%' }} />
+                    </div>
+                  )}
+
+                  {multiPageData.pages.length > 1 && (
+                    <div style={{
+                      marginTop: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '12px'
+                    }}>
+                      <button
+                        className="btn-tool-tab"
+                        onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentPageIndex === 0}
+                      >
+                        &lt; Anterior
+                      </button>
+                      <span style={{color: '#888', fontSize: '12px'}}>
+                        Página {currentPageIndex + 1} de {multiPageData.pages.length}
+                      </span>
+                      <button
+                        className="btn-tool-tab"
+                        onClick={() => setCurrentPageIndex(prev => Math.min(multiPageData.pages.length - 1, prev + 1))}
+                        disabled={currentPageIndex === multiPageData.pages.length - 1}
+                      >
+                        Próxima &gt;
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="desc-title">DESCRIÇÃO:</span>
+                  <p className="public-desc">
+                     {card.description_public || "Nenhuma descrição fornecida."}
+                  </p>
+                </>
+              )}
 
               {isGameMaster && card.description_hidden && (
                  <div className="gm-note">
@@ -1396,10 +1470,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 <PhoneViewer 
                   chatData={_headerChatList} 
-                  contactName={currentCard.title}
+                  contactName={contactNameInferred || currentCard.title}
                   isLocked={phoneIsLocked}
                   password={phonePassword}
                   fullscreen={true}
+                  onContactNameChange={handleContactNameChange}
                 />
               </div>
             ) : (

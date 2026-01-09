@@ -86,6 +86,43 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
   const [title, setTitle] = useState('');
   const [descPublic, setDescPublic] = useState('');
   const [descHidden, setDescHidden] = useState('');
+   // Multi-page support: each page holds its own media and reveal config
+   const createNewPage = () => ({
+      id: Date.now() + Math.random(),
+      title: '',
+      content: '',
+      imgFile: null as File | null,
+      previewUrl: null as string | null,
+      audioBase: null as File | null,
+      audioBasePreview: null as string | null,
+      audioHidden: null as File | null,
+      audioHiddenPreview: null as string | null,
+      uvFile: null as File | null,
+      filterFile: null as File | null,
+      filterPreviewUrl: null as string | null,
+      filterTransform: null as { left: number; top: number; width: number; height: number } | null,
+      videoFile: null as File | null,
+      videoPreviewUrl: null as string | null,
+      videoUrl: null as string | null,
+      isShredded: false,
+      shredRows: 1,
+      shredCols: 8,
+      realText: '',
+      cipherText: '',
+      hexCode: '',
+   });
+   const [pages, setPages] = useState<any[]>([createNewPage()]);
+   const [activePageIndex, setActivePageIndex] = useState(0);
+
+   const handlePageDataChange = (field: string, value: any, index?: number) => {
+      setPages(prev => {
+         const i = index !== undefined ? index : activePageIndex;
+         const copy = [...prev];
+         if (!copy[i]) return copy;
+         copy[i] = { ...copy[i], [field]: value };
+         return copy;
+      });
+   };
   const [tags, setTags] = useState('');
   const [discoveryCode, setDiscoveryCode] = useState('');
   const [isHidden, setIsHidden] = useState(false);
@@ -145,6 +182,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (url) {
          setAudioBase(file);
          setAudioBasePreview(url);
+         handlePageDataChange('audioBase', file);
+         handlePageDataChange('audioBasePreview', url);
       }
    };
 
@@ -160,6 +199,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (url) {
          setAudioHidden(file);
          setAudioHiddenPreview(url);
+         handlePageDataChange('audioHidden', file);
+         handlePageDataChange('audioHiddenPreview', url);
       }
    };
    const [stamp, setStamp] = useState('');
@@ -402,6 +443,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setFilterPreviewUrl(url);
       // default: center overlay covering 50% width/height
       setFilterTransform({ left: 25, top: 25, width: 50, height: 50 });
+      handlePageDataChange('filterTransform', { left: 25, top: 25, width: 50, height: 50 });
       return () => { try { URL.revokeObjectURL(url); } catch (e) {} };
    }, [filterFile]);
 
@@ -428,7 +470,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             const dy = e.clientY - start.startY;
             const newLeft = ((start.startTransform.left / 100) * bounds.width + dx) / bounds.width * 100;
             const newTop = ((start.startTransform.top / 100) * bounds.height + dy) / bounds.height * 100;
-            setFilterTransform({ ...current, left: Math.max(0, Math.min(100 - current.width, newLeft)), top: Math.max(0, Math.min(100 - current.height, newTop)) });
+            const newTransform = { ...current, left: Math.max(0, Math.min(100 - current.width, newLeft)), top: Math.max(0, Math.min(100 - current.height, newTop)) };
+            setFilterTransform(newTransform);
+            handlePageDataChange('filterTransform', newTransform);
          } else if (start.mode === 'resize') {
             const dx = e.clientX - start.startX;
             const dy = e.clientY - start.startY;
@@ -436,7 +480,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             const deltaPctH = (dy / bounds.height) * 100;
             const newW = Math.max(5, Math.min(100 - start.startTransform.left, start.startTransform.width + deltaPctW));
             const newH = Math.max(5, Math.min(100 - start.startTransform.top, start.startTransform.height + deltaPctH));
-            setFilterTransform({ ...current, width: newW, height: newH });
+            const sizeTransform = { ...current, width: newW, height: newH };
+            setFilterTransform(sizeTransform);
+            handlePageDataChange('filterTransform', sizeTransform);
          }
       };
       const onUp = () => { draggingRef.current = null; };
@@ -458,16 +504,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       // files / previews
       setImgFile(null);
       setVideoFile(null);
+      handlePageDataChange('videoFile', null);
       try { if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
       setVideoPreviewUrl(null);
+      handlePageDataChange('videoPreviewUrl', null);
       setVideoUrl(null);
+      handlePageDataChange('videoUrl', null);
       setVideoUploading(false);
       setVideoUrlInput('');
       setUvFile(null);
+      handlePageDataChange('uvFile', null);
       setFilterFile(null);
+      handlePageDataChange('filterFile', null);
       try { if (filterPreviewUrl) URL.revokeObjectURL(filterPreviewUrl); } catch (e) {}
       setFilterPreviewUrl(null);
+      handlePageDataChange('filterPreviewUrl', null);
       setFilterTransform(null);
+      handlePageDataChange('filterTransform', null);
       setFilterInitialImage(null);
       setPreviewUrl(null);
       setEditorMode(null);
@@ -830,6 +883,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          
          // Display config
          displayConfig,
+         // Include pages so templates capture multi-page dossiers
+         pages,
       };
 
       // Sanitize to remove Files, Blobs, and blob URLs
@@ -909,11 +964,18 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (data.thermalPositionY !== undefined) setThermalPositionY(data.thermalPositionY);
       if (data.thermalKeyword !== undefined) setThermalKeyword(data.thermalKeyword);
       
-      if (data.isShredded !== undefined) setIsShredded(data.isShredded);
-      if (data.shredRows !== undefined) setShredRows(data.shredRows);
-      if (data.shredCols !== undefined) setShredCols(data.shredCols);
-      if (data.realText !== undefined) setRealText(data.realText);
-      if (data.cipherText !== undefined) setCipherText(data.cipherText);
+      // Legacy cipher fields: if template didn't include pages, map them into first page
+      if (data.pages === undefined) {
+         const first = createNewPage();
+         if (data.isShredded !== undefined) first.isShredded = data.isShredded;
+         if (data.shredRows !== undefined) first.shredRows = data.shredRows;
+         if (data.shredCols !== undefined) first.shredCols = data.shredCols;
+         if (data.realText !== undefined) first.realText = data.realText;
+         if (data.cipherText !== undefined) first.cipherText = data.cipherText;
+         if (data.hexCode !== undefined) first.hexCode = data.hexCode;
+         setPages([first]);
+         setActivePageIndex(0);
+      }
       
       if (data.isPerson !== undefined) setIsPerson(data.isPerson);
       if (data.personName !== undefined) setPersonName(data.personName);
@@ -943,7 +1005,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (data.filterRevealBrightness !== undefined) setFilterRevealBrightness(data.filterRevealBrightness);
       if (data.filterRevealContrast !== undefined) setFilterRevealContrast(data.filterRevealContrast);
       if (data.filterRevealSaturate !== undefined) setFilterRevealSaturate(data.filterRevealSaturate);
-      if (data.filterTransform !== undefined) setFilterTransform(data.filterTransform);
+      // If template includes pages, load them; otherwise apply legacy filterTransform to active page
+      if (data.pages !== undefined && Array.isArray(data.pages)) {
+         setPages(data.pages.map((p: any) => ({ ...createNewPage(), ...p })));
+         setActivePageIndex(0);
+         // apply first page filter transform to editor if present
+         if (data.pages[0]?.filter_transform) setFilterTransform(data.pages[0].filter_transform);
+      } else {
+         if (data.filterTransform !== undefined) setFilterTransform(data.filterTransform);
+      }
       
       if (data.forensicTargetChannel !== undefined) setForensicTargetChannel(data.forensicTargetChannel);
       
@@ -1257,6 +1327,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             megaImageUrl = await uploadInvestigationImage(megaImageFile, investigationId);
          }
 
+         
+
          const revealRequiresKeyword = revealLogicMode === 'aligned_keyword' || glitchRequireKeyword;
          const baseMediaType = finalVideoUrl ? 'video' : audUrl ? 'audio' : imgUrl ? 'image' : 'unknown';
          const baseMediaUrl = finalVideoUrl || audUrl || imgUrl || null;
@@ -1288,8 +1360,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          
          // optional external link + qr
          if (externalLink) metadata.external_link = externalLink;
-        // hex code for HexViewer
-        if (hexCode) metadata.hex_code = hexCode;
+        // hex code for HexViewer (prefer first page if present)
+        if (metadata.multiPageDocument && metadata.multiPageDocument.pages && metadata.multiPageDocument.pages[0] && metadata.multiPageDocument.pages[0].hex_code) {
+           metadata.hex_code = metadata.multiPageDocument.pages[0].hex_code;
+        } else if (hexCode) {
+           metadata.hex_code = hexCode;
+        }
         // thermal metadata flag
         if (thermalEnabled) {
            metadata.thermal = true;
@@ -1428,6 +1504,89 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         };
         metadata.field_values = fieldValues;
 
+        // Process all pages: upload per-page files (images/audio/video/uv/filter) and construct cleaned page objects
+        const processedPages: any[] = [];
+        for (let i = 0; i < pages.length; i++) {
+           const p = pages[i];
+           if (!p) continue;
+           let pageImageUrl: string | null = null;
+           let pageUvUrl: string | null = null;
+           let pageFilterUrl: string | null = null;
+           let pageVideoUrl: string | null = null;
+           let pageAudioUrl: string | null = null;
+           let pageAudioHiddenUrl: string | null = null;
+           try {
+              if (p.imgFile) {
+                 pageImageUrl = await uploadInvestigationImage(p.imgFile, investigationId, (progress) => {
+                    if (mountedRef.current) setUploadProgress(prev => ({ ...prev, [`page_${i}_image`]: progress }));
+                 });
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - imagem: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+           try {
+              if (p.uvFile) {
+                 pageUvUrl = await uploadInvestigationImage(p.uvFile, investigationId, (progress) => {
+                    if (mountedRef.current) setUploadProgress(prev => ({ ...prev, [`page_${i}_uv`]: progress }));
+                 });
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - UV: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+           try {
+              if (p.filterFile) {
+                 pageFilterUrl = await uploadInvestigationImage(p.filterFile, investigationId, (progress) => {
+                    if (mountedRef.current) setUploadProgress(prev => ({ ...prev, [`page_${i}_filter`]: progress }));
+                 });
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - filtro: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+           try {
+              if (p.videoFile) {
+                 pageVideoUrl = await uploadInvestigationFile(p.videoFile, investigationId, p.videoFile.name.split('.').pop() || 'mp4');
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - vídeo: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+           try {
+              if (p.audioBase) {
+                 pageAudioUrl = await uploadAudio(p.audioBase, investigationId);
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - áudio: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+           try {
+              if (p.audioHidden) {
+                 pageAudioHiddenUrl = await uploadAudio(p.audioHidden, investigationId);
+              }
+           } catch (err) {
+              setUploadErrors(prev => [...prev, `Página ${i + 1} - áudio oculto: ${err instanceof Error ? err.message : 'Erro'}`]);
+           }
+
+           processedPages.push({
+              title: p.title || `Página ${i + 1}`,
+              descPublic: p.content || null,
+              image_url: pageImageUrl,
+              uv_url: pageUvUrl,
+              filter_url: pageFilterUrl,
+              video_url: pageVideoUrl,
+              audio_url: pageAudioUrl,
+              audio_hidden_url: pageAudioHiddenUrl,
+              is_shredded: p.isShredded || false,
+              shred_rows: p.shredRows || 1,
+              shred_cols: p.shredCols || 8,
+              real_text: p.realText || null,
+              cipher_text: p.cipherText || null,
+              hex_code: p.hexCode || null,
+              filter_transform: p.filterTransform || null,
+           });
+        }
+
+        if (processedPages.length > 0) {
+           metadata.multiPageDocument = { pages: processedPages };
+        }
+
          // sanitize metadata to avoid sending unserializable objects
          const cleanMetadata = sanitizeForMetadata(metadata);
 
@@ -1440,9 +1599,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         x: initialX ?? 100,
         y: initialY ?? 100,
                   image_url: boardImageUrl,
-        image_uv_url: uvUrl,
-            image_filter_layer: filterUrl,
-            image_filter_layer_transform: filterTransform || null,
+                     image_uv_url: uvUrl,
+                     image_filter_layer: filterUrl,
+                     image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
             lock_password: isLocked ? lockPass : null,
             is_hidden: isHidden,
@@ -1606,6 +1765,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       if (localUrl) {
          setVideoFile(f);
          setVideoPreviewUrl(localUrl);
+         handlePageDataChange('videoFile', f);
+         handlePageDataChange('videoPreviewUrl', localUrl);
 
          // Upload immediately and track promise
          const uploadPromise = (async () => {
@@ -1619,6 +1780,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                });
                if (publicUrl) {
                   if (mountedRef.current) setVideoUrl(publicUrl);
+                  handlePageDataChange('videoUrl', publicUrl);
                   return publicUrl;
                } else {
                   throw new Error('Upload retornou URL vazia');
@@ -1774,13 +1936,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             setEvidenceType('document');
                             // Limpar mídias incompatíveis ao mudar tipo
                             if (evidenceType !== 'document') {
-                               setVideoFile(null);
-                               setVideoUrl(null);
-                               setVideoUrlInput('');
-                               if (videoPreviewUrl) {
-                                  try { URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
-                               }
-                               setVideoPreviewUrl(null);
+                                                    setVideoFile(null);
+                                                    setVideoUrl(null);
+                                                    setVideoUrlInput('');
+                                                    if (videoPreviewUrl) {
+                                                       try { URL.revokeObjectURL(videoPreviewUrl); } catch(e){}
+                                                    }
+                                                    setVideoPreviewUrl(null);
+                                                    // clear active page video fields
+                                                    handlePageDataChange('videoFile', null);
+                                                    handlePageDataChange('videoPreviewUrl', null);
+                                                    handlePageDataChange('videoUrl', null);
                             }
                          }}
                          style={{flex:1, background: evidenceType === 'document' ? 'rgba(198,164,95,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'document' ? '#c6a45f' : '#888'}}
@@ -2164,7 +2330,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                              }}
                                           >
                                              <div style={{position:'absolute', right:6, top:6, zIndex:40, display:'flex', gap:6}}>
-                                                <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); }}>Remover</button>
+                                                <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); handlePageDataChange('filterPreviewUrl', null); handlePageDataChange('filterFile', null); handlePageDataChange('filterTransform', null); }}>Remover</button>
                                              </div>
                                              <div
                                                 onMouseDown={onHandleMouseDown}
@@ -2334,7 +2500,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         <p style={{fontSize:10, color:'#aaa'}}>Desenhe segredos visíveis apenas com lanterna.</p>
                         <div style={{display:'flex', flexDirection:'column', gap:10}}>
                            <button onClick={()=>setEditorMode('uv')} className="upload-btn">🖌️ DESENHAR EFEITO</button>
-                           <label className="upload-btn">📂 UPLOAD PNG<input type="file" accept="image/png" hidden onChange={e => setUvFile(e.target.files?.[0] || null)} /></label>
+                           <label className="upload-btn">📂 UPLOAD PNG<input type="file" accept="image/png" hidden onChange={e => { const f = e.target.files?.[0] || null; setUvFile(f); handlePageDataChange('uvFile', f); }} /></label>
                         </div>
                      </div>
                      <div className="field-block" style={{flex:1, borderColor:'#3498db'}}>
@@ -3620,8 +3786,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  mode={editorMode || 'uv'}
                  initialImageFile={editorMode === 'filter' ? filterInitialImage : undefined}
                  onSave={(file) => { 
-                    if (editorMode === 'uv') setUvFile(file);
-                    if (editorMode === 'filter') setFilterFile(file);
+                    if (editorMode === 'uv') { setUvFile(file); handlePageDataChange('uvFile', file); }
+                    if (editorMode === 'filter') { setFilterFile(file); handlePageDataChange('filterFile', file); }
                     setEditorMode(null);
                     setFilterInitialImage(null);
                  }}
@@ -3662,7 +3828,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   spectrogramUrl={audioHiddenPreview}
                   triggerTime={triggerTime}
                   onClose={() => setShowAudioForgeFor(null)}
-                  onSave={(file) => {
+                                        onSave={(file) => {
                      if (showAudioForgeFor === 'hidden') {
                         // Revoke previous URL
                         revokeUrl(audioHiddenPreview);
@@ -3670,8 +3836,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         // Create and register new URL
                         const newUrl = createAndRegisterBlobUrl(file);
                         if (newUrl) {
-                           setAudioHidden(file);
-                           setAudioHiddenPreview(newUrl);
+                                                   setAudioHidden(file);
+                                                   setAudioHiddenPreview(newUrl);
+                                                   handlePageDataChange('audioHidden', file);
+                                                   handlePageDataChange('audioHiddenPreview', newUrl);
                         }
                      } else {
                         // Revoke previous URL
@@ -3680,8 +3848,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         // Create and register new URL
                         const newUrl = createAndRegisterBlobUrl(file);
                         if (newUrl) {
-                           setAudioBase(file);
-                           setAudioBasePreview(newUrl);
+                                                   setAudioBase(file);
+                                                   setAudioBasePreview(newUrl);
+                                                   handlePageDataChange('audioBase', file);
+                                                   handlePageDataChange('audioBasePreview', newUrl);
                         }
                      }
                      setShowAudioForgeFor(null);

@@ -18,6 +18,23 @@
   cursor: grabbing;
 }
 
+/* Drag-over indicators */
+.layer-item.drag-over-indicator-above {
+  border-top: 2px solid #00ffff !important;
+  box-shadow: 0 -5px 10px rgba(0, 255, 255, 0.18);
+  margin-top: 4px;
+}
+.layer-item.drag-over-indicator-below {
+  border-bottom: 2px solid #00ffff !important;
+  box-shadow: 0 5px 10px rgba(0, 255, 255, 0.18);
+  margin-bottom: 4px;
+}
+.layer-item.drag-over-indicator-into {
+  background: rgba(0,255,255,0.03);
+  border-style: dashed !important;
+  border-color: #00ffff !important;
+}
+
 /* Tooltip hover para controles */
 .layer-controls button::after,
 .layer-item-actions button::after {

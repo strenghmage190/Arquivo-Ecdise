@@ -1,1489 +1,1014 @@
-import React, { useRef, useState, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import './UVEditor.css';
 import './UVEditor.animations.css';
+import './UVEditor.animations.css';
 
+// Interface para as propriedades do componente
 interface UVEditorProps {
   baseImageUrl: string;
   onSave: (file: File) => void;
   onClose: () => void;
   mode?: 'uv' | 'filter';
-  initialImageFile?: File | null;
 }
 
-interface Layer {
+// Definindo o tipo para uma Camada (Layer)
+type Layer = {
   id: string;
-  type: 'text' | 'image' | 'drawing' | 'group';
+  type: 'text' | 'drawing' | 'image' | 'group';
   name: string;
   visible: boolean;
   opacity: number;
   locked: boolean;
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
   text?: string;
   size?: number;
   color?: string;
+  drawingCanvas?: HTMLCanvasElement;
   img?: HTMLImageElement;
   scale?: number;
-  drawingCanvas?: HTMLCanvasElement; // For drawing layers
-  children?: string[]; // IDs of child layers if type is 'group'
-  parentId?: string | null; // ID of parent group, if any
-}
-
-const COLOR_PALETTES = {
-  uv: [
-    { label: 'Magenta', hex: '#b366ff', glow: '0 0 10px #b366ff' },
-    { label: 'Ciano', hex: '#00ffff', glow: '0 0 10px #00ffff' },
-    { label: 'Vermelho', hex: '#ff0033', glow: '0 0 10px #ff0033' },
-    { label: 'Verde Neon', hex: '#39ff14', glow: '0 0 10px #39ff14' },
-    { label: 'Rosa Quente', hex: '#ff10f0', glow: '0 0 10px #ff10f0' },
-    { label: 'Azul Elétrico', hex: '#0080ff', glow: '0 0 10px #0080ff' },
-    { label: 'Amarelo Neon', hex: '#ffff00', glow: '0 0 10px #ffff00' },
-    { label: 'Laranja Neon', hex: '#ff6600', glow: '0 0 10px #ff6600' },
-  ],
-  filter: [
-    { label: 'Branco', hex: '#ffffff', glow: '0 0 10px #fff' },
-    { label: 'Cinza', hex: '#cccccc', glow: '0 0 8px #ccc' },
-    { label: 'Branco Transparente', hex: 'rgba(255,255,255,0.5)', glow: '0 0 5px rgba(255,255,255,0.5)' },
-    { label: 'Cinza Escuro', hex: '#888888', glow: '0 0 5px #888' },
-  ],
+  parentId?: string | null;
+  children?: string[];
+  isExpanded?: boolean;
+  blendMode?: GlobalCompositeOperation;
 };
 
-export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', initialImageFile }: UVEditorProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+// Definição do Componente
+export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv' }: UVEditorProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const baseImageRef = useRef<HTMLImageElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // --- ESTADO DO COMPONENTE ---
+  const [layers, setLayersState] = useState<Layer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [history, setHistory] = useState<Layer[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
+  const [multiSelectIds, setMultiSelectIds] = useState<Set<string>>(new Set());
+
+  // Ferramentas
+  const [tool, setTool] = useState<'select' | 'draw' | 'erase'>('select');
   const [color, setColor] = useState(mode === 'filter' ? '#ffffff' : '#b366ff');
   const [brushSize, setBrushSize] = useState(mode === 'filter' ? 18 : 6);
-  const [tool, setTool] = useState<'draw' | 'erase' | 'placeImage' | 'placeText'>('draw');
-  const [textValue, setTextValue] = useState('');
-  const [textSize, setTextSize] = useState(24);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
-  const [imageScale, setImageScale] = useState(1);
-  const [censorMode, setCensorMode] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Layers support: placed texts/images (editable)
-  const [layers, setLayers] = useState<Layer[]>([]);
-  const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
-  const [isDraggingLayer, setIsDraggingLayer] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
-  const dragOffsetRef = useRef<{ox:number, oy:number} | null>(null);
-  const resizeStartRef = useRef<{x:number, y:number, width:number, height:number, scale:number} | null>(null);
-  const drawingOffscreen = useRef<HTMLCanvasElement | null>(null);
-  const [editingLayerName, setEditingLayerName] = useState<string | null>(null);
-  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
-  const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [showAddLayerMenu, setShowAddLayerMenu] = useState(false);
-  
-  // RAF optimization for draw
-  const rafIdRef = useRef<number | null>(null);
-  const lastMouseEventRef = useRef<React.MouseEvent | null>(null);
-  const redrawRafIdRef = useRef<number | null>(null);
-  const redrawScheduledRef = useRef<boolean>(false);
 
-  const colors = COLOR_PALETTES[mode];
+  // Referência para controlar ações do mouse (desenhar, arrastar)
+  const actionRef = useRef<{
+    type: 'draw' | 'drag' | 'resize';
+    startX: number;
+    startY: number;
+    tempCanvas?: HTMLCanvasElement;
+    initialLayerState?: Layer;
+    // for resize
+    handle?: 'nw' | 'ne' | 'sw' | 'se';
+    initialBounds?: { x: number; y: number; w: number; h: number };
+    initialScale?: number;
+    initialSize?: number;
+    // for direct draw/erase
+    targetLayerId?: string | null;
+    directCtx?: CanvasRenderingContext2D | null;
+  } | null>(null);
 
-  // Cleanup RAF on unmount
-  useEffect(() => {
-    return () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+  // --- LÓGICA DE HISTÓRICO (UNDO/REDO) ---
+  const updateLayersAndRecordHistory = (newLayers: Layer[] | ((prev: Layer[]) => Layer[])) => {
+    const updatedLayers = typeof newLayers === 'function' ? newLayers(layers) : newLayers;
+    setLayersState(updatedLayers);
+    const newHistory = history.slice(0, historyIndex + 1);
+    // store serialized snapshot: copy props and serialize any drawingCanvas to dataURL
+    const snapshot = updatedLayers.map(l => {
+      const copy: any = { ...l };
+      if (l.drawingCanvas) {
+        try {
+          // deep-copy canvas bitmap into a new canvas for immediate undo/redo fidelity
+          const c = document.createElement('canvas');
+          c.width = l.drawingCanvas.width;
+          c.height = l.drawingCanvas.height;
+          const cctx = c.getContext('2d')!;
+          cctx.clearRect(0, 0, c.width, c.height);
+          cctx.drawImage(l.drawingCanvas, 0, 0);
+          copy.drawingCanvasCopy = c;
+        } catch (err) {
+          copy.drawingCanvasCopy = undefined;
+        }
+        try {
+          copy.drawingDataUrl = l.drawingCanvas.toDataURL();
+        } catch (err) {
+          copy.drawingDataUrl = undefined;
+        }
+        // don't store original DOM canvas reference in history snapshot
+        delete copy.drawingCanvas;
       }
-      if (redrawRafIdRef.current !== null) {
-        cancelAnimationFrame(redrawRafIdRef.current);
-        redrawRafIdRef.current = null;
-      }
-    };
-  }, []);
+      return copy;
+    });
+    newHistory.push(snapshot);
+    setHistory(newHistory as any);
+    setHistoryIndex(newHistory.length - 1);
+  };
 
-  useEffect(() => {
+  const restoreSnapshot = (snapshot: any[]) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return snapshot.map(s => ({ ...s }));
+    // reconstruct drawingCanvas from serialized dataURL (async image load)
+    const reconstructed = snapshot.map(s => {
+      const copy: any = { ...s };
+      if (s.drawingCanvasCopy) {
+        // prefer in-memory canvas copy stored in snapshot
+        copy.drawingCanvas = s.drawingCanvasCopy;
+        delete copy.drawingCanvasCopy;
+      } else if (s.drawingDataUrl) {
+        const c = document.createElement('canvas');
+        c.width = canvas.width;
+        c.height = canvas.height;
+        copy.drawingCanvas = c;
+        // draw image into canvas once it's loaded
+        const img = new Image();
+        img.onload = () => {
+          const ctx = c.getContext('2d')!;
+          ctx.clearRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0);
+          // update live state to ensure UI reflects the restored pixel data
+          setLayersState(prev => prev.map(p => p.id === copy.id ? { ...p, drawingCanvas: c } : p));
+        };
+        img.src = s.drawingDataUrl;
+        delete copy.drawingDataUrl;
+      }
+      return copy;
+    });
+    return reconstructed;
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const snapshot = history[newIndex] as any[];
+      const restored = restoreSnapshot(snapshot);
+      setLayersState(restored as Layer[]);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const snapshot = history[newIndex] as any[];
+      const restored = restoreSnapshot(snapshot);
+      setLayersState(restored as Layer[]);
+    }
+  };
+
+  // --- RENDERIZAÇÃO NO CANVAS ---
+  const redrawAll = () => {
+    const canvas = canvasRef.current;
+    const baseImg = baseImageRef.current;
+    if (!canvas || !baseImg) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(baseImg, 0, 0, canvas.width, canvas.height);
+
+    const drawSingle = (layer: Layer) => {
+      if (!layer.visible) return;
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.globalCompositeOperation = layer.blendMode || 'source-over';
+      if (layer.type === 'drawing' && layer.drawingCanvas) {
+        ctx.drawImage(layer.drawingCanvas, 0, 0);
+      } else if (layer.type === 'text' && layer.text) {
+        ctx.fillStyle = layer.color || '#000000';
+        ctx.font = `${layer.size || 24}px 'Share Tech Mono', monospace`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(layer.text, layer.x, layer.y);
+      } else if ((layer as any).type === 'image' && (layer as any).img) {
+        const img = (layer as any).img as HTMLImageElement;
+        const scale = (layer as any).scale ?? 1;
+        const w = img.naturalWidth * scale;
+        const h = img.naturalHeight * scale;
+        ctx.drawImage(img, layer.x - w / 2, layer.y - h / 2, w, h);
+      }
+      ctx.restore();
+    };
+
+    // draw only top-level layers; grouped children are drawn when their group is encountered
+    layers.forEach(layer => {
+      if (layer.parentId) return; // skip child entries
+      if (layer.type === 'group') {
+        // draw group's children in the group's children order
+        const ids = layer.children || [];
+        ids.forEach(cid => {
+          const child = layers.find(l => l.id === cid);
+          if (child) drawSingle(child);
+        });
+      } else {
+        drawSingle(layer);
+      }
+    });
+
+    // draw selection bounds and handles for the selected layer
+    if (selectedLayerId) {
+      const layer = layers.find(l => l.id === selectedLayerId);
+      if (layer) {
+        ctx.save();
+        let bounds = { x: 0, y: 0, w: 0, h: 0 };
+        if (layer.type === 'text') {
+          ctx.font = `${layer.size || 24}px 'Share Tech Mono', monospace`;
+          bounds.w = ctx.measureText(layer.text || '').width;
+          bounds.h = (layer.size || 24) * 1.2;
+          bounds.x = layer.x;
+          bounds.y = layer.y;
+        } else if (layer.type === 'image' && (layer as any).img) {
+          const img = (layer as any).img as HTMLImageElement;
+          const scale = (layer as any).scale ?? 1;
+          bounds.w = img.naturalWidth * scale;
+          bounds.h = img.naturalHeight * scale;
+          bounds.x = layer.x - bounds.w / 2;
+          bounds.y = layer.y - bounds.h / 2;
+        } else if (layer.type === 'drawing' && layer.drawingCanvas) {
+          bounds.x = 0; bounds.y = 0; bounds.w = canvas.width; bounds.h = canvas.height;
+        }
+
+        // dashed rect
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 3]);
+        ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+        ctx.setLineDash([]);
+
+        // handle size
+        const hs = 10;
+        // draw handles
+        ctx.fillStyle = '#00ffff';
+        // bottom-right
+        ctx.fillRect(bounds.x + bounds.w - hs/2, bounds.y + bounds.h - hs/2, hs, hs);
+        // bottom-left
+        ctx.fillRect(bounds.x - hs/2, bounds.y + bounds.h - hs/2, hs, hs);
+        // top-left
+        ctx.fillRect(bounds.x - hs/2, bounds.y - hs/2, hs, hs);
+        // top-right
+        ctx.fillRect(bounds.x + bounds.w - hs/2, bounds.y - hs/2, hs, hs);
+
+        ctx.restore();
+      }
+    }
+
+    if (actionRef.current?.type === 'draw' && actionRef.current.tempCanvas) {
+      ctx.drawImage(actionRef.current.tempCanvas, 0, 0);
+    }
+  };
+
+  useEffect(() => { redrawAll(); }, [layers]);
+
+  useEffect(() => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = baseImageUrl;
     img.onload = () => {
-      const maxWidth = 800;
+      baseImageRef.current = img;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const maxWidth = 900;
       const scale = Math.min(1, maxWidth / img.naturalWidth);
-      canvas.width = img.naturalWidth * scale;
-      canvas.height = img.naturalHeight * scale;
-      // initialize offscreen drawing canvas to capture brush strokes
-      drawingOffscreen.current = document.createElement('canvas');
-      drawingOffscreen.current.width = canvas.width;
-      drawingOffscreen.current.height = canvas.height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // if an initial image file (e.g. glitch) was provided, add it as an image layer centered
-      if (initialImageFile) {
-        const url = URL.createObjectURL(initialImageFile);
-        const img2 = new Image();
-        img2.crossOrigin = 'anonymous';
-        img2.src = url;
-        img2.onload = () => {
-          try {
-            const id = `layer-${Date.now()}`;
-            const naturalW = img2.naturalWidth || img2.width || 100;
-            const scaleToFit = Math.min(1, canvas.width / naturalW, canvas.height / (img2.naturalHeight || img2.height || 100));
-            setLayers(prev => [...prev, { 
-              id, 
-              type: 'image', 
-              name: 'Imagem Inicial',
-              visible: true,
-              opacity: 100,
-              locked: false,
-              x: canvas.width / 2, 
-              y: canvas.height / 2, 
-              img: img2, 
-              scale: scaleToFit 
-            }]);
-            setSelectedLayer(id);
-            redrawAll();
-          } catch (e) {
-            // ignore
-          }
-        };
-        // cleanup object url when component unmounts
-        const cleanup = () => { try { URL.revokeObjectURL(url); } catch (e) {} };
-        // schedule cleanup on unmount
-        (canvas as any).__initialImageCleanup = cleanup;
-      }
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      redrawAll();
+      setHistory([[]]);
+      setHistoryIndex(0);
     };
-    return () => {
-      // revoke any initial image url
-      const cleanup = (canvasRef.current as any)?.__initialImageCleanup;
-      if (cleanup && typeof cleanup === 'function') cleanup();
-    };
-  }, [baseImageUrl, initialImageFile]);
+  }, [baseImageUrl]);
 
-  // redraw main canvas from offscreen drawing + layers
-  const redrawAll = () => {
-    // Se já tem um redraw agendado, não agenda outro
-    if (redrawScheduledRef.current) return;
-    
-    redrawScheduledRef.current = true;
-    redrawRafIdRef.current = requestAnimationFrame(() => {
-      redrawScheduledRef.current = false;
-      redrawRafIdRef.current = null;
-      
-      const canvas = canvasRef.current;
-      const off = drawingOffscreen.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // draw existing strokes from offscreen
-      if (off) ctx.drawImage(off, 0, 0);
-      // draw layers (respecting visibility and opacity)
-      for (const layer of layers) {
-        if (!layer.visible) continue; // skip invisible layers
-        
-        ctx.save();
-        ctx.globalAlpha = (layer.opacity || 100) / 100;
-        
-        if (layer.type === 'text') {
-          // draw subtle stroke for contrast then fill
-          ctx.fillStyle = layer.color || color;
-          ctx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-          ctx.textBaseline = 'top';
-          ctx.lineWidth = Math.max(1, (layer.size || textSize) * 0.08);
-          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.strokeText(layer.text || '', layer.x || 0, layer.y || 0);
-          ctx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-        } else if (layer.type === 'image' && layer.img) {
-          const w = layer.img.naturalWidth * (layer.scale || 1);
-          const h = layer.img.naturalHeight * (layer.scale || 1);
-          ctx.drawImage(layer.img, (layer.x || 0) - w/2, (layer.y || 0) - h/2, w, h);
-        } else if (layer.type === 'drawing' && layer.drawingCanvas) {
-          // Draw the drawing layer canvas
-          ctx.drawImage(layer.drawingCanvas, 0, 0);
-        }
-        
-        ctx.restore();
-      }
-      // draw selection outline with resize handles
-      if (selectedLayer) {
-        const s = layers.find(l => l.id === selectedLayer);
-        if (s) {
-          ctx.save();
-          ctx.strokeStyle = '#00ffff';
-          ctx.setLineDash([6,4]);
-          ctx.lineWidth = 2;
-          
-          let bounds = { x: 0, y: 0, w: 0, h: 0 };
-          
-          if (s.type === 'image' && s.img) {
-            const w = s.img.naturalWidth * (s.scale || 1);
-            const h = s.img.naturalHeight * (s.scale || 1);
-            bounds = { x: s.x - w/2, y: s.y - h/2, w, h };
-          } else if (s.type === 'text') {
-            ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-            const measure = ctx.measureText(s.text || '');
-            const w = measure.width;
-            const h = (s.size || textSize) * 1.2;
-            bounds = { x: s.x, y: s.y, w, h };
-          }
-          
-          // Draw bounding box
-          ctx.strokeRect(bounds.x - 6, bounds.y - 6, bounds.w + 12, bounds.h + 12);
-          
-          // Draw resize handles (corner circles)
-          const handleSize = 10;
-          ctx.fillStyle = '#00ffff';
-          ctx.strokeStyle = '#ffffff';
-          ctx.setLineDash([]);
-          ctx.lineWidth = 2;
-          
-          const handles = [
-            { x: bounds.x - 6, y: bounds.y - 6, pos: 'nw' }, // top-left
-            { x: bounds.x + bounds.w + 6, y: bounds.y - 6, pos: 'ne' }, // top-right
-            { x: bounds.x - 6, y: bounds.y + bounds.h + 6, pos: 'sw' }, // bottom-left
-            { x: bounds.x + bounds.w + 6, y: bounds.y + bounds.h + 6, pos: 'se' }, // bottom-right
-          ];
-          
-          handles.forEach(handle => {
-            ctx.beginPath();
-            ctx.arc(handle.x, handle.y, handleSize / 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-          });
-          
-          ctx.restore();
-        }
-      }
-    });
-  };
-
+  // Keyboard shortcuts for layer reordering and deletion
   useEffect(() => {
-    if (!imageFile) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = URL.createObjectURL(imageFile);
-    img.onload = () => setImageEl(img);
-    return () => { try { URL.revokeObjectURL(img.src); } catch(e) {} };
-  }, [imageFile]);
-
-  // redraw when layers change
-  useEffect(() => { redrawAll(); }, [layers]);
-
-  const getCtx = (): CanvasRenderingContext2D | null => canvasRef.current?.getContext('2d') || null;
-
-  const startDrawing = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = getCtx();
-    if (!ctx) return;
-    if (tool !== 'draw' && tool !== 'erase') return;
-    const rect = canvas.getBoundingClientRect();
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const scaleX = canvas.width / rect.width || 1;
-    const scaleY = canvas.height / rect.height || 1;
-    const x = rawX * scaleX;
-    const y = rawY * scaleY;
-    
-    // Check if we should draw on a selected drawing layer
-    let targetCanvas = drawingOffscreen.current;
-    if (selectedLayer) {
-      const layer = layers.find(l => l.id === selectedLayer);
-      if (layer && layer.type === 'drawing' && layer.drawingCanvas) {
-        targetCanvas = layer.drawingCanvas;
-      }
-    }
-    
-    // draw on offscreen canvas or layer canvas
-    const off = targetCanvas;
-    if (!off) return;
-    const octx = off.getContext('2d');
-    if (!octx) return;
-    octx.beginPath();
-    octx.moveTo(x, y);
-    octx.lineCap = 'round';
-    octx.lineJoin = 'round';
-    octx.lineWidth = brushSize * ((scaleX + scaleY) / 2);
-    if (tool === 'erase') {
-      octx.globalCompositeOperation = 'destination-out';
-      octx.shadowBlur = 0;
-    } else {
-      octx.globalCompositeOperation = 'source-over';
-      // if censor mode is active, draw flat black with no blur for redaction bars
-      if (censorMode) {
-        octx.strokeStyle = '#000000';
-        octx.shadowBlur = 0;
-      } else {
-        octx.strokeStyle = color;
-        octx.shadowColor = mode === 'filter' ? 'rgba(255,255,255,0.9)' : color;
-        octx.shadowBlur = mode === 'filter' ? 8 : 15;
-      }
-    }
-    setIsDrawing(true);
-    // immediately reflect on main canvas
-    redrawAll();
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent): boolean => {
-    const canvas = canvasRef.current;
-    if (!canvas) return false;
-    const ctx = getCtx();
-    if (!ctx) return false;
-    const rect = canvas.getBoundingClientRect();
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const scaleX = canvas.width / rect.width || 1;
-    const scaleY = canvas.height / rect.height || 1;
-    const x = rawX * scaleX;
-    const y = rawY * scaleY;
-    
-    // Check if clicking on resize handle of selected layer
-    if (selectedLayer) {
-      const s = layers.find(l => l.id === selectedLayer);
-      if (s) {
-        let bounds = { x: 0, y: 0, w: 0, h: 0 };
-        
-        if (s.type === 'image' && s.img) {
-          const w = s.img.naturalWidth * (s.scale || 1);
-          const h = s.img.naturalHeight * (s.scale || 1);
-          bounds = { x: s.x - w/2, y: s.y - h/2, w, h };
-        } else if (s.type === 'text') {
-          ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-          const measure = ctx.measureText(s.text || '');
-          const w = measure.width;
-          const h = (s.size || textSize) * 1.2;
-          bounds = { x: s.x, y: s.y, w, h };
-        }
-        
-        const handleSize = 10;
-        const handles = [
-          { x: bounds.x - 6, y: bounds.y - 6, pos: 'nw' },
-          { x: bounds.x + bounds.w + 6, y: bounds.y - 6, pos: 'ne' },
-          { x: bounds.x - 6, y: bounds.y + bounds.h + 6, pos: 'sw' },
-          { x: bounds.x + bounds.w + 6, y: bounds.y + bounds.h + 6, pos: 'se' },
-        ];
-        
-        for (const handle of handles) {
-          const dist = Math.sqrt(Math.pow(x - handle.x, 2) + Math.pow(y - handle.y, 2));
-          if (dist <= handleSize) {
-            // Start resizing
-            setIsResizing(true);
-            setResizeHandle(handle.pos);
-            if (s.type === 'image' && s.img) {
-              resizeStartRef.current = {
-                x: s.x,
-                y: s.y,
-                width: s.img.naturalWidth * (s.scale || 1),
-                height: s.img.naturalHeight * (s.scale || 1),
-                scale: s.scale || 1
-              };
-            } else if (s.type === 'text') {
-              resizeStartRef.current = {
-                x: s.x,
-                y: s.y,
-                width: 0,
-                height: 0,
-                scale: s.size || textSize
-              };
-            }
-            return true;
-          }
-        }
-      }
-    }
-    
-    // if clicking on an existing layer, select it (unless locked)
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const layer = layers[i];
-      if (!layer.visible) continue; // skip invisible layers
-      if (layer.type === 'image' && layer.img) {
-        const w = layer.img.naturalWidth * (layer.scale || 1);
-        const h = layer.img.naturalHeight * (layer.scale || 1);
-        const left = layer.x - w/2;
-        const top = layer.y - h/2;
-        if (x >= left && x <= left + w && y >= top && y <= top + h) {
-          setSelectedLayer(layer.id);
-          // prepare drag offset and start dragging immediately
-          dragOffsetRef.current = { ox: x - layer.x, oy: y - layer.y };
-          setIsDraggingLayer(true);
-          return true;
-        }
-      } else if (layer.type === 'text') {
-        const size = layer.size || textSize;
-        const measure = ctx.measureText(layer.text || '');
-        const w = measure.width;
-        const h = size * 1.2;
-        const left = layer.x;
-        const top = layer.y;
-        if (x >= left && x <= left + w && y >= top && y <= top + h) {
-          setSelectedLayer(layer.id);
-          dragOffsetRef.current = { ox: x - layer.x, oy: y - layer.y };
-          setIsDraggingLayer(true);
-          return true;
-        }
-      }
-    }
-
-    // placing new items
-    if (tool === 'placeText' && textValue) {
-      const id = `layer-${Date.now()}`;
-      const newLayer: Layer = { 
-        id, 
-        type: 'text', 
-        name: textValue.substring(0, 20) || 'Texto',
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x, 
-        y, 
-        text: textValue, 
-        size: textSize, 
-        color 
-      };
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
-      setTextValue('');
-      redrawAll();
-      return true;
-    }
-
-    if (tool === 'placeImage' && imageEl) {
-      const id = `layer-${Date.now()}`;
-      const newLayer: Layer = { 
-        id, 
-        type: 'image', 
-        name: 'Imagem ' + (layers.filter(l => l.type === 'image').length + 1),
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x, 
-        y, 
-        img: imageEl, 
-        scale: imageScale 
-      };
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
-      setImageFile(null);
-      setImageEl(null);
-      redrawAll();
-      return true;
-    }
-    // if clicked on empty space, clear selection and indicate we did not handle placement
-    setSelectedLayer(null);
-    return false;
-  };
-
-  const draw = (e: React.MouseEvent) => {
-    // Salva o último evento de mouse
-    lastMouseEventRef.current = e;
-    
-    // Se já tem um RAF agendado, não agenda outro
-    if (rafIdRef.current !== null) return;
-    
-    // Agenda processamento no próximo frame
-    rafIdRef.current = requestAnimationFrame(() => {
-      rafIdRef.current = null;
-      
-      const mouseEvent = lastMouseEventRef.current;
-      if (!mouseEvent) return;
-      
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const rawX = mouseEvent.clientX - rect.left;
-      const rawY = mouseEvent.clientY - rect.top;
-      const scaleX = canvas.width / rect.width || 1;
-      const scaleY = canvas.height / rect.height || 1;
-      const x = rawX * scaleX;
-      const y = rawY * scaleY;
-      
-      // Handle resizing
-      if (isResizing && selectedLayer && resizeHandle && resizeStartRef.current) {
-        const s = layers.find(l => l.id === selectedLayer);
-        if (s) {
-          const startData = resizeStartRef.current;
-          
-          if (s.type === 'image' && s.img) {
-            // Calculate new scale based on handle movement
-            const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-            const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-            const delta = Math.max(dx, dy);
-            const newScale = Math.max(0.1, startData.scale + (delta / s.img.naturalWidth));
-            
-            setLayers(prev => prev.map(l => 
-              l.id === selectedLayer ? { ...l, scale: newScale } : l
-            ));
-          } else if (s.type === 'text') {
-            // For text, resize means changing font size
-            const dx = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-            const dy = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-            const delta = Math.max(dx, dy);
-            const newSize = Math.max(8, Math.min(200, startData.scale + delta / 2));
-            
-            setLayers(prev => prev.map(l => 
-              l.id === selectedLayer ? { ...l, size: Math.round(newSize) } : l
-            ));
-          }
-          
-          redrawAll();
-        }
+    const onKey = (e: KeyboardEvent) => {
+      if (!selectedLayerId) return;
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        deleteLayer(selectedLayerId);
         return;
       }
-      
-      // Handle drawing
-      if (isDrawing) {
-        // Check if we should draw on a selected drawing layer
-        let targetCanvas = drawingOffscreen.current;
-        if (selectedLayer) {
-          const layer = layers.find(l => l.id === selectedLayer);
-          if (layer && layer.type === 'drawing' && layer.drawingCanvas) {
-            targetCanvas = layer.drawingCanvas;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const idx = layers.findIndex(l => l.id === selectedLayerId);
+        if (idx === -1) return;
+        const newLayers = [...layers];
+        if (e.key === 'ArrowUp' && idx < layers.length - 1) {
+          // move up (towards front/top)
+          const tmp = newLayers[idx+1]; newLayers[idx+1] = newLayers[idx]; newLayers[idx] = tmp;
+          updateLayersAndRecordHistory(newLayers);
+        } else if (e.key === 'ArrowDown' && idx > 0) {
+          // move down (towards back/bottom)
+          const tmp = newLayers[idx-1]; newLayers[idx-1] = newLayers[idx]; newLayers[idx] = tmp;
+          updateLayersAndRecordHistory(newLayers);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedLayerId, layers]);
+
+  // --- INTERAÇÕES DO MOUSE ---
+  const getCanvasCoords = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const { x, y } = getCanvasCoords(e);
+
+    if (tool === 'draw' || tool === 'erase') {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasRef.current!.width;
+      tempCanvas.height = canvasRef.current!.height;
+      // If erasing directly into an existing drawing layer, draw to that layer's canvas
+      if (tool === 'erase') {
+        // prefer selected drawing layer
+        let target = layers.find(l => l.id === selectedLayerId && l.type === 'drawing');
+        if (!target) {
+          // fallback to last drawing layer
+          for (let i = layers.length - 1; i >= 0; i--) {
+            if (layers[i].type === 'drawing') { target = layers[i]; break; }
           }
         }
-        
-        const off = targetCanvas;
-        if (!off) return;
-        const ctx = off.getContext('2d');
-        if (!ctx) return;
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        redrawAll();
-        return;
-      }
-    });
-  };
 
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-    const off = drawingOffscreen.current;
-    const ctx = off?.getContext('2d') || null;
-    ctx?.closePath();
-    setIsDrawing(false);
-  };
-
-  // drag handling for selected layer
-  useEffect(() => {
-    let rafId: number | null = null;
-    let lastMouseEvent: MouseEvent | null = null;
-    
-    const handleMove = (e: MouseEvent) => {
-      lastMouseEvent = e;
-      
-      if (!isDraggingLayer && !isResizing) return;
-      
-      // Se já tem um RAF agendado, não agenda outro
-      if (rafId !== null) return;
-      
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        
-        if (!lastMouseEvent) return;
-        const e = lastMouseEvent;
-        
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const rawX = e.clientX - rect.left;
-        const rawY = e.clientY - rect.top;
-        const scaleX = canvas.width / rect.width || 1;
-        const scaleY = canvas.height / rect.height || 1;
-        const x = rawX * scaleX;
-        const y = rawY * scaleY;
-        
-        if (isDraggingLayer && selectedLayer) {
-          setLayers(prev => prev.map(l => l.id !== selectedLayer ? l : { ...l, x: x - (dragOffsetRef.current?.ox||0), y: y - (dragOffsetRef.current?.oy||0) }));
-          redrawAll();
+        if (target && target.drawingCanvas) {
+          const dctx = target.drawingCanvas.getContext('2d')!;
+          dctx.globalCompositeOperation = 'destination-out';
+          dctx.strokeStyle = 'rgba(0,0,0,1)';
+          dctx.lineWidth = brushSize;
+          dctx.lineCap = 'round';
+          dctx.lineJoin = 'round';
+          dctx.beginPath();
+          dctx.moveTo(x, y);
+          actionRef.current = { type: 'draw', startX: x, startY: y, directCtx: dctx, targetLayerId: target.id };
+          return;
         }
+
+        // otherwise draw to tempCanvas and merge later
+      }
+
+      const ctx = tempCanvas.getContext('2d')!;
+      if (tool === 'erase') ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      actionRef.current = { type: 'draw', startX: x, startY: y, tempCanvas, targetLayerId: undefined };
+      return;
+    }
+
+    if (tool === 'select') {
+      // Find top-most layer under the pointer (basic bounding boxes for text/image/drawing)
+      const found = [...layers].reverse().find(l => {
+        if (!l.visible) return false;
+        const ctx = canvasRef.current!.getContext('2d')!;
+        let bx = 0, by = 0, bw = 0, bh = 0;
+        if (l.type === 'text' && l.text) {
+          ctx.font = `${l.size || 24}px 'Share Tech Mono', monospace`;
+          bw = ctx.measureText(l.text).width;
+          bh = (l.size || 24) * 1.2;
+          bx = l.x; by = l.y;
+        } else if (l.type === 'image' && (l as any).img) {
+          const img = (l as any).img as HTMLImageElement;
+          const scale = (l as any).scale ?? 1;
+          bw = img.naturalWidth * scale;
+          bh = img.naturalHeight * scale;
+          bx = l.x - bw / 2;
+          by = l.y - bh / 2;
+        } else if (l.type === 'drawing') {
+          bx = 0; by = 0; bw = canvasRef.current!.width; bh = canvasRef.current!.height;
+        }
+        return x >= bx && x <= bx + bw && y >= by && y <= by + bh;
       });
-    };
-    
-    const handleUp = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      if (isDraggingLayer) setIsDraggingLayer(false);
-      if (isResizing) {
-        setIsResizing(false);
-        setResizeHandle(null);
-        resizeStartRef.current = null;
-      }
-    };
-    
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, [isDraggingLayer, isResizing, selectedLayer]);
 
-  const handleFinish = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    // ensure latest drawing + layers are rendered
-    redrawAll();
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const file = new File([blob], `uv_layer_${Date.now()}.png`, { type: 'image/png' });
-      onSave(file);
-    });
+      if (found && !found.locked) {
+        // determine if pointer hit a resize handle on the found layer
+        const ctx = canvasRef.current!.getContext('2d')!;
+        let bounds = { x: 0, y: 0, w: 0, h: 0 };
+        if (found.type === 'text') {
+          ctx.font = `${found.size || 24}px 'Share Tech Mono', monospace`;
+          bounds.w = ctx.measureText(found.text || '').width;
+          bounds.h = (found.size || 24) * 1.2;
+          bounds.x = found.x; bounds.y = found.y;
+        } else if (found.type === 'image' && (found as any).img) {
+          const img = (found as any).img as HTMLImageElement;
+          const scale = (found as any).scale ?? 1;
+          bounds.w = img.naturalWidth * scale;
+          bounds.h = img.naturalHeight * scale;
+          bounds.x = found.x - bounds.w / 2; bounds.y = found.y - bounds.h / 2;
+        } else if (found.type === 'drawing') {
+          bounds.x = 0; bounds.y = 0; bounds.w = canvasRef.current!.width; bounds.h = canvasRef.current!.height;
+        }
+
+        const hs = 10;
+        const handleRects = {
+          nw: { x: bounds.x - hs/2, y: bounds.y - hs/2, w: hs, h: hs },
+          ne: { x: bounds.x + bounds.w - hs/2, y: bounds.y - hs/2, w: hs, h: hs },
+          sw: { x: bounds.x - hs/2, y: bounds.y + bounds.h - hs/2, w: hs, h: hs },
+          se: { x: bounds.x + bounds.w - hs/2, y: bounds.y + bounds.h - hs/2, w: hs, h: hs },
+        };
+
+        const hitHandle = (Object.keys(handleRects) as Array<keyof typeof handleRects>).find(k => {
+          const r = handleRects[k];
+          return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        }) as ('nw' | 'ne' | 'sw' | 'se') | undefined;
+
+        setSelectedLayerId(found.id);
+        if (hitHandle) {
+          actionRef.current = {
+            type: 'resize', startX: x, startY: y, handle: hitHandle,
+            initialBounds: bounds,
+            initialScale: (found as any).scale ?? 1,
+            initialSize: (found as any).size ?? 24,
+          };
+        } else {
+          actionRef.current = { type: 'drag', startX: x, startY: y, initialLayerState: found };
+        }
+      } else {
+        setSelectedLayerId(null);
+        actionRef.current = null;
+      }
+    }
   };
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const off = drawingOffscreen.current;
-    if (off) {
-      const octx = off.getContext('2d');
-      octx?.clearRect(0,0,off.width, off.height);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const { x, y } = getCanvasCoords(e);
+    const canvasEl = canvasRef.current!;
+    // when idle (no action), provide hover feedback for handles and layers
+    if (!actionRef.current) {
+      let cursor = 'default';
+      if (selectedLayerId) {
+        const l = layers.find(ll => ll.id === selectedLayerId);
+        if (l) {
+          const ctx = canvasEl.getContext('2d')!;
+          let bounds = { x: 0, y: 0, w: 0, h: 0 };
+          if (l.type === 'text') {
+            ctx.font = `${l.size || 24}px 'Share Tech Mono', monospace`;
+            bounds.w = ctx.measureText(l.text || '').width;
+            bounds.h = (l.size || 24) * 1.2;
+            bounds.x = l.x; bounds.y = l.y;
+          } else if (l.type === 'image' && (l as any).img) {
+            const img = (l as any).img as HTMLImageElement;
+            const scale = (l as any).scale ?? 1;
+            bounds.w = img.naturalWidth * scale;
+            bounds.h = img.naturalHeight * scale;
+            bounds.x = l.x - bounds.w / 2; bounds.y = l.y - bounds.h / 2;
+          }
+          const hs = 12;
+          const handleRects = [
+            { cursor: 'nwse-resize', x: bounds.x - hs/2, y: bounds.y - hs/2, w: hs, h: hs },
+            { cursor: 'nesw-resize', x: bounds.x + bounds.w - hs/2, y: bounds.y - hs/2, w: hs, h: hs },
+            { cursor: 'nesw-resize', x: bounds.x - hs/2, y: bounds.y + bounds.h - hs/2, w: hs, h: hs },
+            { cursor: 'nwse-resize', x: bounds.x + bounds.w - hs/2, y: bounds.y + bounds.h - hs/2, w: hs, h: hs },
+          ];
+          for (const r of handleRects) {
+            if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { cursor = r.cursor; break; }
+          }
+          if (cursor === 'default') {
+            // if pointer over any layer, show move cursor
+            const over = [...layers].reverse().find(ll => {
+              if (!ll.visible) return false;
+              const ctx2 = canvasEl.getContext('2d')!;
+              let bx = 0, by = 0, bw = 0, bh = 0;
+              if (ll.type === 'text' && ll.text) {
+                ctx2.font = `${ll.size || 24}px 'Share Tech Mono', monospace`;
+                bw = ctx2.measureText(ll.text).width; bh = (ll.size || 24) * 1.2; bx = ll.x; by = ll.y;
+              } else if (ll.type === 'image' && (ll as any).img) {
+                const img = (ll as any).img as HTMLImageElement;
+                const scale = (ll as any).scale ?? 1;
+                bw = img.naturalWidth * scale; bh = img.naturalHeight * scale; bx = ll.x - bw/2; by = ll.y - bh/2;
+              }
+              return x >= bx && x <= bx + bw && y >= by && y <= by + bh;
+            });
+            if (over) cursor = 'move';
+          }
+        }
+      }
+      canvasEl.style.cursor = cursor;
     }
-    setLayers([]);
-    redrawAll();
+
+    if (!actionRef.current) return;
+
+    // proceed with active actions
+    // if drawing directly into a layer (eraser direct), draw on that ctx
+    if (actionRef.current.type === 'draw' && actionRef.current.directCtx) {
+      const dctx = actionRef.current.directCtx;
+      dctx.lineTo(x, y);
+      dctx.stroke();
+      redrawAll();
+      return;
+    }
+
+    if (actionRef.current.type === 'draw' && actionRef.current.tempCanvas) {
+      const ctx = actionRef.current.tempCanvas.getContext('2d')!;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      redrawAll();
+      return;
+    }
+
+    if (actionRef.current.type === 'resize' && selectedLayerId) {
+      const meta = actionRef.current;
+      const dx = x - meta.startX;
+      const dy = y - meta.startY;
+      const bounds = meta.initialBounds!;
+      const l = layers.find(ll => ll.id === selectedLayerId)!;
+      if (!bounds || !l) return;
+      const isEast = meta.handle === 'ne' || meta.handle === 'se';
+      const isSouth = meta.handle === 'se' || meta.handle === 'sw';
+      const scaleX = (bounds.w + (isEast ? dx : -dx)) / Math.max(1, bounds.w);
+      const scaleY = (bounds.h + (isSouth ? dy : -dy)) / Math.max(1, bounds.h);
+      // If Shift is pressed, constrain aspect ratio (use the smaller scale)
+      const factor = Math.max(0.05, (e.shiftKey ? Math.min(scaleX, scaleY) : (scaleX + scaleY) / 2));
+      if (l.type === 'image') {
+        const newScale = (meta.initialScale || 1) * factor;
+        setLayersState(current => current.map(layer => layer.id === l.id ? { ...layer, scale: newScale } : layer));
+      } else if (l.type === 'text') {
+        const newSize = Math.max(6, Math.round((meta.initialSize || 24) * factor));
+        setLayersState(current => current.map(layer => layer.id === l.id ? { ...layer, size: newSize } : layer));
+      }
+      redrawAll();
+      return;
+    }
+
+    if (actionRef.current.type === 'drag' && selectedLayerId) {
+      const dx = x - actionRef.current.startX;
+      const dy = y - actionRef.current.startY;
+      const initial = actionRef.current.initialLayerState!;
+      setLayersState(currentLayers => currentLayers.map(l =>
+        l.id === selectedLayerId ? { ...l, x: initial.x + dx, y: initial.y + dy } : l
+      ));
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!actionRef.current) return;
+
+    if (actionRef.current.type === 'draw' && actionRef.current.tempCanvas) {
+      if (tool === 'erase') {
+        // merge tempCanvas onto a drawing layer if target specified
+        if (actionRef.current.targetLayerId) {
+          const target = layers.find(l => l.id === actionRef.current.targetLayerId!);
+          if (target && target.drawingCanvas) {
+            const tctx = target.drawingCanvas.getContext('2d')!;
+            tctx.globalCompositeOperation = 'destination-out';
+            tctx.drawImage(actionRef.current.tempCanvas!, 0, 0);
+            tctx.globalCompositeOperation = 'source-over';
+            updateLayersAndRecordHistory(layers);
+          }
+        } else {
+          // create a new drawing layer (contains eraser strokes as transparent marks)
+          const newLayer: Layer = {
+            id: `l-${Date.now()}`,
+            type: 'drawing', name: 'Eraser', visible: true, opacity: 100, locked: false,
+            x: 0, y: 0, drawingCanvas: actionRef.current.tempCanvas,
+          };
+          updateLayersAndRecordHistory(prev => [...prev, newLayer]);
+        }
+      } else {
+        const newLayer: Layer = {
+          id: `l-${Date.now()}`,
+          type: 'drawing', name: 'Desenho', visible: true, opacity: 100, locked: false,
+          x: 0, y: 0, drawingCanvas: actionRef.current.tempCanvas,
+        };
+        updateLayersAndRecordHistory(prev => [...prev, newLayer]);
+      }
+    } else if (actionRef.current.type === 'draw' && actionRef.current.directCtx) {
+      // drawing/erasing directly modified a layer
+      updateLayersAndRecordHistory(layers);
+    } else if (actionRef.current.type === 'drag') {
+      updateLayersAndRecordHistory(layers);
+    } else if (actionRef.current.type === 'resize') {
+      updateLayersAndRecordHistory(layers);
+    }
+    actionRef.current = null;
+  };
+
+  // --- AÇÕES DE CAMADAS ---
+  const addTextLayer = () => {
+    const canvas = canvasRef.current!;
+    const newLayer: Layer = {
+      id: `l-${Date.now()}`,
+      type: 'text', name: 'Texto Novo', visible: true, opacity: 100, locked: false,
+      x: canvas.width / 2 - 50, y: canvas.height / 2, text: 'Edite-me', size: 32, color,
+    };
+    setSelectedLayerId(newLayer.id);
+    updateLayersAndRecordHistory(prev => [...prev, newLayer]);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = canvasRef.current!;
+        const newLayer: Layer = {
+          id: `l-${Date.now()}`,
+          type: 'image',
+          name: file.name,
+          visible: true,
+          opacity: 100,
+          locked: false,
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          img: img,
+          scale: 0.5,
+        } as Layer;
+        updateLayersAndRecordHistory(prev => [...prev, newLayer]);
+        setSelectedLayerId(newLayer.id);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const updateLayerProperty = (id: string, prop: Partial<Layer>) => {
+    const newLayers = layers.map(l => l.id === id ? { ...l, ...prop } : l);
+    updateLayersAndRecordHistory(newLayers);
   };
 
   const deleteLayer = (id: string) => {
-    setLayers(prev => prev.filter(l => l.id !== id));
-    if (selectedLayer === id) setSelectedLayer(null);
-    redrawAll();
-  };
-
-  const selectLayer = (id: string) => {
-    setSelectedLayer(id);
-    setTool('draw');
-    redrawAll();
-  };
-
-  const addEmptyTextLayer = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const id = `layer-${Date.now()}`;
-    const newLayer: Layer = { 
-      id, 
-      type: 'text',
-      name: 'Novo Texto',
-      visible: true,
-      opacity: 100,
-      locked: false,
-      x: canvas.width / 2, 
-      y: canvas.height / 2, 
-      text: 'Novo Texto', 
-      size: textSize, 
-      color 
-    };
-    setLayers(prev => [...prev, newLayer]);
-    setSelectedLayer(id);
-    setShowAddLayerMenu(false);
-    redrawAll();
-  };
-
-  const addEmptyDrawingLayer = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const id = `layer-${Date.now()}`;
-    
-    // Create an offscreen canvas for this drawing layer
-    const drawCanvas = document.createElement('canvas');
-    drawCanvas.width = canvas.width;
-    drawCanvas.height = canvas.height;
-    
-    const newLayer: Layer = { 
-      id, 
-      type: 'drawing',
-      name: 'Desenho ' + (layers.filter(l => l.type === 'drawing').length + 1),
-      visible: true,
-      opacity: 100,
-      locked: false,
-      drawingCanvas: drawCanvas,
-      x: 0,
-      y: 0
-    };
-    setLayers(prev => [...prev, newLayer]);
-    setSelectedLayer(id);
-    setShowAddLayerMenu(false);
-    setTool('draw');
-    redrawAll();
-  };
-
-  const toggleLayerVisibility = (id: string) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
-    redrawAll();
-  };
-
-  const toggleLayerLock = (id: string) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, locked: !l.locked } : l));
-  };
-
-  const updateLayerOpacity = (id: string, opacity: number) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, opacity: Math.max(0, Math.min(100, opacity)) } : l));
-    redrawAll();
-  };
-
-  const renameLayer = (id: string, newName: string) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, name: newName } : l));
-    setEditingLayerName(null);
+    updateLayersAndRecordHistory(prev => prev.filter(l => l.id !== id));
+    if (selectedLayerId === id) setSelectedLayerId(null);
   };
 
   const duplicateLayer = (id: string) => {
-    const layer = layers.find(l => l.id === id);
-    if (!layer) return;
-    const newId = `layer-${Date.now()}`;
-    const duplicated: Layer = {
-      ...layer,
-      id: newId,
-      name: layer.name + ' (cópia)',
-      x: (layer.x || 0) + 20,
-      y: (layer.y || 0) + 20
+    const layerToDup = layers.find(l => l.id === id);
+    if (!layerToDup) return;
+    const newLayer = {
+      ...layerToDup,
+      id: `l-${Date.now()}`,
+      name: `${layerToDup.name} Cópia`,
+      x: layerToDup.x + 10,
+      y: layerToDup.y + 10,
     };
-    const index = layers.findIndex(l => l.id === id);
-    setLayers(prev => [...prev.slice(0, index + 1), duplicated, ...prev.slice(index + 1)]);
-    setSelectedLayer(newId);
-    redrawAll();
+    updateLayersAndRecordHistory(prev => [...prev, newLayer]);
+  };
+
+  const groupSelected = () => {
+    const ids = Array.from(multiSelectIds);
+    if (ids.length < 2) return;
+    // preserve order from layers array
+    const ordered = layers.filter(l => ids.includes(l.id)).map(l => l.id);
+    const groupLayer: Layer = {
+      id: `g-${Date.now()}`,
+      type: 'group', name: `Group ${Date.now()}`, visible: true, opacity: 100, locked: false,
+      x: 0, y: 0, children: ordered, isExpanded: true
+    } as Layer;
+    // set parentId on children
+    const newLayers = layers.map(l => ids.includes(l.id) ? { ...l, parentId: groupLayer.id } : l);
+    // add group on top
+    newLayers.push(groupLayer);
+    updateLayersAndRecordHistory(newLayers);
+    setMultiSelectIds(new Set());
+    setSelectedLayerId(groupLayer.id);
+  };
+
+  const ungroupSelected = (groupId: string) => {
+    const group = layers.find(l => l.id === groupId && l.type === 'group');
+    if (!group) return;
+    // clear parentId from children and remove group
+    const newLayers = layers.filter(l => l.id !== groupId).map(l => l.parentId === groupId ? { ...l, parentId: null } : l);
+    updateLayersAndRecordHistory(newLayers);
+    setSelectedLayerId(null);
   };
 
   const mergeDown = (id: string) => {
-    const index = layers.findIndex(l => l.id === id);
-    if (index <= 0) return; // can't merge if it's the bottom layer
-    
+    const idx = layers.findIndex(l => l.id === id);
+    if (idx <= 0) return; // nothing below
+    const top = layers[idx];
+    const bottom = layers[idx - 1];
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    // Create temporary canvas to merge layers
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    
-    const lowerLayer = layers[index - 1];
-    const upperLayer = layers[index];
-    
-    // Draw lower layer
-    tempCtx.globalAlpha = (lowerLayer.opacity || 100) / 100;
-    if (lowerLayer.type === 'image' && lowerLayer.img) {
-      const w = lowerLayer.img.naturalWidth * (lowerLayer.scale || 1);
-      const h = lowerLayer.img.naturalHeight * (lowerLayer.scale || 1);
-      tempCtx.drawImage(lowerLayer.img, (lowerLayer.x || 0) - w/2, (lowerLayer.y || 0) - h/2, w, h);
-    }
-    
-    // Draw upper layer on top
-    tempCtx.globalAlpha = (upperLayer.opacity || 100) / 100;
-    if (upperLayer.type === 'image' && upperLayer.img) {
-      const w = upperLayer.img.naturalWidth * (upperLayer.scale || 1);
-      const h = upperLayer.img.naturalHeight * (upperLayer.scale || 1);
-      tempCtx.drawImage(upperLayer.img, (upperLayer.x || 0) - w/2, (upperLayer.y || 0) - h/2, w, h);
-    }
-    
-    // Create merged image
-    const mergedImg = new Image();
-    mergedImg.src = tempCanvas.toDataURL();
-    mergedImg.onload = () => {
-      const mergedLayer: Layer = {
-        id: `layer-${Date.now()}`,
-        type: 'image',
-        name: `${lowerLayer.name} + ${upperLayer.name}`,
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        img: mergedImg,
-        scale: 1
-      };
-      
-      setLayers(prev => [
-        ...prev.slice(0, index - 1),
-        mergedLayer,
-        ...prev.slice(index + 1)
-      ]);
-      setSelectedLayer(mergedLayer.id);
-      redrawAll();
+    const temp = document.createElement('canvas');
+    temp.width = canvas.width; temp.height = canvas.height;
+    const tctx = temp.getContext('2d')!;
+    // draw bottom then top respecting layer rendering rules
+    const drawLayerOnto = (l: Layer) => {
+      if (!l.visible) return;
+      if (l.type === 'drawing' && l.drawingCanvas) tctx.drawImage(l.drawingCanvas, 0, 0);
+      else if (l.type === 'text' && l.text) {
+        tctx.fillStyle = l.color || '#000';
+        tctx.font = `${l.size ?? 24}px 'Share Tech Mono', monospace`;
+        tctx.textBaseline = 'top';
+        tctx.fillText(l.text, l.x, l.y);
+      } else if (l.type === 'image' && (l as any).img) {
+        const img = (l as any).img as HTMLImageElement;
+        const scale = (l as any).scale ?? 1;
+        const w = img.naturalWidth * scale; const h = img.naturalHeight * scale;
+        tctx.drawImage(img, l.x - w/2, l.y - h/2, w, h);
+      }
     };
+    drawLayerOnto(bottom);
+    drawLayerOnto(top);
+    // create merged drawing layer replacing bottom, remove top
+    const mergedLayer: Layer = {
+      id: `l-${Date.now()}`,
+      type: 'drawing', name: `Merged ${bottom.name}+${top.name}`, visible: true, opacity: 100, locked: false,
+      x: 0, y: 0, drawingCanvas: temp,
+    };
+    const newLayers = [...layers];
+    newLayers.splice(idx - 1, 2, mergedLayer);
+    updateLayersAndRecordHistory(newLayers);
+    setSelectedLayerId(mergedLayer.id);
   };
 
   const mergeVisible = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    
-    // Draw all visible layers
-    for (const layer of layers) {
-      if (!layer.visible) continue;
-      
-      tempCtx.globalAlpha = (layer.opacity || 100) / 100;
-      
-      if (layer.type === 'text') {
-        tempCtx.fillStyle = layer.color || color;
-        tempCtx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-        tempCtx.textBaseline = 'top';
-        tempCtx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-      } else if (layer.type === 'image' && layer.img) {
-        const w = layer.img.naturalWidth * (layer.scale || 1);
-        const h = layer.img.naturalHeight * (layer.scale || 1);
-        tempCtx.drawImage(layer.img, (layer.x || 0) - w/2, (layer.y || 0) - h/2, w, h);
+    const visibleLayers = layers.filter(l => l.visible && l.type !== 'group');
+    if (visibleLayers.length <= 1) return;
+    const temp = document.createElement('canvas'); temp.width = canvas.width; temp.height = canvas.height;
+    const tctx = temp.getContext('2d')!;
+    // draw in original order
+    for (const l of layers) {
+      if (!l.visible || l.type === 'group') continue;
+      if (l.type === 'drawing' && l.drawingCanvas) tctx.drawImage(l.drawingCanvas, 0, 0);
+      else if (l.type === 'text' && l.text) {
+        tctx.fillStyle = l.color || '#000';
+        tctx.font = `${l.size ?? 24}px 'Share Tech Mono', monospace`;
+        tctx.textBaseline = 'top';
+        tctx.fillText(l.text, l.x, l.y);
+      } else if (l.type === 'image' && (l as any).img) {
+        const img = (l as any).img as HTMLImageElement;
+        const scale = (l as any).scale ?? 1;
+        const w = img.naturalWidth * scale; const h = img.naturalHeight * scale;
+        tctx.drawImage(img, l.x - w/2, l.y - h/2, w, h);
       }
     }
-    
-    const mergedImg = new Image();
-    mergedImg.src = tempCanvas.toDataURL();
-    mergedImg.onload = () => {
-      const mergedLayer: Layer = {
-        id: `layer-${Date.now()}`,
-        type: 'image',
-        name: 'Camadas Mescladas',
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        img: mergedImg,
-        scale: 1
-      };
-      
-      setLayers([mergedLayer]);
-      setSelectedLayer(mergedLayer.id);
-      redrawAll();
+    // remove visible non-group layers and insert merged at lowest index among them
+    const visibleIds = new Set(layers.filter(l => l.visible && l.type !== 'group').map(l => l.id));
+    let lowestIndex = Infinity;
+    layers.forEach((l, i) => { if (visibleIds.has(l.id)) lowestIndex = Math.min(lowestIndex, i); });
+    const mergedLayer: Layer = {
+      id: `l-${Date.now()}`,
+      type: 'drawing', name: `Merged Visible`, visible: true, opacity: 100, locked: false,
+      x: 0, y: 0, drawingCanvas: temp,
     };
+    const newLayers = layers.filter(l => !visibleIds.has(l.id));
+    newLayers.splice(lowestIndex === Infinity ? 0 : lowestIndex, 0, mergedLayer);
+    updateLayersAndRecordHistory(newLayers);
+    setSelectedLayerId(mergedLayer.id);
   };
 
-  const moveLayer = (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
-    const newLayers = [...layers];
-    const [movedLayer] = newLayers.splice(fromIndex, 1);
-    newLayers.splice(toIndex, 0, movedLayer);
-    setLayers(newLayers);
-    redrawAll();
-  };
-
-  const getToolInstructions = () => {
-    switch (tool) {
-      case 'draw':
-        return {
-          title: '✏️ Modo Desenho',
-          description: 'Desenhe livremente no canvas',
-          steps: [
-            ['1', 'Escolha uma cor na seção acima'],
-            ['2', 'Ajuste o tamanho do pincel'],
-            ['3', 'Clique e arraste no canvas para desenhar'],
-          ],
-        };
-      case 'erase':
-        return {
-          title: '🗑️ Borracha',
-          description: 'Apague partes do desenho',
-          steps: [
-            ['1', 'Use o tamanho para controlar a força de apagamento'],
-            ['2', 'Clique e arraste para apagar'],
-            ['3', 'Maior tamanho = área maior apagada'],
-          ],
-        };
-      case 'placeText':
-        return {
-          title: '🅰️ Inserir Texto',
-          description: 'Adicione textos à sua arte',
-          steps: [
-            ['1', 'Digite o texto na caixa abaixo'],
-            ['2', 'Defina o tamanho (8-200px)'],
-            ['3', 'Clique no canvas para colocar'],
-            ['4', 'Pressione ENTER ou clique para confirmar'],
-          ],
-        };
-      case 'placeImage':
-        return {
-          title: '🖼️ Inserir Imagem',
-          description: 'Coloque imagens do seu computador',
-          steps: [
-            ['1', 'Clique no botão "Imagem" para selecionar'],
-            ['2', 'Escolha uma imagem do seu PC'],
-            ['3', 'Ajuste a escala (10%-200%)'],
-            ['4', 'Clique no canvas para colocar'],
-          ],
-        };
-      default:
-        return null;
+  // --- FINALIZAÇÃO ---
+  const handleFinish = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = canvas.width;
+    finalCanvas.height = canvas.height;
+    const ctx = finalCanvas.getContext('2d')!;
+    if (baseImageRef.current) {
+      ctx.drawImage(baseImageRef.current, 0, 0, finalCanvas.width, finalCanvas.height);
     }
+    layers.forEach(l => {
+      if (!l.visible) return;
+      ctx.save();
+      ctx.globalAlpha = l.opacity / 100;
+      ctx.globalCompositeOperation = l.blendMode || 'source-over';
+      if (l.type === 'drawing' && l.drawingCanvas) {
+        ctx.drawImage(l.drawingCanvas, 0, 0);
+      } else if (l.type === 'text' && l.text) {
+        ctx.fillStyle = l.color || '#000000';
+        ctx.font = `${l.size ?? 24}px 'Share Tech Mono', monospace`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(l.text, l.x, l.y);
+      } else if ((l as any).type === 'image' && (l as any).img) {
+        const img = (l as any).img as HTMLImageElement;
+        const scale = (l as any).scale ?? 1;
+        const w = img.naturalWidth * scale;
+        const h = img.naturalHeight * scale;
+        ctx.drawImage(img, l.x - w / 2, l.y - h / 2, w, h);
+      }
+      ctx.restore();
+    });
+    finalCanvas.toBlob(blob => {
+      if (blob) onSave(new File([blob], `edited-image-${Date.now()}.png`, { type: 'image/png' }));
+    }, 'image/png');
   };
+
+  // --- RENDERIZAÇÃO DO JSX ---
+  const selectedLayer = layers.find(l => l.id === selectedLayerId);
+  const topLayers = layers.filter(l => !l.parentId);
 
   return (
     <div className="uv-editor-overlay">
       <div className="uv-editor-panel">
         <div className="uv-header">
-          <h3>{mode === 'filter' ? '🔍 Desenhar Segredos' : '💎 Luz UV'}</h3>
-          <button onClick={onClose} className="btn-close">✕</button>
+          <h3>{mode === 'filter' ? '🔍 Editor Avançado' : '💎 Luz UV'}</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={undo} disabled={historyIndex <= 0} title="Desfazer (Ctrl+Z)">↶</button>
+            <button onClick={redo} disabled={historyIndex >= history.length - 1} title="Refazer (Ctrl+Y)">↷</button>
+            <button onClick={onClose} className="btn-close">✕</button>
+          </div>
         </div>
 
         <div className="uv-editor-main">
           <div className="editor-workspace">
-            <div className="canvas-container" style={{ backgroundImage: `url(${baseImageUrl})`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}>
+            <div className="canvas-container">
               <canvas
                 ref={canvasRef}
-                onMouseDown={(e) => { const handled = handleCanvasClick(e); if (!handled && (tool === 'draw' || tool === 'erase')) startDrawing(e); }}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                className={isResizing ? 'resizing' : isDraggingLayer ? 'dragging' : ''}
-                style={{ display: 'block', maxWidth: '100%' }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{ cursor: tool === 'draw' || tool === 'erase' ? 'crosshair' : 'default' }}
               />
             </div>
           </div>
 
-          {/* SIDEBAR */}
           <div className="uv-sidebar">
-            <div className="uv-sidebar-scroll">
-            
-            {/* TOOLS */}
-            <div className="uv-sidebar-section" style={{ minHeight: '200px' }}>
-              <h4>🛠️ Ferramentas</h4>
-              <div className="tools-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                <button
-                  className={`tool-btn ${tool === 'draw' ? 'active' : ''}`}
-                  onClick={() => setTool('draw')}
-                  title="Desenhar"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  ✏️ Desenhar
-                </button>
-                <button
-                  className={`tool-btn ${tool === 'erase' ? 'active' : ''}`}
-                  onClick={() => setTool('erase')}
-                  title="Apagar"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  🗑️ Borracha
-                </button>
-                <button
-                  className={`tool-btn ${censorMode ? 'active' : ''}`}
-                  onClick={() => {
-                    const next = !censorMode;
-                    setCensorMode(next);
-                    if (next) {
-                      setColor('#000000');
-                      setTool('draw');
-                      setBrushSize(20);
-                    }
-                  }}
-                  title="Censura"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  🟥 Censura
-                </button>
-                <button
-                  className={`tool-btn ${tool === 'placeText' ? 'active' : ''}`}
-                  onClick={() => setTool('placeText')}
-                  title="Texto"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  🅰️ Texto
-                </button>
-                <button
-                  className={`tool-btn ${tool === 'placeImage' ? 'active' : ''}`}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Imagem"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  🖼️ Imagem
-                </button>
-                <button
-                  className="tool-btn"
-                  onClick={clearCanvas}
-                  title="Limpar"
-                  style={{ display: 'block', minHeight: '36px' }}
-                >
-                  ⚡ Limpar
-                </button>
+            <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <h4>Ferramentas</h4>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '20px' }}>
+                <button onClick={() => setTool('select')} className={tool === 'select' ? 'active' : ''}>🖐️ Selecionar</button>
+                <button onClick={() => setTool('draw')} className={tool === 'draw' ? 'active' : ''}>✏️ Desenhar</button>
+                <button onClick={() => setTool('erase')} className={tool === 'erase' ? 'active' : ''}>🧼 Borracha</button>
+                <button onClick={addTextLayer}>🅰️ Ad. Texto</button>
+                <button onClick={() => fileInputRef.current?.click()}>🖼️ Ad. Imagem</button>
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0] || null; setImageFile(f); if (f) setTool('placeImage'); }} />
-            </div>
 
-            {/* COLORS */}
-            <div className="uv-sidebar-section">
-              <h4>🎨 Cor</h4>
-              <div className="color-grid">
-                {colors.map((c) => (
-                  <button
-                    key={c.hex}
-                    className={`color-btn ${color === c.hex ? 'active' : ''}`}
-                    style={{ background: c.hex, boxShadow: color === c.hex ? `${c.glow}, inset 0 0 10px rgba(255,255,255,0.3)` : `0 0 0 1px rgba(0,0,0,0.5)` }}
-                    onClick={() => { setColor(c.hex); setTool('draw'); }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept="image/png, image/jpeg"
+                onChange={handleImageUpload}
+              />
 
-            {/* SIZE */}
-            <div className="uv-sidebar-section">
-              <h4>📏 Tamanho</h4>
-              <div className="size-control">
-                <div className="size-input-group">
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={brushSize}
-                    onChange={(e) => setBrushSize(Math.max(1, Math.min(100, Number(e.target.value))))}
-                  />
-                  <span style={{color:'#aaa', fontSize:'11px', minWidth:'20px'}}>px</span>
+              {(tool === 'draw' || tool === 'erase') && (
+                <div style={{marginBottom: '20px'}}>
+                  <label>Cor (para desenho):</label>
+                  <input type="color" value={color} onChange={e => setColor(e.target.value)} />
+                  <label>Pincel: {brushSize}px</label>
+                  <input type="range" min="1" max="100" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} />
                 </div>
-                <div className="size-preview">
-                  <div className="size-preview-dot" style={{ width: `${Math.min(brushSize, 40)}px`, height: `${Math.min(brushSize, 40)}px` }} />
-                </div>
+              )}
+                        
+              <h4 style={{ marginTop: 0 }}>Camadas</h4>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <button onClick={groupSelected} disabled={multiSelectIds.size < 2}>📁 Agrupar selecionadas</button>
+                <button onClick={() => { if (selectedLayer && selectedLayer.type === 'group') ungroupSelected(selectedLayer.id); }} disabled={!selectedLayer || selectedLayer.type !== 'group'}>📂 Desagrupar</button>
+                <button onClick={mergeVisible}>🧩 Mesclar Visíveis</button>
               </div>
-            </div>
-
-            {/* LAYERS */}
-            <div className="uv-sidebar-section layers-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0 }}>📦 Camadas ({layers.length})</h4>
-                <div style={{ display: 'flex', gap: '6px', position: 'relative' }}>
-                  <button 
-                    onClick={mergeVisible}
-                    className="layer-action-btn"
-                    title="Mesclar Visíveis"
-                    disabled={layers.filter(l => l.visible).length < 2}
-                  >
-                    🔗
-                  </button>
-                  <div style={{ position: 'relative' }}>
-                    <button 
-                      onClick={() => setShowAddLayerMenu(!showAddLayerMenu)}
-                      className="add-layer-btn"
-                      title="Adicionar nova camada"
-                    >
-                      ➕
-                    </button>
-                    
-                    {showAddLayerMenu && (
-                      <>
-                        <div 
-                          style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 999
-                          }}
-                          onClick={() => setShowAddLayerMenu(false)}
-                        />
-                        <div 
-                          style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: 0,
-                            marginTop: '4px',
-                            background: 'rgba(20, 20, 20, 0.98)',
-                            border: '1px solid #b366ff',
-                            borderRadius: '6px',
-                            padding: '6px',
-                            minWidth: '160px',
-                            boxShadow: '0 0 20px rgba(179, 102, 255, 0.4)',
-                            zIndex: 1000
-                          }}
-                        >
-                          <button
-                            onClick={addEmptyDrawingLayer}
-                            style={{
-                              width: '100%',
-                              background: 'rgba(100, 100, 100, 0.3)',
-                              border: '1px solid rgba(180, 180, 180, 0.3)',
-                              color: '#ddd',
-                              padding: '8px 10px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              textAlign: 'left',
-                              marginBottom: '4px',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(150, 150, 150, 0.5)';
-                              e.currentTarget.style.borderColor = '#00ffff';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(100, 100, 100, 0.3)';
-                              e.currentTarget.style.borderColor = 'rgba(180, 180, 180, 0.3)';
-                            }}
-                          >
-                            🎨 Camada de Desenho
-                          </button>
-                          <button
-                            onClick={addEmptyTextLayer}
-                            style={{
-                              width: '100%',
-                              background: 'rgba(100, 100, 100, 0.3)',
-                              border: '1px solid rgba(180, 180, 180, 0.3)',
-                              color: '#ddd',
-                              padding: '8px 10px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              textAlign: 'left',
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(150, 150, 150, 0.5)';
-                              e.currentTarget.style.borderColor = '#00ffff';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(100, 100, 100, 0.3)';
-                              e.currentTarget.style.borderColor = 'rgba(180, 180, 180, 0.3)';
-                            }}
-                          >
-                            🅰️ Camada de Texto
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="layers-list">
-                {layers.length === 0 ? (
-                  <div className="no-layers">
-                    Nenhuma camada ainda.
-                    <br />
-                    <small>Clique no "➕" acima para adicionar</small>
-                  </div>
-                ) : (
-                  [...layers].reverse().map((layer, reverseIndex) => {
-                    const actualIndex = layers.length - 1 - reverseIndex;
+              <div className="layers-container">
+                {topLayers.length === 0 ? <div className="no-layers-placeholder">Nenhuma camada</div> : 
+                  [...topLayers].reverse().map((l, reversedIndex) => {
+                    const originalIndex = topLayers.length - 1 - reversedIndex;
+                    const isGroup = l.type === 'group';
                     return (
-                      <div
-                        key={layer.id}
-                        className={`layer-item ${selectedLayer === layer.id ? 'active' : ''} ${layer.locked ? 'locked' : ''}`}
-                        draggable={!layer.locked}
-                        onDragStart={(e) => {
-                          if (layer.locked) {
-                            e.preventDefault();
-                            return;
-                          }
-                          setDraggedLayerId(layer.id);
-                          e.dataTransfer.effectAllowed = 'move';
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                          setDragOverLayerId(layer.id);
-                        }}
-                        onDragLeave={() => {
-                          setDragOverLayerId(null);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (draggedLayerId && draggedLayerId !== layer.id) {
-                            const fromIndex = layers.findIndex(l => l.id === draggedLayerId);
-                            const toIndex = actualIndex;
-                            moveLayer(fromIndex, toIndex);
-                          }
-                          setDraggedLayerId(null);
-                          setDragOverLayerId(null);
-                        }}
-                        onDragEnd={() => {
-                          setDraggedLayerId(null);
-                          setDragOverLayerId(null);
-                        }}
-                        style={{
-                          borderColor: dragOverLayerId === layer.id ? '#b366ff' : undefined,
-                          borderWidth: dragOverLayerId === layer.id ? '2px' : '1px',
-                          opacity: draggedLayerId === layer.id ? 0.5 : 1,
-                        }}
-                      >
-                        <div className="layer-controls">
-                          <button
-                            className={`layer-visibility-btn ${layer.visible ? 'visible' : 'hidden'}`}
-                            onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
-                            title={layer.visible ? 'Ocultar camada' : 'Mostrar camada'}
-                          >
-                            {layer.visible ? '👁️' : '🚫'}
-                          </button>
-                          <button
-                            className={`layer-lock-btn ${layer.locked ? 'locked' : ''}`}
-                            onClick={(e) => { e.stopPropagation(); toggleLayerLock(layer.id); }}
-                            title={layer.locked ? 'Desbloquear camada' : 'Bloquear camada'}
-                          >
-                            {layer.locked ? '🔒' : '🔓'}
-                          </button>
-                        </div>
-                        <div className="layer-item-info" onClick={() => !layer.locked && selectLayer(layer.id)}>
-                          {editingLayerName === layer.id ? (
-                            <input
-                              type="text"
-                              className="layer-name-input"
-                              value={layer.name}
-                              onChange={(e) => setLayers(prev => prev.map(l => l.id === layer.id ? { ...l, name: e.target.value } : l))}
-                              onBlur={() => setEditingLayerName(null)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') setEditingLayerName(null);
-                                if (e.key === 'Escape') {
-                                  setEditingLayerName(null);
-                                }
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              autoFocus
-                            />
+                      <div key={l.id} className={`layer-item ${selectedLayerId === l.id ? 'active' : ''} ${draggedLayerId === l.id ? 'dragging' : ''}`} onClick={() => setSelectedLayerId(l.id)} onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedId = draggedLayerId || e.dataTransfer?.getData('text/plain');
+                        if (!draggedId || draggedId === l.id) return;
+                        const draggedIndex = layers.findIndex(layer => layer.id === draggedId);
+                        // compute target index in original layers array as the index of the referenced topLayers item
+                        const targetTop = topLayers[originalIndex];
+                        const targetIndex = layers.findIndex(layer => layer.id === targetTop.id);
+                        if (draggedIndex === -1) { setDraggedLayerId(null); return; }
+                        const newLayers = [...layers];
+                        const [draggedItem] = newLayers.splice(draggedIndex, 1);
+                        newLayers.splice(targetIndex, 0, draggedItem);
+                        updateLayersAndRecordHistory(newLayers);
+                        setDraggedLayerId(null);
+                      }}>
+                        <div className='layer-item-main'>
+                          <input type="checkbox" checked={multiSelectIds.has(l.id)} onChange={(e) => {
+                            const next = new Set(multiSelectIds);
+                            if (e.target.checked) next.add(l.id); else next.delete(l.id);
+                            setMultiSelectIds(next);
+                          }} onClick={(ev) => ev.stopPropagation()} />
+                          <span
+                            className="layer-drag-handle"
+                            draggable={!l.locked}
+                            onDragStart={(e) => {
+                              if (l.locked) { e.preventDefault(); return; }
+                              setDraggedLayerId(l.id);
+                              try { e.dataTransfer?.setData('text/plain', l.id); } catch (err) {}
+                              try { e.dataTransfer?.setDragImage((e.target as HTMLElement), 0, 0); } catch (err) {}
+                            }}
+                            onDragEnd={() => setDraggedLayerId(null)}
+                            onClick={(ev) => ev.stopPropagation()}
+                            title="Arrastar camada"
+                          >☰</span>
+                          {editingLayerId === l.id ? (
+                             <input 
+                               type="text" 
+                               defaultValue={l.name} 
+                               onBlur={(e: React.FocusEvent<HTMLInputElement>) => { updateLayerProperty(l.id, { name: e.currentTarget.value }); setEditingLayerId(null); }}
+                               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { updateLayerProperty(l.id, { name: e.currentTarget.value }); setEditingLayerId(null); }}}
+                               autoFocus
+                             />
                           ) : (
-                            <div 
-                              className="layer-item-title"
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                if (!layer.locked) setEditingLayerName(layer.id);
-                              }}
-                              title="Clique duplo para renomear"
-                            >
-                              {layer.name}
-                            </div>
+                             <span onDoubleClick={() => !l.locked && setEditingLayerId(l.id)}>{l.name}</span>
                           )}
-                          <div className="layer-item-type">
-                            {layer.type === 'text' ? `Texto ${layer.size}px` : 
-                             layer.type === 'image' ? `Escala ${((layer.scale || 1) * 100).toFixed(0)}%` : 
-                             layer.type === 'drawing' ? 'Desenho livre' : 
-                             layer.type}
+                        </div>
+                        <div className='layer-item-controls'>
+                          <button onClick={(e) => { e.stopPropagation(); duplicateLayer(l.id); }}>📑</button>
+                          <button onClick={(e) => { e.stopPropagation(); updateLayerProperty(l.id, { locked: !l.locked }); }}>{l.locked ? '🔒' : '🔓'}</button>
+                          <button onClick={(e) => { e.stopPropagation(); updateLayerProperty(l.id, { visible: !l.visible }); }}>{l.visible ? '👁️' : '🚫'}</button>
+                          <button className="delete-layer-btn" onClick={(e) => { e.stopPropagation(); deleteLayer(l.id); }}>🗑️</button>
+                          {isGroup && <button onClick={(e) => { e.stopPropagation(); const g = layers.find(x => x.id === l.id); if (g) { setSelectedLayerId(g.id); } }}>📂</button>}
+                        </div>
+                        {/* render children if group */}
+                        {isGroup && l.children && l.isExpanded && (
+                          <div style={{ paddingLeft: 24, marginTop: 8 }}>
+                            {l.children.map(cid => {
+                              const child = layers.find(x => x.id === cid);
+                              if (!child) return null;
+                              return (
+                                <div key={child.id} className={`layer-item ${selectedLayerId === child.id ? 'active' : ''}`} style={{ marginBottom: 6 }} onClick={() => setSelectedLayerId(child.id)}>
+                                  <div className='layer-item-main' style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input type="checkbox" checked={multiSelectIds.has(child.id)} onChange={(e) => { const next = new Set(multiSelectIds); if (e.target.checked) next.add(child.id); else next.delete(child.id); setMultiSelectIds(next); }} onClick={(ev) => ev.stopPropagation()} />
+                                    <span style={{ opacity: 0.9 }}>{child.name}</span>
+                                  </div>
+                                  <div className='layer-item-controls'>
+                                    <button onClick={(e) => { e.stopPropagation(); duplicateLayer(child.id); }}>📑</button>
+                                    <button onClick={(e) => { e.stopPropagation(); updateLayerProperty(child.id, { locked: !child.locked }); }}>{child.locked ? '🔒' : '🔓'}</button>
+                                    <button onClick={(e) => { e.stopPropagation(); updateLayerProperty(child.id, { visible: !child.visible }); }}>{child.visible ? '👁️' : '🚫'}</button>
+                                    <button className="delete-layer-btn" onClick={(e) => { e.stopPropagation(); deleteLayer(child.id); }}>🗑️</button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                        <div className="layer-item-actions">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); duplicateLayer(layer.id); }} 
-                            title="Duplicar"
-                            disabled={layer.locked}
-                          >
-                            📑
-                          </button>
-                          {actualIndex > 0 && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); mergeDown(layer.id); }} 
-                              title="Mesclar para baixo"
-                              disabled={layer.locked}
-                            >
-                              ⬇️
-                            </button>
-                          )}
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); deleteLayer(layer.id); }} 
-                            className="delete" 
-                            title="Deletar"
-                            disabled={layer.locked}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                        )}
                       </div>
                     );
                   })
-                )}
+                }
               </div>
-            </div>
-            
-            {/* LAYER CONTROLS - OUTSIDE SCROLLABLE AREA */}
-            {selectedLayer && layers.find(l => l.id === selectedLayer) && (() => {
-              const layer = layers.find(l => l.id === selectedLayer);
-              if (!layer) return null;
-              return (
-                <div className="uv-sidebar-section" style={{ borderTop: '2px solid #b366ff', paddingTop: '12px' }}>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#00ffff' }}>⚙️ Controles da Camada</h4>
-                  
-                  {/* OPACITY */}
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '11px', color: '#aaa' }}>Opacidade</label>
-                      <span style={{ fontSize: '11px', color: '#00ffff', fontWeight: 'bold' }}>{layer.opacity || 100}%</span>
+
+             {selectedLayer && (
+                <div className="layer-properties">
+                    <h4>Propriedades da Camada</h4>
+                    {/* Texto editing controls */}
+                    {selectedLayer.type === 'text' && (
+                      <>
+                        <div>
+                          <label>Conteúdo do Texto</label>
+                          <textarea
+                            value={selectedLayer.text}
+                            disabled={selectedLayer.locked}
+                            onChange={(e) => updateLayerProperty(selectedLayerId!, { text: e.target.value })}
+                            rows={3}
+                            style={{ width: '100%', resize: 'vertical', marginTop: 6 }}
+                          />
+                        </div>
+                        <div style={{ marginTop: 8 }}>
+                          <label>Tamanho da Fonte: {selectedLayer.size}px</label>
+                          <input
+                            type="range" min="8" max="200"
+                            value={selectedLayer.size}
+                            disabled={selectedLayer.locked}
+                            onChange={(e) => updateLayerProperty(selectedLayerId!, { size: Number(e.target.value) })}
+                          />
+                        </div>
+                      </>
+                    )}
+                    <div>
+                        <label>Opacidade: {selectedLayer.opacity}%</label>
+                        <input 
+                            type="range" min="0" max="100" 
+                            value={selectedLayer.opacity} 
+                            disabled={selectedLayer.locked}
+                            onChange={(e) => updateLayerProperty(selectedLayerId!, { opacity: Number(e.target.value)})}
+                        />
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={layer.opacity || 100}
-                      onChange={(e) => updateLayerOpacity(selectedLayer, Number(e.target.value))}
-                      disabled={layer.locked}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  
-                  {/* SCALE - Only for images */}
-                  {layer.type === 'image' && layer.img && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <label style={{ fontSize: '11px', color: '#aaa' }}>Escala</label>
-                        <span style={{ fontSize: '11px', color: '#00ffff', fontWeight: 'bold' }}>{((layer.scale || 1) * 100).toFixed(0)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={10}
-                        max={300}
-                        step={5}
-                        value={(layer.scale || 1) * 100}
-                        onChange={(e) => {
-                          const newScale = Number(e.target.value) / 100;
-                          setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, scale: newScale } : l));
-                          redrawAll();
-                        }}
-                        disabled={layer.locked}
-                        style={{ width: '100%' }}
-                      />
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                        <button 
-                          onClick={() => {
-                            setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, scale: 0.5 } : l));
-                            redrawAll();
-                          }}
-                          disabled={layer.locked}
-                          style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(100,100,100,0.3)', border: '1px solid #555', color: '#ddd', borderRadius: '4px', cursor: 'pointer' }}
+                    <div>
+                        <label>Modo de Mesclagem</label>
+                        <select
+                           value={selectedLayer.blendMode || 'source-over'}
+                           disabled={selectedLayer.locked}
+                           onChange={(e) => updateLayerProperty(selectedLayerId!, { blendMode: e.target.value as GlobalCompositeOperation})}
                         >
-                          50%
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, scale: 1 } : l));
-                            redrawAll();
-                          }}
-                          disabled={layer.locked}
-                          style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(100,100,100,0.3)', border: '1px solid #555', color: '#ddd', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          100%
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, scale: 2 } : l));
-                            redrawAll();
-                          }}
-                          disabled={layer.locked}
-                          style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(100,100,100,0.3)', border: '1px solid #555', color: '#ddd', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          200%
-                        </button>
-                      </div>
+                            <option value="source-over">Normal</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="screen">Screen</option>
+                            <option value="overlay">Overlay</option>
+                            <option value="darken">Darken</option>
+                            <option value="lighten">Lighten</option>
+                        </select>
                     </div>
-                  )}
-                  
-                  {/* FONT SIZE - Only for text */}
-                  {layer.type === 'text' && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <label style={{ fontSize: '11px', color: '#aaa' }}>Tamanho</label>
-                        <span style={{ fontSize: '11px', color: '#00ffff', fontWeight: 'bold' }}>{layer.size || textSize}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={8}
-                        max={200}
-                        value={layer.size || textSize}
-                        onChange={(e) => {
-                          const newSize = Number(e.target.value);
-                          setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, size: newSize } : l));
-                          redrawAll();
-                        }}
-                        disabled={layer.locked}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  )}
                 </div>
-              );
-            })()}
+             )}
+
+            </div>
+            <div className="sidebar-footer">
+              <button onClick={handleFinish} className="save-button">Salvar & Fechar</button>
             </div>
           </div>
-        </div>
-
-        {/* FLOATING CONTROLS */}
-        {tool === 'placeText' && (
-          <div className="floating-control">
-            <input
-              placeholder="Texto..."
-              value={textValue}
-              onChange={e => setTextValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && textValue) { handleCanvasClick(e as any); } }}
-              autoFocus
-            />
-            <label>Tam:</label>
-            <input
-              type="number"
-              min={8}
-              max={200}
-              value={textSize}
-              onChange={e => setTextSize(Number(e.target.value))}
-              style={{ width: 60 }}
-            />
-            <span style={{color:'#aaa', fontSize:'10px'}}>Clique no canvas</span>
-          </div>
-        )}
-
-        {tool === 'placeImage' && imageFile && (
-          <div className="floating-control">
-            <label>Escala:</label>
-            <input
-              type="range"
-              min={0.1}
-              max={2}
-              step={0.05}
-              value={imageScale}
-              onChange={e => setImageScale(Number(e.target.value))}
-              style={{ width: 100 }}
-            />
-            <span style={{color:'#aaa', fontSize:'10px'}}>{(imageScale * 100).toFixed(0)}%</span>
-            <span style={{color:'#aaa', fontSize:'10px'}}>Clique no canvas</span>
-          </div>
-        )}
-
-        {/* RESIZE INDICATOR */}
-        {isResizing && selectedLayer && (() => {
-          const s = layers.find(l => l.id === selectedLayer);
-          if (!s) return null;
-          
-          let sizeText = '';
-          if (s.type === 'image' && s.img) {
-            const w = Math.round(s.img.naturalWidth * (s.scale || 1));
-            const h = Math.round(s.img.naturalHeight * (s.scale || 1));
-            sizeText = `${w}×${h}px (${((s.scale || 1) * 100).toFixed(0)}%)`;
-          } else if (s.type === 'text') {
-            sizeText = `${s.size || textSize}px`;
-          }
-          
-          return (
-            <div className="resize-indicator">
-              📏 {sizeText}
-            </div>
-          );
-        })()}
-
-        {/* INSTRUCTIONS PANEL - OPTIONAL */}
-        {showInstructions && (() => {
-          const instructions = getToolInstructions();
-          if (!instructions) return null;
-          return (
-            <div className="instructions-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h5 style={{ margin: 0 }}>{instructions.title}</h5>
-                <button 
-                  onClick={() => setShowInstructions(false)}
-                  style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer', padding: '0 4px' }}
-                  title="Fechar ajuda"
-                >
-                  ✕
-                </button>
-              </div>
-              <p>{instructions.description}</p>
-              {instructions.steps.map((step, i) => (
-                <div key={i} className="instruction-step">
-                  <strong>{step[0]}</strong>
-                  <span>{step[1]}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        <div className="uv-toolbar">
-          <button 
-            className="btn-help"
-            onClick={() => setShowInstructions(!showInstructions)}
-            title={showInstructions ? 'Ocultar ajuda' : 'Mostrar ajuda'}
-          >
-            {showInstructions ? '📖' : '❓'}
-          </button>
-          <button className="btn-save-uv" onClick={handleFinish}>✓ Confirmar</button>
         </div>
       </div>
     </div>

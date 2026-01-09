@@ -24,16 +24,24 @@ interface PhoneViewerProps {
    isLocked?: boolean;
    password?: string | number;
    fullscreen?: boolean;
+   onContactNameChange?: (name: string) => void;
 }
 
-export default function PhoneViewer({ chatData, contactName, isLocked = false, password, fullscreen = false }: PhoneViewerProps): React.ReactElement {
+export default function PhoneViewer({ chatData, contactName, isLocked = false, password, fullscreen = false, onContactNameChange }: PhoneViewerProps): React.ReactElement {
    const [unlocked, setUnlocked] = useState(!isLocked);
+   const [editingName, setEditingName] = useState(false);
+   const [localName, setLocalName] = useState(contactName || '');
    const [isBooting, setIsBooting] = useState(false);
    
    // Sincroniza o estado se a prop `isLocked` mudar de fora
    useEffect(() => {
       setUnlocked(!isLocked);
    }, [isLocked]);
+
+   // keep localName in sync if prop changes from outside
+   useEffect(() => {
+      setLocalName(contactName || '');
+   }, [contactName]);
    
    const handleUnlock = () => {
      setIsBooting(true);
@@ -83,13 +91,39 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
    }
 
   // --- TELA DESBLOQUEADA ---
-  return (
+   return (
     <div className="phone-mockup-wrapper">
        <div className={`nexus-phone-mockup ${fullscreen ? 'fullscreen' : ''}`}>
           <div className="phone-header">
-             <div className="contact-avatar">{contactName ? contactName[0].toUpperCase() : '?'}</div>
+             <div className="contact-avatar">{(localName || contactName) ? (localName || contactName)![0].toUpperCase() : '?'}</div>
              <div className="contact-info">
-                <div className="contact-name">{contactName || 'Desconhecido'}</div>
+                <div className={`contact-name ${editingName ? 'editing' : 'clickable'}`} onClick={() => setEditingName(true)}>
+                      {editingName ? (
+                         <input
+                            className="contact-name-input"
+                            value={localName}
+                            onChange={e => setLocalName(e.target.value)}
+                            onBlur={e => {
+                               const newVal = (e.target as HTMLInputElement).value || '';
+                               setEditingName(false);
+                               setLocalName(newVal);
+                               if (onContactNameChange) onContactNameChange(newVal);
+                            }}
+                            onKeyDown={e => {
+                               if (e.key === 'Enter') {
+                                  const input = e.target as HTMLInputElement;
+                                  const newVal = input.value || '';
+                                  input.blur();
+                                  setLocalName(newVal);
+                                  if (onContactNameChange) onContactNameChange(newVal);
+                               }
+                            }}
+                            autoFocus
+                         />
+                      ) : (
+                         (localName && localName.length > 0) ? localName : (contactName || 'Desconhecido')
+                      )}
+                </div>
                 <div className="contact-status">Online</div>
              </div>
           </div>

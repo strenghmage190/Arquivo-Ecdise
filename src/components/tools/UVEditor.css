@@ -1,287 +1,229 @@
-/* ===== OVERLAY ===== */
+/* ============================================= */
+/* ===== 1. VARIÁVEIS DE TEMA E CONFIGURAÇÃO ===== */
+/* ============================================= */
+
+:root {
+  --color-primary: #a855f7; /* Roxo */
+  --color-accent: #00f5c3;  /* Verde/Ciano neon */
+  --color-bg-dark: #111;
+  --color-bg-panel: #1e1e24;
+  --color-bg-light: #2d2d37;
+  --color-text: #d4d4d8;
+  --color-text-muted: #71717a;
+  --font-mono: 'Share Tech Mono', monospace;
+  --shadow-glow: 0 0 15px rgba(168, 85, 247, 0.4);
+}
+
+/* Ensure editor-local buttons are visible even if global styles hide `.tool-btn` */
+.uv-editor-panel .tool-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Ensure layer action buttons inside the editor are visible */
+.uv-editor-panel .layer-item .layer-item-controls button {
+  display: inline-flex !important;
+}
+
+/* ================================ */
+/* ===== 2. LAYOUT PRINCIPAL ===== */
+/* ================================ */
+
+/* --- Camada de Fundo (Overlay) --- */
 .uv-editor-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(2px);
-  z-index: var(--z-modal-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.2s ease-out;
+  background: rgba(10, 10, 15, 0.9);
+  backdrop-filter: blur(5px);
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-/* ===== MAIN PANEL ===== */
+/* --- Painel Principal --- */
 .uv-editor-panel {
-  width: 100%;
-  max-width: 1400px;
-  height: 90vh;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1015 100%);
-  border: 2px solid #b366ff;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: row;
-  box-shadow: 0 0 40px rgba(179, 102, 255, 0.2), inset 0 0 40px rgba(179, 102, 255, 0.05);
-  overflow: hidden;
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-bg-light);
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  border-radius: 8px;
 }
 
-/* ===== HEADER ===== */
+/* --- Cabeçalho --- */
 .uv-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  border-bottom: 2px solid #333;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  z-index: 10;
+  padding: 10px 20px;
+  background: transparent;
+  border-bottom: 1px solid var(--color-bg-light);
 }
 
-.uv-header h3 {
-  color: #b366ff;
-  margin: 0;
-  font-family: 'Share Tech Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 16px;
-  font-weight: bold;
-  text-shadow: 0 0 10px rgba(179, 102, 255, 0.5);
-}
+.uv-header h3 { color: var(--color-text); font-size: 14px; text-shadow: none; }
 
-.btn-close {
-  background: rgba(255, 0, 60, 0.1);
-  border: 1px solid #c41e3a;
-  color: #ff6b9d;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.uv-header .btn-close { /* e botões undo/redo */
+  background-color: var(--color-bg-light); border: none; border-radius: 5px; color: var(--color-text-muted);
 }
+.uv-header .btn-close:hover { background-color: #ff3c5b; color: white;}
 
-.btn-close:hover {
-  background: rgba(255, 0, 60, 0.3);
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.4);
-  transform: scale(1.05);
-}
-
-/* ===== MAIN LAYOUT FLEX ===== */
+/* --- Estrutura Flex (Workspace + Sidebar) --- */
 .uv-editor-main {
   display: flex;
   flex: 1;
-  padding-top: 70px;
-  gap: 0;
+  padding-top: 60px; /* Altura do header */
   width: 100%;
 }
 
-/* ===== WORKSPACE ===== */
+/* ============================ */
+/* ===== 3. ÁREA DE TRABALHO ===== */
+/* ============================ */
+
 .editor-workspace {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(45deg, #0a0a0a 25%, transparent 25%, transparent 75%, #0a0a0a 75%, #0a0a0a),
-              linear-gradient(45deg, #0a0a0a 25%, transparent 25%, transparent 75%, #0a0a0a 75%, #0a0a0a);
+  background-color: #000;
+  background-image:
+    linear-gradient(var(--color-bg-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-bg-light) 1px, transparent 1px);
   background-size: 40px 40px;
-  background-position: 0 0, 20px 20px;
-  background-color: #1a1a1a;
-  overflow: auto;
   position: relative;
-  padding: 20px;
+  cursor: default; /* Padrão, muda com panning */
 }
 
-.canvas-container {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(179, 102, 255, 0.05);
-  max-height: 100%;
-  max-width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid rgba(179, 102, 255, 0.2);
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
+.canvas-container { border: 2px solid var(--color-accent); border-radius: 2px; box-shadow: 0 0 20px var(--color-accent); }
+
+.zoom-indicator {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--color-bg-panel); color: var(--color-text-muted);
+    padding: 4px 8px; border-radius: 4px; font-size: 12px;
 }
 
-.canvas-container canvas {
+/* ========================= */
+/* ===== 4. PAINEL LATERAL (SIDEBAR) ===== */
+/* ========================= */
+
+.uv-sidebar { background: var(--color-bg-panel); border-left: 1px solid var(--color-bg-light); width: 300px; }
+
+/* --- Seções e Títulos --- */
+.uv-sidebar h4 { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); letter-spacing: 1px; border-bottom: 1px solid var(--color-bg-light); padding-bottom: 8px; }
+
+/* --- Botões de Ferramenta --- */
+.tool-btn {
+  background-color: var(--color-bg-light); color: var(--color-text); border: none; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; transition: background-color 0.2s;
+}
+
+.tool-btn:hover { background-color: #4a4a58; }
+.tool-btn.active { background-color: var(--color-primary); box-shadow: var(--shadow-glow); color: white; }
+
+/* --- Lista de Camadas --- */
+.layer-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.layer-actions button { flex: 1; background-color: var(--color-bg-light); border:none; color:var(--color-text); padding: 6px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.layer-actions button:hover { background-color: var(--color-primary); }
+
+.layers-container { min-height: 200px; }
+
+.layer-item-container { display: flex; flex-direction: column; }
+.layer-item {
+  display: flex; align-items: center; padding: 6px; border-radius: 4px;
+  transition: background-color 0.2s;
   background: transparent;
-  display: block;
-  max-width: 100%;
-  height: auto;
-  cursor: crosshair;
-  border-radius: 4px;
 }
 
-.canvas-container canvas.resizing {
-  cursor: nwse-resize;
+.layer-item:hover { background: var(--color-bg-light); }
+.layer-item.active { background: var(--color-primary); }
+
+.layer-item-main { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
+.layer-toggle-expand { background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0 4px; }
+.layer-icon { width: 16px; text-align: center; }
+
+.layer-group-children { border-left: 1px solid var(--color-bg-light); margin-top: 4px; padding-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+
+.layer-item .layer-item-main { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
+.layer-item .layer-item-main span { color: var(--color-text); }
+.layer-item .layer-item-controls { display: flex; gap: 4px; }
+.layer-item .layer-item-controls button { background: transparent; border: none; color: var(--color-text-muted); font-size: 14px; cursor: pointer; padding: 4px; border-radius: 4px; }
+.layer-item .layer-item-controls button:hover { color: var(--color-text); background: var(--color-bg-light); transform: scale(1.05); }
+
+/* --- Painel de Propriedades da Camada --- */
+.layer-properties { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--color-bg-light); display:flex; flex-direction: column; gap:12px; }
+.layer-properties > div { display:flex; flex-direction: column; gap:8px; }
+.layer-properties label { font-size:11px; font-weight:500; color:var(--color-text-muted); display:block; }
+.layer-properties input, .layer-properties select, .layer-properties textarea { background: var(--color-bg-dark); border:1px solid var(--color-bg-light); color:var(--color-text); border-radius:4px; padding:6px 8px; font-size:12px; width:100%; }
+.layer-properties input:focus, .layer-properties select:focus, .layer-properties textarea:focus { outline:none; border-color:var(--color-accent); box-shadow: 0 0 10px rgba(0,255,255,0.12); }
+
+/* --- Rodapé com Botão Salvar --- */
+.sidebar-footer { padding:15px; border-top:1px solid var(--color-bg-light); background: transparent; }
+.save-button { background: var(--color-primary); font-size:14px; font-family:var(--font-mono); box-shadow: var(--shadow-glow); transition: transform 0.2s, box-shadow 0.2s; }
+.save-button:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(168,85,247,0.6); }
+
+/* =============================== */
+/* ===== 5. COMPONENTES E ESTILOS GERAIS ===== */
+/* =============================== */
+
+/* --- Controles Deslizantes (Range) --- */
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; background: var(--color-bg-deep);
+  border-radius: 2px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px;
+  background: var(--color-accent);
+  border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--color-bg-panel);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+}
+input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.05); }
+input[type="range"]::-moz-range-thumb {
+   width: 14px; height: 14px;
+   background: var(--color-accent);
+   border-radius: 50%; cursor: pointer;
+   border: 2px solid var(--color-bg-panel);
 }
 
-.canvas-container canvas.dragging {
-  cursor: move;
-}
-
-/* ===== RESIZE INDICATOR ===== */
-.resize-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 255, 255, 0.9);
-  color: #000;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-}
-
-/* ===== RIGHT SIDEBAR ===== */
-.uv-sidebar {
-  width: 280px;
-  background: rgba(0, 0, 0, 0.4);
-  border-left: 2px solid #333;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  backdrop-filter: blur(5px);
-  position: relative;
-}
-
-.uv-sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding-right: 4px;
-}
-
-/* ===== CUSTOM SCROLLBAR ===== */
-.uv-sidebar-scroll::-webkit-scrollbar {
+/* --- Scrollbars --- */
+.layers-container::-webkit-scrollbar, .uv-sidebar-scroll::-webkit-scrollbar {
   width: 8px;
 }
-
-.uv-sidebar-scroll::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+.layers-container::-webkit-scrollbar-track, .uv-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.layers-container::-webkit-scrollbar-thumb, .uv-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
-
-.uv-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #b366ff, #8e2de2);
-  border-radius: 4px;
-  border: 2px solid rgba(0, 0, 0, 0.4);
+.layers-container::-webkit-scrollbar-thumb:hover, .uv-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }
 
-.uv-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #8e2de2, #b366ff);
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.5);
+/* ============================ */
+/* ===== 6. RESPONSIVIDADE ===== */
+/* ============================ */
+
+@media (max-width: 1024px) {
+  .uv-editor-panel { flex-direction: column; height:95vh; }
+  .uv-editor-main { flex:1; min-height:0; }
+  .uv-sidebar { flex-direction: row; width:100%; height:auto; border-left:none; border-top:1px solid var(--color-bg-light); }
+  .sidebar-footer { border-top:none; border-left:1px solid var(--color-bg-light); }
 }
 
-/* Firefox scrollbar */
-.uv-sidebar-scroll {
-  scrollbar-color: #b366ff rgba(0, 0, 0, 0.3);
-  scrollbar-width: thin;
+@media (max-width: 768px) {
+  .uv-editor-overlay { padding: 0; }
+  .uv-editor-panel { height: 100vh; border-radius: 0; }
+  .uv-header { padding: 10px 15px; }
+  .uv-editor-main { padding-top: 50px; }
+  .uv-sidebar { flex-direction: column; height:45vh; }
 }
 
-.uv-sidebar-section {
-  flex: 0 0 auto;
-  border-bottom: 1px solid #333;
-  padding: 15px;
-  min-width: 0;
-  min-height: fit-content;
-  display: block;
+/* Dragging visual state for layers */
+.layer-item.dragging {
+  opacity: 0.5;
+  background: #5c0099;
+  border: 1px dashed #00ffff;
 }
-
-.uv-sidebar-section h4 {
-  color: #b366ff;
-  margin: 0 0 12px 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: bold;
-}
-
-/* ===== COLORS SECTION ===== */
-.color-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.color-btn {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
-}
-
-.color-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px currentColor;
-}
-
-.color-btn.active {
-  border-color: #fff;
-  box-shadow: 0 0 20px currentColor, inset 0 0 10px rgba(255, 255, 255, 0.3);
-}
-
-/* ===== SIZE SECTION ===== */
-.size-control {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.size-input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.size-input-group input[type="number"] {
-  flex: 1;
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid rgba(179, 102, 255, 0.3);
-  color: #fff;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.size-input-group input[type="number"]:focus {
-  border-color: #b366ff;
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
-  outline: none;
-}
+ 
+ 
 
 .size-preview {
   display: flex;
@@ -798,6 +740,134 @@ input[type="range"]:disabled {
   font-weight: bold;
 }
 
+/* ===== ADDITIONAL POLISH & RESPONSIVE IMPROVEMENTS ===== */
+
+/* Slightly narrower panel on small screens and more breathing room */
+.uv-editor-panel {
+  max-width: 1200px;
+}
+
+/* Make the sidebar a bit wider for controls and improve contrast */
+.uv-sidebar {
+  width: 320px;
+  background: linear-gradient(180deg, rgba(10,10,10,0.65), rgba(20,12,18,0.6));
+  border-left: 2px solid rgba(179,102,255,0.06);
+}
+
+/* Canvas container: tighter frame and subtle neon inset */
+.canvas-container {
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(179,102,255,0.12);
+  background: linear-gradient(180deg, rgba(30,30,30,0.6), rgba(10,10,10,0.4));
+}
+
+.canvas-container::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(179,102,255,0.02);
+}
+
+/* Layer item layout improvements */
+.layer-item {
+  padding: 8px 10px;
+  gap: 12px;
+  align-items: center;
+}
+
+.layer-item .layer-item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.layer-item .layer-item-main span {
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-item .layer-item-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.layer-item .layer-item-controls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.02);
+}
+
+.layer-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.02);
+  cursor: grab;
+  user-select: none;
+}
+.layer-drag-handle:active { cursor: grabbing; }
+
+.layer-item .layer-item-controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.6), 0 0 12px rgba(179,102,255,0.08);
+}
+
+/* Make the properties panel visually separated */
+.layer-properties {
+  margin-top: 16px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+  border: 1px solid rgba(179,102,255,0.06);
+  border-radius: 8px;
+}
+
+/* Save button in sidebar */
+.save-button {
+  width: calc(100% - 32px);
+  margin: 10px 16px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg,#b366ff,#8e2de2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(142,45,226,0.18);
+}
+
+.save-button:hover { transform: translateY(-2px); }
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .uv-sidebar { width: 300px; }
+  .uv-editor-panel { max-width: 100%; margin: 8px; }
+}
+
+@media (max-width: 768px) {
+  .uv-editor-panel { flex-direction: column; height: 95vh; }
+  .uv-sidebar { width: 100%; height: 360px; order: 2; }
+  .editor-workspace { order: 1; padding: 12px; }
+}
+
+
 /* ===== INSTRUCTIONS PANEL ===== */
 .instructions-panel {
   position: absolute;
@@ -967,4 +1037,11 @@ input[type="range"]:disabled {
     bottom: 60px;
     flex-wrap: wrap;
   }
+}
+
+/* Dragging visual state for layers */
+.layer-item.dragging {
+  opacity: 0.5;
+  background: #5c0099;
+  border: 1px dashed #00ffff;
 }

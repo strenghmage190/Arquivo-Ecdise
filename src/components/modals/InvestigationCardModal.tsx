@@ -85,6 +85,13 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
       }
     } catch (e) { setChatMessages(null); }
   }, [existing]);
+  const swipeHandlers = useSwipeable({
+    onSwipedDown: () => {
+      if (isMobile) onClose();
+    },
+    trackMouse: false,
+  });
+
   if (!open) return null;
 
   const addInsight = () => setInsights((s) => [...s, emptyInsight()]);
@@ -390,13 +397,6 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
       document.body
     );
   }
-
-  const swipeHandlers = useSwipeable({
-    onSwipedDown: () => {
-      if (isMobile) onClose();
-    },
-    trackMouse: false,
-  });
 
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>
