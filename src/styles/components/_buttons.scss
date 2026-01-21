@@ -1,0 +1,25 @@
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+.btn {
+  @include flex-center;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  border: 1px solid transparent;
+  background: rgba(100,100,100,0.3);
+  color: var(--text-color);
+  padding: 8px;
+}
+
+.btn:hover { transform: scale(1.03); }
+
+.btn-close {
+  background: rgba(255,0,60,0.1);
+  border: 1px solid var(--danger);
+  color: var(--danger-text);
+  width: 36px; height: 36px; font-size: 18px;
+}
+
+.btn-help { border-radius: var(--radius-sm); }
+.btn-save-uv { border-radius: var(--radius-md); }

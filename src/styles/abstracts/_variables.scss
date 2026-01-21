@@ -1,0 +1,36 @@
+/* Core design tokens for UV Editor */
+:root {
+  --primary: #b366ff;
+  --primary-2: #8e2de2;
+  --primary-gradient: linear-gradient(135deg, var(--primary), var(--primary-2));
+  --primary-glow: rgba(179, 102, 255, 0.3);
+  --primary-glow-strong: rgba(179, 102, 255, 0.5);
+  --primary-glow-soft: rgba(179, 102, 255, 0.05);
+  --primary-glow-medium: rgba(179, 102, 255, 0.2);
+  --primary-glow-50: rgba(179, 102, 255, 0.5);
+
+  --accent: #00ffff;
+  --accent-2: #0080ff;
+  --accent-glow: rgba(0, 255, 255, 0.6);
+
+  --danger: #c41e3a;
+  --danger-text: #ff6b9d;
+  --danger-glow: rgba(255, 0, 60, 0.4);
+  --danger-glow-soft: rgba(196, 30, 58, 0.3);
+
+  --bg-0: #0f0f0f;
+  --bg-1: #1a1015;
+  --bg-2: #1a1a1a;
+
+  --border-color: #333;
+  --text-color: #ddd;
+  --white: #fff;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition-fast: all 0.2s ease;
+  --transition-medium: all 0.3s ease;
+  --z-modal-base: 1000;
+}
