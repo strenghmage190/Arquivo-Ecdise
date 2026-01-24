@@ -59,6 +59,9 @@ interface LayersPanelProps {
   onBatchDelete: (ids: string[]) => void;
   onBatchLock: (ids: string[]) => void;
   onBatchUnlock: (ids: string[]) => void;
+  // External control: show actions bar and callback when toggled
+  showActions?: boolean;
+  onShowActionsChange?: (v: boolean) => void;
 }
 
 export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: LayersPanelProps) {
@@ -68,6 +71,15 @@ export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: La
   const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id?: string } | null>(null);
+
+  // If parent provides `showActions`, keep internal state in sync
+  useEffect(() => {
+    try {
+      if (typeof props.showActions !== 'undefined') {
+        setShowActionsBar(Boolean(props.showActions));
+      }
+    } catch (e) {}
+  }, [props.showActions]);
 
   const handleLayerItemContextMenu = (id: string, e: React.MouseEvent) => {
     console.debug('[LayersPanel] handleLayerItemContextMenu', { id, x: e.clientX, y: e.clientY, target: (e.target as HTMLElement)?.tagName });
@@ -257,8 +269,9 @@ export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: La
               <i className="icon-draw"></i>
             </button>
           </Tooltip>
+          {/* debug: log clicks on header add drawing */}
           <Tooltip id="add-text-layer" text="Adicionar Camada de Texto">
-            <button aria-label="Adicionar Camada de Texto" onClick={props.onAddTextLayer} tabIndex={0}>
+            <button aria-label="Adicionar Camada de Texto" onClick={(e) => { console.debug('[LayersPanel] header add-text clicked', e); props.onAddTextLayer(); }} tabIndex={0}>
               <i className="icon-text"></i>
             </button>
           </Tooltip>
@@ -291,7 +304,12 @@ export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: La
             </button>
           </Tooltip>
           <Tooltip id="actions-toggle" text="Mostrar ações de camada">
-            <button aria-label="Mostrar ações" onClick={() => setShowActionsBar(s => !s)} tabIndex={0} className="layers-actions-toggle">
+            <button
+              aria-label="Mostrar ações"
+              onClick={(e) => { console.debug('[LayersPanel] header actions-toggle clicked'); setShowActionsBar((s) => { const next = !s; try { props.onShowActionsChange && props.onShowActionsChange(next); } catch (e) {} return next; }); }}
+              tabIndex={0}
+              className="layers-actions-toggle"
+            >
               ⚙️
             </button>
           </Tooltip>
@@ -482,14 +500,14 @@ export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: La
       {/* Rodapé com botões de ação */}
       <div className="layers-footer">
         <Tooltip id="add-drawing-footer" text="Criar nova camada de desenho">
-          <button onClick={props.onAddDrawingLayer}>Nova Camada</button>
+          <button onClick={(e) => { console.debug('[LayersPanel] footer add-drawing clicked'); props.onAddDrawingLayer(); }}>Nova Camada</button>
         </Tooltip>
         <Tooltip id="create-group-footer" text="Criar um grupo de camadas">
-          <button onClick={props.onCreateGroup}>Novo Grupo</button>
+          <button onClick={(e) => { console.debug('[LayersPanel] footer create-group clicked'); props.onCreateGroup(); }}>Novo Grupo</button>
         </Tooltip>
         <div style={{flex:1}} />
         <Tooltip id="delete-selected-footer" text="Excluir camadas selecionadas">
-          <button onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>Excluir</button>
+          <button onClick={(e) => { console.debug('[LayersPanel] footer delete-selected clicked'); handleBatchDelete(); }} disabled={selectedLayers.length === 0}>Excluir</button>
         </Tooltip>
       </div>
 
