@@ -13,6 +13,7 @@ import NumericKeypad from '../tools/NumericKeypad';
 import AudioViewerModal from './AudioViewerModal';
 import WaveSurfer from 'wavesurfer.js';
 import './InspectionModal.css';
+import { markPerfKeep } from '../../utils/performance';
 import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
@@ -84,7 +85,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
   const [puzzleSolved, setPuzzleSolved] = useState(false);
   const fileRef = React.useRef<HTMLDivElement | null>(null);
+  const backdropRef = React.useRef<HTMLDivElement | null>(null);
   const thermalCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Mark modal root as a performance exception so filters/animations remain functional
+  useEffect(() => {
+    const el = fileRef.current;
+    const cleans: Array<() => void> = [];
+    try {
+      if (backdropRef.current) cleans.push(markPerfKeep(backdropRef.current));
+    } catch {}
+    try {
+      if (el) cleans.push(markPerfKeep(el));
+    } catch {}
+    return () => cleans.forEach((c) => { try { c(); } catch {} });
+  }, []);
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
   const [serverCard, setServerCard] = useState<any | null>(null);
   const [showMoreTools, setShowMoreTools] = useState(false);
@@ -862,7 +877,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   }
 
   const modal = (
-    <div className="inspect-backdrop" onClick={onClose}>
+    <div className="inspect-backdrop" ref={backdropRef} onClick={onClose}>
       <div
         className="inspect-file"
         ref={fileRef}

@@ -244,6 +244,19 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
     alert('✓ Chave copiada para a área de transferência!');
   };
 
+  const validateSecurityLayer = (securityLayer) => {
+    if (securityLayer?.require_keyword && !securityLayer?.keyword) {
+      console.error('A camada de segurança requer uma palavra-chave, mas nenhuma foi fornecida.');
+    }
+    if (securityLayer?.reveal_logic === 'aligned_keyword' && !securityLayer?.keyword) {
+      console.error('A lógica de revelação exige uma palavra-chave alinhada, mas nenhuma foi fornecida.');
+    }
+  };
+
+  useEffect(() => {
+    validateSecurityLayer(resolvedConfig.security_layer);
+  }, [resolvedConfig.security_layer]);
+
   return (
     <div className="solver-container">
       {/* AREA DA IMAGEM - Ela se conserta conforme os valores chegam no alvo */}

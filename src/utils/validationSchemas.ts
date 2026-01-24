@@ -22,6 +22,8 @@ const MegaClueDataSchema = z.object({
   final_truth_text: z.string().max(2000, 'Texto da verdade não pode exceder 2000 caracteres'),
   final_image_url: z.string().url('URL de imagem inválida').optional().or(z.literal('')),
   required_puzzle_ids: z.array(z.string().uuid('ID deve ser um UUID válido')),
+  // códigos/exigências de desbloqueio para mega-pista (ex: senhas por puzzle)
+  required_codes: z.array(z.string()).optional(),
   collected_codes: z.array(z.string()).optional(),
 }).strict();
 

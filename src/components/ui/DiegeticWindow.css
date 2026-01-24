@@ -1,28 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 .diegetic-window {
   width: 880px;
   max-width: calc(100% - 48px);
-  background: linear-gradient(180deg, rgba(5,8,10,0.95), rgba(5,8,10,0.88));
-  border: 2px solid rgba(0, 243, 255, 0.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px rgba(0, 243, 255, 0.08);
+  background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(5 8 10 / 88%));
+  border: 2px solid rgb(0 243 255 / 20%);
+  box-shadow:
+    0 12px 40px rgb(0 0 0 / 70%),
+    0 0 20px rgb(0 243 255 / 8%);
   color: #e9fcff;
   border-radius: 6px;
   overflow: hidden;
   z-index: 13000;
   position: fixed;
-  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   max-height: 96vh;
   display: flex;
   flex-direction: column;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .diegetic-titlebar {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:8px 14px; background:rgba(0, 243, 255, 0.05);
-  border-bottom:1px solid rgba(0, 243, 255, 0.15);
-  font-family: 'Share Tech Mono', monospace; color:#00f3ff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgb(0 243 255 / 5%);
+  border-bottom: 1px solid rgb(0 243 255 / 15%);
+  font-family: "Share Tech Mono", monospace;
+  color: #00f3ff;
   font-size: 13px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -40,56 +48,62 @@
   align-items: center;
 }
 
-.diegetic-body { padding:14px; overflow:hidden; }
+.diegetic-body {
+  padding: 14px;
+  overflow: hidden;
+}
 
-.title-controls { display:flex; gap:6px }
+.title-controls {
+  display: flex;
+  gap: 6px;
+}
 
-.ctrl-btn { 
-  background:transparent; 
-  border:1px solid rgba(0, 243, 255, 0.2); 
-  color:#00f3ff; 
-  width:28px; 
-  height:22px; 
-  cursor:pointer;
+.ctrl-btn {
+  background: transparent;
+  border: 1px solid rgb(0 243 255 / 20%);
+  color: #00f3ff;
+  width: 28px;
+  height: 22px;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
 .ctrl-btn:hover {
   border-color: #00f3ff;
-  box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 8px rgb(0 243 255 / 20%);
 }
 
-.ctrl-btn.close { 
-  border-color: rgba(255, 0, 60, 0.3);
-  color:#ff003c;
+.ctrl-btn.close {
+  border-color: rgb(255 0 60 / 30%);
+  color: #ff003c;
 }
 
 .ctrl-btn.close:hover {
   border-color: #ff003c;
-  box-shadow: 0 0 8px rgba(255, 0, 60, 0.2);
+  box-shadow: 0 0 8px rgb(255 0 60 / 20%);
 }
 
-.diegetic-minibar { 
-  position: fixed; 
-  left: 12px; 
-  bottom: 12px; 
-  background: rgba(5, 8, 10, 0.95); 
-  padding:10px 14px; 
-  border-radius:6px; 
-  border:1px solid rgba(0, 243, 255, 0.2); 
-  cursor:pointer; 
-  z-index:14000; 
-  font-family:'Share Tech Mono', monospace; 
-  color:#00f3ff;
+.diegetic-minibar {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  background: rgb(5 8 10 / 95%);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid rgb(0 243 255 / 20%);
+  cursor: pointer;
+  z-index: 14000;
+  font-family: "Share Tech Mono", monospace;
+  color: #00f3ff;
   transition: all 0.2s;
 }
 
 .diegetic-minibar:hover {
   border-color: #00f3ff;
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+  box-shadow: 0 0 12px rgb(0 243 255 / 15%);
 }
 
-.diegetic-minibar .mini-title { 
-  font-size:12px;
+.diegetic-minibar .mini-title {
+  font-size: 12px;
   letter-spacing: 1px;
 }

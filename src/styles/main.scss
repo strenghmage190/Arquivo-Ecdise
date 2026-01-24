@@ -2,13 +2,16 @@
 @use './abstracts/variables' as *;
 @use './abstracts/mixins' as *;
 
-/* Layout */
-@use './layout/_editor' as *;
+/* Base styles */
+@use './base/base' as *;
+@use './base/animations' as *;
 
 /* Components */
 @use './components/_buttons' as *;
 @use './components/_layers' as *;
-@use './components/_scrollbar' as *;
+
+/* Layout */
+@use './layout/_editor' as *;
 
 /* Accessibility / utilities */
 @media (prefers-reduced-motion: reduce) {
@@ -16,3 +19,6 @@
 }
 
 :where(button, input, select, textarea):focus-visible { @include focus-ring(); }
+
+/* Responsive styles */
+/* ... Your media queries can go here, or inside each component/layout file ... */

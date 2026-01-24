@@ -30,6 +30,7 @@ import CreatorHub from '../modals/CreatorHub';
 const GMOverwatch = React.lazy(() => import('./GMOverwatch'));
 import { useIsMobile } from '../../hooks/useIsMobile';
 import BottomSheet from '../ui/BottomSheet';
+import usePerformanceMode from '../../utils/usePerformanceMode';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -63,59 +64,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
 
-  const [performanceMode, setPerformanceMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const stored = window.localStorage.getItem('investigation_performance_mode');
-      if (stored === '1') return true;
-      if (stored === '0') return false;
-      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch {
-      return false;
-    }
-  });
-
-  // Add a new state for extended performance optimizations
-  const [extendedPerformanceMode, setExtendedPerformanceMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const stored = window.localStorage.getItem('investigation_extended_performance_mode');
-      return stored === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('investigation_performance_mode', performanceMode ? '1' : '0');
-    } catch {
-      // ignore persistence errors
-    }
-  }, [performanceMode]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('investigation_extended_performance_mode', extendedPerformanceMode ? '1' : '0');
-    } catch {
-      // ignore persistence errors
-    }
-  }, [extendedPerformanceMode]);
-
-  // Update the performance mode toggle to include extended mode
-  const togglePerformanceMode = () => {
-    setPerformanceMode((prev) => !prev);
-    setExtendedPerformanceMode((prev) => !prev); // Toggle extended mode alongside
-  };
-
-  // Apply performance mode class to body for global CSS optimizations
-  useEffect(() => {
-    if (performanceMode) {
-      document.body.classList.add('performance-mode');
-    } else {
-      document.body.classList.remove('performance-mode');
-    }
-  }, [performanceMode]);
+  const {
+    enabled: performanceMode,
+    extended: extendedPerformanceMode,
+    preset: performancePreset,
+    setEnabled: setPerformanceMode,
+    setExtended: setExtendedPerformanceMode,
+    setPreset: setPerformancePreset,
+    toggle: togglePerformanceMode,
+  } = usePerformanceMode();
 
   // rAF batching to reduce state churn while dragging/panning
   const positionFrameRef = useRef<number | null>(null);
@@ -1569,6 +1526,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       }
 
       const password = (unlockingCard.lock_password || metadata?.lock_pass || metadata?.lock_password || '').toString().toUpperCase();
+      console.debug('unlock attempt', { cardId: unlockingCard?.id, providedCode: code, expected: password, performanceMode });
       if (!password) {
         showToast({ id: 'unlock-missing', message: 'Nenhuma senha configurada para este card.' }, 3000);
         setUnlockingCard(null);
@@ -1577,6 +1535,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       }
 
       if (password !== code) {
+        console.debug('unlock failed: code mismatch', { cardId: unlockingCard?.id, providedCode: code, expected: password });
         showToast({ id: 'unlock-invalid', message: 'Código inválido.' }, 3200);
         return { success: false, message: 'Código inválido.' };
       }
@@ -2023,14 +1982,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           } catch (err) { /* ignore */ }
         }}
         onMouseMove={(e) => {
-          if (!isUV || performanceMode) return;
+          if (!isUV) return;
           const boardRect = corkboardRef.current?.getBoundingClientRect();
           if (!boardRect) return;
           const lx = e.clientX - boardRect.left;
           const ly = e.clientY - boardRect.top;
+          console.debug('uv overlay move', { isUV, performanceMode, coords: { x: lx, y: ly } });
           setOverlayPos({ x: lx, y: ly, over: true });
         }}
-        onMouseLeave={() => { if (performanceMode) return; setOverlayPos((o) => o ? { ...o, over: false } : null); }}
+        onMouseLeave={() => { console.debug('uv overlay leave', { isUV, performanceMode }); setOverlayPos((o) => o ? { ...o, over: false } : null); }}
         onMouseDown={(e) => {
           if (e.target === corkboardRef.current || e.target === e.currentTarget) {
             // close any open context menu when clicking the background
@@ -2073,11 +2033,46 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
         >
           {/* Global UV overlay that follows the mouse across the whole corkboard */}
-          {isUV && !performanceMode && overlayPos && overlayPos.over && (() => {
+          {isUV && overlayPos && overlayPos.over && (() => {
             // overlayPos is in screen-local board coords (pixels from corkboard left/top)
             // convert to world coordinates inside the transformed layer: world = origin + screen/zoom
             const worldX = origin.x + (overlayPos.x / zoom);
             const worldY = origin.y + (overlayPos.y / zoom);
+
+            // If performance mode is enabled, render a lightweight UV halo
+            if (performanceMode) {
+              return (
+                <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3100 }}>
+                  <div style={{
+                    position: 'absolute',
+                    left: worldX,
+                    top: worldY,
+                    transform: 'translate(-50%, -50%)',
+                    width: 220,
+                    height: 220,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(179, 102, 255, 0.48) 0%, rgba(179, 102, 255, 0) 68%)',
+                    pointerEvents: 'none',
+                    mixBlendMode: 'screen'
+                  }} />
+                  {/* center highlight to make the UV spot more visible on dark canvases */}
+                  <div style={{
+                    position: 'absolute',
+                    left: worldX,
+                    top: worldY,
+                    transform: 'translate(-50%, -50%)',
+                    width: 72,
+                    height: 72,
+                    borderRadius: '50%',
+                    background: 'rgba(200,140,255,0.18)',
+                    pointerEvents: 'none',
+                    mixBlendMode: 'screen'
+                  }} />
+                </div>
+              );
+            }
+
+            // Full effect when not in performance mode
             return (
               <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
                 <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
@@ -2509,42 +2504,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           </div>
         </div>
       )}
-      <div className="toast-container">
-        {toast && (
-          <Toast
-            message={toast.message}
-            actionLabel={toast.connectionId ? 'Desfazer' : undefined}
-            onAction={() => { undo(); clearToast(); }}
-            onClose={() => clearToast()}
-          />
-        )}
-      </div>
-
-      {/* Modal do Decodificador de Anomalias */}
-      {showDecoderModal && (
-        <div className="modal-overlay decoder-overlay" onClick={() => setShowDecoderModal(false)}>
-          <div className="decoder-wrapper" onClick={(e) => e.stopPropagation()}>
-            <GlitchMaker 
-              onSave={handleDecoderSave}
-              onClose={() => setShowDecoderModal(false)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Código para Desbloqueio */}
-      {showCodePrompt && (
-        <CodePromptModal 
-          title="ARQUIVO PROTEGIDO - PROTOCOLO DELTA"
-          description="Sistema de segurança detectado. Digite o código de acesso para desbloquear o Decodificador de Anomalias."
-          onSubmit={handleDecoderCodeSubmit}
-          onClose={() => setShowCodePrompt(false)}
-        />
-      )}
-
-      {/* Modal de criação legado */}
       {showLegacyModal && (
-        <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
+        <Suspense fallback={<div>Carregando...</div>}>
           <CreateClueModalLegacy
             isOpen={showLegacyModal}
             onClose={() => setShowLegacyModal(false)}
@@ -2563,7 +2524,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           />
         </Suspense>
       )}
-
       {/* GM Overwatch Panel */}
       {isGameMaster && (
         <GMOverwatch

@@ -31,8 +31,8 @@
 .blur-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
-  border: 1px dashed rgba(0,243,255,0.25);
+  background: linear-gradient(180deg, rgb(0 0 0 / 20%), rgb(0 0 0 / 60%));
+  border: 1px dashed rgb(0 243 255 / 25%);
   backdrop-filter: blur(2px);
   pointer-events: none;
 }
@@ -68,24 +68,24 @@
   align-items: center;
   justify-content: center;
   z-index: 100;
-  background: linear-gradient(135deg, rgba(10,10,10,0.98), rgba(5,5,5,0.98));
+  background: linear-gradient(135deg, rgb(10 10 10 / 98%), rgb(5 5 5 / 98%));
 }
 
 .encryption-grid {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     repeating-linear-gradient(
       0deg,
-      rgba(255,0,60,0.08) 0px,
-      rgba(255,0,60,0.08) 2px,
+      rgb(255 0 60 / 8%) 0,
+      rgb(255 0 60 / 8%) 2px,
       transparent 2px,
       transparent 4px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255,0,60,0.08) 0px,
-      rgba(255,0,60,0.08) 2px,
+      rgb(255 0 60 / 8%) 0,
+      rgb(255 0 60 / 8%) 2px,
       transparent 2px,
       transparent 4px
     );
@@ -94,8 +94,13 @@
 }
 
 @keyframes grid-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .encryption-text-wrapper {
@@ -112,34 +117,44 @@
   font-size: 48px;
   color: #ff003c;
   animation: lock-pulse 2s infinite;
-  filter: drop-shadow(0 0 20px rgba(255,0,60,0.8));
+  filter: drop-shadow(0 0 20px rgb(255 0 60 / 80%));
 }
 
 @keyframes lock-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 .access-denied {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   font-size: 16px;
   color: #ff003c;
   letter-spacing: 3px;
   text-transform: uppercase;
   font-weight: bold;
-  text-shadow: 0 0 15px rgba(255,0,60,0.8);
+  text-shadow: 0 0 15px rgb(255 0 60 / 80%);
   animation: access-blink 1s infinite;
 }
 
 @keyframes access-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .encryption-code {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 10px;
-  color: #ff6600;
+  color: #f60;
   letter-spacing: 2px;
   text-transform: uppercase;
   opacity: 0.8;
@@ -167,10 +182,10 @@
   inset: 0;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255,0,255,0.15) 0px,
-    rgba(255,0,255,0.15) 2px,
-    rgba(0,255,255,0.1) 2px,
-    rgba(0,255,255,0.1) 4px,
+    rgb(255 0 255 / 15%) 0,
+    rgb(255 0 255 / 15%) 2px,
+    rgb(0 255 255 / 10%) 2px,
+    rgb(0 255 255 / 10%) 4px,
     transparent 4px,
     transparent 8px
   );
@@ -181,8 +196,8 @@
   animation: glitch-shift 0.3s infinite;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255,0,60,0.2) 0px,
-    rgba(255,0,60,0.2) 3px,
+    rgb(255 0 60 / 20%) 0,
+    rgb(255 0 60 / 20%) 3px,
     transparent 3px,
     transparent 6px
   );
@@ -192,8 +207,8 @@
   animation: glitch-shift 0.3s infinite;
   background: repeating-linear-gradient(
     90deg,
-    rgba(0,255,255,0.2) 0px,
-    rgba(0,255,255,0.2) 3px,
+    rgb(0 255 255 / 20%) 0,
+    rgb(0 255 255 / 20%) 3px,
     transparent 3px,
     transparent 6px
   );
@@ -203,8 +218,8 @@
   animation: glitch-shift 0.3s infinite;
   background: repeating-linear-gradient(
     90deg,
-    rgba(255,255,0,0.15) 0px,
-    rgba(255,255,0,0.15) 2px,
+    rgb(255 255 0 / 15%) 0,
+    rgb(255 255 0 / 15%) 2px,
     transparent 2px,
     transparent 4px
   );
@@ -212,19 +227,41 @@
 }
 
 @keyframes glitch-shift {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-2px); }
-  40% { transform: translateX(2px); }
-  60% { transform: translateX(-1px); }
-  80% { transform: translateX(1px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
 }
 
 @keyframes glitch-shift-reverse {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(2px); }
-  40% { transform: translateX(-2px); }
-  60% { transform: translateX(1px); }
-  80% { transform: translateX(-1px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(2px);
+  }
+  40% {
+    transform: translateX(-2px);
+  }
+  60% {
+    transform: translateX(1px);
+  }
+  80% {
+    transform: translateX(-1px);
+  }
 }
 
 /* Data corruption overlay */
@@ -243,8 +280,15 @@
 }
 
 @keyframes corruption-float {
-  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
-  50% { transform: translate(-3px, 2px); opacity: 0.8; }
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-3px, 2px);
+    opacity: 0.8;
+  }
 }
 
 /* Texto de glitch */
@@ -260,7 +304,7 @@
 }
 
 .glitch-chars {
-  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-family: "Share Tech Mono", "Courier New", monospace;
   font-size: 11px;
   letter-spacing: 4px;
   text-transform: uppercase;
@@ -272,43 +316,75 @@
 .glitch-1 {
   color: #ff003c;
   animation: glitch-char 0.4s infinite;
-  text-shadow: 
+  text-shadow:
     -2px 0 #00f3ff,
-    2px 0 #ff00ff,
-    0 0 15px rgba(255,0,60,0.8);
+    2px 0 #f0f,
+    0 0 15px rgb(255 0 60 / 80%);
 }
 
 .glitch-2 {
-  color: #ffff00;
+  color: #ff0;
   font-size: 13px;
   animation: glitch-char-reverse 0.35s infinite;
-  text-shadow: 0 0 10px rgba(255,255,0,0.6);
+  text-shadow: 0 0 10px rgb(255 255 0 / 60%);
   opacity: 0.7;
 }
 
 .glitch-3 {
   color: #00f3ff;
   animation: glitch-char 0.45s infinite;
-  text-shadow: 
+  text-shadow:
     -1px 0 #ff003c,
-    1px 0 #ffff00,
-    0 0 15px rgba(0,243,255,0.8);
+    1px 0 #ff0,
+    0 0 15px rgb(0 243 255 / 80%);
 }
 
 @keyframes glitch-char {
-  0%, 100% { transform: translateX(0) scaleX(1); opacity: 1; }
-  20% { transform: translateX(-3px) scaleX(0.98); opacity: 0.8; }
-  40% { transform: translateX(2px) scaleX(1.02); opacity: 0.9; }
-  60% { transform: translateX(-1px) scaleX(0.99); opacity: 0.7; }
-  80% { transform: translateX(1px) scaleX(1.01); opacity: 0.8; }
+  0%,
+  100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 1;
+  }
+  20% {
+    transform: translateX(-3px) scaleX(0.98);
+    opacity: 0.8;
+  }
+  40% {
+    transform: translateX(2px) scaleX(1.02);
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateX(-1px) scaleX(0.99);
+    opacity: 0.7;
+  }
+  80% {
+    transform: translateX(1px) scaleX(1.01);
+    opacity: 0.8;
+  }
 }
 
 @keyframes glitch-char-reverse {
-  0%, 100% { transform: translateX(0) skewX(0deg); opacity: 1; }
-  20% { transform: translateX(3px) skewX(-2deg); opacity: 0.7; }
-  40% { transform: translateX(-2px) skewX(2deg); opacity: 0.8; }
-  60% { transform: translateX(1px) skewX(-1deg); opacity: 0.9; }
-  80% { transform: translateX(-1px) skewX(1deg); opacity: 0.7; }
+  0%,
+  100% {
+    transform: translateX(0) skewX(0deg);
+    opacity: 1;
+  }
+  20% {
+    transform: translateX(3px) skewX(-2deg);
+    opacity: 0.7;
+  }
+  40% {
+    transform: translateX(-2px) skewX(2deg);
+    opacity: 0.8;
+  }
+  60% {
+    transform: translateX(1px) skewX(-1deg);
+    opacity: 0.9;
+  }
+  80% {
+    transform: translateX(-1px) skewX(1deg);
+    opacity: 0.7;
+  }
 }
 
 /* Scanlines */
@@ -319,38 +395,46 @@
   pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
-    transparent 0px,
+    transparent 0,
     transparent 2px,
-    rgba(0,255,255,0.03) 2px,
-    rgba(0,255,255,0.03) 4px
+    rgb(0 255 255 / 3%) 2px,
+    rgb(0 255 255 / 3%) 4px
   );
   animation: scanline-drift 8s linear infinite;
 }
 
 @keyframes scanline-drift {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(10px); }
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(10px);
+  }
 }
 
 /* Mais intenso */
 .scanlines::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     90deg,
-    transparent 0px,
+    transparent 0,
     transparent 80px,
-    rgba(255,0,60,0.02) 80px,
-    rgba(255,0,60,0.02) 160px
+    rgb(255 0 60 / 2%) 80px,
+    rgb(255 0 60 / 2%) 160px
   );
   animation: scanline-horizontal 15s linear infinite;
   pointer-events: none;
 }
 
 @keyframes scanline-horizontal {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(100px); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100px);
+  }
 }
 
 /* =========================================
@@ -362,10 +446,10 @@
   inset: 0;
   background: repeating-linear-gradient(
     0deg,
-    transparent 0px,
+    transparent 0,
     transparent 2px,
-    rgba(0, 243, 255, 0.02) 2px,
-    rgba(0, 243, 255, 0.02) 4px
+    rgb(0 243 255 / 2%) 2px,
+    rgb(0 243 255 / 2%) 4px
   );
   pointer-events: none;
   opacity: 0.3;
@@ -376,7 +460,7 @@
    RESPONSIVE
    ========================================= */
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .glitch-chars {
     font-size: 10px;
     letter-spacing: 3px;
@@ -403,7 +487,7 @@
     animation: none !important;
     transition: none !important;
   }
-  
+
   .glitch-layer-1,
   .glitch-layer-2,
   .glitch-layer-3,
@@ -413,12 +497,12 @@
     animation: none;
     opacity: 0.4;
   }
-  
+
   .encryption-grid {
     animation: none;
     opacity: 0.2;
   }
-  
+
   .overlay-scan {
     animation: none;
   }

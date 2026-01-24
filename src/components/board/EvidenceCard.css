@@ -3,654 +3,788 @@
    ========================================= */
 
 /* === CARD BASE === */
-.clue-card, 
+.clue-card,
 .card-node {
-    width: 220px !important;
-    min-height: 280px;
-    display: flex !important;
-    flex-direction: column !important;
-    background: linear-gradient(135deg, rgba(5,8,12,0.98), rgba(10,15,20,0.95)) !important;
-    border: 1px solid rgba(0, 243, 255, 0.15) !important;
-    border-radius: 8px;
-    box-shadow: 
-        0 10px 40px rgba(0,0,0,0.9), 
-        0 0 0 1px rgba(0, 243, 255, 0.08),
-        inset 0 1px 0 rgba(255,255,255,0.02);
-    position: relative;
-    overflow: hidden !important;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    backdrop-filter: blur(12px);
-    color: #e0e0e0 !important;
-    padding: 0 !important;
+  width: 220px !important;
+  min-height: 280px;
+  display: flex !important;
+  flex-direction: column !important;
+  background: linear-gradient(
+    135deg,
+    rgb(5 8 12 / 98%),
+    rgb(10 15 20 / 95%)
+  ) !important;
+  border: 1px solid rgb(0 243 255 / 15%) !important;
+  border-radius: 8px;
+  box-shadow:
+    0 10px 40px rgb(0 0 0 / 90%),
+    0 0 0 1px rgb(0 243 255 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 2%);
+  position: relative;
+  overflow: hidden !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-family: "Share Tech Mono", "Courier New", monospace;
+  backdrop-filter: blur(12px);
+  color: #e0e0e0 !important;
+  padding: 0 !important;
 }
 
 .clue-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #00f3ff, transparent);
-    opacity: 0.4;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f3ff, transparent);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .clue-card:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 
-        0 20px 50px rgba(0,0,0,0.95), 
-        0 0 20px rgba(0, 243, 255, 0.2),
-        inset 0 1px 0 rgba(255,255,255,0.05);
-    border-color: rgba(0, 243, 255, 0.4) !important;
+  transform: translateY(-6px) scale(1.02);
+  box-shadow:
+    0 20px 50px rgb(0 0 0 / 95%),
+    0 0 20px rgb(0 243 255 / 20%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+  border-color: rgb(0 243 255 / 40%) !important;
 }
 
 /* === HIDDEN CLUES (GM SPECTER MODE) === */
 .card-node.hidden-clue {
-    opacity: 0.7 !important;
-    border-style: dashed !important;
-    border-color: rgba(139, 92, 246, 0.5) !important;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(109, 40, 217, 0.04)) !important;
-    box-shadow: 
-        0 0 20px rgba(139, 92, 246, 0.3),
-        inset 0 1px 0 rgba(139, 92, 246, 0.1) !important;
+  opacity: 0.7 !important;
+  border-style: dashed !important;
+  border-color: rgb(139 92 246 / 50%) !important;
+  background: linear-gradient(
+    135deg,
+    rgb(139 92 246 / 8%),
+    rgb(109 40 217 / 4%)
+  ) !important;
+  box-shadow:
+    0 0 20px rgb(139 92 246 / 30%),
+    inset 0 1px 0 rgb(139 92 246 / 10%) !important;
 }
 
 .card-node.hidden-clue:hover {
-    transform: none !important;
-    box-shadow: 
-        0 0 30px rgba(139, 92, 246, 0.5),
-        0 10px 40px rgba(0,0,0,0.9), 
-        inset 0 1px 0 rgba(139, 92, 246, 0.2) !important;
-    border-color: rgba(139, 92, 246, 0.8) !important;
+  transform: none !important;
+  box-shadow:
+    0 0 30px rgb(139 92 246 / 50%),
+    0 10px 40px rgb(0 0 0 / 90%),
+    inset 0 1px 0 rgb(139 92 246 / 20%) !important;
+  border-color: rgb(139 92 246 / 80%) !important;
 }
 
 /* === SCANNER LINE ANIMATION === */
 .scanner-line {
-    position: absolute;
-    top: -10px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, #00f3ff, transparent);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.9);
-    animation: scan 4s infinite ease-in-out;
-    z-index: 100;
-    pointer-events: none;
-    opacity: 0.6;
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #00f3ff, transparent);
+  box-shadow: 0 0 15px rgb(0 243 255 / 90%);
+  animation: scan 4s infinite ease-in-out;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 @keyframes scan {
-    0%, 100% { top: 0%; opacity: 0; }
-    5% { opacity: 1; }
-    50% { top: 50%; opacity: 0.8; }
-    95% { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
+  0%,
+  100% {
+    top: 0%;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  50% {
+    top: 50%;
+    opacity: 0.8;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
 }
 
 /* === IMAGE CONTAINER === */
 .clue-image-container {
-    width: 100%;
-    height: 150px;
-    position: relative;
-    background: #000;
-    overflow: hidden;
-    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  width: 100%;
+  height: 150px;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  border-bottom: 1px solid rgb(0 243 255 / 20%);
 }
 
 .clue-image-container img,
 .clue-image-container canvas,
 .clue-image-container .uv-container,
 .clue-image-container .uv-container > * {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    display: block !important;
-    border: none !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border: none !important;
 }
 
 .clue-image-container img {
-    filter: grayscale(70%) contrast(115%) brightness(0.95);
-    transition: filter 0.4s;
+  filter: grayscale(70%) contrast(115%) brightness(0.95);
+  transition: filter 0.4s;
 }
 
 .clue-card:hover .clue-image-container img {
-    filter: grayscale(10%) contrast(105%) brightness(1);
+  filter: grayscale(10%) contrast(105%) brightness(1);
 }
 
 .overlay-scan {
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent 0px,
-        transparent 2px,
-        rgba(0, 243, 255, 0.02) 2px,
-        rgba(0, 243, 255, 0.02) 4px
-    );
-    pointer-events: none;
-    opacity: 0.3;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgb(0 243 255 / 2%) 2px,
+    rgb(0 243 255 / 2%) 4px
+  );
+  pointer-events: none;
+  opacity: 0.3;
 }
 
 /* === BADGES CONTAINER === */
 .badges-container {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    z-index: 110;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 110;
 }
 
 .type-badge {
-    width: 32px;
-    height: 32px;
-    background: rgba(0, 0, 0, 0.92);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
-    backdrop-filter: blur(8px);
-    font-size: 16px;
-    transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+  background: rgb(0 0 0 / 92%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 80%);
+  backdrop-filter: blur(8px);
+  font-size: 16px;
+  transition: all 0.2s;
 }
 
 .type-badge.small {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
 }
 
 .type-badge:hover {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 
 /* Type Colors */
-.type-badge.video { border-color: #bd00ff; color: #bd00ff; box-shadow: 0 0 12px rgba(189, 0, 255, 0.5); }
-.type-badge.audio { border-color: #ffcc00; color: #ffcc00; box-shadow: 0 0 12px rgba(255, 204, 0, 0.5); }
-.type-badge.image { border-color: #00f3ff; color: #00f3ff; box-shadow: 0 0 12px rgba(0, 243, 255, 0.5); }
-.type-badge.text { border-color: #ffffff; color: #ffffff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.4); }
-.type-badge.locked { border-color: #ff003c; color: #ff003c; box-shadow: 0 0 18px rgba(255, 0, 60, 0.7); animation: pulse-red 2s infinite; }
+.type-badge.video {
+  border-color: #bd00ff;
+  color: #bd00ff;
+  box-shadow: 0 0 12px rgb(189 0 255 / 50%);
+}
+.type-badge.audio {
+  border-color: #fc0;
+  color: #fc0;
+  box-shadow: 0 0 12px rgb(255 204 0 / 50%);
+}
+.type-badge.image {
+  border-color: #00f3ff;
+  color: #00f3ff;
+  box-shadow: 0 0 12px rgb(0 243 255 / 50%);
+}
+.type-badge.text {
+  border-color: #fff;
+  color: #fff;
+  box-shadow: 0 0 12px rgb(255 255 255 / 40%);
+}
+.type-badge.locked {
+  border-color: #ff003c;
+  color: #ff003c;
+  box-shadow: 0 0 18px rgb(255 0 60 / 70%);
+  animation: pulse-red 2s infinite;
+}
 
-.type-badge.uv { border-color: #9b59b6; color: #9b59b6; box-shadow: 0 0 10px rgba(155,89,182,0.4); }
-.type-badge.hidden-audio { border-color: #ff6f61; color: #ff6f61; box-shadow: 0 0 10px rgba(255,111,97,0.4); }
-.type-badge.chat { border-color: #6cc644; color: #6cc644; box-shadow: 0 0 10px rgba(108,198,68,0.4); }
-.type-badge.thermal { border-color: #e67e22; color: #e67e22; box-shadow: 0 0 10px rgba(255,126,34,0.4); }
-.type-badge.stamp { border-color: #3498db; color: #3498db; box-shadow: 0 0 10px rgba(52,152,219,0.4); }
-.type-badge.link { border-color: #f1c40f; color: #f1c40f; box-shadow: 0 0 10px rgba(241,196,15,0.4); }
-.type-badge.hidden { border-color: #8b5cf6; color: #8b5cf6; box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); animation: pulse-purple 2s infinite; }
+.type-badge.uv {
+  border-color: #9b59b6;
+  color: #9b59b6;
+  box-shadow: 0 0 10px rgb(155 89 182 / 40%);
+}
+.type-badge.hidden-audio {
+  border-color: #ff6f61;
+  color: #ff6f61;
+  box-shadow: 0 0 10px rgb(255 111 97 / 40%);
+}
+.type-badge.chat {
+  border-color: #6cc644;
+  color: #6cc644;
+  box-shadow: 0 0 10px rgb(108 198 68 / 40%);
+}
+.type-badge.thermal {
+  border-color: #e67e22;
+  color: #e67e22;
+  box-shadow: 0 0 10px rgb(255 126 34 / 40%);
+}
+.type-badge.stamp {
+  border-color: #3498db;
+  color: #3498db;
+  box-shadow: 0 0 10px rgb(52 152 219 / 40%);
+}
+.type-badge.link {
+  border-color: #f1c40f;
+  color: #f1c40f;
+  box-shadow: 0 0 10px rgb(241 196 15 / 40%);
+}
+.type-badge.hidden {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow: 0 0 12px rgb(139 92 246 / 60%);
+  animation: pulse-purple 2s infinite;
+}
 
 @keyframes pulse-red {
-    0%, 100% { box-shadow: 0 0 18px rgba(255, 0, 60, 0.7); opacity: 1; }
-    50% { box-shadow: 0 0 30px rgba(255, 0, 60, 1); opacity: 0.8; }
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgb(255 0 60 / 70%);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 30px rgb(255 0 60 / 100%);
+    opacity: 0.8;
+  }
 }
 
 @keyframes pulse-purple {
-    0%, 100% { box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); opacity: 1; }
-    50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.9); opacity: 0.9; }
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgb(139 92 246 / 60%);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 20px rgb(139 92 246 / 90%);
+    opacity: 0.9;
+  }
 }
 
 /* === LOCK OVERLAY === */
 .clue-card.is-locked {
-    border-color: rgba(255, 0, 60, 0.6) !important;
-    box-shadow: 
-        0 10px 40px rgba(255, 0, 60, 0.2),
-        0 0 30px rgba(255, 0, 60, 0.15),
-        inset 0 0 50px rgba(255, 0, 60, 0.05) !important;
+  border-color: rgb(255 0 60 / 60%) !important;
+  box-shadow:
+    0 10px 40px rgb(255 0 60 / 20%),
+    0 0 30px rgb(255 0 60 / 15%),
+    inset 0 0 50px rgb(255 0 60 / 5%) !important;
 }
 
 .lock-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 105;
-    border-bottom: 1px solid rgba(255, 0, 60, 0.3);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 105;
+  border-bottom: 1px solid rgb(255 0 60 / 30%);
 }
 
 .lock-overlay::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent 0px,
-        transparent 2px,
-        rgba(255, 0, 60, 0.08) 2px,
-        rgba(255, 0, 60, 0.08) 4px
-    );
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 2px,
+    rgb(255 0 60 / 8%) 2px,
+    rgb(255 0 60 / 8%) 4px
+  );
+  pointer-events: none;
 }
 
 .lock-overlay::after {
-    content: 'ACESSO RESTRITO';
-    position: absolute;
-    bottom: 12px;
-    font-size: 8px;
-    color: rgba(255, 0, 60, 0.5);
-    letter-spacing: 3px;
-    font-family: 'Share Tech Mono', monospace;
+  content: "ACESSO RESTRITO";
+  position: absolute;
+  bottom: 12px;
+  font-size: 8px;
+  color: rgb(255 0 60 / 50%);
+  letter-spacing: 3px;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .lock-icon {
-    font-size: 40px;
-    color: #ff003c;
-    margin-bottom: 10px;
-    animation: pulse-lock 2s infinite;
-    filter: drop-shadow(0 0 15px rgba(255, 0, 60, 0.8));
+  font-size: 40px;
+  color: #ff003c;
+  margin-bottom: 10px;
+  animation: pulse-lock 2s infinite;
+  filter: drop-shadow(0 0 15px rgb(255 0 60 / 80%));
 }
 
 .lock-text {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    color: #ff003c;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    text-shadow: 0 0 10px rgba(255, 0, 60, 0.6);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  color: #ff003c;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgb(255 0 60 / 60%);
 }
 
 @keyframes pulse-lock {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
 }
 
 .clue-card.is-locked .clue-info h3 {
-    color: #555;
-    background: linear-gradient(90deg, transparent, #111, transparent);
-    padding: 4px 10px;
-    letter-spacing: 4px;
+  color: #555;
+  background: linear-gradient(90deg, transparent, #111, transparent);
+  padding: 4px 10px;
+  letter-spacing: 4px;
 }
 
 /* === INFO SECTION === */
 .clue-info {
-    padding: 16px 14px;
-    text-align: center;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    z-index: 2;
+  padding: 16px 14px;
+  text-align: center;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
 }
 
 .clue-info h3 {
-    font-size: 13px;
-    line-height: 1.5;
-    text-transform: uppercase;
-    color: #d0d0d0;
-    margin: 0;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    text-shadow: 0 0 8px rgba(0, 243, 255, 0.1);
+  font-size: 13px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: #d0d0d0;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px rgb(0 243 255 / 10%);
 }
 
 .clue-uuid {
-    display: block;
-    font-size: 9px;
-    color: #666;
-    margin-bottom: 6px;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-    opacity: 0.7;
+  display: block;
+  font-size: 9px;
+  color: #666;
+  margin-bottom: 6px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  opacity: 0.7;
 }
 
 /* === DECISION BAR === */
 .decision-bar {
-    background: rgba(0, 0, 0, 0.6);
-    border-top: 1px solid rgba(0, 243, 255, 0.15);
-    padding: 10px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    z-index: 20;
-    backdrop-filter: blur(4px);
+  background: rgb(0 0 0 / 60%);
+  border-top: 1px solid rgb(0 243 255 / 15%);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 20;
+  backdrop-filter: blur(4px);
 }
 
 .divider {
-    width: 1px;
-    height: 26px;
-    background: linear-gradient(to bottom, transparent, rgba(0, 243, 255, 0.3), transparent);
-    margin: 0 6px;
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(0 243 255 / 30%),
+    transparent
+  );
+  margin: 0 6px;
 }
 
 .btn-decision {
-    background: transparent;
-    border: 1px solid transparent;
-    color: #666;
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #666;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .btn-decision svg,
 .btn-decision i {
-    font-size: 18px;
-    pointer-events: none;
-    transition: transform 0.2s;
+  font-size: 18px;
+  pointer-events: none;
+  transition: transform 0.2s;
 }
 
 .btn-decision:hover svg {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 
 .btn-decision:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+  border-color: rgb(255 255 255 / 20%);
 }
 
 .btn-decision.true:hover {
-    color: #00ff41;
-    text-shadow: 0 0 12px #00ff41;
-    border-color: rgba(0, 255, 65, 0.5);
-    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+  color: #00ff41;
+  text-shadow: 0 0 12px #00ff41;
+  border-color: rgb(0 255 65 / 50%);
+  box-shadow: 0 0 15px rgb(0 255 65 / 20%);
 }
 
 .btn-decision.theory:hover {
-    color: #ffcc00;
-    text-shadow: 0 0 12px #ffcc00;
-    border-color: rgba(255, 204, 0, 0.5);
-    box-shadow: 0 0 15px rgba(255, 204, 0, 0.2);
+  color: #fc0;
+  text-shadow: 0 0 12px #fc0;
+  border-color: rgb(255 204 0 / 50%);
+  box-shadow: 0 0 15px rgb(255 204 0 / 20%);
 }
 
 .btn-decision.false:hover {
-    color: #ff003c;
-    text-shadow: 0 0 12px #ff003c;
-    border-color: rgba(255, 0, 60, 0.5);
-    box-shadow: 0 0 15px rgba(255, 0, 60, 0.2);
+  color: #ff003c;
+  text-shadow: 0 0 12px #ff003c;
+  border-color: rgb(255 0 60 / 50%);
+  box-shadow: 0 0 15px rgb(255 0 60 / 20%);
 }
 
 .btn-decision.open:hover {
-    color: #00f3ff;
-    text-shadow: 0 0 12px #00f3ff;
-    border-color: rgba(0, 243, 255, 0.5);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+  color: #00f3ff;
+  text-shadow: 0 0 12px #00f3ff;
+  border-color: rgb(0 243 255 / 50%);
+  box-shadow: 0 0 15px rgb(0 243 255 / 20%);
 }
 
 /* === ACTIVE STATES === */
 .clue-card.status-true {
-    border-color: #00ff41 !important;
-    box-shadow: 
-        0 10px 40px rgba(0, 255, 65, 0.25),
-        0 0 30px rgba(0, 255, 65, 0.2),
-        inset 0 0 40px rgba(0, 255, 65, 0.08);
+  border-color: #00ff41 !important;
+  box-shadow:
+    0 10px 40px rgb(0 255 65 / 25%),
+    0 0 30px rgb(0 255 65 / 20%),
+    inset 0 0 40px rgb(0 255 65 / 8%);
 }
 
 .clue-card.status-true .btn-decision.true {
-    color: #00ff41;
-    background: rgba(0, 255, 65, 0.15);
-    border-color: #00ff41;
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+  color: #00ff41;
+  background: rgb(0 255 65 / 15%);
+  border-color: #00ff41;
+  box-shadow: 0 0 10px rgb(0 255 65 / 40%);
 }
 
 .clue-card.status-theory {
-    border-color: #ffcc00 !important;
-    box-shadow: 
-        0 10px 40px rgba(255, 204, 0, 0.25),
-        0 0 30px rgba(255, 204, 0, 0.2),
-        inset 0 0 40px rgba(255, 204, 0, 0.08);
+  border-color: #fc0 !important;
+  box-shadow:
+    0 10px 40px rgb(255 204 0 / 25%),
+    0 0 30px rgb(255 204 0 / 20%),
+    inset 0 0 40px rgb(255 204 0 / 8%);
 }
 
 .clue-card.status-theory .btn-decision.theory {
-    color: #ffcc00;
-    background: rgba(255, 204, 0, 0.15);
-    border-color: #ffcc00;
-    box-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+  color: #fc0;
+  background: rgb(255 204 0 / 15%);
+  border-color: #fc0;
+  box-shadow: 0 0 10px rgb(255 204 0 / 40%);
 }
 
 .clue-card.status-false {
-    border-color: #ff003c !important;
-    box-shadow: 
-        0 10px 40px rgba(255, 0, 60, 0.25),
-        0 0 30px rgba(255, 0, 60, 0.2),
-        inset 0 0 40px rgba(255, 0, 60, 0.08);
+  border-color: #ff003c !important;
+  box-shadow:
+    0 10px 40px rgb(255 0 60 / 25%),
+    0 0 30px rgb(255 0 60 / 20%),
+    inset 0 0 40px rgb(255 0 60 / 8%);
 }
 
 .clue-card.status-false .btn-decision.false {
-    color: #ff003c;
-    background: rgba(255, 0, 60, 0.15);
-    border-color: #ff003c;
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+  color: #ff003c;
+  background: rgb(255 0 60 / 15%);
+  border-color: #ff003c;
+  box-shadow: 0 0 10px rgb(255 0 60 / 40%);
 }
 
 /* === SPECIAL CARD TYPES === */
 
 /* GLITCH PUZZLE - Efeito de distorção digital */
 .clue-card.type-glitch {
-    border-color: #ff00ff !important;
-    position: relative;
+  border-color: #f0f !important;
+  position: relative;
 }
 
 .clue-card.type-glitch::before {
-    background: linear-gradient(90deg, transparent, #ff00ff, transparent);
+  background: linear-gradient(90deg, transparent, #f0f, transparent);
 }
 
 .clue-card.type-glitch .clue-image-container::after {
-    content: 'GLITCH PUZZLE';
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 9px;
-    color: #ff00ff;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 4px 8px;
-    border: 1px solid #ff00ff;
-    border-radius: 3px;
-    letter-spacing: 2px;
-    font-family: 'Share Tech Mono', monospace;
-    box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
-    z-index: 100;
-    animation: glitch-text 3s infinite;
+  content: "GLITCH PUZZLE";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 9px;
+  color: #f0f;
+  background: rgb(0 0 0 / 80%);
+  padding: 4px 8px;
+  border: 1px solid #f0f;
+  border-radius: 3px;
+  letter-spacing: 2px;
+  font-family: "Share Tech Mono", monospace;
+  box-shadow: 0 0 15px rgb(255 0 255 / 60%);
+  z-index: 100;
+  animation: glitch-text 3s infinite;
 }
 
 .clue-card.type-glitch:hover {
-    animation: glitch-shake 0.3s infinite;
+  animation: glitch-shake 0.3s infinite;
 }
 
 @keyframes glitch-shake {
-    0%, 100% { transform: translateY(-6px) translateX(0) scale(1.02); }
-    25% { transform: translateY(-6px) translateX(-2px) scale(1.02); }
-    50% { transform: translateY(-6px) translateX(2px) scale(1.02); }
-    75% { transform: translateY(-6px) translateX(-1px) scale(1.02); }
+  0%,
+  100% {
+    transform: translateY(-6px) translateX(0) scale(1.02);
+  }
+  25% {
+    transform: translateY(-6px) translateX(-2px) scale(1.02);
+  }
+  50% {
+    transform: translateY(-6px) translateX(2px) scale(1.02);
+  }
+  75% {
+    transform: translateY(-6px) translateX(-1px) scale(1.02);
+  }
 }
 
 @keyframes glitch-text {
-    0%, 90%, 100% { opacity: 1; }
-    92%, 94%, 96% { opacity: 0.6; }
-    93%, 95%, 97% { opacity: 1; }
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+
+  92%,
+  94%,
+  96% {
+    opacity: 0.6;
+  }
+
+  93%,
+  95%,
+  97% {
+    opacity: 1;
+  }
 }
 
 .clue-card.type-glitch .scanner-line {
-    background: linear-gradient(90deg, transparent, #ff00ff, transparent);
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.9);
+  background: linear-gradient(90deg, transparent, #f0f, transparent);
+  box-shadow: 0 0 20px rgb(255 0 255 / 90%);
 }
 
 /* MEGA CLUE - Efeito dourado premium */
 .clue-card.type-mega-clue {
-    border-color: #ffd700 !important;
-    background: linear-gradient(135deg, rgba(10,8,5,0.98), rgba(15,12,8,0.95)) !important;
-    box-shadow: 
-        0 15px 50px rgba(255, 215, 0, 0.3),
-        0 0 40px rgba(255, 215, 0, 0.2),
-        inset 0 1px 0 rgba(255, 215, 0, 0.1);
+  border-color: #ffd700 !important;
+  background: linear-gradient(
+    135deg,
+    rgb(10 8 5 / 98%),
+    rgb(15 12 8 / 95%)
+  ) !important;
+  box-shadow:
+    0 15px 50px rgb(255 215 0 / 30%),
+    0 0 40px rgb(255 215 0 / 20%),
+    inset 0 1px 0 rgb(255 215 0 / 10%);
 }
 
 .clue-card.type-mega-clue::before {
-    background: linear-gradient(90deg, transparent, #ffd700, transparent);
-    height: 3px;
-    opacity: 0.8;
+  background: linear-gradient(90deg, transparent, #ffd700, transparent);
+  height: 3px;
+  opacity: 0.8;
 }
 
 .clue-card.type-mega-clue .clue-image-container::after {
-    content: '🔓 MEGA-PISTA';
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 10px;
-    color: #ffd700;
-    background: rgba(0, 0, 0, 0.9);
-    padding: 5px 10px;
-    border: 2px solid #ffd700;
-    border-radius: 4px;
-    letter-spacing: 2px;
-    font-family: 'Share Tech Mono', monospace;
-    font-weight: bold;
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
-    z-index: 100;
-    animation: mega-glow 2s infinite;
+  content: "🔓 MEGA-PISTA";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 10px;
+  color: #ffd700;
+  background: rgb(0 0 0 / 90%);
+  padding: 5px 10px;
+  border: 2px solid #ffd700;
+  border-radius: 4px;
+  letter-spacing: 2px;
+  font-family: "Share Tech Mono", monospace;
+  font-weight: bold;
+  box-shadow: 0 0 25px rgb(255 215 0 / 80%);
+  z-index: 100;
+  animation: mega-glow 2s infinite;
 }
 
 .clue-card.type-mega-clue .scanner-line {
-    background: linear-gradient(90deg, transparent, #ffd700, transparent);
-    box-shadow: 0 0 25px rgba(255, 215, 0, 1);
+  background: linear-gradient(90deg, transparent, #ffd700, transparent);
+  box-shadow: 0 0 25px rgb(255 215 0 / 100%);
 }
 
 .clue-card.type-mega-clue:hover {
-    transform: translateY(-8px) scale(1.05);
-    box-shadow: 
-        0 20px 60px rgba(255, 215, 0, 0.4),
-        0 0 60px rgba(255, 215, 0, 0.3),
-        inset 0 1px 0 rgba(255, 215, 0, 0.2);
+  transform: translateY(-8px) scale(1.05);
+  box-shadow:
+    0 20px 60px rgb(255 215 0 / 40%),
+    0 0 60px rgb(255 215 0 / 30%),
+    inset 0 1px 0 rgb(255 215 0 / 20%);
 }
 
 @keyframes mega-glow {
-    0%, 100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
-    50% { box-shadow: 0 0 40px rgba(255, 215, 0, 1); }
+  0%,
+  100% {
+    box-shadow: 0 0 25px rgb(255 215 0 / 80%);
+  }
+  50% {
+    box-shadow: 0 0 40px rgb(255 215 0 / 100%);
+  }
 }
 
 /* ENCRYPTED/PASSWORD - Efeito de bloqueio avançado */
 .clue-card.type-encrypted {
-    border-color: #ff003c !important;
+  border-color: #ff003c !important;
 }
 
 .clue-card.type-encrypted .clue-image-container::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: 
-        repeating-linear-gradient(
-            90deg,
-            transparent 0px,
-            transparent 10px,
-            rgba(255, 0, 60, 0.03) 10px,
-            rgba(255, 0, 60, 0.03) 11px
-        ),
-        repeating-linear-gradient(
-            0deg,
-            transparent 0px,
-            transparent 10px,
-            rgba(255, 0, 60, 0.03) 10px,
-            rgba(255, 0, 60, 0.03) 11px
-        );
-    z-index: 2;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 10px,
+      rgb(255 0 60 / 3%) 10px,
+      rgb(255 0 60 / 3%) 11px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 10px,
+      rgb(255 0 60 / 3%) 10px,
+      rgb(255 0 60 / 3%) 11px
+    );
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* === RESPONSIVE === */
-@media (max-width: 360px) {
-    .clue-card {
-        width: 100% !important;
-    }
+@media (width <= 360px) {
+  .clue-card {
+    width: 100% !important;
+  }
 }
 
 @media (pointer: coarse) {
-    .btn-decision {
-        width: 44px;
-        height: 44px;
-    }
-    
-    .btn-decision svg {
-        width: 20px;
-        height: 20px;
-    }
+  .btn-decision {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn-decision svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* === SELECTION STATE === */
 .card-node.selected {
-    outline: none !important;
-    box-shadow: 
-        0 8px 25px rgba(0, 243, 255, 0.4),
-        0 0 40px rgba(0, 243, 255, 0.3) !important;
-    border-color: rgba(0, 243, 255, 0.8) !important;
+  outline: none !important;
+  box-shadow:
+    0 8px 25px rgb(0 243 255 / 40%),
+    0 0 40px rgb(0 243 255 / 30%) !important;
+  border-color: rgb(0 243 255 / 80%) !important;
 }
 
 /* === LEGACY COMPATIBILITY === */
 .card-node,
 .card-photo-container,
 .card-photo {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .card-title,
 .card-desc,
 .clue-info,
 .clue-info * {
-    color: inherit !important;
+  color: inherit !important;
 }
 
 /* === CARD CONTENT CONTAINER === */
 .card-content-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
 .card-content-container.loading-placeholder {
-    background: linear-gradient(90deg, #0a0a0a 0%, #151515 50%, #0a0a0a 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.2s linear infinite;
+  background: linear-gradient(90deg, #0a0a0a 0%, #151515 50%, #0a0a0a 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
 }
 
 .card-content-container img,
 .card-content-container canvas {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* GM View - Normal */
 .card-content-container.gm-view {
-    background: #000;
+  background: #000;
 }
 
 /* Locked View - Access Denied */
 .card-content-container.locked-view {
-    background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
 }
 
 /* Glitch View - Data Corruption */
 .card-content-container.glitch-view {
-    background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
+  background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
 }
 
 @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

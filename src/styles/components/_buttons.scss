@@ -3,23 +3,156 @@
 
 .btn {
   @include flex-center;
+  padding: var(--spacing-md) var(--spacing-lg);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   transition: var(--transition-fast);
-  border: 1px solid transparent;
-  background: rgba(100,100,100,0.3);
+  border: 1.5px solid transparent;
+  background: var(--bg-elevated);
   color: var(--text-color);
-  padding: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  gap: var(--spacing-sm);
+
+  // Efeito de brilho sutil
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: var(--transition-fast);
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:focus-visible {
+    @include focus-ring(var(--primary));
+  }
 }
 
-.btn:hover { transform: scale(1.03); }
+.btn-primary {
+  @extend .btn;
+  background: var(--primary-gradient);
+  border-color: var(--primary);
+  color: var(--white);
+  font-weight: 700;
+  box-shadow: 0 0 15px var(--primary-glow-soft);
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 25px var(--primary-glow-medium), 
+                0 4px 15px rgba(0, 0, 0, 0.4);
+    border-color: var(--primary-2);
+  }
+}
 
 .btn-close {
-  background: rgba(255,0,60,0.1);
-  border: 1px solid var(--danger);
+  @extend .btn;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger);
   color: var(--danger-text);
-  width: 36px; height: 36px; font-size: 18px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 20px var(--danger-glow);
+    transform: scale(1.05);
+  }
 }
 
-.btn-help { border-radius: var(--radius-sm); }
-.btn-save-uv { border-radius: var(--radius-md); }
+.tool-btn {
+  @extend .btn;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  justify-content: flex-start;
+  gap: var(--spacing-md);
+  font-size: 13px;
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary);
+    background: rgba(168, 85, 247, 0.08);
+  }
+  
+  &.active {
+    background: var(--primary-gradient);
+    border-color: var(--primary);
+    color: var(--white);
+    box-shadow: 0 0 20px var(--primary-glow-medium),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: scale(1.02);
+    font-weight: 700;
+
+    &:hover {
+      transform: scale(1.02) translateY(-1px);
+    }
+  }
+
+  // Ícone dentro do botão
+  svg, i {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+}
+
+.btn-save-uv {
+  @extend .btn-primary;
+  padding: var(--spacing-md) var(--spacing-2xl);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 13px;
+  gap: var(--spacing-sm);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 0 30px var(--primary-glow-strong), 
+                0 8px 20px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// Botões de ação pequenos (layers, etc)
+.btn-icon {
+  @extend .btn;
+  padding: var(--spacing-sm);
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border-color: var(--border-color);
+
+  &:hover:not(:disabled) {
+    background: var(--primary-glow-soft);
+    border-color: var(--primary);
+  }
+
+  &.danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: var(--danger);
+    color: var(--danger-text);
+  }
+}

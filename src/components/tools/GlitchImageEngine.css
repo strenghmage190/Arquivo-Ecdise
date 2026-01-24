@@ -1,11 +1,17 @@
 .glitch-engine {
   position: relative;
   width: 100%;
-  background: radial-gradient(circle at 30% 30%, rgba(100,150,255,0.08), rgba(0,0,0,0.8));
-  border: 1px solid rgba(100,150,255,0.4);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgb(100 150 255 / 8%),
+    rgb(0 0 0 / 80%)
+  );
+  border: 1px solid rgb(100 150 255 / 40%);
   border-radius: 10px;
   overflow: visible;
-  box-shadow: 0 0 24px rgba(0, 0, 0, 0.45), 0 0 22px rgba(100,150,255,0.15);
+  box-shadow:
+    0 0 24px rgb(0 0 0 / 45%),
+    0 0 22px rgb(100 150 255 / 15%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -66,7 +72,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(30,255,120,0.12), rgba(0,0,0,0.75));
+  background: linear-gradient(135deg, rgb(30 255 120 / 12%), rgb(0 0 0 / 75%));
   color: #b6ffd5;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -79,7 +85,7 @@
 .restored-title {
   font-weight: 800;
   font-size: 1.1rem;
-  text-shadow: 0 0 18px rgba(0,255,170,0.45);
+  text-shadow: 0 0 18px rgb(0 255 170 / 45%);
 }
 
 .restored-sub {
@@ -88,8 +94,12 @@
 }
 
 @keyframes restored-fade {
-  0% { opacity: 0; }
-  100% { opacity: 0.88; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.88;
+  }
 }
 
 .glitch-meter {
@@ -98,16 +108,20 @@
   right: 12px;
   bottom: 12px;
   height: 12px;
-  border: 1px solid rgba(100,150,255,0.5);
+  border: 1px solid rgb(100 150 255 / 50%);
   border-radius: 999px;
-  background: rgba(0,0,0,0.7);
+  background: rgb(0 0 0 / 70%);
   overflow: hidden;
 }
 
 .glitch-meter-bar {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(100,150,255,0.6), rgba(0,255,170,0.8));
+  background: linear-gradient(
+    90deg,
+    rgb(100 150 255 / 60%),
+    rgb(0 255 170 / 80%)
+  );
   transition: width 120ms linear;
 }
 
@@ -119,7 +133,7 @@
   justify-content: center;
   font-size: 10px;
   color: #d9e8ff;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  text-shadow: 0 1px 6px rgb(0 0 0 / 70%);
 }
 
 /* Decoding animation */
@@ -129,33 +143,44 @@
   left: 12px;
   right: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, rgba(100,150,255,0.25), rgba(0,180,255,0.15));
-  border: 1px solid rgba(100,150,255,0.5);
+  background: linear-gradient(
+    135deg,
+    rgb(100 150 255 / 25%),
+    rgb(0 180 255 / 15%)
+  );
+  border: 1px solid rgb(100 150 255 / 50%);
   border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 0 20px rgba(100,150,255,0.3);
+  box-shadow: 0 0 20px rgb(100 150 255 / 30%);
   backdrop-filter: blur(8px);
   opacity: 0.92;
 }
 
 @keyframes decoding-pulse {
-  0%, 100% { opacity: 0.95; }
-  50% { opacity: 0.75; }
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
 .decoding-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(100,150,255,0.3);
+  border: 2px solid rgb(100 150 255 / 30%);
   border-top-color: #64b5ff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .decoding-text {
@@ -164,7 +189,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 1px;
-  text-shadow: 0 0 12px rgba(100,150,255,0.6);
+  text-shadow: 0 0 12px rgb(100 150 255 / 60%);
 }
 
 .decoding-bars {
@@ -182,8 +207,15 @@
 }
 
 @keyframes bar-bounce {
-  0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
-  50% { transform: scaleY(1); opacity: 1; }
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }
 
 /* Accessibility: Disable animations for users with motion sensitivity */
@@ -194,7 +226,7 @@
   .restored-fade {
     animation: none !important;
   }
-  
+
   .decoding-spinner {
     border-top-color: #64b5ff;
     opacity: 0.6;

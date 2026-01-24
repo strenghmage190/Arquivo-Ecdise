@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import './MysteryEffects.css';
+import useThrottledMouse from '../../hooks/useThrottledMouse';
 
 interface GlobalMouse {
   clientX: number;
@@ -44,28 +45,11 @@ export function MysteryImage({
   pointerLocal
   , forensicChannel = 'all'
 }: Props) {
-  const [xy, setXy] = useState({ x: -500, y: -500 });
-  const [isHovering, setIsHovering] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setXy({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    setIsHovering(true);
-  };
-
-  const handleMouseLeave = () => setIsHovering(false);
-
-  useEffect(() => {
-    if (!pointerLocal) return;
-    if (!pointerLocal.over) {
-      setIsHovering(false);
-      return;
-    }
-    setXy({ x: pointerLocal.x, y: pointerLocal.y });
-    setIsHovering(true);
-  }, [pointerLocal]);
+  const { xy, isHovering } = useThrottledMouse<HTMLDivElement>(
+    containerRef,
+    pointerLocal ? { x: pointerLocal.x, y: pointerLocal.y, over: Boolean(pointerLocal.over) } : undefined
+  );
 
   const hasSecret = Boolean(hiddenSrc);
 
@@ -90,11 +74,16 @@ export function MysteryImage({
     return () => { ro.disconnect(); window.removeEventListener('resize', compute); };
   }, [containerRef.current]);
 
-  const maskStyle: React.CSSProperties = {
-    // explicit gradient stops: solid black up to 60% of the radius, then fade to transparent
-    maskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 0%, black 60%, transparent 100%)`,
-    WebkitMaskImage: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, black 0%, black 60%, transparent 100%)`
-  };
+  // preload base/hidden images to avoid flashing on first reveal
+  useEffect(() => {
+    try {
+      if (baseSrc) { const i = new Image(); i.src = baseSrc; }
+      if (hiddenSrc) { const h = new Image(); h.src = hiddenSrc; }
+      if (filterLayerSrc) { const f = new Image(); f.src = filterLayerSrc; }
+    } catch (e) {}
+  }, [baseSrc, hiddenSrc, filterLayerSrc]);
+
+  // mask is now applied via CSS using the container's CSS variables
 
   const bgStyle: React.CSSProperties = {
     backgroundSize: fit,
@@ -167,7 +156,9 @@ export function MysteryImage({
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-
+  // Only redraw the forensic canvas when the source image or the requested
+  // forensic channel changes. This avoids expensive reprocessing when unrelated
+  // props (filters / isUVMode) change.
   useEffect(() => {
     if (forensicChannel === 'all') return; // no canvas processing required
     if (!baseSrc) return;
@@ -182,15 +173,18 @@ export function MysteryImage({
     imageRef.current = img;
 
     let cancelled = false;
-    img.onload = () => {
+    const onload = async () => {
       if (cancelled) return;
       try {
-        const container = containerRef.current;
-        // Use the image's intrinsic resolution for the canvas backing store
         const naturalW = img.naturalWidth || img.width || 1024;
         const naturalH = img.naturalHeight || img.height || 768;
-        canvas.width = Math.max(1, naturalW);
-        canvas.height = Math.max(1, naturalH);
+        // cap maximum dimension to reduce pixel-processing cost and improve FPS
+        const MAX_DIM = 1200; // adjust if you want higher fidelity
+        const scale = Math.min(1, MAX_DIM / Math.max(naturalW, naturalH));
+        const targetW = Math.max(1, Math.round(naturalW * scale));
+        const targetH = Math.max(1, Math.round(naturalH * scale));
+        canvas.width = targetW;
+        canvas.height = targetH;
         // ensure canvas element will scale visually to fit the container while preserving aspect ratio
         try {
           (canvas as any).style.maxWidth = '100%';
@@ -201,15 +195,26 @@ export function MysteryImage({
           (canvas as any).style.top = '50%';
           (canvas as any).style.transform = 'translate(-50%, -50%)';
         } catch (e) {}
-        // draw the image to the canvas at its intrinsic resolution
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // pixel manipulation for channel isolation
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // prefer createImageBitmap where available (faster in many browsers)
+        if ((window as any).createImageBitmap) {
+          try {
+            const bitmap = await (window as any).createImageBitmap(img);
+            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            try { bitmap.close?.(); } catch (e) {}
+          } catch (e) {
+            // fallback
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+        } else {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+
+        // small optimization: work on the scaled canvas only (fewer pixels)
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
-        // produce colored overlay with alpha based on channel intensity
-        for (let i = 0; i < data.length; i += 4) {
+        for (let i = 0, len = data.length; i < len; i += 4) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
@@ -218,7 +223,6 @@ export function MysteryImage({
           if (forensicChannel === 'r') { intensity = r; cr = 255; cg = 0; cb = 0; }
           else if (forensicChannel === 'g') { intensity = g; cr = 0; cg = 255; cb = 0; }
           else if (forensicChannel === 'b') { intensity = b; cr = 0; cg = 0; cb = 255; }
-          // set RGB to pure channel color and alpha proportional to intensity
           data[i] = cr;
           data[i + 1] = cg;
           data[i + 2] = cb;
@@ -231,16 +235,22 @@ export function MysteryImage({
       }
     };
 
-    return () => { cancelled = true; };
-  }, [baseSrc, forensicChannel, filters, isUVMode]);
+    img.addEventListener('load', onload);
+    return () => { cancelled = true; img.removeEventListener('load', onload); };
+  }, [baseSrc, forensicChannel]);
 
   return (
     <div
-      className={`uv-container ${className}`}
+      className={`uv-container ${isUVMode ? 'uv-active' : ''} ${className}`}
       ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ ...style, cursor: isUVMode ? 'none' : 'default' }}
+      style={{
+        ...style,
+        cursor: isUVMode ? 'none' : 'default',
+        // expose CSS vars for radius and pointer to enable CSS-only masks
+        ['--uv-radius' as any]: `${RADIUS}px`,
+        ['--mouse-x' as any]: `${xy.x}px`,
+        ['--mouse-y' as any]: `${xy.y}px`
+      }}
     >
       {/* Background decorative blur (fills sides with color from the image) - optional */}
       {baseSrc && !isUVMode && ambientBlur && (
@@ -280,19 +290,13 @@ export function MysteryImage({
       )}
 
       {isUVMode && hasSecret && (
-        <div className="secret-ink" style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: hiddenImage, ...maskStyle }} />
+        <div className="secret-ink" style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: hiddenImage }} />
       )}
 
       {isUVMode && isHovering && (
         <>
-          <div className="static-noise" style={maskStyle} />
-          <div className="uv-lens-flare" style={{
-            // limit flare to the reveal mask so only the pointed area glows
-            ...maskStyle,
-            background: `radial-gradient(circle ${RADIUS}px at ${xy.x}px ${xy.y}px, rgba(140,80,200,0.18) 0%, rgba(80,0,180,0.12) 50%, rgba(30,0,80,0.02) 100%)`,
-            position: 'absolute', inset: 0,
-            opacity: 0.55
-          }} />
+          <div className="static-noise" />
+          <div className="uv-lens-flare" style={{ position: 'absolute', inset: 0, opacity: 0.55 }} />
         </>
       )}
 

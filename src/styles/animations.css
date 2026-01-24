@@ -1,9 +1,9 @@
 /**
  * ✅ CENTRALIZED ANIMATIONS
- * 
+ *
  * Consolidates all @keyframes definitions to prevent duplication
  * and ensure consistency across the application.
- * 
+ *
  * Import this file in main CSS entry point to avoid conflicts.
  */
 
@@ -16,6 +16,7 @@
     transform: translate(-50%, -48%) scale(0.98);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
@@ -26,6 +27,7 @@
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }
@@ -35,6 +37,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -45,6 +48,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -56,6 +60,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -67,6 +72,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -78,6 +84,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -89,6 +96,7 @@
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -100,6 +108,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -111,6 +120,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -126,6 +136,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -137,6 +148,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-10px);
@@ -144,10 +156,13 @@
 }
 
 @keyframes toast {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
-  90%, 100% {
+
+  90%,
+  100% {
     opacity: 0;
   }
 }
@@ -157,10 +172,12 @@
    ========================================================================== */
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.7;
@@ -168,10 +185,12 @@
 }
 
 @keyframes pulse-fast {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.4;
@@ -179,20 +198,24 @@
 }
 
 @keyframes pulse-omega {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
-    box-shadow: 0 0 10px #ff00ff;
+    box-shadow: 0 0 10px #f0f;
   }
+
   50% {
     opacity: 0.6;
-    box-shadow: 0 0 20px #ff00ff;
+    box-shadow: 0 0 20px #f0f;
   }
 }
 
 @keyframes thermalPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
@@ -200,13 +223,15 @@
 
 @keyframes inputGlow {
   0% {
-    box-shadow: 0 0 5px rgba(255, 0, 255, 0.3);
+    box-shadow: 0 0 5px rgb(255 0 255 / 30%);
   }
+
   50% {
-    box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+    box-shadow: 0 0 15px rgb(255 0 255 / 60%);
   }
+
   100% {
-    box-shadow: 0 0 5px rgba(255, 0, 255, 0.3);
+    box-shadow: 0 0 5px rgb(255 0 255 / 30%);
   }
 }
 
@@ -215,6 +240,7 @@
     opacity: 0;
     filter: brightness(1.2);
   }
+
   100% {
     opacity: 1;
     filter: brightness(1);
@@ -222,10 +248,12 @@
 }
 
 @keyframes unlockPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.8;
@@ -240,15 +268,19 @@
   0% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-2px);
   }
+
   50% {
     transform: translateX(2px);
   }
+
   75% {
     transform: translateX(-1px);
   }
+
   100% {
     transform: translateX(0);
   }
@@ -258,18 +290,23 @@
   0% {
     transform: translateY(0);
   }
+
   20% {
     transform: translateY(-2px);
   }
+
   40% {
     transform: translateY(0);
   }
+
   60% {
     transform: translateY(2px);
   }
+
   80% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(0);
   }
@@ -280,55 +317,71 @@
    ========================================================================== */
 
 @keyframes blink {
-  0%, 40%, 100% {
+  0%,
+  40%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.2;
   }
 }
 
 @keyframes blinkRec {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0;
   }
 }
 
 @keyframes blinkWarn {
-  0%, 100% {
-    color: #ff4444;
+  0%,
+  100% {
+    color: #f44;
   }
+
   50% {
-    color: #ff0000;
+    color: #f00;
   }
 }
 
 @keyframes blinkBlock {
-  0%, 100% {
-    background-color: rgba(255, 0, 0, 0.3);
+  0%,
+  100% {
+    background-color: rgb(255 0 0 / 30%);
   }
+
   50% {
-    background-color: rgba(255, 0, 0, 0.1);
+    background-color: rgb(255 0 0 / 10%);
   }
 }
 
 @keyframes terminalBlink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0;
   }
 }
 
 @keyframes flicker {
-  0%, 2%, 4%, 100% {
+  0%,
+  2%,
+  4%,
+  100% {
     opacity: 1;
   }
-  1%, 3% {
+
+  1%,
+  3% {
     opacity: 0.5;
   }
 }
@@ -341,6 +394,7 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(10px);
   }
@@ -350,6 +404,7 @@
   0% {
     transform: translateY(-100%);
   }
+
   100% {
     transform: translateY(100vh);
   }
@@ -359,20 +414,28 @@
   0% {
     opacity: 0;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
 }
 
 @keyframes thermal-pulse {
-  0%, 100% {
-    text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+  0%,
+  100% {
+    text-shadow:
+      0 0 10px #f00,
+      0 0 20px #f00;
   }
+
   50% {
-    text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+    text-shadow:
+      0 0 20px #f00,
+      0 0 40px #f00;
   }
 }
 
@@ -384,16 +447,19 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 @keyframes wave {
-  0%, 100% {
+  0%,
+  100% {
     transform: scaleY(0.5);
     opacity: 0.5;
   }
+
   50% {
     transform: scaleY(1);
     opacity: 1;
@@ -401,12 +467,15 @@
 }
 
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
+
   25% {
     transform: translateX(-5px);
   }
+
   75% {
     transform: translateX(5px);
   }
@@ -416,16 +485,19 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(100px);
   }
 }
 
 @keyframes dragPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.8;
@@ -434,16 +506,18 @@
 
 @keyframes dropZoneHighlight {
   0% {
-    background-color: rgba(255, 255, 255, 0);
-    border-color: rgba(255, 255, 255, 0);
+    background-color: rgb(255 255 255 / 0%);
+    border-color: rgb(255 255 255 / 0%);
   }
+
   50% {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgb(255 255 255 / 10%);
+    border-color: rgb(255 255 255 / 30%);
   }
+
   100% {
-    background-color: rgba(255, 255, 255, 0);
-    border-color: rgba(255, 255, 255, 0);
+    background-color: rgb(255 255 255 / 0%);
+    border-color: rgb(255 255 255 / 0%);
   }
 }
 
@@ -456,6 +530,7 @@
     opacity: 0;
     transform: scale(1.1);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -467,6 +542,7 @@
     opacity: 0;
     transform: translateY(-20px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -478,6 +554,7 @@
     opacity: 0;
     transform: translateX(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -489,6 +566,7 @@
     width: 0;
     opacity: 0;
   }
+
   to {
     width: 100%;
     opacity: 1;
@@ -499,6 +577,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -513,6 +592,7 @@
     opacity: 0;
     transform: scale(1.1);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);

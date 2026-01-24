@@ -15,7 +15,9 @@
   color: #9c27b0;
   font-size: 24px;
   cursor: pointer;
-  box-shadow: 0 0 20px rgba(156, 39, 176, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 20px rgb(156 39 176 / 50%),
+    inset 0 0 10px rgb(255 255 255 / 10%);
   transition: all 0.3s ease;
   z-index: 9998;
   display: flex;
@@ -26,7 +28,9 @@
 
 .field-visibility-button:hover {
   background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
-  box-shadow: 0 0 30px rgba(156, 39, 176, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 30px rgb(156 39 176 / 80%),
+    inset 0 0 15px rgb(255 255 255 / 15%);
   transform: scale(1.1);
 }
 
@@ -34,7 +38,7 @@
   transform: scale(0.95);
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .field-visibility-button {
     bottom: 76px;
     right: 16px;

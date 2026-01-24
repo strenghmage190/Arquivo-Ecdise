@@ -21,7 +21,8 @@ export default function ResetPassword() {
       if (error) throw error;
       setMsg('Verifique seu email. Instruções para redefinir sua senha foram enviadas.');
     } catch (err: any) {
-      setMsg(err.message || 'Erro ao solicitar redefinição.');
+      const errorMessage = err.response?.data?.message || err.message || 'Erro ao solicitar redefinição. Por favor, tente novamente mais tarde ou entre em contato com o suporte.';
+      setMsg(errorMessage);
     } finally {
       setLoading(false);
     }

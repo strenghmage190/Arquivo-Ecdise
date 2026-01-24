@@ -16,7 +16,7 @@
 .tab-btn {
   background: transparent;
   border: none;
-  color: #888888;
+  color: #888;
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
@@ -30,13 +30,13 @@
 
 .tab-btn:hover {
   color: #c6a45f;
-  background: rgba(198, 164, 95, 0.05);
+  background: rgb(198 164 95 / 5%);
 }
 
 .tab-btn.active {
   color: #c6a45f;
   border-bottom-color: #c6a45f;
-  background: rgba(198, 164, 95, 0.1);
+  background: rgb(198 164 95 / 10%);
 }
 
 .form-section {
@@ -47,13 +47,13 @@
 }
 
 .form-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   color: #c6a45f;
   font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(198, 164, 95, 0.3);
+  border-bottom: 1px solid rgb(198 164 95 / 30%);
   padding-bottom: 8px;
 }
 
@@ -92,7 +92,7 @@
 .field-group textarea:focus {
   outline: none;
   border-color: #c6a45f;
-  box-shadow: 0 0 0 2px rgba(198, 164, 95, 0.2);
+  box-shadow: 0 0 0 2px rgb(198 164 95 / 20%);
 }
 
 .field-group input[type="text"]:disabled,
@@ -163,8 +163,8 @@
 }
 
 .summary {
-  background: rgba(198, 164, 95, 0.05);
-  border-color: rgba(198, 164, 95, 0.4);
+  background: rgb(198 164 95 / 5%);
+  border-color: rgb(198 164 95 / 40%);
 }
 
 .summary-content p {
@@ -196,8 +196,8 @@
 }
 
 .no-puzzles {
-  background: rgba(255, 59, 48, 0.1);
-  border: 1px solid rgba(255, 59, 48, 0.3);
+  background: rgb(255 59 48 / 10%);
+  border: 1px solid rgb(255 59 48 / 30%);
   border-radius: 6px;
 }
 
@@ -206,10 +206,10 @@
 }
 
 .puzzle-selection-hint {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   padding: 12px;
-  background: rgba(198, 164, 95, 0.1);
-  border: 1px solid rgba(198, 164, 95, 0.3);
+  background: rgb(198 164 95 / 10%);
+  border: 1px solid rgb(198 164 95 / 30%);
   border-radius: 4px;
   color: #aaa;
   font-size: 13px;
@@ -276,17 +276,17 @@
 .puzzle-code {
   font-size: 12px;
   color: #c6a45f;
-  background: rgba(198, 164, 95, 0.1);
+  background: rgb(198 164 95 / 10%);
   padding: 2px 6px;
   border-radius: 3px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   align-self: flex-start;
 }
 
 .selection-summary {
   padding: 12px 16px;
-  background: rgba(198, 164, 95, 0.05);
-  border: 1px solid rgba(198, 164, 95, 0.3);
+  background: rgb(198 164 95 / 5%);
+  border: 1px solid rgb(198 164 95 / 30%);
   border-radius: 4px;
   color: #fff;
   font-size: 14px;
@@ -306,7 +306,7 @@
 .selected-puzzles-summary {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(198, 164, 95, 0.2);
+  border-top: 1px solid rgb(198 164 95 / 20%);
 }
 
 .selected-puzzles-summary strong {
@@ -339,10 +339,10 @@
   margin-left: auto;
   font-size: 11px;
   color: #c6a45f;
-  background: rgba(198, 164, 95, 0.1);
+  background: rgb(198 164 95 / 10%);
   padding: 2px 6px;
   border-radius: 3px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 /* Scrollbar para lista de puzzles */
@@ -402,12 +402,12 @@
 .btn-save {
   background: linear-gradient(135deg, #c6a45f 0%, #a88747 100%);
   color: #000;
-  box-shadow: 0 2px 8px rgba(198, 164, 95, 0.4);
+  box-shadow: 0 2px 8px rgb(198 164 95 / 40%);
 }
 
 .btn-save:hover:not(:disabled) {
   background: linear-gradient(135deg, #d4b46f 0%, #c6a45f 100%);
-  box-shadow: 0 4px 12px rgba(198, 164, 95, 0.6);
+  box-shadow: 0 4px 12px rgb(198 164 95 / 60%);
   transform: translateY(-1px);
 }
 
@@ -416,7 +416,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .form-section {
     padding: 16px;
   }

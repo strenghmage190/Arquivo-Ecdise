@@ -76,6 +76,23 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     setTimeout(() => setSavedMessage(''), 2000);
   };
 
+  const validateFieldVisibility = (fieldId, value) => {
+    if (fieldId === 'uv_layer' && !value) {
+      console.warn('A camada UV foi desativada. Certifique-se de que isso é intencional.');
+    }
+    if (fieldId === 'lockPassword' && !value) {
+      console.warn('A senha de desbloqueio está vazia.');
+    }
+  };
+
+  const handleFieldChange = (fieldId, value) => {
+    validateFieldVisibility(fieldId, value);
+    setConfig(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  };
+
   const filePropertyOptions = [
     { id: 'fileType', label: '📄 Tipo de Arquivo', description: 'Tipo do arquivo (JPEG, PNG, etc)' },
     { id: 'size', label: '📊 Tamanho', description: 'Tamanho do arquivo em bytes' },
@@ -89,7 +106,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     { id: 'externalLink', label: '🔗 Link Externo', description: 'Link para recurso externo' },
     { id: 'fakeLocation', label: '📍 Localização Falsa', description: 'Localização fictícia do arquivo' },
     { id: 'isLocked', label: '🔒 Bloqueado', description: 'Se o documento está trancado' },
-    { id: 'lockPassword', label: '🔑 Senha de Desbloqueio', description: 'Senha necessária' },
+    { id: 'lockPassword', label: '🔑 Senha de Desbloqueio', description: 'Senha necessária', onChange: (value) => handleFieldChange('lockPassword', value) },
     { id: 'isPerson', label: '👤 Dossiê de Pessoa', description: 'Se é um perfil de pessoa' },
     { id: 'personName', label: '👤 Nome da Pessoa', description: 'Nome completo' },
     { id: 'personDob', label: '🎂 Data de Nascimento', description: 'Data de nascimento' },
@@ -133,7 +150,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     { id: 'gps_coords', label: '🗺️ Coordenadas GPS', description: 'Coordenadas de localização' },
     { id: 'filter_transform', label: '🎨 Transformação do Filtro', description: 'Posição/tamanho do overlay de filtro' },
     { id: 'filter_reveal_settings', label: '🔍 Config de Revelação', description: 'Brilho/contraste/saturação' },
-    { id: 'uv_layer', label: '💡 Camada UV', description: 'Camada ultravioleta oculta' },
+    { id: 'uv_layer', label: '💡 Camada UV', description: 'Camada ultravioleta oculta', onChange: (value) => handleFieldChange('uv_layer', value) },
     { id: 'is_shredded', label: '📃 Fragmentado', description: 'Se o documento está fragmentado' },
     { id: 'shred_config', label: '✂️ Config de Fragmentação', description: 'Linhas/colunas de fragmentação' },
     { id: 'real_text', label: '📝 Texto Real', description: 'Texto verdadeiro (fragmentado)' },

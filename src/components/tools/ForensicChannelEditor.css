@@ -4,7 +4,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgb(0 0 0 / 85%);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -17,7 +17,9 @@
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 2px solid #00ff9d;
   border-radius: 12px;
-  box-shadow: 0 0 40px rgba(0, 255, 157, 0.3), inset 0 0 60px rgba(0, 255, 157, 0.05);
+  box-shadow:
+    0 0 40px rgb(0 255 157 / 30%),
+    inset 0 0 60px rgb(0 255 157 / 5%);
   max-width: 1400px;
   width: 95%;
   max-height: 95vh;
@@ -32,6 +34,7 @@
     opacity: 0;
     transform: scale(0.95) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -49,25 +52,28 @@
 }
 
 .forensic-editor-header::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    #00ff9d 25%, 
-    #00ff9d 75%, 
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #00ff9d 25%,
+    #00ff9d 75%,
     transparent 100%
   );
   animation: scanline 3s linear infinite;
 }
 
 @keyframes scanline {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -76,15 +82,15 @@
 .forensic-editor-header h2 {
   margin: 0;
   color: #00ff9d;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 24px;
   font-weight: bold;
-  text-shadow: 0 0 10px rgba(0, 255, 157, 0.8);
+  text-shadow: 0 0 10px rgb(0 255 157 / 80%);
   letter-spacing: 2px;
 }
 
 .btn-close {
-  background: rgba(255, 50, 50, 0.2);
+  background: rgb(255 50 50 / 20%);
   border: 1px solid #ff3232;
   color: #ff3232;
   width: 40px;
@@ -99,8 +105,8 @@
 }
 
 .btn-close:hover {
-  background: rgba(255, 50, 50, 0.4);
-  box-shadow: 0 0 15px rgba(255, 50, 50, 0.6);
+  background: rgb(255 50 50 / 40%);
+  box-shadow: 0 0 15px rgb(255 50 50 / 60%);
   transform: scale(1.1);
 }
 
@@ -121,7 +127,7 @@
 
 .forensic-preview-section h3 {
   color: #00ff9d;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 16px;
   margin: 0;
   text-transform: uppercase;
@@ -142,15 +148,25 @@
 }
 
 .canvas-container::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
-    linear-gradient(90deg, transparent 48%, rgba(0, 255, 157, 0.03) 50%, transparent 52%),
-    linear-gradient(0deg, transparent 48%, rgba(0, 255, 157, 0.03) 50%, transparent 52%);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 48%,
+      rgb(0 255 157 / 3%) 50%,
+      transparent 52%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 48%,
+      rgb(0 255 157 / 3%) 50%,
+      transparent 52%
+    );
   background-size: 20px 20px;
   pointer-events: none;
 }
@@ -162,7 +178,7 @@
   height: auto;
   cursor: move;
   border-radius: 4px;
-  box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+  box-shadow: 0 0 20px rgb(0 255 157 / 20%);
   position: relative;
   z-index: 1;
 }
@@ -173,33 +189,33 @@
 
 .info-text {
   color: #aaa;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   margin: 0;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   border-radius: 6px;
-  border: 1px solid rgba(0, 255, 157, 0.2);
+  border: 1px solid rgb(0 255 157 / 20%);
 }
 
 .channel-r {
-  color: #ff4444 !important;
-  text-shadow: 0 0 5px rgba(255, 68, 68, 0.8);
+  color: #f44 !important;
+  text-shadow: 0 0 5px rgb(255 68 68 / 80%);
 }
 
 .channel-g {
-  color: #44ff44 !important;
-  text-shadow: 0 0 5px rgba(68, 255, 68, 0.8);
+  color: #4f4 !important;
+  text-shadow: 0 0 5px rgb(68 255 68 / 80%);
 }
 
 .channel-b {
-  color: #4444ff !important;
-  text-shadow: 0 0 5px rgba(68, 68, 255, 0.8);
+  color: #44f !important;
+  text-shadow: 0 0 5px rgb(68 68 255 / 80%);
 }
 
 .forensic-controls-section {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 255, 157, 0.3);
+  background: rgb(0 0 0 / 30%);
+  border: 1px solid rgb(0 255 157 / 30%);
   border-radius: 8px;
   padding: 20px;
   overflow-y: auto;
@@ -209,7 +225,7 @@
 .control-group {
   margin-bottom: 25px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0, 255, 157, 0.2);
+  border-bottom: 1px solid rgb(0 255 157 / 20%);
 }
 
 .control-group:last-child {
@@ -219,7 +235,7 @@
 .control-group > label {
   display: block;
   color: #00ff9d;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   font-weight: bold;
   margin-bottom: 12px;
@@ -237,10 +253,10 @@
 .overlay-type-btn {
   flex: 1;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 5%);
+  border: 2px solid rgb(255 255 255 / 20%);
   color: #aaa;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 13px;
   font-weight: bold;
   cursor: pointer;
@@ -252,58 +268,58 @@
 
 .channel-btn:hover,
 .overlay-type-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
   transform: translateY(-2px);
 }
 
 .channel-r {
-  border-color: #ff4444;
+  border-color: #f44;
 }
 
 .channel-r.active {
-  background: rgba(255, 68, 68, 0.3);
-  border-color: #ff4444;
-  color: #ff4444;
-  box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+  background: rgb(255 68 68 / 30%);
+  border-color: #f44;
+  color: #f44;
+  box-shadow: 0 0 20px rgb(255 68 68 / 40%);
 }
 
 .channel-g {
-  border-color: #44ff44;
+  border-color: #4f4;
 }
 
 .channel-g.active {
-  background: rgba(68, 255, 68, 0.3);
-  border-color: #44ff44;
-  color: #44ff44;
-  box-shadow: 0 0 20px rgba(68, 255, 68, 0.4);
+  background: rgb(68 255 68 / 30%);
+  border-color: #4f4;
+  color: #4f4;
+  box-shadow: 0 0 20px rgb(68 255 68 / 40%);
 }
 
 .channel-b {
-  border-color: #4444ff;
+  border-color: #44f;
 }
 
 .channel-b.active {
-  background: rgba(68, 68, 255, 0.3);
-  border-color: #4444ff;
-  color: #4444ff;
-  box-shadow: 0 0 20px rgba(68, 68, 255, 0.4);
+  background: rgb(68 68 255 / 30%);
+  border-color: #44f;
+  color: #44f;
+  box-shadow: 0 0 20px rgb(68 68 255 / 40%);
 }
 
 .overlay-type-btn.active {
-  background: rgba(0, 255, 157, 0.3);
+  background: rgb(0 255 157 / 30%);
   border-color: #00ff9d;
   color: #00ff9d;
-  box-shadow: 0 0 20px rgba(0, 255, 157, 0.4);
+  box-shadow: 0 0 20px rgb(0 255 157 / 40%);
 }
 
 .text-input {
   width: 100%;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(0, 255, 157, 0.3);
+  background: rgb(0 0 0 / 50%);
+  border: 2px solid rgb(0 255 157 / 30%);
   border-radius: 6px;
   color: #fff;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   resize: vertical;
   transition: all 0.3s ease;
@@ -312,7 +328,7 @@
 .text-input:focus {
   outline: none;
   border-color: #00ff9d;
-  box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
+  box-shadow: 0 0 15px rgb(0 255 157 / 30%);
 }
 
 .slider-control {
@@ -322,7 +338,7 @@
 .slider-control label {
   display: block;
   color: #aaa;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -331,29 +347,28 @@
 .intensity-slider {
   width: 100%;
   height: 6px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   border-radius: 3px;
   outline: none;
-  -webkit-appearance: none;
   appearance: none;
 }
 
 .slider-control input[type="range"]::-webkit-slider-thumb,
 .intensity-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
+  appearance: none;
   width: 18px;
   height: 18px;
   background: #00ff9d;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 255, 157, 0.6);
+  box-shadow: 0 0 10px rgb(0 255 157 / 60%);
   transition: all 0.2s ease;
 }
 
 .slider-control input[type="range"]::-webkit-slider-thumb:hover,
 .intensity-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
-  box-shadow: 0 0 15px rgba(0, 255, 157, 0.8);
+  box-shadow: 0 0 15px rgb(0 255 157 / 80%);
 }
 
 .slider-control input[type="range"]::-moz-range-thumb,
@@ -364,17 +379,17 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 255, 157, 0.6);
+  box-shadow: 0 0 10px rgb(0 255 157 / 60%);
 }
 
 .file-input {
   width: 100%;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px dashed rgba(0, 255, 157, 0.3);
+  background: rgb(0 0 0 / 50%);
+  border: 2px dashed rgb(0 255 157 / 30%);
   border-radius: 6px;
   color: #aaa;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -382,14 +397,14 @@
 
 .file-input:hover {
   border-color: #00ff9d;
-  background: rgba(0, 255, 157, 0.05);
+  background: rgb(0 255 157 / 5%);
 }
 
 .overlay-preview {
   margin-top: 15px;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 255, 157, 0.3);
+  background: rgb(0 0 0 / 50%);
+  border: 1px solid rgb(0 255 157 / 30%);
   border-radius: 6px;
   text-align: center;
 }
@@ -398,12 +413,12 @@
   max-width: 100%;
   max-height: 150px;
   border-radius: 4px;
-  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+  box-shadow: 0 0 10px rgb(0 255 157 / 20%);
 }
 
 .hint-text {
   color: #888;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 11px;
   font-style: italic;
   margin-top: 8px;
@@ -417,7 +432,7 @@
 }
 
 .forensic-editor-footer {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   border-top: 2px solid #00ff9d;
   padding: 20px 30px;
   display: flex;
@@ -428,7 +443,7 @@
 .btn-cancel,
 .btn-save {
   padding: 12px 30px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   font-weight: bold;
   border-radius: 6px;
@@ -439,14 +454,14 @@
 }
 
 .btn-cancel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgb(255 255 255 / 5%);
+  border: 2px solid rgb(255 255 255 / 30%);
   color: #aaa;
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 50%);
   color: #fff;
 }
 
@@ -454,12 +469,12 @@
   background: linear-gradient(135deg, #00ff9d 0%, #00cc7a 100%);
   border: 2px solid #00ff9d;
   color: #0a0a0a;
-  box-shadow: 0 0 20px rgba(0, 255, 157, 0.4);
+  box-shadow: 0 0 20px rgb(0 255 157 / 40%);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00ffaa 0%, #00dd88 100%);
-  box-shadow: 0 0 30px rgba(0, 255, 157, 0.6);
+  background: linear-gradient(135deg, #0fa 0%, #0d8 100%);
+  box-shadow: 0 0 30px rgb(0 255 157 / 60%);
   transform: translateY(-2px);
 }
 
@@ -470,7 +485,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+@media (width <= 1200px) {
   .forensic-editor-body {
     grid-template-columns: 1fr;
   }
@@ -480,7 +495,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .forensic-editor-content {
     width: 100%;
     max-height: 100vh;

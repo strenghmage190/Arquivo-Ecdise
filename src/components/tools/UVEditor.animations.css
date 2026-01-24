@@ -2,9 +2,11 @@
 
 /* Animação para feedback visual ao arrastar */
 @keyframes dragPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
@@ -27,7 +29,7 @@
   left: 50%;
   transform: translateX(-50%);
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgb(0 0 0 / 90%);
   color: #fff;
   font-size: 10px;
   white-space: nowrap;
@@ -50,10 +52,11 @@
 
 @keyframes inputGlow {
   from {
-    box-shadow: 0 0 0 rgba(179, 102, 255, 0);
+    box-shadow: 0 0 0 rgb(179 102 255 / 0%);
   }
+
   to {
-    box-shadow: 0 0 15px rgba(179, 102, 255, 0.5);
+    box-shadow: 0 0 15px rgb(179 102 255 / 50%);
   }
 }
 
@@ -71,9 +74,11 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.4;
   }
@@ -91,24 +96,26 @@
 }
 
 @keyframes dropZoneHighlight {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgb(179 102 255 / 30%);
   }
+
   50% {
-    box-shadow: 0 0 20px rgba(179, 102, 255, 0.6);
+    box-shadow: 0 0 20px rgb(179 102 255 / 60%);
   }
 }
 
 /* Responsividade para controles de camadas */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .layer-controls {
     flex-direction: row;
   }
-  
+
   .layer-item-actions {
     flex-wrap: wrap;
   }
-  
+
   .layer-opacity-control {
     padding: 8px;
   }

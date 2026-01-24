@@ -38,7 +38,7 @@
 .status-text {
   font-size: 11px;
   font-family: monospace;
-  color: #888888;
+  color: #888;
   font-weight: 600;
 }
 
@@ -48,19 +48,26 @@
   border-radius: 50%;
   background: #00f3ff;
   animation: pulse 2s infinite;
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.6);
+  box-shadow: 0 0 12px rgb(0 243 255 / 60%);
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
 }
 
 .progress-percent {
   font-size: 12px;
   font-weight: 800;
   color: #00f3ff;
-  background: rgba(0, 243, 255, 0.1);
+  background: rgb(0 243 255 / 10%);
   padding: 3px 8px;
   border-radius: 4px;
 }
@@ -68,16 +75,16 @@
 .progress-bar-container {
   margin-top: 10px;
   height: 3px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00ffff, #0088ff);
+  background: linear-gradient(90deg, #0ff, #08f);
   transition: width 0.3s ease;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 10px rgb(0 243 255 / 50%);
 }
 
 /* Grid de Controles - Organiza os botões em colunas flexíveis */
@@ -144,11 +151,25 @@
   transition: all 0.2s;
 }
 
-.color-btn:hover { background: #333; }
+.color-btn:hover {
+  background: #333;
+}
 
-.color-btn.active.hot { border-color: #ff4500; color: #ff4500; background: rgba(255, 69, 0, 0.1); }
-.color-btn.active.cyan { border-color: #00f3ff; color: #00f3ff; background: rgba(0, 243, 255, 0.1); }
-.color-btn.active.magma { border-color: #ff00ff; color: #ff00ff; background: rgba(255, 0, 255, 0.1); }
+.color-btn.active.hot {
+  border-color: #ff4500;
+  color: #ff4500;
+  background: rgb(255 69 0 / 10%);
+}
+.color-btn.active.cyan {
+  border-color: #00f3ff;
+  color: #00f3ff;
+  background: rgb(0 243 255 / 10%);
+}
+.color-btn.active.magma {
+  border-color: #f0f;
+  color: #f0f;
+  background: rgb(255 0 255 / 10%);
+}
 
 /* Container do Canvas com Scroll Horizontal */
 .canvas-container {
@@ -170,11 +191,13 @@
 /* Marcadores de Frequência */
 .frequency-markers {
   position: absolute;
-  left: 0; top: 0; bottom: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 50px;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.3);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(0 0 0 / 30%);
+  border-right: 1px solid rgb(255 255 255 / 10%);
 }
 
 .freq-marker {
@@ -186,7 +209,7 @@
 }
 
 .freq-marker.highlight {
-  color: #ff00ff;
+  color: #f0f;
   font-weight: bold;
 }
 
@@ -209,7 +232,7 @@
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .control-grid {
     grid-template-columns: 1fr;
   }
@@ -235,7 +258,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .header-title {
     font-size: 12px;
   }
@@ -268,16 +291,16 @@
 }
 
 .canvas-container::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
 }
 
 .canvas-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 243, 255, 0.3);
+  background: rgb(0 243 255 / 30%);
   border-radius: 5px;
 }
 
 .canvas-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 243, 255, 0.5);
+  background: rgb(0 243 255 / 50%);
 }
 
 /* Custom Scrollbar - Cyberpunk Style */
@@ -302,24 +325,49 @@
 }
 
 /* Crosshair inspector */
-.canvas-container { position: relative; cursor: crosshair; }
+.canvas-container {
+  position: relative;
+  cursor: crosshair;
+}
+
 .crosshair-v {
-  position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); pointer-events: none; z-index: 8;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgb(255 255 255 / 50%);
+  pointer-events: none;
+  z-index: 8;
 }
+
 .crosshair-h {
-  position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.5); pointer-events: none; z-index: 8;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgb(255 255 255 / 50%);
+  pointer-events: none;
+  z-index: 8;
 }
+
 .crosshair-tooltip {
-  position: absolute; background: rgba(0,0,0,0.85); color: #00f3ff;
-  padding: 4px 8px; border: 1px solid #00f3ff; border-radius: 4px;
-  font-size: 11px; font-family: monospace; pointer-events: none; z-index: 10;
+  position: absolute;
+  background: rgb(0 0 0 / 85%);
+  color: #00f3ff;
+  padding: 4px 8px;
+  border: 1px solid #00f3ff;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 10;
   white-space: nowrap;
 }
 
 /* Subtle grid when canvas is empty */
 .spectrogram-container {
-  background-image: 
-    linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgb(0 243 255 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(0 243 255 / 3%) 1px, transparent 1px);
   background-size: 20px 20px;
 }

@@ -14,6 +14,24 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [msg, setMsg] = useState('');
 
+  const validatePassword = (password: string) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasMinLength = password.length >= 8;
+    return hasUpperCase && hasLowerCase && hasNumber && hasMinLength;
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if (!validatePassword(newPassword)) {
+      setMsg('A senha deve conter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas e números.');
+    } else {
+      setMsg('');
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -99,7 +117,7 @@ export default function Login() {
               type="password" 
               required
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               placeholder="••••••••"
             />
           </div>

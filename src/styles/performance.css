@@ -8,37 +8,78 @@ body.performance-mode *::before,
 body.performance-mode *::after {
   animation: none !important;
   transition: none !important;
+
   /* Não desabilite 'transform' globalmente, pois quebra layout! */
 }
 
-/* 2. EFEITOS PESADOS (Glow, Blur, Neon) - Os verdadeiros vilões */
-body.performance-mode * {
-  box-shadow: none !important;            /* Mata neons */
-  text-shadow: none !important;           /* Mata brilho de texto */
-  backdrop-filter: none !important;       /* Mata blur (vidro) */
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;                /* Mata outros filtros */
+/* 2. EFEITOS PESADOS (Glow, Blur, Neon) - direcionado apenas a elementos decorativos */
+
+/* Substitui a regra global por uma lista explícita de seletores decorativos. */
+body.performance-mode .decorative,
+body.performance-mode .background-effect,
+body.performance-mode .particle-effect,
+body.performance-mode .scanline,
+body.performance-mode .grid-overlay,
+body.performance-mode .glitch-corruption *,
+body.performance-mode .glitch-layer-1,
+body.performance-mode .glitch-layer-2,
+body.performance-mode .glitch-layer-3,
+body.performance-mode .glitch-text-overlay *,
+body.performance-mode .drop-zone,
+body.performance-mode .scanner-line {
+  box-shadow: none !important; /* Mata neons apenas nas decorações */
+  text-shadow: none !important; /* Mata brilho de texto decorativo */
+  backdrop-filter: none !important; /* Mata blur decorativo */
+  backdrop-filter: none !important;
+  filter: none !important; /* Mata outros filtros decorativos */
+  background-image: none !important; /* Remove imagens de fundo apenas em decorações */
 }
 
 /* 3. SUBSTITUIÇÃO VISUAL (Fallback para Glassmorphism) */
+
 /* Quando tiramos o blur, o fundo fica invisível ou feio. Vamos colocar um fundo sólido. */
 body.performance-mode .investigation-toolbar,
 body.performance-mode .modal-content,
 body.performance-mode .glass-panel,
-body.performance-mode .toolbar {
+body.performance-mode .toolbar,
+body.performance-mode .clue-card {
   background-color: #05080a !important; /* Cor sólida escura (Nexus Dark) */
   border: 1px solid #1e40af !important; /* Borda simples para definição */
 }
 
 /* 4. PERFORMANCE GRÁFICA */
-body.performance-mode * {
-  /* Remove renderizações complexas de background */
-  background-image: none !important;
-  /* Volta com cantos quadrados (menos antialiasing para a GPU calcular) */
-  border-radius: 0 !important;
+
+/* NOTE: Não remover imagens de fundo globalmente — isso afeta o inspector UV.
+   Aplicamos `background-image: none` apenas às decorações (acima). */
+
+/* ------------------------------------------------------------------
+   VARIÁVEIS DE MODO PERFORMANCE (Facilitam ajustes finos sem !important)
+------------------------------------------------------------------ */
+body.performance-mode {
+  --perf-decor-filter: none;
+  --perf-decor-backdrop-filter: none;
+  --perf-decor-box-shadow: none;
+  --perf-decor-text-shadow: none;
+  --perf-decor-bg-image: none;
+  --perf-decor-border-radius: 0;
+}
+
+/* Aplicar remoção/normalização apenas em elementos decorativos usando variáveis */
+body.performance-mode .decorative,
+body.performance-mode .background-effect,
+body.performance-mode .particle-effect,
+body.performance-mode .glitch-corruption * {
+  filter: var(--perf-decor-filter) !important;
+  backdrop-filter: var(--perf-decor-backdrop-filter) !important;
+  backdrop-filter: var(--perf-decor-backdrop-filter) !important;
+  box-shadow: var(--perf-decor-box-shadow) !important;
+  text-shadow: var(--perf-decor-text-shadow) !important;
+  background-image: var(--perf-decor-bg-image) !important;
+  border-radius: var(--perf-decor-border-radius) !important;
 }
 
 /* 5. PROTEÇÃO DE LAYOUT (O que não quebra centralização) */
+
 /* Reabilitar interações básicas para botões não parecerem quebrados */
 body.performance-mode button:active,
 body.performance-mode .clickable:active {
@@ -46,9 +87,11 @@ body.performance-mode .clickable:active {
 }
 
 /* 6. CORREÇÃO ESPECÍFICA: TOOLBAR E POSICIONAMENTO */
+
 /* Garante que elementos de layout ainda possam usar flex e grid corretamente */
 body.performance-mode {
   /* Evita repaint de scroll suave */
+
   scroll-behavior: auto !important;
 }
 
@@ -60,13 +103,12 @@ body.performance-mode {
 body.performance-mode .fixed-center,
 body.performance-mode [style*="transform"], /* Tenta manter inline styles */
 body.performance-mode .center-xy {
-   /* Não forçar 'transform: none' aqui */
+  /* Não forçar 'transform: none' aqui */
 }
 
 /* Permitir seleção de texto (IMPORTANTE para puzzles) */
 body.performance-mode * {
   user-select: text !important;
-  -webkit-user-select: text !important;
 }
 
 /* Impedir seleção apenas em UI */
@@ -107,8 +149,6 @@ body.performance-mode * {
 /* Simplify border images */
 body.performance-mode * {
   border-image: none !important;
-  border-image-source: none !important;
-  border-image-slice: none !important;
 }
 
 /* Disable CSS counters */
@@ -130,9 +170,9 @@ body.performance-mode * {
 
 /* Disable CSS page breaks */
 body.performance-mode * {
-  page-break-after: auto !important;
-  page-break-before: auto !important;
-  page-break-inside: auto !important;
+  break-after: auto !important;
+  break-before: auto !important;
+  break-inside: auto !important;
 }
 
 /* Disable CSS columns */
@@ -145,8 +185,8 @@ body.performance-mode * {
 /* Disable CSS flexbox/grid complexity */
 body.performance-mode * {
   flex-shrink: 1 !important;
-  grid-template-columns: none !important;
-  grid-template-rows: none !important;
+  grid-template-columns: unset !important;
+  grid-template-rows: unset !important;
 }
 
 /* Disable CSS transforms that create layers */
@@ -160,4 +200,88 @@ body.performance-mode *::before,
 body.performance-mode *::after {
   animation: none !important;
   transition: none !important;
+}
+
+/* ============================================================================
+   EXCEÇÕES CENTRALIZADAS: Zona segura via atributo `data-perf-keep`
+   ========================================================================== */
+
+/*
+  Em vez de manter uma longa lista frágil de seletores, marcamos componentes
+  críticos com `data-perf-keep="1"`. Esta regra cria uma "zona segura"
+  que restaura todas as propriedades para esses elementos e seus descendentes.
+
+  Usamos `all: initial !important` para garantir que propriedades desativadas
+  (filtros, backdrop-filter, animações, sombras, etc.) sejam restauradas.
+  Em seguida reabilitamos apenas as propriedades de layout básicas para evitar
+  quebra de render (display/position/box-sizing).
+*/
+
+body.performance-mode [data-perf-keep="1"],
+body.performance-mode [data-perf-keep="1"] * {
+  all: initial !important;
+
+  /* Reaplicar propriedades essenciais de layout para evitar que 'all: initial' quebre a estrutura */
+  display: revert !important;
+  position: revert !important;
+  float: revert !important;
+  inset: revert !important;
+  top: revert !important;
+  left: revert !important;
+  right: revert !important;
+  bottom: revert !important;
+  box-sizing: border-box !important;
+  contain: none !important;
+  z-index: revert !important;
+
+  /* Permitir que efeitos e filtros venham de volta */
+  filter: initial !important;
+  backdrop-filter: initial !important;
+  backdrop-filter: initial !important;
+  animation: initial !important;
+  transition: initial !important;
+  box-shadow: initial !important;
+}
+
+/* Contenção específica para modais/inspection visual dentro da zona segura
+  Evita imagens/vídeos expandirem além da viewport e quebrarem o layout. */
+body.performance-mode [data-perf-keep="1"] .inspect-file,
+body.performance-mode [data-perf-keep="1"] .inspect-visual-area,
+body.performance-mode [data-perf-keep="1"] .inspect-backdrop,
+body.performance-mode
+  [data-perf-keep="1"]
+  .inspect-file
+  .inspect-visual-area-wrapper {
+  max-width: calc(100vw - 80px) !important;
+  max-height: calc(100vh - 120px) !important;
+  overflow: auto !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+body.performance-mode [data-perf-keep="1"] .inspect-visual-area img,
+body.performance-mode
+  [data-perf-keep="1"]
+  .inspect-visual-area
+  .large-evidence-img,
+body.performance-mode [data-perf-keep="1"] .inspect-visual-area video,
+body.performance-mode [data-perf-keep="1"] .inspect-visual-area canvas {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* Contenção para elementos que usam inline background-image */
+body.performance-mode [data-perf-keep="1"] [style*="background-image"],
+body.performance-mode
+  [data-perf-keep="1"]
+  .large-evidence-img[style*="background-image"] {
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
 }

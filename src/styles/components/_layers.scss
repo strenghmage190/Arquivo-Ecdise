@@ -1,36 +1,351 @@
+@use './_buttons' as *;
 @use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as mixins;
 
-.layers-section { min-height: 150px; max-height: 420px; }
+.layers-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-height: 200px;
+  max-height: 500px;
+  padding: var(--spacing-lg);
+  background: var(--bg-1);
+  border-radius: var(--radius-lg);
+
+  h4 {
+    margin: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    
+    &::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: var(--primary-gradient);
+      border-radius: var(--radius-full);
+    }
+  }
+}
+
+.layers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+
+  .layers-header-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+
+  button {
+    @extend .btn-icon;
+  }
+}
 
 .layers-list {
-  display: grid;
-  grid-auto-rows: min-content;
-  gap: 8px;
-  max-height: 360px;
-  padding-right: 6px;
-  padding-left: 4px;
+  flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-sm) * 1.0);
+  padding-right: calc(var(--spacing-sm) * 1.0);
+  @include mixins.custom-scrollbar(var(--primary), var(--bg-0));
+
+  &:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 }
 
 .layer-item {
-  background: rgba(50,50,50,0.6);
-  border: 1px solid var(--primary-glow-medium);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  height: 50px;
+  overflow: hidden;
+  cursor: default;
+  transition: background 150ms ease, border-color 150ms ease;
+  position: relative;
+
+  // Indicador de ordem
+  &:hover {
+    border-color: rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+  
+  // Modifiers
+  &.active {
+    background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.02));
+    border-color: rgba(255,255,255,0.06);
+
+    .layer-item-title {
+      color: var(--text-color);
+      font-weight: 700;
+    }
+  }
+
+  &.locked {
+    cursor: not-allowed;
+    opacity: 0.85;
+    border-style: dashed;
+    border-color: rgba(255,80,80,0.12);
+  }
+
+  &.hidden {
+    opacity: 0.5;
+  }
+  
+  // Thumbnail da camada (fixo 40x40)
+  &__thumbnail {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    background: var(--bg-2);
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .placeholder-thumbnail {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(0,0,0,0.05), rgba(0,0,0,0.12));
+    }
+  }
+
+  &__info {
+    overflow: hidden;
+    display: block;
+    min-width: 0; /* allow ellipsis */
+    flex: 1 1 auto;
+  }
+  
+  &__title {
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    padding-left: 4px;
+  }
+
+  &__meta {
+    font-size: 11px;
+    color: var(--text-color-dimmed);
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+.no-layers {
+  color: var(--text-color-dimmed);
+  font-style: italic;
+  padding: var(--spacing-2xl);
+  text-align: center;
+  font-size: 13px;
+  
+  svg, i {
+    font-size: 32px;
+    color: var(--text-color-muted);
+    margin-bottom: var(--spacing-md);
+  }
+}
+
+/* Batch actions (buttons below search) */
+.batch-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding: calc(var(--spacing-sm) / 2) 0;
+
+  button {
+    @extend .btn;
+    font-size: 12px;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-color-dimmed);
+    border-radius: var(--radius-sm);
+  }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+/* Mini toolbar above layer list for quick layer actions */
+.mini-layer-toolbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:4px 0;
+}
+
+.mini-layer-toolbar input[type="range"]{
+  height:6px;
+  background: rgba(255,255,255,0.04);
+  border-radius:6px;
+}
+
+.mini-layer-toolbar .layer-btn{
+  width:20px;
+  height:20px;
+  min-width:20px;
+  padding:1px;
+  border-radius:4px;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.mini-layer-toolbar .layer-btn:hover{
+  background: rgba(255,255,255,0.02);
+}
+
+/* Compatibility rules for JSX classnames used in LayerItem.tsx */
+.layer-item-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.layer-item-info {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.layer-item-title {
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Small button helper used by LayerItem */
+.layer-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:20px;
+  width:20px;
+  height:20px;
+  padding:2px;
+  border-radius:4px;
+  background: transparent;
+  border: 1px solid transparent;
+  font-size:12px;
+  color: inherit;
+}
+
+.layer-btn--icon{
+  min-width:20px;
+  width:20px;
+  height:20px;
+}
+
+.layer-btn--danger{
+  color: var(--danger-text, #ff8b8b);
+}
+
+.layer-controls {
+  display: flex !important;
+  gap: 6px;
   align-items: center;
 }
 
-.layer-item:hover { border-color: var(--primary-glow-50); background: rgba(70,50,80,0.5); }
-.layer-item.locked { border-color: var(--danger-glow-soft); opacity: 0.8; }
-.layer-item.active { background: rgba(179,102,255,0.2); border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+/* show only visibility button by default for compact UI */
+.layer-controls > *:not(.layer-visibility) {
+  display: none !important;
+}
 
-.layer-item-title { color: var(--white); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.layer-item-type { color: #aaa; font-size: 10px; text-transform: uppercase; }
+.layer-item-actions {
+  display: none !important; /* hide duplicated actions inline */
+}
 
-.layer-controls { display:flex; gap:6px; align-items:center; }
-.layer-action-btn { background: rgba(100,100,100,0.5); border:1px solid var(--primary-glow-medium); color: #ddd; padding:4px 8px; border-radius:4px; }
+// Drag & Drop estados
+.layer-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: rotate(2deg) scale(0.95);
+}
+
+.layer-item.drag-over {
+  border-style: dashed;
+  background: rgba(168, 85, 247, 0.15);
+}
+
+@media (max-width: 768px) {
+  .layers-section {
+    padding: var(--spacing-md);
+  }
+
+  .layer-item {
+    grid-template-columns: 28px 1fr auto;
+    padding: var(--spacing-sm);
+    
+    &__thumbnail {
+      width: 28px;
+      height: 28px;
+    }
+  }
+}

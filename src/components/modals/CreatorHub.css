@@ -1,18 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
   --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgba(0, 243, 255, 0.4);
+  --nexus-blue-glow: rgb(0 243 255 / 40%);
   --nexus-dark: #05080a;
 }
 
 .creator-hub-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(5, 8, 10, 0.9);
+  inset: 0;
+  background: rgb(5 8 10 / 90%);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -22,19 +19,21 @@
 }
 
 .creator-hub-modal {
-  background: linear-gradient(180deg, rgba(5, 8, 10, 0.92), rgba(5, 8, 10, 0.85));
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 8px;
   width: 90%;
   max-width: 1200px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 243, 255, 0.12);
+  box-shadow:
+    0 20px 50px rgb(0 0 0 / 60%),
+    0 0 25px rgb(0 243 255 / 12%);
   animation: hubSlideIn 0.3s ease-out;
   position: relative;
   pointer-events: auto;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .creator-hub-header {
@@ -42,8 +41,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 22px 28px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-  background: rgba(0, 243, 255, 0.05);
+  border-bottom: 1px solid rgb(0 243 255 / 20%);
+  background: rgb(0 243 255 / 5%);
 }
 
 .creator-hub-header h2 {
@@ -53,12 +52,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+  text-shadow: 0 0 10px rgb(0 243 255 / 20%);
 }
 
 .creator-hub-header .close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 0, 60, 0.4);
+  border: 1px solid rgb(255 0 60 / 40%);
   color: #ff003c;
   font-size: 28px;
   cursor: pointer;
@@ -73,9 +72,9 @@
 }
 
 .creator-hub-header .close-btn:hover {
-  background: rgba(255, 0, 60, 0.15);
+  background: rgb(255 0 60 / 15%);
   border-color: #ff003c;
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.3);
+  box-shadow: 0 0 12px rgb(255 0 60 / 30%);
 }
 
 .creator-hub-body {
@@ -90,8 +89,8 @@
   gap: 16px;
   margin-bottom: 32px;
   padding: 24px;
-  background: rgba(0, 243, 255, 0.05);
-  border: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(0 243 255 / 5%);
+  border: 1px solid rgb(0 243 255 / 15%);
   border-radius: 8px;
 }
 
@@ -99,7 +98,7 @@
   flex: 1;
   background: transparent;
   color: #00f3ff;
-  border: 1px solid rgba(0, 243, 255, 0.3);
+  border: 1px solid rgb(0 243 255 / 30%);
   padding: 16px 40px;
   font-size: 13px;
   font-weight: 700;
@@ -111,12 +110,11 @@
   box-shadow: none;
 }
 
-
 .btn-create-new.primary {
   background: #00f3ff;
   color: #000;
   border-color: #00f3ff;
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 20px rgb(0 243 255 / 30%);
 }
 
 /* Extra highlight for selected create option */
@@ -124,7 +122,7 @@
   background: linear-gradient(90deg, #00f3ff 60%, #c6a45f 100%);
   color: #000;
   border-color: #c6a45f;
-  box-shadow: 0 0 24px 2px rgba(198, 164, 95, 0.18);
+  box-shadow: 0 0 24px 2px rgb(198 164 95 / 18%);
   font-weight: 900;
   letter-spacing: 2.5px;
 }
@@ -132,12 +130,12 @@
 .btn-create-new:hover {
   transform: translateY(-2px);
   border-color: #00f3ff;
-  box-shadow: 0 4px 15px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 4px 15px rgb(0 243 255 / 20%);
 }
 
 .btn-create-new.primary:hover {
   background: #00f3ff;
-  box-shadow: 0 6px 25px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 6px 25px rgb(0 243 255 / 40%);
 }
 
 .btn-create-new:active {
@@ -155,7 +153,7 @@
   margin-bottom: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(198, 164, 95, 0.3);
+  border-bottom: 1px solid rgb(198 164 95 / 30%);
   padding-bottom: 8px;
 }
 
@@ -187,7 +185,7 @@
 
 .card-summary:hover {
   border-color: #c6a45f;
-  box-shadow: 0 4px 12px rgba(198, 164, 95, 0.2);
+  box-shadow: 0 4px 12px rgb(198 164 95 / 20%);
   transform: translateY(-2px);
 }
 
@@ -210,7 +208,7 @@
 }
 
 .card-title-section h4 {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
   color: #fff;
   font-size: 16px;
   font-weight: 600;
@@ -225,7 +223,7 @@
   color: #c6a45f;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: rgba(198, 164, 95, 0.1);
+  background: rgb(198 164 95 / 10%);
   padding: 2px 8px;
   border-radius: 3px;
 }
@@ -238,7 +236,7 @@
   font-size: 13px;
   color: #aaa;
   line-height: 1.5;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
 }
 
 .card-meta {
@@ -251,18 +249,22 @@
 
 /* === HIDDEN CLUES === */
 .card-summary.hidden-clue {
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(109, 40, 217, 0.05));
+  border: 1px solid rgb(139 92 246 / 30%);
+  background: linear-gradient(
+    135deg,
+    rgb(139 92 246 / 10%),
+    rgb(109 40 217 / 5%)
+  );
   opacity: 0.8;
 }
 
 .card-summary.hidden-clue:hover {
-  border-color: rgba(139, 92, 246, 0.6);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  border-color: rgb(139 92 246 / 60%);
+  box-shadow: 0 0 15px rgb(139 92 246 / 30%);
 }
 
 .meta-label {
-  color: #888888;
+  color: #888;
   font-weight: 500;
 }
 
@@ -271,10 +273,10 @@
   color: #c6a45f;
   padding: 3px 8px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid rgba(198, 164, 95, 0.3);
+  border: 1px solid rgb(198 164 95 / 30%);
 }
 
 .required-count {
@@ -284,15 +286,15 @@
 
 /* Informações úteis */
 .hub-info {
-  background: rgba(198, 164, 95, 0.05);
-  border: 1px solid rgba(198, 164, 95, 0.2);
+  background: rgb(198 164 95 / 5%);
+  border: 1px solid rgb(198 164 95 / 20%);
   border-radius: 6px;
   padding: 16px 20px;
   margin-top: 24px;
 }
 
 .hub-info h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   color: #c6a45f;
   font-size: 14px;
   text-transform: uppercase;
@@ -365,7 +367,7 @@
 }
 
 /* Responsivo */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .creator-hub-modal {
     width: 95%;
     max-height: 95vh;
@@ -387,13 +389,13 @@
   gap: 8px;
   margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 243, 255, 0.1);
+  border-top: 1px solid rgb(0 243 255 / 10%);
 }
 
 .btn-action {
   padding: 6px 10px;
-  border: 1px solid rgba(0, 243, 255, 0.3);
-  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgb(0 243 255 / 30%);
+  background: rgb(0 243 255 / 10%);
   color: #00f3ff;
   border-radius: 4px;
   cursor: pointer;
@@ -407,40 +409,40 @@
 }
 
 .btn-action:hover {
-  background: rgba(0, 243, 255, 0.2);
-  border-color: rgba(0, 243, 255, 0.6);
+  background: rgb(0 243 255 / 20%);
+  border-color: rgb(0 243 255 / 60%);
   transform: scale(1.05);
 }
 
 .btn-edit {
-  background: rgba(198, 164, 95, 0.1);
-  border-color: rgba(198, 164, 95, 0.3);
+  background: rgb(198 164 95 / 10%);
+  border-color: rgb(198 164 95 / 30%);
   color: #c6a45f;
 }
 
 .btn-edit:hover {
-  background: rgba(198, 164, 95, 0.2);
-  border-color: rgba(198, 164, 95, 0.6);
+  background: rgb(198 164 95 / 20%);
+  border-color: rgb(198 164 95 / 60%);
 }
 
 .btn-hide {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.3);
+  background: rgb(139 92 246 / 10%);
+  border-color: rgb(139 92 246 / 30%);
   color: #8b5cf6;
 }
 
 .btn-hide:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.6);
+  background: rgb(139 92 246 / 20%);
+  border-color: rgb(139 92 246 / 60%);
 }
 
 .btn-show {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgb(34 197 94 / 10%);
+  border-color: rgb(34 197 94 / 30%);
   color: #22c55e;
 }
 
 .btn-show:hover {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.6);
+  background: rgb(34 197 94 / 20%);
+  border-color: rgb(34 197 94 / 60%);
 }

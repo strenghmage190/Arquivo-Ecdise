@@ -5,21 +5,20 @@
   border: 1px solid #c6a45f;
   max-width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   display: flex;
   flex-direction: column;
 }
 
 .glitch-maker-container h3 {
   color: #c6a45f;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(198, 164, 95, 0.5);
-  font-family: 'Share Tech Mono', monospace;
+  text-shadow: 0 0 10px rgb(198 164 95 / 50%);
+  font-family: "Share Tech Mono", monospace;
 }
 
 .glitch-maker-input-group {
@@ -30,8 +29,8 @@
 .glitch-maker-sliders {
   margin: 16px 0;
   padding: 12px;
-  background: rgba(198, 164, 95, 0.05);
-  border: 1px solid rgba(198, 164, 95, 0.3);
+  background: rgb(198 164 95 / 5%);
+  border: 1px solid rgb(198 164 95 / 30%);
   border-radius: 6px;
 }
 
@@ -51,12 +50,12 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .slider-control .param-value {
   color: #fff;
-  background: rgba(198, 164, 95, 0.2);
+  background: rgb(198 164 95 / 20%);
   padding: 2px 6px;
   border-radius: 3px;
   margin-left: 4px;
@@ -69,12 +68,11 @@
   background: #333;
   border-radius: 3px;
   outline: none;
-  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
 }
 
 .slider-control input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
   appearance: none;
   width: 18px;
   height: 18px;
@@ -82,13 +80,13 @@
   border: 2px solid #c6a45f;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(198, 164, 95, 0.5);
+  box-shadow: 0 0 8px rgb(198 164 95 / 50%);
   transition: all 0.2s ease;
 }
 
 .slider-control input[type="range"]::-webkit-slider-thumb:hover {
   background: linear-gradient(135deg, #e8c77f, #a89a5a);
-  box-shadow: 0 0 12px rgba(198, 164, 95, 0.8);
+  box-shadow: 0 0 12px rgb(198 164 95 / 80%);
   transform: scale(1.1);
 }
 
@@ -99,13 +97,13 @@
   border: 2px solid #c6a45f;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(198, 164, 95, 0.5);
+  box-shadow: 0 0 8px rgb(198 164 95 / 50%);
   transition: all 0.2s ease;
 }
 
 .slider-control input[type="range"]::-moz-range-thumb:hover {
   background: linear-gradient(135deg, #e8c77f, #a89a5a);
-  box-shadow: 0 0 12px rgba(198, 164, 95, 0.8);
+  box-shadow: 0 0 12px rgb(198 164 95 / 80%);
   transform: scale(1.1);
 }
 
@@ -123,7 +121,7 @@
 
 .glitch-maker-input-group input[type="file"] {
   padding: 6px;
-  background: rgba(198, 164, 95, 0.05);
+  background: rgb(198 164 95 / 5%);
   border: 1px solid #c6a45f;
   border-radius: 4px;
   color: #c6a45f;
@@ -166,7 +164,7 @@
 
 .glitch-maker-controls button:hover:not(:disabled) {
   background: linear-gradient(135deg, #e8c77f, #a89a5a);
-  box-shadow: 0 0 12px rgba(198, 164, 95, 0.4);
+  box-shadow: 0 0 12px rgb(198 164 95 / 40%);
   transform: translateY(-1px);
 }
 
@@ -190,7 +188,7 @@
 
 .glitch-maker-controls button:last-of-type:hover:not(:disabled) {
   background: linear-gradient(135deg, #e8305a, #ab2a3a);
-  box-shadow: 0 0 12px rgba(196, 30, 58, 0.4);
+  box-shadow: 0 0 12px rgb(196 30 58 / 40%);
 }
 
 .glitch-maker-preview {
@@ -219,7 +217,7 @@
   display: block;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .glitch-maker-container {
     padding: 10px;
     max-height: 85vh;

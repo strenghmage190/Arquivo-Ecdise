@@ -158,19 +158,48 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
     return <div className="loading-placeholder-content" />
   }
 
-  // ===== VISÃO COMPLETA / NORMAL (FALLBACK) =====
+  // =======================================================================
+  //  ✅ LÓGICA DE RENDERIZAÇÃO ATUALIZADA PARA MODO PERFORMANCE
+  // =======================================================================
   return (
     <>
       {hasUV && isUV ? (
-        <div className="uv-layer">
-          <MysteryImage 
-            baseSrc={image} 
-            hiddenSrc={hiddenSrc} 
-            isUVMode={true} 
-            pointerLocal={undefined} 
-          />
-        </div>
+        // --- Se a LUZ UV estiver LIGADA ---
+        performanceMode ? (
+          // MODO PERFORMANCE "LITE": Renderiza duas divs simples com mix-blend-mode via inline style.
+          // Isso é à prova de falhas e ignora qualquer regra CSS externa que quebre o efeito.
+          <div className="uv-layer-lite" style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
+            {/* Imagem Base */}
+            <div 
+              style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${image})`,
+                backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat'
+              }} 
+            />
+            {/* Camada UV (revelação) */}
+            <div 
+              style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${hiddenSrc})`,
+                backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+                mixBlendMode: 'screen' /* Essencial para o efeito funcionar */
+              }} 
+            />
+          </div>
+        ) : (
+          // MODO COMPLETO: Usa o componente MysteryImage original com todos os efeitos.
+          <div className="uv-layer">
+            <MysteryImage 
+              baseSrc={image} 
+              hiddenSrc={hiddenSrc} 
+              isUVMode={true} 
+              pointerLocal={undefined} 
+            />
+          </div>
+        )
       ) : (
+        // --- Se a LUZ UV estiver DESLIGADA ---
         <>
           <MysteryImage 
             baseSrc={image} 

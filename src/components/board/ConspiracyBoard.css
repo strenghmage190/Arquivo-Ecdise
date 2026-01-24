@@ -1,11 +1,11 @@
 /* --- Estrutura Principal --- */
 .conspiracy-layout {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   z-index: 2000;
   background: linear-gradient(135deg, #05080a 0%, #0d1117 100%);
   display: flex;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .board-wrapper {
@@ -19,16 +19,16 @@
 /* --- Cabeçalho Principal (Board) --- */
 .conspiracy-header {
   height: 60px;
-  background: rgba(0, 243, 255, 0.04);
+  background: rgb(0 243 255 / 4%);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  border-bottom: 2px solid rgba(0, 243, 255, 0.3);
+  border-bottom: 2px solid rgb(0 243 255 / 30%);
   flex-shrink: 0;
   position: relative;
   z-index: 2;
-  box-shadow: 0 4px 20px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 4px 20px rgb(0 243 255 / 10%);
 }
 
 .conspiracy-header h2 {
@@ -38,7 +38,7 @@
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  text-shadow: 0 0 10px rgb(0 243 255 / 30%);
 }
 
 .conspiracy-header .actions {
@@ -50,23 +50,27 @@
 /* --- Barra Lateral de Pistas (Sidebar) --- */
 .clue-sidebar {
   width: 280px;
-  background: linear-gradient(180deg, rgba(5,8,10,0.95), rgba(10,15,20,0.88));
-  border-right: 2px solid rgba(0, 243, 255, 0.2);
+  background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(10 15 20 / 88%));
+  border-right: 2px solid rgb(0 243 255 / 20%);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease-in-out;
-  box-shadow: 4px 0px 25px rgba(0, 243, 255, 0.08);
-  font-family: 'Share Tech Mono', monospace;
+  box-shadow: 4px 0 25px rgb(0 243 255 / 8%);
+  font-family: "Share Tech Mono", monospace;
 }
 
 .clue-sidebar::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: -280px;
   height: 100%;
-  background: linear-gradient(90deg, rgba(0,243,255,0) 50%, rgba(0,243,255,0.02) 50%);
+  background: linear-gradient(
+    90deg,
+    rgb(0 243 255 / 0%) 50%,
+    rgb(0 243 255 / 2%) 50%
+  );
   background-size: 100% 3px;
   pointer-events: none;
   z-index: 1;
@@ -87,8 +91,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 15px 0 20px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
-  background: rgba(0, 243, 255, 0.05);
+  border-bottom: 1px solid rgb(0 243 255 / 15%);
+  background: rgb(0 243 255 / 5%);
   flex-shrink: 0;
 }
 
@@ -98,12 +102,12 @@
   font-weight: bold;
   letter-spacing: 2px;
   text-transform: uppercase;
-  text-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+  text-shadow: 0 0 5px rgb(0 243 255 / 20%);
 }
 
 .sidebar-header button {
   background: transparent;
-  border: 1px solid rgba(0, 243, 255, 0.3);
+  border: 1px solid rgb(0 243 255 / 30%);
   color: #00f3ff;
   cursor: pointer;
   width: 28px;
@@ -115,10 +119,10 @@
 }
 
 .sidebar-header button:hover {
-  background: rgba(0, 243, 255, 0.15);
+  background: rgb(0 243 255 / 15%);
   border-color: #00f3ff;
   transform: scale(1.1);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+  box-shadow: 0 0 12px rgb(0 243 255 / 25%);
 }
 
 .clue-list-scroll {
@@ -134,13 +138,13 @@
 }
 
 .clue-list-scroll::-webkit-scrollbar-track {
-  background: rgba(0, 243, 255, 0.05);
+  background: rgb(0 243 255 / 5%);
 }
 
 .clue-list-scroll::-webkit-scrollbar-thumb {
   background-color: #00f3ff;
   border-radius: 4px;
-  border: 2px solid rgba(0, 243, 255, 0.1);
+  border: 2px solid rgb(0 243 255 / 10%);
   opacity: 0.7;
 }
 
@@ -155,8 +159,8 @@
   text-align: center;
   margin-bottom: 15px;
   padding: 10px;
-  background: rgba(0, 243, 255, 0.05);
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: rgb(0 243 255 / 5%);
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 4px;
 }
 
@@ -165,21 +169,29 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.05) 0%, rgba(0, 243, 255, 0.02) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(0 243 255 / 5%) 0%,
+    rgb(0 243 255 / 2%) 100%
+  );
   border: 1px solid #00f3ff;
   padding: 10px;
   margin-bottom: 10px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   border-radius: 6px;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 0 10px rgb(0 243 255 / 10%);
 }
 
 .mini-card:hover {
   border-color: #00f3ff;
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15) 0%, rgba(0, 243, 255, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(0 243 255 / 15%) 0%,
+    rgb(0 243 255 / 8%) 100%
+  );
   transform: translateX(5px);
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 20px rgb(0 243 255 / 30%);
 }
 
 .mini-card:active {
@@ -196,12 +208,12 @@
   background-color: #0a0e14;
   flex-shrink: 0;
   transition: transform 0.2s;
-  box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 8px rgb(0 243 255 / 20%);
 }
 
 .mini-card:hover .mini-thumb {
   transform: scale(1.1);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 12px rgb(0 243 255 / 40%);
 }
 
 .mini-thumb.no-img {
@@ -215,7 +227,7 @@
 .mini-card span {
   font-size: 12px;
   color: #c7e7f0;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   flex-grow: 1;
   line-height: 1.4;
   font-weight: 500;
@@ -238,7 +250,7 @@
 }
 
 .btn-save-conspiracy {
-  background: rgba(0, 243, 255, 0.1);
+  background: rgb(0 243 255 / 10%);
   color: #00f3ff;
 }
 
@@ -246,7 +258,7 @@
   background: #00f3ff;
   color: #0a0e14;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 4px 12px rgb(0 243 255 / 40%);
 }
 
 .btn-save-conspiracy:disabled {
@@ -255,7 +267,7 @@
 }
 
 .btn-update-available {
-  background: rgba(255, 215, 0, 0.15);
+  background: rgb(255 215 0 / 15%);
   color: #ffd700;
   border-color: #ffd700;
   animation: pulse 2s infinite;
@@ -265,34 +277,36 @@
   background: #ffd700;
   color: #0a0e14;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px rgb(255 215 0 / 30%);
 }
 
 .btn-close-conspiracy {
-  background: rgba(255, 68, 68, 0.1);
-  color: #ff4444;
-  border-color: #ff4444;
+  background: rgb(255 68 68 / 10%);
+  color: #f44;
+  border-color: #f44;
 }
 
 .btn-close-conspiracy:hover {
-  background: #ff4444;
+  background: #f44;
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+  box-shadow: 0 4px 12px rgb(255 68 68 / 30%);
 }
 
 @keyframes pulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+    box-shadow: 0 0 0 0 rgb(255 215 0 / 70%);
   }
+
   70% {
     transform: scale(1.03);
-    box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
+    box-shadow: 0 0 0 10px rgb(255 215 0 / 0%);
   }
+
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+    box-shadow: 0 0 0 0 rgb(255 215 0 / 0%);
   }
 }
 

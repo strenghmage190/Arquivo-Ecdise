@@ -6,7 +6,7 @@
   flex-direction: column;
   background: #000;
   color: #0f0;
-  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-family: "Share Tech Mono", "Courier New", monospace;
   position: relative;
   overflow: auto;
 }
@@ -26,7 +26,7 @@
 .success-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgb(0 0 0 / 92%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,6 +38,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -50,8 +51,8 @@
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 255, 0, 0.03) 2px,
-    rgba(0, 255, 0, 0.03) 4px
+    rgb(0 255 0 / 3%) 2px,
+    rgb(0 255 0 / 3%) 4px
   );
   pointer-events: none;
   animation: scanlineMove 8s linear infinite;
@@ -61,6 +62,7 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(100%);
   }
@@ -69,24 +71,25 @@
 .reward-terminal {
   max-width: 600px;
   padding: 40px;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgb(0 0 0 / 85%);
   border: 2px solid #0f0;
-  box-shadow: 
-    0 0 20px rgba(0, 255, 0, 0.4),
-    inset 0 0 40px rgba(0, 255, 0, 0.05);
+  box-shadow:
+    0 0 20px rgb(0 255 0 / 40%),
+    inset 0 0 40px rgb(0 255 0 / 5%);
   animation: terminalGlow 2s ease-in-out infinite alternate;
 }
 
 @keyframes terminalGlow {
   from {
-    box-shadow: 
-      0 0 20px rgba(0, 255, 0, 0.4),
-      inset 0 0 40px rgba(0, 255, 0, 0.05);
+    box-shadow:
+      0 0 20px rgb(0 255 0 / 40%),
+      inset 0 0 40px rgb(0 255 0 / 5%);
   }
+
   to {
-    box-shadow: 
-      0 0 30px rgba(0, 255, 0, 0.6),
-      inset 0 0 60px rgba(0, 255, 0, 0.08);
+    box-shadow:
+      0 0 30px rgb(0 255 0 / 60%),
+      inset 0 0 60px rgb(0 255 0 / 8%);
   }
 }
 
@@ -94,14 +97,16 @@
   font-size: 14px;
   color: #0f0;
   margin: 8px 0;
-  text-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+  text-shadow: 0 0 8px rgb(0 255 0 / 70%);
   animation: typingBlink 0.5s ease-in-out;
 }
 
 @keyframes typingBlink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.3;
   }
@@ -110,7 +115,7 @@
 .reward-code-box {
   margin-top: 30px;
   padding: 20px;
-  background: rgba(0, 255, 0, 0.05);
+  background: rgb(0 255 0 / 5%);
   border: 1px solid #0f0;
   text-align: center;
 }
@@ -125,10 +130,10 @@
 .reward-pass {
   font-size: 32px;
   color: #0f0;
-  text-shadow: 
-    0 0 10px rgba(0, 255, 0, 0.8),
-    0 0 20px rgba(0, 255, 0, 0.5),
-    0 0 30px rgba(0, 255, 0, 0.3);
+  text-shadow:
+    0 0 10px rgb(0 255 0 / 80%),
+    0 0 20px rgb(0 255 0 / 50%),
+    0 0 30px rgb(0 255 0 / 30%);
   margin: 16px 0;
   letter-spacing: 4px;
   animation: codeReveal 1s ease-out;
@@ -140,6 +145,7 @@
     transform: scale(0.8);
     filter: blur(10px);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -152,19 +158,19 @@
   color: #000;
   border: 2px solid #0f0;
   padding: 12px 24px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   margin-top: 16px;
   text-shadow: none;
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  box-shadow: 0 0 10px rgb(0 255 0 / 50%);
   transition: all 0.3s ease;
 }
 
 .btn-copy-key:hover {
   background: #0f0;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+  box-shadow: 0 0 20px rgb(0 255 0 / 80%);
   transform: scale(1.05);
 }
 
@@ -179,9 +185,9 @@
 /* Controles dos Sliders */
 .solver-controls {
   padding: 30px;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgb(0 0 0 / 95%);
   border-top: 2px solid #0f0;
-  box-shadow: 0 -4px 20px rgba(0, 255, 0, 0.2);
+  box-shadow: 0 -4px 20px rgb(0 255 0 / 20%);
   max-height: 420px;
   overflow-y: auto;
 }
@@ -197,7 +203,7 @@
   font-size: 14px;
   color: #0f0;
   margin-bottom: 12px;
-  text-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+  text-shadow: 0 0 8px rgb(0 255 0 / 70%);
 }
 
 .pulse-dot {
@@ -205,15 +211,17 @@
   height: 8px;
   background: #0f0;
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+  box-shadow: 0 0 10px rgb(0 255 0 / 80%);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.5;
     transform: scale(0.8);
@@ -223,29 +231,37 @@
 .solver-hint {
   font-size: 12px;
   color: #0a0;
-  background: rgba(0, 255, 0, 0.05);
+  background: rgb(0 255 0 / 5%);
   padding: 8px 12px;
   border-left: 3px solid #0f0;
 }
 
 .keyword-panel {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(100, 150, 255, 0.3);
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid rgb(100 150 255 / 30%);
   padding: 12px;
   border-radius: 8px;
   margin-top: 10px;
 }
 
 .keyword-panel.attention {
-  background: linear-gradient(135deg, rgba(0, 255, 170, 0.12), rgba(0, 120, 90, 0.25));
-  border: 1px solid rgba(0, 255, 170, 0.7);
-  box-shadow: 0 0 12px rgba(0, 255, 170, 0.35);
+  background: linear-gradient(
+    135deg,
+    rgb(0 255 170 / 12%),
+    rgb(0 120 90 / 25%)
+  );
+  border: 1px solid rgb(0 255 170 / 70%);
+  box-shadow: 0 0 12px rgb(0 255 170 / 35%);
   animation: keyword-pulse 1.4s ease-in-out infinite alternate;
 }
 
 @keyframes keyword-pulse {
-  from { box-shadow: 0 0 8px rgba(0, 255, 170, 0.25); }
-  to   { box-shadow: 0 0 18px rgba(0, 255, 170, 0.55); }
+  from {
+    box-shadow: 0 0 8px rgb(0 255 170 / 25%);
+  }
+  to {
+    box-shadow: 0 0 18px rgb(0 255 170 / 55%);
+  }
 }
 
 .slider-group {
@@ -260,7 +276,7 @@
   margin-bottom: 8px;
   font-size: 13px;
   color: #0f0;
-  text-shadow: 0 0 6px rgba(0, 255, 0, 0.5);
+  text-shadow: 0 0 6px rgb(0 255 0 / 50%);
 }
 
 .slider-label-text {
@@ -278,7 +294,6 @@
 .glitch-slider {
   width: 100%;
   height: 6px;
-  -webkit-appearance: none;
   appearance: none;
   background: transparent;
   outline: none;
@@ -288,33 +303,32 @@
 }
 
 .glitch-slider::-webkit-slider-track {
-  background: linear-gradient(90deg, #001100, #003300);
+  background: linear-gradient(90deg, #010, #030);
   height: 6px;
   border: 1px solid #0f0;
-  box-shadow: 
-    0 0 5px rgba(0, 255, 0, 0.3),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 5px rgb(0 255 0 / 30%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
 }
 
 .glitch-slider::-moz-range-track {
-  background: linear-gradient(90deg, #001100, #003300);
+  background: linear-gradient(90deg, #010, #030);
   height: 6px;
   border: 1px solid #0f0;
-  box-shadow: 
-    0 0 5px rgba(0, 255, 0, 0.3),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 5px rgb(0 255 0 / 30%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
 }
 
 .glitch-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
   appearance: none;
   width: 20px;
   height: 20px;
   background: #0f0;
   border: 2px solid #000;
-  box-shadow: 
-    0 0 10px rgba(0, 255, 0, 0.8),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 10px rgb(0 255 0 / 80%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -324,33 +338,33 @@
   height: 20px;
   background: #0f0;
   border: 2px solid #000;
-  box-shadow: 
-    0 0 10px rgba(0, 255, 0, 0.8),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 10px rgb(0 255 0 / 80%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .glitch-slider::-webkit-slider-thumb:hover {
   background: #0ff;
-  box-shadow: 
-    0 0 15px rgba(0, 255, 255, 1),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 15px rgb(0 255 255 / 100%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
   transform: scale(1.2);
 }
 
 .glitch-slider::-moz-range-thumb:hover {
   background: #0ff;
-  box-shadow: 
-    0 0 15px rgba(0, 255, 255, 1),
-    inset 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 15px rgb(0 255 255 / 100%),
+    inset 0 0 5px rgb(0 0 0 / 50%);
   transform: scale(1.2);
 }
 
 .solver-footer {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid rgba(0, 255, 0, 0.2);
+  border-top: 1px solid rgb(0 255 0 / 20%);
 }
 
 .sync-status {
@@ -364,9 +378,9 @@
   color: #0f0;
   font-size: 12px;
   padding: 4px 10px;
-  background: rgba(0, 255, 0, 0.1);
+  background: rgb(0 255 0 / 10%);
   border: 1px solid #0f0;
-  box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+  box-shadow: 0 0 8px rgb(0 255 0 / 40%);
   animation: syncBlink 1s ease-in-out;
 }
 
@@ -375,10 +389,12 @@
     opacity: 0;
     transform: scale(0.8);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.1);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);

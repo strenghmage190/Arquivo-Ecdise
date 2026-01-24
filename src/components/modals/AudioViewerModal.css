@@ -2,22 +2,19 @@
    AUDIO VIEWER MODAL - Terminal de Análise de Áudio Classificado
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
   --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgba(0, 243, 255, 0.4);
-  --nexus-green: #00ff99;
+  --nexus-blue-glow: rgb(0 243 255 / 40%);
+  --nexus-green: #0f9;
   --nexus-dark: #05080a;
 }
 
 .audio-viewer-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(5, 8, 10, 0.9);
+  inset: 0;
+  background: rgb(5 8 10 / 90%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,17 +24,19 @@
 }
 
 .audio-viewer-modal {
-  background: linear-gradient(180deg, rgba(5, 8, 10, 0.92), rgba(5, 8, 10, 0.85));
+  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
   width: 100%;
   max-width: 1100px;
   max-height: 95vh;
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 243, 255, 0.15);
-  font-family: 'Share Tech Mono', monospace;
+  box-shadow:
+    0 20px 60px rgb(0 0 0 / 70%),
+    0 0 30px rgb(0 243 255 / 15%);
+  font-family: "Share Tech Mono", monospace;
 }
 
 /* Header */
@@ -46,8 +45,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 22px;
-  border-bottom: 2px solid rgba(0, 243, 255, 0.3);
-  background: rgba(0, 243, 255, 0.05);
+  border-bottom: 2px solid rgb(0 243 255 / 30%);
+  background: rgb(0 243 255 / 5%);
   flex-shrink: 0;
 }
 
@@ -56,14 +55,14 @@
   font-weight: bold;
   letter-spacing: 3px;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  text-shadow: 0 0 10px rgb(0 243 255 / 30%);
 }
 
 .audio-viewer-close {
   width: 40px;
   height: 40px;
   background: transparent;
-  border: 1px solid rgba(255, 0, 60, 0.4);
+  border: 1px solid rgb(255 0 60 / 40%);
   color: #ff003c;
   font-size: 24px;
   cursor: pointer;
@@ -75,20 +74,20 @@
 }
 
 .audio-viewer-close:hover {
-  background: rgba(255, 0, 60, 0.15);
+  background: rgb(255 0 60 / 15%);
   border-color: #ff003c;
-  box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
+  box-shadow: 0 0 15px rgb(255 0 60 / 40%);
 }
 
 /* Waveform */
 .audio-viewer-waveform {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(0 0 0 / 60%);
   padding: 12px;
   margin: 12px 20px;
-  border: 1px solid rgba(0, 243, 255, 0.15);
+  border: 1px solid rgb(0 243 255 / 15%);
   flex-shrink: 0;
   border-radius: 6px;
-  box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.05);
+  box-shadow: inset 0 0 15px rgb(0 243 255 / 5%);
 }
 
 #audio-viewer-wave {
@@ -102,9 +101,9 @@
   align-items: center;
   gap: 20px;
   padding: 14px 20px;
-  background: rgba(0, 243, 255, 0.04);
+  background: rgb(0 243 255 / 4%);
   flex-shrink: 0;
-  border-top: 1px solid rgba(0, 243, 255, 0.1);
+  border-top: 1px solid rgb(0 243 255 / 10%);
 }
 
 .audio-viewer-play-btn {
@@ -125,7 +124,7 @@
 .audio-viewer-play-btn:hover {
   background: var(--nexus-green);
   color: #000;
-  box-shadow: 0 0 15px rgba(0, 255, 153, 0.4);
+  box-shadow: 0 0 15px rgb(0 255 153 / 40%);
 }
 
 .audio-viewer-play-btn:active {
@@ -136,7 +135,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   color: var(--nexus-blue);
   font-weight: bold;
   font-size: 1.1rem;
@@ -149,8 +148,15 @@
 }
 
 @keyframes blink {
-  0%, 49% { opacity: 0.6; }
-  50%, 100% { opacity: 0.3; }
+  0%,
+  49% {
+    opacity: 0.6;
+  }
+
+  50%,
+  100% {
+    opacity: 0.3;
+  }
 }
 
 /* Controles de Espectrograma */
@@ -159,19 +165,18 @@
   flex-wrap: wrap;
   gap: 14px;
   padding: 10px 14px;
-  background: rgba(0, 243, 255, 0.05);
-  border-top: 1px solid rgba(0, 243, 255, 0.15);
-  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(0 243 255 / 5%);
+  border-top: 1px solid rgb(0 243 255 / 15%);
+  border-bottom: 1px solid rgb(0 243 255 / 15%);
   align-items: center;
   flex-shrink: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto hidden;
 }
 
 .spectrum-analysis-group {
   display: flex;
   gap: 10px;
-  border-left: 2px solid rgba(0, 243, 255, 0.2);
+  border-left: 2px solid rgb(0 243 255 / 20%);
   padding-left: 14px;
   margin-left: 14px;
 }
@@ -180,7 +185,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(0, 243, 255, 0.7);
+  color: rgb(0 243 255 / 70%);
   font-size: 11px;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -188,7 +193,7 @@
 }
 
 .spectrum-control-group label {
-  color: rgba(0, 243, 255, 0.8);
+  color: rgb(0 243 255 / 80%);
   white-space: nowrap;
   text-transform: uppercase;
   font-weight: 600;
@@ -206,17 +211,17 @@
   color: var(--nexus-blue);
   min-width: 58px;
   font-weight: bold;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 11px;
-  background: rgba(0, 243, 255, 0.08);
+  background: rgb(0 243 255 / 8%);
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 .spectrum-action-btn {
-  background: rgba(0, 243, 255, 0.08);
+  background: rgb(0 243 255 / 8%);
   color: var(--nexus-blue);
-  border: 1px solid rgba(0, 243, 255, 0.3);
+  border: 1px solid rgb(0 243 255 / 30%);
   padding: 7px 14px;
   cursor: pointer;
   font-size: 11px;
@@ -231,14 +236,14 @@
 
 .spectrum-action-btn:hover {
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 10px rgb(0 243 255 / 20%);
 }
 
 .spectrum-color-row {
   display: flex;
   gap: 8px;
   padding: 2px 4px;
-  background: rgba(0, 243, 255, 0.04);
+  background: rgb(0 243 255 / 4%);
   border-radius: 8px;
 }
 
@@ -247,8 +252,8 @@
   width: 36px;
   height: 36px;
   padding: 3px;
-  border: 2px solid rgba(0, 243, 255, 0.3);
-  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgb(0 243 255 / 30%);
+  background: rgb(0 0 0 / 50%);
   color: #aaa;
   font-size: 18px;
   cursor: pointer;
@@ -260,50 +265,50 @@
 }
 
 .spectrum-color-btn:hover {
-  border-color: rgba(0, 243, 255, 0.6);
-  background: rgba(0, 243, 255, 0.1);
+  border-color: rgb(0 243 255 / 60%);
+  background: rgb(0 243 255 / 10%);
   transform: translateY(-2px);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 12px rgb(0 243 255 / 30%);
 }
 
 .spectrum-color-btn.active {
   transform: scale(1.1);
-  border-color: rgba(0, 243, 255, 0.8);
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+  border-color: rgb(0 243 255 / 80%);
+  box-shadow: 0 0 15px rgb(0 243 255 / 50%);
 }
 
 .spectrum-color-btn.active.hot {
   border-color: #ff4500;
-  box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
-  color: #ff6600;
+  box-shadow: 0 0 15px rgb(255 69 0 / 50%);
+  color: #f60;
 }
 
 .spectrum-color-btn.active.cyan {
-  border-color: #00ffff;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-  color: #00ffff;
+  border-color: #0ff;
+  box-shadow: 0 0 15px rgb(0 255 255 / 50%);
+  color: #0ff;
 }
 
 .spectrum-color-btn.active.magma {
-  border-color: #ff00ff;
-  box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
-  color: #ff00ff;
+  border-color: #f0f;
+  box-shadow: 0 0 15px rgb(255 0 255 / 50%);
+  color: #f0f;
 }
 
 /* Espectrograma Principal */
 .audio-viewer-spectrogram {
   flex: 1;
   overflow: auto;
-  padding: 14px 20px 20px 20px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(5, 8, 10, 0.6));
+  padding: 14px 20px 20px;
+  background: linear-gradient(180deg, rgb(0 0 0 / 40%), rgb(5 8 10 / 60%));
   position: relative;
 }
 
 .audio-viewer-spectrogram::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(rgba(0, 243, 255, 0) 50%, rgba(0, 243, 255, 0.02) 50%);
+  background: linear-gradient(rgb(0 243 255 / 0%) 50%, rgb(0 243 255 / 2%) 50%);
   background-size: 100% 3px;
   pointer-events: none;
   z-index: 1;
@@ -314,7 +319,7 @@
    Responsivo
    ============================================================ */
 
-@media (max-width: 1024px) {
+@media (width <= 1024px) {
   .audio-viewer-modal {
     width: 98vw;
     height: 98vh;
@@ -330,7 +335,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .audio-viewer-modal {
     width: 100vw;
     height: 100vh;
@@ -365,6 +370,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -375,6 +381,7 @@
     transform: scale(0.9);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -384,7 +391,7 @@
 /* Interação do minimapa (waveform) */
 .audio-viewer-waveform {
   cursor: pointer;
-  border: 2px solid rgba(0, 255, 153, 0.3);
+  border: 2px solid rgb(0 255 153 / 30%);
 }
 
 .audio-viewer-waveform:hover {

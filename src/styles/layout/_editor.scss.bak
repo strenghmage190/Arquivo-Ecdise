@@ -1,0 +1,104 @@
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as mixins;
+
+.uv-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-modal-base);
+  @include mixins.flex-center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.uv-editor-panel {
+  width: 100%;
+  max-width: 1400px;
+  height: 90vh;
+  background: linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 100%);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: row;
+  box-shadow: 0 0 40px var(--primary-glow-medium), inset 0 0 40px var(--primary-glow-soft);
+  overflow: hidden;
+  position: relative; // Para posicionar header/toolbar
+}
+
+.uv-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  border-bottom: 2px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.uv-editor-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  padding-top: 70px; /* Espaço para o header */
+  padding-bottom: 60px; /* Espaço para a toolbar */
+  width: 100%;
+}
+
+.editor-workspace {
+  flex: 1;
+  @include mixins.flex-center;
+  background-color: var(--bg-elevated);
+  // ... outros estilos de fundo ...
+  overflow: auto;
+  position: relative;
+  padding: 20px;
+  min-width: 0;
+}
+
+.canvas-container {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 30px var(--primary-glow-soft);
+  max-height: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--primary-glow-medium);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  position: relative;
+}
+
+.canvas-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  touch-action: none;
+}
+
+.canvas-container canvas {
+  background: transparent;
+  display: block;
+  min-width: 240px;
+  min-height: 160px;
+  cursor: crosshair;
+  border-radius: 4px;
+  transform-origin: center center;
+  transition: transform 120ms ease-out;
+}
+
+.uv-sidebar {
+  width: 320px;
+  background: rgba(0, 0, 0, 0.4);
+  border-left: 2px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+  position: relative;
+}

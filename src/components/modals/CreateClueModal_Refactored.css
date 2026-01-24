@@ -3,151 +3,172 @@
    - Nexus theme variables
    - Modal overlay, header, tabs, content, field blocks, inputs, buttons
 */
-:root{
+:root {
   --nexus-blue: #00f3ff;
   --nexus-dark: #0a0a0a;
-  --muted: rgba(255,255,255,0.45);
-  --panel-bg: rgba(10,10,10,0.85);
+  --muted: rgb(255 255 255 / 45%);
+  --panel-bg: rgb(10 10 10 / 85%);
   --z-modal-top: 30000;
-  --glass: rgba(255,255,255,0.03);
+  --glass: rgb(255 255 255 / 3%);
   --gold-accent: #c6a45f;
   --radius: 8px;
 }
 
-.createclue-modal-overlay{
-  position:fixed;
-  inset:0;
-  background:linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.6));
+.createclue-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(rgb(0 0 0 / 45%), rgb(0 0 0 / 60%));
   backdrop-filter: blur(6px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: var(--z-modal-top);
 }
 
-.createclue-modal{
-  width:100%;
-  max-width:980px;
-  background:var(--panel-bg);
-  color:#fff;
-  border-radius:12px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.7);
-  overflow:hidden;
-  border:1px solid rgba(0,243,255,0.06);
+.createclue-modal {
+  width: 100%;
+  max-width: 980px;
+  background: var(--panel-bg);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 70%);
+  overflow: hidden;
+  border: 1px solid rgb(0 243 255 / 6%);
 }
 
-.createclue-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 16px;
-  border-bottom:1px solid rgba(255,255,255,0.03);
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+.createclue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 3%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 2%), transparent);
 }
 
-.createclue-title{
-  font-weight:700;
-  letter-spacing:1px;
-  color:var(--nexus-blue);
+.createclue-title {
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--nexus-blue);
 }
 
-.createclue-close{
-  background:transparent;
-  border:1px solid rgba(255,255,255,0.03);
-  color:var(--muted);
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
+.createclue-close {
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 3%);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-.createclue-tabs{
-  display:flex;
-  gap:8px;
+.createclue-tabs {
+  display: flex;
+  gap: 8px;
 }
 
-.createclue-tab-btn{
-  padding:8px 12px;
-  background:transparent;
-  color:var(--muted);
-  border-radius:6px;
-  border:1px solid transparent;
-  cursor:pointer;
+.createclue-tab-btn {
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
 }
 
-.createclue-tab-btn.active{
-  background:rgba(0,243,255,0.06);
-  color:var(--nexus-blue);
-  box-shadow:0 6px 18px rgba(0,243,255,0.03);
-  border:1px solid rgba(0,243,255,0.08);
+.createclue-tab-btn.active {
+  background: rgb(0 243 255 / 6%);
+  color: var(--nexus-blue);
+  box-shadow: 0 6px 18px rgb(0 243 255 / 3%);
+  border: 1px solid rgb(0 243 255 / 8%);
 }
 
-.createclue-body{
-  padding:16px;
-  max-height:72vh;
-  overflow:auto;
+.createclue-body {
+  padding: 16px;
+  max-height: 72vh;
+  overflow: auto;
 }
 
-.field-block{
-  margin-bottom:18px;
+.field-block {
+  margin-bottom: 18px;
 }
 
-.field-title{
-  display:block;
-  font-size:12px;
-  color:var(--muted);
-  margin-bottom:8px;
-  font-weight:700;
+.field-title {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: 700;
 }
 
-.input, .textarea, .select{
-  width:100%;
-  padding:10px;
-  background:transparent;
-  border:1px solid rgba(255,255,255,0.06);
-  color:#fff;
-  border-radius:6px;
-  outline:none;
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 6%);
+  color: #fff;
+  border-radius: 6px;
+  outline: none;
 }
 
-.textarea{ min-height:84px; font-family:monospace; }
-
-.upload-btn{
-  display:inline-block;
-  padding:10px 12px;
-  background:linear-gradient(90deg, rgba(0,243,255,0.06), rgba(255,255,255,0.02));
-  border-radius:6px;
-  cursor:pointer;
-  color:var(--nexus-blue);
-  border:1px solid rgba(0,243,255,0.04);
+.textarea {
+  min-height: 84px;
+  font-family: monospace;
 }
 
-.primary-btn{
-  width:100%;
-  padding:12px 14px;
-  background:linear-gradient(90deg,var(--nexus-blue), #00d6ff);
-  color:#001;
-  font-weight:700;
-  border-radius:8px;
-  border:none;
-  cursor:pointer;
+.upload-btn {
+  display: inline-block;
+  padding: 10px 12px;
+  background: linear-gradient(
+    90deg,
+    rgb(0 243 255 / 6%),
+    rgb(255 255 255 / 2%)
+  );
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--nexus-blue);
+  border: 1px solid rgb(0 243 255 / 4%);
 }
 
-.ghost-btn{
-  padding:10px 12px;
-  background:transparent;
-  color:var(--muted);
-  border:1px solid rgba(255,255,255,0.04);
-  border-radius:6px;
-  cursor:pointer;
+.primary-btn {
+  width: 100%;
+  padding: 12px 14px;
+  background: linear-gradient(90deg, var(--nexus-blue), #00d6ff);
+  color: #001;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
 }
 
-.preview-img{ max-width:100%; max-height:180px; border-radius:6px; display:block; }
-
-@media (max-width:900px){
-  .createclue-modal{ max-width:720px; }
+.ghost-btn {
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid rgb(255 255 255 / 4%);
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-@media (max-width:600px){
-  .createclue-modal{ margin:12px; max-width:100%; }
-  .createclue-tabs{ flex-wrap:wrap; }
+.preview-img {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 6px;
+  display: block;
+}
+
+@media (width <= 900px) {
+  .createclue-modal {
+    max-width: 720px;
+  }
+}
+
+@media (width <= 600px) {
+  .createclue-modal {
+    margin: 12px;
+    max-width: 100%;
+  }
+  .createclue-tabs {
+    flex-wrap: wrap;
+  }
 }

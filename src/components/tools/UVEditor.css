@@ -1,970 +1,1222 @@
-/* ===== OVERLAY ===== */
-.uv-editor-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(2px);
-  z-index: var(--z-modal-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.2s ease-out;
+/* UV Editor - Grid workspace layout (cyberpunk GIMP style)
+	 Focused on .uv-editor-panel and its children
+*/
+
+:root {
+  /* Core palette / tokens (use these everywhere) */
+  --nexus-dark: #0b0f14;
+  --nexus-dark-rgb: 11, 15, 20;
+  --nexus-blue: #00d7ff;
+  --nexus-blue-rgb: 0, 215, 255;
+  --accent-cyan: #39f0ff;
+  --accent-cyan-rgb: 57, 240, 255;
+  --text-color: #d6e6f6;
+  --muted-text: #9aa3b2;
+
+  /* Elevation & borders */
+  --primary-glow-medium: 0 0 10px rgb(0 215 255 / 45%);
+  --border-color: rgb(255 255 255 / 6%);
+  --bg-elevated: rgb(255 255 255 / 3%);
+  --bg-2: rgb(255 255 255 / 2%);
+
+  /* Spacing scale */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-medium: 180ms ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ===== MAIN PANEL ===== */
-.uv-editor-panel {
-  width: 100%;
-  max-width: 1400px;
-  height: 90vh;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1015 100%);
-  border: 2px solid #b366ff;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: row;
-  box-shadow: 0 0 40px rgba(179, 102, 255, 0.2), inset 0 0 40px rgba(179, 102, 255, 0.05);
-  overflow: hidden;
-}
-
-/* ===== HEADER ===== */
-.uv-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  border-bottom: 2px solid #333;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  z-index: 10;
-}
-
-.uv-header h3 {
-  color: #b366ff;
-  margin: 0;
-  font-family: 'Share Tech Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 16px;
-  font-weight: bold;
-  text-shadow: 0 0 10px rgba(179, 102, 255, 0.5);
-}
-
-.btn-close {
-  background: rgba(255, 0, 60, 0.1);
-  border: 1px solid #c41e3a;
-  color: #ff6b9d;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  font-size: 18px;
+/* ===== Base utilities: buttons, focus, transitions ===== */
+.uv-editor-panel .uv-btn,
+.uv-editor-panel button,
+.uv-editor-panel .tool-button,
+.uv-editor-panel .control-button,
+.uv-editor-panel .btn {
+  box-sizing: border-box;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close:hover {
-  background: rgba(255, 0, 60, 0.3);
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.4);
-  transform: scale(1.05);
-}
-
-/* ===== MAIN LAYOUT FLEX ===== */
-.uv-editor-main {
-  display: flex;
-  flex: 1;
-  padding-top: 70px;
-  gap: 0;
-  width: 100%;
-}
-
-/* ===== WORKSPACE ===== */
-.editor-workspace {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(45deg, #0a0a0a 25%, transparent 25%, transparent 75%, #0a0a0a 75%, #0a0a0a),
-              linear-gradient(45deg, #0a0a0a 25%, transparent 25%, transparent 75%, #0a0a0a 75%, #0a0a0a);
-  background-size: 40px 40px;
-  background-position: 0 0, 20px 20px;
-  background-color: #1a1a1a;
-  overflow: auto;
-  position: relative;
-  padding: 20px;
-}
-
-.canvas-container {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(179, 102, 255, 0.05);
-  max-height: 100%;
-  max-width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid rgba(179, 102, 255, 0.2);
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
-}
-
-.canvas-container canvas {
+  transition:
+    box-shadow var(--transition-medium),
+    transform var(--transition-fast),
+    background var(--transition-fast);
+  color: inherit;
   background: transparent;
-  display: block;
-  max-width: 100%;
-  height: auto;
-  cursor: crosshair;
-  border-radius: 4px;
+  border: 1px solid transparent;
 }
 
-.canvas-container canvas.resizing {
-  cursor: nwse-resize;
+/* Accessible focus ring for interactive controls */
+.uv-editor-panel button:focus,
+.uv-editor-panel .tool-button:focus,
+.uv-editor-panel .uv-btn:focus {
+  outline: 2px solid rgb(var(--nexus-dark-rgb), 0.18);
+  outline-color: var(--nexus-blue);
+  outline-offset: 2px;
 }
 
-.canvas-container canvas.dragging {
-  cursor: move;
+/* Prefer :focus-visible and stronger visible indicators for keyboard users */
+.uv-editor-panel
+  :is(
+    button,
+    .tool-button,
+    .uv-btn,
+    .control-button,
+    .tab,
+    .group-toggle-btn
+  ):focus-visible {
+  outline: 2px solid rgb(var(--nexus-blue-rgb), 0.95);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgb(var(--nexus-blue-rgb), 0.06);
 }
 
-/* ===== RESIZE INDICATOR ===== */
-.resize-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 255, 255, 0.9);
-  color: #000;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+/* Make clickable rows and controls show pointer and keyboard focus */
+.layers-list .layer-item,
+.layers-list .layer-item .layer-item-type,
+.uv-right-tabs .tab,
+.uv-tools-dock .tool-button,
+[role="button"] {
+  cursor: pointer;
 }
 
-/* ===== RIGHT SIDEBAR ===== */
-.uv-sidebar {
-  width: 280px;
-  background: rgba(0, 0, 0, 0.4);
-  border-left: 2px solid #333;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  backdrop-filter: blur(5px);
-  position: relative;
+/* Range inputs: improve keyboard focus visibility */
+.uv-editor-panel input[type="range"]:focus-visible {
+  box-shadow: 0 0 0 4px rgb(var(--nexus-blue-rgb), 0.06);
 }
 
-.uv-sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding-right: 4px;
+/* Improve contrast for muted text where necessary */
+.uv-editor-panel .muted,
+.uv-editor-panel .label,
+.properties-panel label {
+  color: var(--muted-text);
 }
 
-/* ===== CUSTOM SCROLLBAR ===== */
-.uv-sidebar-scroll::-webkit-scrollbar {
-  width: 8px;
+/* Support users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .uv-editor-panel * {
+    transition: none !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
-.uv-sidebar-scroll::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-}
+.uv-editor-panel {
+  box-sizing: border-box;
 
-.uv-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #b366ff, #8e2de2);
-  border-radius: 4px;
-  border: 2px solid rgba(0, 0, 0, 0.4);
-}
-
-.uv-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #8e2de2, #b366ff);
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.5);
-}
-
-/* Firefox scrollbar */
-.uv-sidebar-scroll {
-  scrollbar-color: #b366ff rgba(0, 0, 0, 0.3);
-  scrollbar-width: thin;
-}
-
-.uv-sidebar-section {
-  flex: 0 0 auto;
-  border-bottom: 1px solid #333;
-  padding: 15px;
-  min-width: 0;
-  min-height: fit-content;
-  display: block;
-}
-
-.uv-sidebar-section h4 {
-  color: #b366ff;
-  margin: 0 0 12px 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: bold;
-}
-
-/* ===== COLORS SECTION ===== */
-.color-grid {
+  /* Aumentado para ocupar mais tela por padrão, sem precisar do modo fullscreen */
+  height: 95vh;
+  max-height: 95vh; /* Garante que o editor se ajuste bem à altura da tela */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
+  grid-template: "uv-header uv-header uv-header" 48px "uv-tools uv-viewport uv-right" 1fr / 60px minmax(
+      0,
+      1fr
+    ) 400px; /* header + main */
 
-.color-btn {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
-}
-
-.color-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px currentColor;
-}
-
-.color-btn.active {
-  border-color: #fff;
-  box-shadow: 0 0 20px currentColor, inset 0 0 10px rgba(255, 255, 255, 0.3);
-}
-
-/* ===== SIZE SECTION ===== */
-.size-control {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.size-input-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.size-input-group input[type="number"] {
-  flex: 1;
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid rgba(179, 102, 255, 0.3);
-  color: #fff;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.size-input-group input[type="number"]:focus {
-  border-color: #b366ff;
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
-  outline: none;
-}
-
-.size-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 60px;
-  background: rgba(179, 102, 255, 0.1);
-  border: 1px dashed rgba(179, 102, 255, 0.3);
-  border-radius: 6px;
-}
-
-.size-preview-dot {
-  background: #b366ff;
-  border-radius: 50%;
-  box-shadow: 0 0 10px #b366ff;
-}
-
-/* ===== TOOLS SECTION ===== */
-.tools-grid {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  width: 100%;
-  min-height: 120px;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-.tool-btn {
-  background: linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.3));
-  border: 1px solid rgba(180, 180, 180, 0.3);
-  color: #ddd;
-  padding: 10px 8px;
-  cursor: pointer;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  text-align: center;
-  white-space: nowrap;
-  display: block !important;
-  min-height: 36px;
-  visibility: visible !important;
-  opacity: 1 !important;
-  width: 100%;
-}
-
-.tool-btn:hover {
-  background: linear-gradient(135deg, rgba(150, 150, 150, 0.5), rgba(120, 120, 120, 0.5));
-  border-color: rgba(200, 200, 200, 0.6);
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.2);
-}
-
-.tool-btn.active {
-  background: linear-gradient(135deg, #b366ff, #8e2de2);
-  border-color: #b366ff;
-  color: #fff;
-  box-shadow: 0 0 15px rgba(179, 102, 255, 0.5);
-}
-
-/* ===== LAYERS SECTION ===== */
-.layers-section {
-  flex: 0 0 auto;
+  /* Aumentada a largura do painel direito para 400px */ /* tools | viewport | right (mais largo) */
   overflow: hidden;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+  color: #e6eef6;
+  background: rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.95);
+}
+
+/* Header: slim app menu bar */
+.uv-editor-panel > .uv-editor-header {
+  grid-area: uv-header;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.6);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+  z-index: 3;
+  backdrop-filter: blur(4px) saturate(1.1);
+  position: relative; /* allow absolute-positioning of header actions */
+}
+
+/* Left: Tools Dock */
+.uv-editor-panel > .uv-tools-dock {
+  grid-area: uv-tools;
+  width: 60px;
+  min-width: 60px;
+  border-right: 1px solid var(--border-color);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.5),
+    rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.55)
+  );
   display: flex;
   flex-direction: column;
-  min-height: 150px;
-  max-height: 350px;
+  align-items: center;
+  padding: 8px 6px;
+  gap: 8px;
+  z-index: 3;
+  backdrop-filter: blur(3px) saturate(1.05);
 }
 
-.layers-section h4 {
-  margin: 0 0 12px 0;
-}
-
-/* ===== RANGE SLIDERS ===== */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 3px;
-  outline: none;
-  border: 1px solid rgba(179, 102, 255, 0.3);
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: linear-gradient(135deg, #00ffff, #0080ff);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
-  border: 2px solid #fff;
-}
-
-input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: linear-gradient(135deg, #00ffff, #0080ff);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
-  border: 2px solid #fff;
-}
-
-input[type="range"]:hover::-webkit-slider-thumb {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
-}
-
-input[type="range"]:hover::-moz-range-thumb {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
-}
-
-input[type="range"]:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.add-layer-btn {
-  background: linear-gradient(135deg, #b366ff 0%, #8e2de2 100%);
-  border: 1px solid #b366ff;
-  color: white;
-  font-size: 18px;
-  width: 32px;
-  height: 32px;
+.uv-tools-dock .tool-button {
+  width: 44px;
+  height: 44px;
   border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.45);
+  color: inherit;
+  border: 1px solid rgb(255 255 255 / 3%);
+  cursor: pointer;
+  transition:
+    box-shadow 140ms ease,
+    transform 120ms ease,
+    background 120ms ease;
+}
+
+.uv-tools-dock .tool-button:hover {
+  background: var(--bg-2);
+  transform: translateY(-1px);
+}
+
+.uv-tools-dock .tool-button.active {
+  box-shadow:
+    var(--primary-glow-medium),
+    0 0 0 1px rgb(var(--accent-cyan-rgb), 0.06) inset;
+  border-color: rgb(var(--accent-cyan-rgb), 0.18);
+  will-change: transform, box-shadow;
+}
+
+.uv-tools-dock .tool-button .icon {
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 60%));
+}
+
+/* Header action buttons: compact icon-only variant (matches small squares) */
+.uv-editor-header .btn-save,
+.uv-editor-header .btn-close,
+.btn-save,
+.btn-close {
+  width: 32px; /* compact square */
+  height: 28px;
+  min-width: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: rgb(var(--nexus-dark-rgb), 0.28);
+  color: transparent; /* hide textual label if present */
+  font-size: 0; /* ensure only pseudo-icon shows */
+  line-height: 0;
+  transition:
+    box-shadow var(--transition-medium),
+    transform var(--transition-fast),
+    background var(--transition-fast);
+  border: 1px solid transparent;
 }
 
-.add-layer-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(179, 102, 255, 0.6);
-  background: linear-gradient(135deg, #c477ff 0%, #9f3ef3 100%);
+/* Cyan / verified (save) */
+.uv-editor-header .btn-save,
+.btn-save {
+  border-color: rgb(var(--nexus-blue-rgb), 0.14);
 }
 
-.add-layer-btn:active {
-  transform: scale(0.95);
+.uv-editor-header .btn-save:hover,
+.btn-save:hover {
+  background: rgb(var(--nexus-blue-rgb), 0.06);
+  box-shadow: 0 0 8px rgb(var(--nexus-blue-rgb), 0.18);
+}
+
+/* Red / close */
+.uv-editor-header .btn-close,
+.btn-close {
+  border-color: rgb(255 0 80 / 14%);
+}
+
+.uv-editor-header .btn-close:hover,
+.btn-close:hover {
+  background: rgb(255 0 80 / 6%);
+  box-shadow: 0 0 8px rgb(255 0 80 / 18%);
+}
+
+/* Render icons via pseudo-elements so text can remain accessible but hidden visually */
+.uv-editor-header .btn-save::after,
+.btn-save::after {
+  content: "✔"; /* check */
+  font-size: 14px;
+  color: var(--nexus-blue);
+  display: block;
+  line-height: 1;
+}
+
+.uv-editor-header .btn-close::after,
+.btn-close::after {
+  content: "✖"; /* cross */
+  font-size: 14px;
+  color: rgb(255 107 136 / 100%);
+  display: block;
+  line-height: 1;
+}
+
+/* If a textual label exists inside, keep it available to screen-readers but visually hidden */
+.uv-editor-header .btn-save .label,
+.uv-editor-header .btn-close .label,
+.btn-save .label,
+.btn-close .label {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Absolute positioning to ensure perfect alignment at top-right */
+.uv-editor-header .btn-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+  height: 28px;
+}
+
+.uv-editor-header .btn-save {
+  position: absolute;
+  right: 44px; /* space between close and save */
+  top: 8px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Ensure icon pseudo-elements are centered inside the absolute boxes */
+.uv-editor-header .btn-save::after,
+.uv-editor-header .btn-close::after {
+  font-size: 13px;
+  line-height: 28px;
+  display: inline-block;
+}
+
+.uv-tools-dock .tool-button .icon {
+  font-size: 18px; /* expect icon fonts / svg */
+}
+
+/* Center: Viewport */
+.uv-editor-panel > .uv-editor-viewport {
+  grid-area: uv-viewport;
+  overflow: auto; /* internal scroll */
+  background-color: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  min-width: 0; /* allow shrinking inside grid */
+  min-height: 0;
+  position: relative;
+}
+
+/* Checkered background to indicate transparency (dark variant) */
+
+.uv-editor-viewport::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 2%) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgb(255 255 255 / 2%) 75%
+    ),
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 1.5%) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgb(255 255 255 / 1.5%) 75%
+    );
+  background-size:
+    24px 24px,
+    24px 24px;
+  background-position:
+    0 0,
+    12px 12px;
+  z-index: 0;
+  opacity: 0.28; /* less obtrusive */
+  filter: contrast(0.95) brightness(0.92);
+  pointer-events: none; /* allow pointer events to reach canvas */
+}
+
+.uv-editor-viewport .viewport-canvas {
+  position: relative;
+  z-index: 1000; /* content above pattern; raised to ensure canvas sits above other panels/overlays */
+  width: 100%;
+  height: 100%;
+  min-width: 320px; /* ensure viewport doesn't collapse to a very narrow column */
+  min-height: 240px; /* ensure a reasonable visible area for the canvas */
+  box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
+  border-radius: 6px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  /* ensure canvas above pattern but below panels */
+}
+
+/* Ensure canvas and its container always receive pointer events (avoid accidental overlays) */
+.uv-editor-viewport .viewport-canvas,
+.uv-editor-viewport canvas,
+.viewport-canvas canvas {
+  pointer-events: auto !important;
+  z-index: 1100 !important; /* make canvas stack above most UI chrome to avoid accidental overlays */
+}
+
+.uv-editor-viewport canvas {
+  cursor: crosshair;
+}
+
+/* When the editor is in draw/erase tool, hide the system cursor so
+	we can render a precise brush preview on the canvas. */
+.uv-editor-panel.tool-draw .uv-editor-viewport canvas {
+  cursor: none !important;
+}
+.uv-editor-panel.tool-erase .uv-editor-viewport canvas {
+  cursor: none !important;
+}
+
+/* Debug: provide a subtle background so empty/transparent canvas is visible during development */
+.uv-editor-viewport canvas {
+  background-color: rgb(10 10 10 / 60%);
+}
+
+/* mask cursor overlay */
+.viewport-canvas .mask-cursor {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 90%);
+  background: rgb(255 255 255 / 6%);
+  mix-blend-mode: overlay;
+  box-shadow: 0 0 6px rgb(0 0 0 / 60%);
+  z-index: 30;
+}
+
+/* Ensure canvas scales responsively within viewport */
+.uv-editor-viewport canvas,
+.viewport-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Canvas overlays: grid, debugging, and loading indicator */
+.uv-editor-viewport .canvas-overlay,
+.uv-editor-viewport .canvas-loading {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+
+/* subtle grid overlay that can be toggled by adding .grid to .canvas-overlay */
+.uv-editor-viewport .canvas-overlay.grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.18;
+}
+
+/* Loading overlay (useful for saves/imports) */
+.uv-editor-viewport .canvas-loading {
+  backdrop-filter: blur(2px);
+}
+
+.uv-editor-viewport .canvas-loading .spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid rgb(255 255 255 / 6%);
+  border-top-color: rgb(var(--nexus-blue-rgb), 0.95);
+  animation: uv-spin 900ms linear infinite;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
+}
+
+/* Respect app-level performance mode: disable heavy transitions/animations and remove costly effects */
+body.performance-mode .uv-editor-panel *,
+body.performance-mode .uv-editor-panel *::before,
+body.performance-mode .uv-editor-panel *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Disable glow and heavy backdrop filters inside the UV editor when performance mode is active */
+body.performance-mode .uv-editor-panel .primary-glow-medium {
+  box-shadow: none !important;
+}
+
+body.performance-mode .uv-editor-panel .uv-editor-header {
+  backdrop-filter: none !important;
+}
+
+/* Lightweight variant for any explicit UV editor glows */
+body.performance-mode .uv-editor-panel .primary-glow-large {
+  box-shadow: none !important;
+}
+
+/* Range input styling for editor controls */
+.uv-range {
+  width: 100%;
+  margin-top: 6px;
+  appearance: none;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--nexus-blue-rgb), 0.6),
+    rgb(255 255 255 / 12%)
+  );
+  border-radius: 6px;
+}
+
+.uv-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 40%);
+}
+
+@keyframes uv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Right column: properties / layers */
+.uv-editor-panel > .uv-right-panel {
+  grid-area: uv-right;
+  border-left: 1px solid var(--border-color);
+  padding: 16px; /* a bit more horizontal breathing */
+  background: linear-gradient(
+    180deg,
+    rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.58),
+    rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.6)
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 320px;
+  min-height: 0;
+  z-index: 3;
+  backdrop-filter: blur(3px) saturate(1.05);
+}
+
+.uv-right-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.uv-right-tabs .tab {
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.uv-right-tabs .tab.active {
+  background: var(--bg-elevated);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 45%) inset;
+}
+
+/* Panels darker and with clearer separators */
+.properties-panel {
+  background: rgb(0 0 0 / 12%);
+  border: 1px solid rgb(255 255 255 / 2%);
+}
+
+.layers-panel {
+  background: rgb(0 0 0 / 14%);
+}
+
+.layers-list .layer-item {
+  background: transparent;
+}
+
+.layers-list .layer-item.layer--selected {
+  background: linear-gradient(
+    90deg,
+    rgb(57 240 255 / 6%),
+    rgb(57 240 255 / 3%)
+  );
+}
+
+/* Make scrollbars visible and thin */
+.uv-editor-panel ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.uv-editor-panel ::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 6%);
+  border-radius: 6px;
+}
+.uv-editor-panel ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Layers panel: occupy bottom half of right column */
+.layers-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow flex children to scroll */
+  flex: 1 1 50%; /* occupy lower portion but remain flexible */
+  border-radius: 8px;
+
+  /* keep overflow visible to allow inner scrollbars to show */
+  overflow: visible;
+  background: linear-gradient(180deg, rgb(255 255 255 / 1%), transparent);
+  border: 1px solid rgb(255 255 255 / 2%);
+  padding: 12px; /* add breathing room inside panel */
+}
+
+.layers-panel .layers-header {
+  padding: 8px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgb(0 0 0 / 2%);
 }
 
 .layers-list {
-  flex: 0 0 auto;
-  overflow-y: auto;
-  overflow-x: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  min-height: 0; /* allow flex children to scroll properly */
+  flex: 1 1 auto;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 300px;
-  padding-right: 4px;
 }
 
-.layers-list::-webkit-scrollbar {
-  width: 6px;
+/* Ensure layer list container allows inner scrolling within the right panel */
+.layers-panel .layers-list,
+.uv-right-panel .layers-list,
+.layers-section .layers-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
-.layers-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
+/* Smaller icon/action buttons inside layer rows */
+.layers-panel .layer-item button,
+.layers-section .layer-item button,
+.layers-list .layer-item button {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
 }
 
-.layers-list::-webkit-scrollbar-thumb {
-  background: rgba(179, 102, 255, 0.5);
-  border-radius: 3px;
-}
-
-.layers-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(179, 102, 255, 0.8);
-}
-
-.layer-item {
-  background: rgba(50, 50, 50, 0.5);
-  border: 1px solid rgba(179, 102, 255, 0.2);
+/* Ensure our custom edit button is visible and styled in the UV editor context */
+.layers-list .layer-item .layer-edit-btn,
+.layers-panel .layer-item .layer-edit-btn {
+  width: auto;
+  height: auto;
+  padding: 4px 6px;
+  font-size: 12px;
   border-radius: 6px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.layers-list .layer-item .layer-edit-btn svg { width: 14px; height: 14px; display: block; fill: currentColor; }
+.layers-list .layer-item .layer-edit-btn:hover { background: rgba(255,255,255,0.06); }
+
+/* Slight hover for small buttons */
+.layers-panel .layer-item button:hover,
+.layers-list .layer-item button:hover {
+  background: rgb(255 255 255 / 2%);
+}
+
+/* Layer item icon styles used by LayerItem component */
+.layers-list .layer-item .layer-item-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-text, #9aa3b2);
+}
+
+.layers-list .layer-item .layer-item-type .icon-svg {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  color: inherit;
+}
+
+.layers-list .layer-item .layer-item-type .layer-mask-icon .icon-svg {
+  opacity: 0.95;
+}
+
+/* Layers action toolbar shown when user toggles actions in LayersPanel */
+.layers-action-bar {
   display: flex;
   gap: 8px;
+  padding: 8px 12px;
   align-items: center;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0));
+  border-top: 1px solid rgba(255,255,255,0.03);
+}
+.layers-action-bar button {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: inherit;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.layers-actions-toggle {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.layers-list .layer-item.layer--selected {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent-cyan);
+  padding-left: 8px; /* compensate for left border */
+}
+
+/* Also support the `active` class used by LayerItem component */
+.layers-list .layer-item.active,
+.layer-item.active {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent-cyan);
+  padding-left: 8px;
+}
+
+.layers-list .layer-children {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.group-toggle-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Compact controls in right panel */
+.properties-panel {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+/* Inputs: thin sliders and inputs */
+.properties-panel input[type="range"],
+.uv-range {
+  appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgb(255 255 255 / 4%);
+  border-radius: 6px;
+  outline: none;
+}
+
+.properties-panel input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--nexus-blue);
+  box-shadow: 0 0 8px rgb(0 215 255 / 28%);
+  border: 2px solid rgb(255 255 255 / 6%);
+}
+
+.properties-panel label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #9fb3c8;
+}
+
+/* Utility: compact footer for layers if needed */
+.layers-panel .layers-footer {
+  padding: 6px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
   justify-content: space-between;
 }
 
-.layer-item.locked {
-  background: rgba(60, 40, 40, 0.5);
-  border-color: rgba(196, 30, 58, 0.3);
-  opacity: 0.8;
+/* Footer buttons in layers panel */
+.layers-panel .layers-footer .btn,
+.layers-panel .layers-footer button {
+  background: rgb(255 255 255 / 2%);
+  color: #c8d7e6;
+  border: 1px solid rgb(255 255 255 / 3%);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
-.layer-item:hover {
-  background: rgba(70, 50, 80, 0.5);
-  border-color: rgba(179, 102, 255, 0.5);
+.layers-panel .layers-footer .btn:hover,
+.layers-panel .layers-footer button:hover {
+  background: rgb(255 255 255 / 3%);
+  transform: translateY(-1px);
 }
 
-.layer-item.locked:hover {
-  background: rgba(80, 50, 50, 0.5);
+/* Small controls used in right panel */
+.properties-panel .control-button,
+.uv-right-panel .control-button {
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 4%);
+  color: #cfe8ff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
 }
 
-.layer-item.active {
-  background: rgba(179, 102, 255, 0.2);
-  border-color: #b366ff;
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
+.properties-panel .control-button:hover,
+.uv-right-panel .control-button:hover {
+  background: rgb(255 255 255 / 2%);
 }
 
-.layer-controls {
+/* Add-layer button styling */
+.layers-panel .add-layer-btn,
+.add-layer-btn {
+  background: linear-gradient(
+    180deg,
+    rgb(57 240 255 / 4%),
+    rgb(57 240 255 / 2%)
+  );
+  border: 1px solid rgb(57 240 255 / 6%);
+  color: #c8f6ff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Undo / Redo small buttons */
+.layers-panel .undo,
+.layers-panel .redo,
+.btn-undo,
+.btn-redo {
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 3%);
+  color: #9fb3c8;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Responsive breakpoints: adapt grid and controls for narrower screens */
+@media (width <= 1200px) {
+  .uv-editor-panel {
+    grid-template-columns: 52px minmax(0, 1fr) 260px;
+  }
+  .uv-tools-dock {
+    width: 52px;
+    min-width: 52px;
+  }
+  .uv-right-panel {
+    min-width: 220px;
+  }
+}
+
+@media (width <= 900px) {
+  /* collapse right panel to save space and make viewport dominant */
+  .uv-editor-panel {
+    grid-template-columns: 48px 1fr;
+    grid-template-areas:
+      "uv-header uv-header"
+      "uv-tools uv-viewport";
+  }
+  .uv-right-panel {
+    display: none;
+  }
+  .uv-tools-dock {
+    position: relative;
+    top: 0;
+    height: auto;
+    padding: var(--space-xs);
+  }
+  .uv-tools-dock .tool-button {
+    width: 40px;
+    height: 40px;
+  }
+  .uv-editor-viewport {
+    padding: 8px;
+  }
+}
+
+@media (width <= 600px) {
+  /* Mobile: stack right panel under viewport for quick access */
+  .uv-editor-panel {
+    grid-template: "uv-header uv-header" 48px "uv-tools uv-viewport" 1fr "uv-tools uv-right" 260px / 40px 1fr;
+  }
+  .uv-right-panel {
+    display: block;
+    grid-area: uv-right;
+    min-width: 0;
+    height: 260px;
+    overflow: auto;
+  }
+  .uv-tools-dock {
+    width: 40px;
+    min-width: 40px;
+    padding: 6px;
+  }
+  .uv-tools-dock .tool-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
+  .uv-editor-viewport canvas {
+    max-width: 100%;
+    max-height: calc(100vh - 48px - 260px - 32px);
+  }
+}
+
+/* ==============================
+	 Layers panel - override styles
+	 Consolidated and high-specificity rules to ensure
+	 compact, GIMP-like layer list and reliable previews
+	 ============================== */
+
+/* Target both panel variants used in the app */
+.uv-right-panel .layers-panel,
+.uv-sidebar-section.layers-section,
+.layers-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  gap: 6px;
+  min-height: 0; /* allow inner scrolling */
+  background: linear-gradient(180deg, rgb(255 255 255 / 1%), transparent);
+  border: 1px solid rgb(255 255 255 / 2%);
+  border-radius: 6px;
+}
+
+.uv-right-panel .layers-panel .layers-header,
+.uv-sidebar-section.layers-section .layers-header {
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+}
+
+/* The searchable list */
+.uv-right-panel .layers-panel .layers-list,
+.uv-sidebar-section.layers-section .layers-list,
+.layers-section .layers-list {
+  flex: 1 1 auto;
+  min-height: 0; /* ESSENCIAL para permitir que a rolagem funcione dentro de um contêiner flex */
+  overflow: hidden auto; /* Garante a rolagem vertical quando o conteúdo excede a altura */
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.layer-visibility-btn,
-.layer-lock-btn {
+/* Barra de rolagem visível no painel direito */
+.uv-right-panel .layers-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.uv-right-panel .layers-list::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 10%);
+  border-radius: 6px;
+}
+
+.uv-right-panel .layers-list::-webkit-scrollbar-track {
   background: transparent;
-  border: none;
-  color: #ddd;
-  padding: 2px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 24px;
-  height: 24px;
+}
+
+/* Fullscreen mode removed per request */
+
+/* Individual row: compact and readable */
+.uv-right-panel .layers-panel .layers-list .layer-item,
+.uv-sidebar-section.layers-section .layers-list .layer-item,
+.layers-list .layer-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 2px 6px;
+  height: 26px;
   border-radius: 4px;
+  background: transparent;
+  color: var(--text-color, #d6e6f6);
+  font-size: 12px;
 }
 
-.layer-visibility-btn:hover,
-.layer-lock-btn:hover {
-  background: rgba(179, 102, 255, 0.2);
+.layers-list .layer-item:hover {
+  background: rgb(255 255 255 / 2%);
 }
 
-.layer-visibility-btn.hidden {
-  opacity: 0.4;
+/* Selected indicator */
+.layers-list .layer-item.layer--selected,
+.layers-list .layer-item.active,
+.layer-item.active {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent-cyan);
+  padding-left: 8px; /* compensate for left border */
 }
 
-.layer-lock-btn.locked {
-  color: #ff6b9d;
+/* Thumbnail / preview */
+.layers-list .layer-item .layer-preview,
+.layer-preview,
+.layer-item-thumbnail {
+  /* larger thumbnails for better visibility */
+  width: 32px !important;
+  height: 32px !important;
+  flex-shrink: 0 !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  background: var(--bg-2) !important;
+  border: 1px solid rgb(255 255 255 / 4%) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.layer-action-btn {
-  background: rgba(100, 100, 100, 0.5);
-  border: 1px solid rgba(179, 102, 255, 0.3);
-  color: #ddd;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.layers-list .layer-item .layer-preview img,
+.layer-preview img,
+.layer-item-thumbnail img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.layers-list .layer-item .no-preview,
+.layer-preview .no-preview {
+  /* avoid showing textual 'No Preview Available' in the row */
+  display: block;
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgb(255 255 255 / 2%);
+  border-radius: 4px;
+  color: transparent;
+  font-size: 0;
 }
 
-.layer-action-btn:hover:not(:disabled) {
-  background: rgba(179, 102, 255, 0.3);
-  border-color: #b366ff;
+/* Drag & drop / selection feedback for layer rows */
+.layers-list .layer-item.dragging {
+  opacity: 0.55;
+  transform: translateX(6px);
 }
 
-.layer-action-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.layers-list .layer-item.drag-over {
+  outline: 2px dashed rgb(var(--accent-cyan-rgb), 0.85);
+  background: rgb(var(--accent-cyan-rgb), 0.06);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 35%) inset;
 }
 
-.layer-item-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
+.layers-list .layer-item .layer-preview.drag-preview {
+  transform: scale(1.04);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
 }
 
-.layer-item-title {
-  color: #fff;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.layer-item-type {
-  color: #aaa;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
+/* Hide the inline controls to keep rows minimal; use context menu */
+.uv-right-panel .layers-panel .layer-controls,
+.uv-sidebar-section.layers-section .layer-controls,
+.uv-right-panel .layers-panel .layer-item-actions,
+.uv-sidebar-section.layers-section .layer-item-actions,
+.layer-controls,
 .layer-item-actions {
-  display: flex;
-  gap: 4px;
+  display: none !important;
 }
 
-.layer-item-actions button {
-  background: rgba(100, 100, 100, 0.5);
-  border: 1px solid rgba(150, 150, 150, 0.3);
-  color: #ddd;
+/* Batch actions under search should be compact and not overlap */
+.uv-right-panel .layers-panel .batch-actions,
+.layers-section .batch-actions {
+  /* Esconde os botões de ação em lote; usamos o menu de contexto em seu lugar */
+  display: none !important;
+}
+
+/* Hide old batch action buttons — replaced by context menu */
+.batch-actions {
+  display: none;
+}
+
+.uv-right-panel .layers-panel .batch-actions button,
+.layers-section .batch-actions button {
+  font-size: 11px;
   padding: 4px 6px;
   border-radius: 4px;
-  font-size: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.layer-item-actions button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.layer-item-actions button:hover:not(:disabled) {
-  background: rgba(150, 150, 150, 0.5);
-  border-color: rgba(200, 200, 200, 0.6);
-}
-
-.layer-item-actions button.delete:hover:not(:disabled) {
-  background: rgba(196, 30, 58, 0.4);
-  border-color: #c41e3a;
-  color: #ff6b9d;
-}
-
-.layer-name-input {
-  background: rgba(15, 15, 15, 0.9);
-  border: 1px solid #b366ff;
-  color: #fff;
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-  width: 100%;
-  outline: none;
-}
-
-.layer-name-input:focus {
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.5);
-}
-
-.layer-opacity-control {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(179, 102, 255, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.layer-opacity-control label {
-  color: #b366ff;
-  font-size: 11px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.layer-opacity-control input[type="range"] {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(179, 102, 255, 0.2);
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.layer-opacity-control input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #b366ff, #8e2de2);
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(179, 102, 255, 0.5);
-}
-
-.layer-opacity-control input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #b366ff, #8e2de2);
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 0 8px rgba(179, 102, 255, 0.5);
-}
-
-.layer-opacity-control input[type="range"]:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.layer-opacity-control input[type="range"]:disabled::-webkit-slider-thumb {
-  cursor: not-allowed;
-}
-
-.no-layers {
-  color: #666;
-  font-size: 11px;
-  text-align: center;
-  padding: 20px;
-  font-style: italic;
-}
-
-/* ===== TOOLBAR (BOTTOM) ===== */
-.uv-toolbar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.6);
-  border-top: 2px solid #333;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 12px 20px;
-  gap: 15px;
-  color: #fff;
-  backdrop-filter: blur(10px);
-}
-
-.btn-help {
-  padding: 8px 16px;
-  background: rgba(100, 100, 100, 0.4);
-  color: #fff;
-  border: 1px solid rgba(200, 200, 200, 0.4);
-  font-weight: bold;
-  cursor: pointer;
+/* Context menu (right-click) */
+.layers-context-menu {
+  position: fixed;
+  z-index: 1500;
+  background: #1a202c;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 16px;
-  transition: all 0.3s ease;
+  padding: 8px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 50%);
+  min-width: 200px;
 }
 
-.btn-help:hover {
-  background: rgba(150, 150, 150, 0.5);
-  border-color: #00ffff;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-  transform: scale(1.05);
+/* Hint the browser about elements that animate on hover/active to improve paint performance */
+.uv-tools-dock .tool-button,
+.layers-list .layer-item,
+.layers-panel .layers-footer .btn,
+.uv-right-tabs .tab {
+  will-change: transform, box-shadow, background;
 }
 
-.btn-help:active {
-  transform: scale(0.95);
+.layers-context-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  border-radius: 4px;
 }
 
-.btn-save-uv {
-  margin-left: auto;
-  padding: 10px 24px;
-  background: linear-gradient(135deg, #b366ff, #8e2de2);
-  color: #fff;
-  border: 2px solid #b366ff;
-  font-weight: bold;
+.layers-context-menu button:hover {
+  background: rgb(255 255 255 / 2%);
+}
+
+/* ensure scrollbar inside right panel looks okay */
+.uv-right-panel .layers-list::-webkit-scrollbar {
+  width: 8px;
+}
+.uv-right-panel .layers-list::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 4%);
+  border-radius: 6px;
+}
+
+/* End overrides */
+
+/* ===== Layer selection: fill entire row and checkbox square ===== */
+:root {
+  --layer-selected-bg: rgb(57 240 255 / 12%);
+  --layer-selected-fg: #eaffff;
+  --layer-checkbox-size: 18px;
+}
+
+/* Make selected row appear as a solid filled block */
+.layers-list .layer-item.active,
+.layers-list .layer-item.layer--selected,
+.layer-item.active,
+.layer-item.layer--selected {
+  background: var(--layer-selected-bg) !important;
+  color: var(--layer-selected-fg) !important;
+  border-left: none !important;
+  padding-left: 8px !important;
+}
+
+/* Ensure text/icons inside the selected row adopt the foreground color */
+.layers-list .layer-item.active .layer-item-title,
+.layers-list .layer-item.active .icon-svg,
+.layer-item.active .layer-item-title,
+.layer-item.active .icon-svg {
+  color: var(--layer-selected-fg) !important;
+  opacity: 1 !important;
+}
+
+/* Custom-styled checkbox square that fills when checked or when row is active */
+.layers-list .layer-item .layer-controls input[type="checkbox"] {
+  width: var(--layer-checkbox-size);
+  height: var(--layer-checkbox-size);
+  appearance: none;
+  appearance: none;
+  border-radius: 4px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  background: rgb(255 255 255 / 2%);
   cursor: pointer;
-  border-radius: 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 15px rgba(179, 102, 255, 0.3);
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  transition:
+    background 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
 }
 
-.btn-save-uv:hover {
-  background: linear-gradient(135deg, #8e2de2, #b366ff);
-  box-shadow: 0 0 25px rgba(179, 102, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+.layers-list .layer-item .layer-controls input[type="checkbox"]:checked {
+  background: var(--accent-cyan);
+  border-color: transparent;
+  box-shadow: 0 0 10px rgb(57 240 255 / 12%);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><path d='M20.3 5.8l-11 11c-.4.4-1 .4-1.4 0l-5-5c-.4-.4-.4-1 0-1.4s1-.4 1.4 0L9 14.6l10.6-10.6c.4-.4 1-.4 1.4 0s.4 1 0 1.4z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
 }
 
-.btn-save-uv:active {
-  transform: translateY(0);
+/* If the row is selected (via app state), ensure the checkbox shows the same filled style */
+.layers-list .layer-item.active .layer-controls input[type="checkbox"],
+.layer-item.active .layer-controls input[type="checkbox"] {
+  background: var(--accent-cyan);
+  border-color: transparent;
+  box-shadow: 0 0 10px rgb(57 240 255 / 12%);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><path d='M20.3 5.8l-11 11c-.4.4-1 .4-1.4 0l-5-5c-.4-.4-.4-1 0-1.4s1-.4 1.4 0L9 14.6l10.6-10.6c.4-.4 1-.4 1.4 0s.4 1 0 1.4z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
 }
 
-/* ===== FLOATING CONTROLS ===== */
-.floating-control {
-  position: absolute;
-  bottom: 70px;
-  left: 20px;
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid rgba(179, 102, 255, 0.5);
-  border-radius: 8px;
-  padding: 12px;
-  backdrop-filter: blur(10px);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  z-index: 5;
-  box-shadow: 0 0 20px rgba(179, 102, 255, 0.3);
-}
-
-.floating-control input[type="text"],
-.floating-control input[type="number"] {
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid rgba(179, 102, 255, 0.3);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.floating-control input:focus {
-  border-color: #b366ff;
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
-  outline: none;
-}
-
-.floating-control label {
-  color: #aaa;
-  font-size: 11px;
-  font-weight: bold;
-}
-
-/* ===== INSTRUCTIONS PANEL ===== */
-.instructions-panel {
-  position: absolute;
-  bottom: 70px;
-  left: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid rgba(179, 102, 255, 0.5);
-  border-radius: 8px;
-  padding: 16px;
-  backdrop-filter: blur(10px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 600px;
-  animation: slideUp 0.3s ease-out;
-  z-index: 5;
-  box-shadow: 0 0 20px rgba(179, 102, 255, 0.3);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.instructions-panel h5 {
-  color: #b366ff;
-  margin: 0;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: bold;
-}
-
-.instructions-panel p {
-  color: #ddd;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.instructions-panel .instruction-step {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  color: #aaa;
-  font-size: 11px;
-}
-
-.instructions-panel .instruction-step strong {
-  color: #b366ff;
-  min-width: 60px;
-}
-
-.floating-control input[type="text"],
-.floating-control input[type="number"] {
-  background: rgba(15, 15, 15, 0.8);
-  border: 1px solid rgba(179, 102, 255, 0.3);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.floating-control input:focus {
-  border-color: #b366ff;
-  box-shadow: 0 0 10px rgba(179, 102, 255, 0.3);
-  outline: none;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1200px) {
-  .uv-editor-panel {
-    max-width: 95vw;
-  }
-
-  .uv-sidebar {
-    width: 240px;
-  }
-
-  .color-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .uv-editor-overlay {
-    padding: 0;
-  }
-
-  .uv-editor-panel {
-    flex-direction: column;
-    height: 100vh;
-    max-width: 100vw;
-    border-radius: 0;
-    border: none;
-  }
-
-  .uv-editor-main {
-    padding-top: 60px;
-    flex-direction: column;
-  }
-
-  .editor-workspace {
-    flex: 1;
-    padding: 10px;
-    min-height: 300px;
-  }
-
-  .uv-sidebar {
-    width: 100%;
-    border-left: none;
-    border-top: 2px solid #333;
-    max-height: 40vh;
-    min-height: 200px;
-  }
-
-  .uv-sidebar-scroll {
-    overflow-y: auto;
-  }
-
-  .uv-sidebar-section {
-    padding: 10px;
-  }
-
-  .color-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
-  }
-
-  .tools-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-
-  .tool-btn {
-    padding: 8px 6px;
-    font-size: 10px;
-  }
-
-  .uv-toolbar {
-    padding: 10px 12px;
-    gap: 8px;
-  }
-
-  .btn-save-uv {
-    margin-left: 0;
-    padding: 8px 16px;
-    font-size: 11px;
-  }
-
-  .instructions-panel {
-    left: 10px;
-    right: 10px;
-    bottom: 60px;
-    font-size: 11px;
-  }
-
-  .floating-control {
-    left: 10px;
-    bottom: 60px;
-    flex-wrap: wrap;
-  }
+/* Ensure the thumbnail border and other small elements remain visible on selected rows */
+.layers-list .layer-item.active .layer-item-thumbnail,
+.layer-item.active .layer-item-thumbnail {
+  border-color: rgb(255 255 255 / 6%) !important;
 }

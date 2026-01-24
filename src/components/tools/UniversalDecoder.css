@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
   --nexus-blue: #00f3ff;
@@ -6,28 +6,28 @@
 }
 
 .decoder-station {
-  background: rgba(5, 8, 10, 0.85);
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: rgb(5 8 10 / 85%);
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 6px;
   overflow: hidden;
-  font-family: 'Share Tech Mono', monospace;
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.08);
+  font-family: "Share Tech Mono", monospace;
+  box-shadow: 0 0 20px rgb(0 243 255 / 8%);
 }
 
-.decoder-tabs { 
-  display: flex; 
-  background: rgba(0, 0, 0, 0.3); 
+.decoder-tabs {
+  display: flex;
+  background: rgb(0 0 0 / 30%);
   overflow-x: auto;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+  border-bottom: 1px solid rgb(0 243 255 / 15%);
 }
 
 .decoder-tabs button {
-  padding: 12px 16px; 
-  border: none; 
-  background: transparent; 
-  color: rgba(0, 243, 255, 0.6);
-  font-weight: bold; 
-  border-right: 1px solid rgba(0, 243, 255, 0.1);
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: rgb(0 243 255 / 60%);
+  font-weight: bold;
+  border-right: 1px solid rgb(0 243 255 / 10%);
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -36,33 +36,33 @@
   letter-spacing: 1px;
 }
 
-.decoder-tabs button.active { 
-  background: rgba(0, 243, 255, 0.08);
-  color: #00f3ff; 
+.decoder-tabs button.active {
+  background: rgb(0 243 255 / 8%);
+  color: #00f3ff;
   border-bottom: 2px solid #00f3ff;
 }
 
-.decoder-tabs button.special { 
-  color: rgba(0, 243, 255, 0.5);
+.decoder-tabs button.special {
+  color: rgb(0 243 255 / 50%);
 }
 
-.decoder-tabs button.special.active { 
+.decoder-tabs button.special.active {
   color: #00f3ff;
   border-bottom-color: #00f3ff;
 }
 
-.decoder-body { 
+.decoder-body {
   padding: 20px;
 }
 
-.decoder-input { 
-  width: 100%; 
-  height: 80px; 
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px dashed rgba(0, 243, 255, 0.2); 
-  color: #e9fcff; 
-  padding: 12px; 
-  font-family: 'Share Tech Mono', monospace; 
+.decoder-input {
+  width: 100%;
+  height: 80px;
+  background: rgb(0 0 0 / 40%);
+  border: 1px dashed rgb(0 243 255 / 20%);
+  color: #e9fcff;
+  padding: 12px;
+  font-family: "Share Tech Mono", monospace;
   margin-bottom: 10px;
   border-radius: 4px;
   transition: all 0.2s;
@@ -70,36 +70,36 @@
 
 .decoder-input:focus {
   outline: none;
-  border-color: rgba(0, 243, 255, 0.4);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.12);
+  border-color: rgb(0 243 255 / 40%);
+  box-shadow: 0 0 10px rgb(0 243 255 / 12%);
 }
 
-.output-screen { 
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 243, 255, 0.15); 
-  padding: 15px; 
-  color: #00f3ff; 
-  white-space: pre-wrap; 
-  min-height: 100px; 
-  max-height: 300px; 
+.output-screen {
+  background: rgb(0 0 0 / 50%);
+  border: 1px solid rgb(0 243 255 / 15%);
+  padding: 15px;
+  color: #00f3ff;
+  white-space: pre-wrap;
+  min-height: 100px;
+  max-height: 300px;
   overflow-y: auto;
   border-radius: 4px;
 }
 
-.decoder-params { 
-  display: flex; 
-  gap: 10px; 
-  align-items: center; 
-  margin-bottom: 10px; 
-  color: rgba(0, 243, 255, 0.6);
+.decoder-params {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: rgb(0 243 255 / 60%);
   font-size: 12px;
 }
 
-.decoder-params input { 
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 243, 255, 0.2); 
-  color: #e9fcff; 
-  padding: 6px 10px; 
+.decoder-params input {
+  background: rgb(0 0 0 / 40%);
+  border: 1px solid rgb(0 243 255 / 20%);
+  color: #e9fcff;
+  padding: 6px 10px;
   width: 100px;
   border-radius: 3px;
   font-family: inherit;
@@ -108,6 +108,6 @@
 
 .decoder-params input:focus {
   outline: none;
-  border-color: rgba(0, 243, 255, 0.4);
-  box-shadow: 0 0 8px rgba(0, 243, 255, 0.1);
+  border-color: rgb(0 243 255 / 40%);
+  box-shadow: 0 0 8px rgb(0 243 255 / 10%);
 }

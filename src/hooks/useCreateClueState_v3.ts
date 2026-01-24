@@ -61,14 +61,24 @@ export default function useCreateClueState(investigationId?: string): UseCreateC
     title: z.string().min(1, 'Título é obrigatório'),
     descPublic: z.string().optional(),
     evidenceType: z.enum(['document', 'glitch_puzzle', 'mega_clue']),
-  }), []);
+    glitchAccessInstructions: z.string().optional().refine((val) => val || evidenceType !== 'glitch_puzzle', {
+      message: 'Instruções de Glitch são obrigatórias para o tipo glitch_puzzle',
+    }),
+    imgFile: z.instanceof(File).optional(),
+    uvFile: z.instanceof(File).optional(),
+  }), [evidenceType]);
 
   const handleFileSelect = useCallback((fileSetter: (f: File | null) => void, urlSetter: (u: string | null) => void) => (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+
     const url = URL.createObjectURL(file);
     fileSetter(file);
     urlSetter(url);
+
+    return () => {
+      if (url) URL.revokeObjectURL(url); // Libera o URL criado para evitar vazamento de memória
+    };
   }, []);
 
   const handleImageSelect = handleFileSelect(setImgFile, setPreviewUrl);
@@ -76,20 +86,24 @@ export default function useCreateClueState(investigationId?: string): UseCreateC
 
   const validate = useCallback(() => {
     const items: ValidationItem[] = [];
-    const parsed = schema.safeParse({ title, descPublic, evidenceType });
+    const parsed = schema.safeParse({
+      title,
+      descPublic,
+      evidenceType,
+      glitchAccessInstructions,
+      imgFile,
+      uvFile,
+    });
+
     if (!parsed.success) {
       parsed.error.issues.forEach((fe) => {
         items.push({ field: (fe.path.join('.') || 'title'), message: fe.message, severity: 'error' });
       });
     }
 
-    if (evidenceType === 'glitch_puzzle' && !glitchAccessInstructions) {
-      items.push({ field: 'glitchAccessInstructions', message: 'Instruções de Glitch são obrigatórias', severity: 'error' });
-    }
-
     setErrors(items);
     return items;
-  }, [schema, title, descPublic, evidenceType, glitchAccessInstructions]);
+  }, [schema, title, descPublic, evidenceType, glitchAccessInstructions, imgFile, uvFile]);
 
   const formState = useMemo(() => ({
     title,
@@ -97,20 +111,26 @@ export default function useCreateClueState(investigationId?: string): UseCreateC
     descHidden,
     tags,
     evidenceType,
-    imgFile,
-    previewUrl,
-    uvFile,
-    previewUrl2,
-    audioBase,
-    audioBasePreview,
-    audioHidden,
-    audioHiddenPreview,
-    videoFile,
-    videoPreviewUrl,
-    videoUrlInput,
-    megaFinalTruthText,
-    megaRequiredPuzzleIds,
-    glitchAccessInstructions,
+    files: {
+      imgFile,
+      previewUrl,
+      uvFile,
+      previewUrl2,
+      audioBase,
+      audioBasePreview,
+      audioHidden,
+      audioHiddenPreview,
+      videoFile,
+      videoPreviewUrl,
+      videoUrlInput,
+    },
+    megaClue: {
+      megaFinalTruthText,
+      megaRequiredPuzzleIds,
+    },
+    glitchPuzzle: {
+      glitchAccessInstructions,
+    },
     loading,
   }), [
     title,

@@ -20,6 +20,15 @@ export default function DisplayConfigPanel({ onClose }: Props) {
     }));
   };
 
+  const handleToggleUVLayer = () => {
+    if (!config.media.showUVLayer) {
+      console.log('Ativando camada UV');
+    } else {
+      console.log('Desativando camada UV');
+    }
+    handleToggle('media', 'showUVLayer');
+  };
+
   const handleSave = () => {
     saveDisplayConfig(config);
     setSavedMessage('✅ Config salva!');
@@ -300,7 +309,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
               <input
                 type="checkbox"
                 checked={config.media.showUVLayer}
-                onChange={() => handleToggle('media', 'showUVLayer')}
+                onChange={handleToggleUVLayer}
               />
               Camada UV (Ultravioleta)
             </label>

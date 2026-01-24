@@ -1,18 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
   --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgba(0, 243, 255, 0.4);
+  --nexus-blue-glow: rgb(0 243 255 / 40%);
   --nexus-dark: #05080a;
 }
 
 .agent-profile-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(5, 8, 10, 0.9);
+  inset: 0;
+  background: rgb(5 8 10 / 90%);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -22,17 +19,19 @@
 }
 
 .agent-profile-content {
-  background: linear-gradient(180deg, rgba(5, 8, 10, 0.92), rgba(5, 8, 10, 0.85));
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 8px;
   max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   padding: 30px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 243, 255, 0.12);
+  box-shadow:
+    0 20px 50px rgb(0 0 0 / 60%),
+    0 0 25px rgb(0 243 255 / 12%);
   position: relative;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
 }
 
 .profile-header {
@@ -41,23 +40,23 @@
   gap: 15px;
   margin-bottom: 30px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  border-bottom: 1px solid rgb(0 243 255 / 20%);
 }
 
 .profile-header h2 {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   color: var(--nexus-blue);
   font-size: 24px;
   margin: 0;
   flex: 1;
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  text-shadow: 0 0 10px rgb(0 243 255 / 30%);
   letter-spacing: 2px;
   text-transform: uppercase;
 }
 
 .btn-close {
   background: transparent;
-  border: 1px solid rgba(255, 0, 60, 0.4);
+  border: 1px solid rgb(255 0 60 / 40%);
   color: #ff003c;
   font-size: 24px;
   width: 36px;
@@ -72,9 +71,9 @@
 }
 
 .btn-close:hover {
-  background: rgba(255, 0, 60, 0.15);
+  background: rgb(255 0 60 / 15%);
   border-color: #ff003c;
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.3);
+  box-shadow: 0 0 12px rgb(255 0 60 / 30%);
 }
 
 .profile-form {
@@ -91,7 +90,7 @@
 }
 
 .form-group label {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   color: var(--nexus-blue);
   font-size: 10px;
   letter-spacing: 2px;
@@ -100,11 +99,11 @@
 
 .nexus-input,
 .nexus-select {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: rgb(0 0 0 / 50%);
+  border: 1px solid rgb(0 243 255 / 20%);
   color: #e9fcff;
   padding: 12px 14px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   font-size: 13px;
   border-radius: 6px;
   transition: all 0.3s ease;
@@ -114,11 +113,11 @@
 .nexus-select:focus {
   outline: none;
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+  box-shadow: 0 0 12px rgb(0 243 255 / 25%);
 }
 
 .nexus-input::placeholder {
-  color: rgba(0, 243, 255, 0.3);
+  color: rgb(0 243 255 / 30%);
 }
 
 .nexus-select {
@@ -136,7 +135,7 @@
 .btn-cancel,
 .btn-save {
   padding: 12px 28px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: "Share Tech Mono", monospace;
   font-size: 12px;
   border-radius: 6px;
   cursor: pointer;
@@ -147,14 +146,14 @@
 
 .btn-cancel {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(233, 252, 255, 0.7);
+  border: 1px solid rgb(255 255 255 / 20%);
+  color: rgb(233 252 255 / 70%);
 }
 
 .btn-cancel:hover:not(:disabled) {
   border-color: var(--nexus-blue);
   color: var(--nexus-blue);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+  box-shadow: 0 0 10px rgb(0 243 255 / 15%);
 }
 
 .btn-save {
@@ -167,7 +166,7 @@
 .btn-save:hover:not(:disabled) {
   background: var(--nexus-blue);
   color: #000;
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 20px rgb(0 243 255 / 40%);
 }
 
 .btn-save:disabled,
@@ -177,13 +176,13 @@
 }
 
 .profile-preview {
-  border-top: 1px solid #00ffff33;
+  border-top: 1px solid #0ff3;
   padding-top: 25px;
 }
 
 .preview-label {
-  font-family: 'Courier New', monospace;
-  color: #00ffff;
+  font-family: "Courier New", monospace;
+  color: #0ff;
   font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -192,104 +191,111 @@
 
 .agent-card {
   background: linear-gradient(135deg, #0a0e1a 0%, #1a1e2a 100%);
-  border: 2px solid #00ffff;
+  border: 2px solid #0ff;
   border-radius: 8px;
   padding: 25px;
   text-align: center;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgb(0 255 255 / 20%);
   position: relative;
   overflow: hidden;
 }
 
 .agent-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    #00ffff 50%, 
-    transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #0ff 50%,
+    transparent 100%
+  );
   opacity: 0.5;
 }
 
 .agent-clearance {
   display: inline-block;
-  background: #ff0055;
+  background: #f05;
   color: #000;
   padding: 6px 16px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 12px;
   font-weight: bold;
   letter-spacing: 2px;
   border-radius: 3px;
   margin-bottom: 12px;
-  box-shadow: 0 0 10px rgba(255, 0, 85, 0.5);
+  box-shadow: 0 0 10px rgb(255 0 85 / 50%);
 }
 
 /* Cores por credencial */
 .agent-card:has(.agent-clearance:contains("BRANCO")) .agent-clearance {
   background: #e0e0e0;
   color: #000;
-  box-shadow: 0 0 10px rgba(224, 224, 224, 0.5);
+  box-shadow: 0 0 10px rgb(224 224 224 / 50%);
 }
 
 .agent-card:has(.agent-clearance:contains("AMARELO")) .agent-clearance {
-  background: #FFD700;
+  background: #ffd700;
   color: #000;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 10px rgb(255 215 0 / 50%);
 }
 
 .agent-card:has(.agent-clearance:contains("LARANJA")) .agent-clearance {
-  background: #FF8C00;
+  background: #ff8c00;
   color: #000;
-  box-shadow: 0 0 10px rgba(255, 140, 0, 0.5);
+  box-shadow: 0 0 10px rgb(255 140 0 / 50%);
 }
 
 .agent-card:has(.agent-clearance:contains("VERMELHO")) .agent-clearance {
-  background: #DC143C;
+  background: #dc143c;
   color: #fff;
-  box-shadow: 0 0 10px rgba(220, 20, 60, 0.5);
+  box-shadow: 0 0 10px rgb(220 20 60 / 50%);
 }
 
 .agent-card:has(.agent-clearance:contains("PRETO")) .agent-clearance {
   background: #1a1a1a;
-  color: #00ffff;
-  border: 1px solid #00ffff;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  color: #0ff;
+  border: 1px solid #0ff;
+  box-shadow: 0 0 10px rgb(0 255 255 / 50%);
 }
 
 .agent-card:has(.agent-clearance:contains("ALFA")) .agent-clearance {
-  background: linear-gradient(135deg, #4169E1, #00CED1);
+  background: linear-gradient(135deg, #4169e1, #00ced1);
   color: #fff;
-  box-shadow: 0 0 15px rgba(65, 105, 225, 0.7);
+  box-shadow: 0 0 15px rgb(65 105 225 / 70%);
 }
 
 .agent-card:has(.agent-clearance:contains("OMEGA")) .agent-clearance {
-  background: linear-gradient(135deg, #8B00FF, #FF1493);
+  background: linear-gradient(135deg, #8b00ff, #ff1493);
   color: #fff;
-  box-shadow: 0 0 20px rgba(139, 0, 255, 0.8);
+  box-shadow: 0 0 20px rgb(139 0 255 / 80%);
   animation: pulse-omega 2s infinite;
 }
 
 @keyframes pulse-omega {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .agent-name {
-  font-family: 'Courier New', monospace;
-  color: #00ffff;
+  font-family: "Courier New", monospace;
+  color: #0ff;
   font-size: 24px;
   font-weight: bold;
   margin-bottom: 8px;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  text-shadow: 0 0 10px rgb(0 255 255 / 50%);
 }
 
 .agent-codename {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   color: #999;
   font-size: 16px;
   font-style: italic;
@@ -297,8 +303,8 @@
 }
 
 .agent-spec {
-  font-family: 'Courier New', monospace;
-  color: #00ffff;
+  font-family: "Courier New", monospace;
+  color: #0ff;
   font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -306,20 +312,20 @@
 }
 
 .agent-prestige {
-  font-family: 'Courier New', monospace;
-  color: #FFD700;
+  font-family: "Courier New", monospace;
+  color: #ffd700;
   font-size: 14px;
   font-weight: bold;
   letter-spacing: 2px;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #00ffff33;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  border-top: 1px solid #0ff3;
+  text-shadow: 0 0 8px rgb(255 215 0 / 50%);
 }
 
 .loading-text {
-  font-family: 'Courier New', monospace;
-  color: #00ffff;
+  font-family: "Courier New", monospace;
+  color: #0ff;
   text-align: center;
   padding: 50px;
   font-size: 18px;
@@ -327,11 +333,11 @@
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .profile-form {
     grid-template-columns: 1fr;
   }
-  
+
   .agent-profile-content {
     padding: 20px;
   }

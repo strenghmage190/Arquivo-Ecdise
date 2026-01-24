@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import './CreateClueModal_Refactored.css';
 import './createclueTabs/createclueTabs.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
+import UVEditor from '../tools/UVEditor';
 import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
@@ -203,6 +204,56 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
   const [activeTab, setActiveTab] = useState('geral');
   const [loading, setLoading] = useState(false);
 
+  // Helper: compose hidden layer (UVEditor output) over base image and replace imgFile/previewUrl
+  const composeLayerOverBase = async (baseFileOrUrl: File | string | null, layerFile: File): Promise<File | null> => {
+    try {
+      // load base image into Image element
+      const baseImg = new Image();
+      baseImg.crossOrigin = 'anonymous';
+      if (typeof baseFileOrUrl === 'string') {
+        baseImg.src = baseFileOrUrl;
+      } else if (baseFileOrUrl instanceof File) {
+        baseImg.src = URL.createObjectURL(baseFileOrUrl);
+      } else {
+        return null;
+      }
+
+      const layerImg = new Image();
+      layerImg.crossOrigin = 'anonymous';
+      layerImg.src = URL.createObjectURL(layerFile);
+
+      await Promise.all([
+        new Promise((res) => (baseImg.onload = res)),
+        new Promise((res) => (layerImg.onload = res)),
+      ]);
+
+      const w = baseImg.naturalWidth;
+      const h = baseImg.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      // draw base then layer using screen blend for visibility
+      ctx.drawImage(baseImg, 0, 0, w, h);
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(layerImg, 0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
+
+      return await new Promise((resolve) => {
+        canvas.toBlob((b) => {
+          if (!b) return resolve(null);
+          const f = new File([b], `composed_${Date.now()}.png`, { type: 'image/png' });
+          resolve(f);
+        }, 'image/png');
+      });
+    } catch (err) {
+      console.error('Erro ao compor camada forense:', err);
+      return null;
+    }
+  };
+
   // ===== EFFECTS =====
   useEffect(() => {
     if (!isOpen) return;
@@ -236,6 +287,27 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
       // Reset other fields...
     }
   }, [existingCard, isOpen, defaultHidden]);
+
+  // When the forensic hidden layer is provided, compose over base and replace main image
+  useEffect(() => {
+    if (!forensicHiddenImage) return;
+    const doCompose = async () => {
+      const baseSource = imgFile ?? previewUrl ?? null;
+      if (!baseSource) { alert('Selecione a imagem base na aba Visual antes de aplicar a camada.'); return; }
+      const composed = await composeLayerOverBase(baseSource, forensicHiddenImage);
+      if (composed) {
+        // update main image state and preview
+        await handleImgSelect(composed);
+        // clear forensic hidden state
+        setForensicHiddenImage(null);
+        setForensicHiddenPreview(null);
+        alert('✅ Camada aplicada à imagem principal.');
+      } else {
+        alert('Erro ao compor a camada sobre a imagem base.');
+      }
+    };
+    doCompose();
+  }, [forensicHiddenImage]);
 
   // ===== HANDLERS =====
   const handleSave = async () => {
@@ -535,8 +607,11 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
                 setShowForensicEditor={setShowForensicEditor}
                 forensicConfig={forensicConfig}
                 setForensicConfig={setForensicConfig}
+                globalBasePreview={previewUrl}
               />
             )}
+
+            
 
             {activeTab === 'campos' && (
               <ClueFieldsTab
@@ -634,6 +709,26 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
               />
             )}
           </div>
+
+          {showForensicEditor && (previewUrl || forensicBasePreview) && (
+            <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
+              <div style={{width:'min(1200px,96%)'}}>
+                <UVEditor
+                  baseImageUrl={previewUrl || forensicBasePreview}
+                  mode="uv"
+                  onSave={(file: File) => {
+                    // attach as forensic hidden image
+                    setForensicHiddenImage(file);
+                    const reader = new FileReader();
+                    reader.onload = () => setForensicHiddenPreview(String(reader.result));
+                    reader.readAsDataURL(file);
+                    setShowForensicEditor(false);
+                  }}
+                  onClose={() => setShowForensicEditor(false)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="createclue-footer">

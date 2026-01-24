@@ -106,6 +106,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       const [filterTransform, setFilterTransform] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
       const [filterInitialImage, setFilterInitialImage] = useState<File | null>(null);
    const [editorMode, setEditorMode] = useState<'uv' | 'filter' | null>(null);
+   const [uvEditorBaseUrl, setUvEditorBaseUrl] = useState<string | null>(null);
+   const [uvEditorPurpose, setUvEditorPurpose] = useState<'forensic' | null>(null);
 
    const [audioBase, setAudioBase] = useState<File | null>(null);
   const [audioHidden, setAudioHidden] = useState<File | null>(null);
@@ -196,6 +198,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [forensicProcessing, setForensicProcessing] = useState(false);
    const [showForensicEditor, setShowForensicEditor] = useState(false);
    const [forensicConfig, setForensicConfig] = useState<ForensicConfig | null>(null);
+   const [forensicAlwaysOverlay, setForensicAlwaysOverlay] = useState(true);
 
    // MEGA CLUE STATES
    const [megaFinalTruthText, setMegaFinalTruthText] = useState('');
@@ -285,6 +288,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    // LOCK / SECURITY (da pista)
    const [isLocked, setIsLocked] = useState(false);
    const [lockPass, setLockPass] = useState('');
+   const [lockPasses, setLockPasses] = useState<string[]>([]);
 
    // PHONE KEYPAD (do celular/PhoneViewer)
    const [phoneHasKeypad, setPhoneHasKeypad] = useState(false);
@@ -415,6 +419,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    }, [filterTransform]);
 
    useEffect(() => {
+      if (uvFile && uvEditorPurpose === 'forensic') {
+         try { revokeUrl(forensicHiddenPreview); } catch (e) {}
+         const url = createAndRegisterBlobUrl(uvFile);
+         if (url) {
+            setForensicHiddenImage(uvFile);
+            setForensicHiddenPreview(url);
+         }
+         setUvEditorPurpose(null);
+         // clear uvFile since we've consumed it for forensic
+         setUvFile(null);
+      }
+   }, [uvFile, uvEditorPurpose]);
+
+   useEffect(() => {
       const onMove = (e: MouseEvent) => {
          if (!draggingRef.current || !filterTransformRef.current || !previewUrl) return;
          const rect = document.querySelector('.image-edit-canvas') as HTMLElement | null;
@@ -492,6 +510,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       // basic flags (pista)
       setIsLocked(false);
       setLockPass('');
+      setLockPasses([]);
       
       // phone keypad
       setPhoneHasKeypad(false);
@@ -592,6 +611,52 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          megaClue: { showHints: true, showAnswer: false, showProgress: true },
       });
    };
+
+      const composeVisibleOverlay = async (baseImage: File, hiddenImage: File): Promise<Blob | null> => {
+         return new Promise((resolve) => {
+            const baseImg = new Image();
+            const hiddenImg = new Image();
+            let loaded = 0;
+            const tryResolve = () => {
+               try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = baseImg.width;
+                  canvas.height = baseImg.height;
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx) { resolve(null); return; }
+
+                  // Draw base
+                  ctx.drawImage(baseImg, 0, 0);
+
+                  // Draw hidden resized to base, using a blend so it's visible (RGB output)
+                  const tmp = document.createElement('canvas');
+                  tmp.width = baseImg.width;
+                  tmp.height = baseImg.height;
+                  const tctx = tmp.getContext('2d');
+                  if (!tctx) { resolve(null); return; }
+                  tctx.drawImage(hiddenImg, 0, 0, baseImg.width, baseImg.height);
+
+                  // Draw the hidden image over the base with a blend to guarantee visibility
+                  ctx.globalCompositeOperation = 'screen';
+                  ctx.drawImage(tmp, 0, 0);
+                  ctx.globalCompositeOperation = 'source-over';
+
+                  canvas.toBlob((blob) => resolve(blob), 'image/png');
+               } catch (err) {
+                  console.error('Erro ao compor overlay visível:', err);
+                  resolve(null);
+               }
+            };
+
+            baseImg.onload = () => { loaded++; if (loaded === 2) tryResolve(); };
+            hiddenImg.onload = () => { loaded++; if (loaded === 2) tryResolve(); };
+            baseImg.onerror = () => resolve(null);
+            hiddenImg.onerror = () => resolve(null);
+
+            baseImg.src = URL.createObjectURL(baseImage);
+            hiddenImg.src = URL.createObjectURL(hiddenImage);
+         });
+      };
 
    /**
     * Processa duas imagens para realizar steganografia em canal RGB
@@ -895,6 +960,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       
       if (data.isLocked !== undefined) setIsLocked(data.isLocked);
       if (data.lockPass !== undefined) setLockPass(data.lockPass);
+      if (data.lockPasses !== undefined) setLockPasses(data.lockPasses);
+      if (!data.lockPasses && data.metadata && data.metadata.mega_clue && data.metadata.mega_clue.required_codes) setLockPasses(data.metadata.mega_clue.required_codes || []);
       
       if (data.phoneHasKeypad !== undefined) setPhoneHasKeypad(data.phoneHasKeypad);
       if (data.phonePassword !== undefined) setPhonePassword(data.phonePassword);
@@ -1068,7 +1135,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       
       setForensicProcessing(true);
       try {
-         const resultBlob = await processRGBMerge(forensicBaseImage, forensicHiddenImage, forensicTargetChannel);
+         const resultBlob = forensicAlwaysOverlay
+            ? await composeVisibleOverlay(forensicBaseImage, forensicHiddenImage)
+            : await processRGBMerge(forensicBaseImage, forensicHiddenImage, forensicTargetChannel);
          if (resultBlob) {
             const resultUrl = createAndRegisterBlobUrl(resultBlob as any);
             if (resultUrl) {
@@ -1444,7 +1513,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             image_filter_layer: filterUrl,
             image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
-            lock_password: isLocked ? lockPass : null,
+            lock_password: (isLocked && evidenceType !== 'mega_clue') ? lockPass : null,
             is_hidden: isHidden,
             discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
             metadata: cleanMetadata,
@@ -1474,6 +1543,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    payload.metadata = payload.metadata || {};
                    payload.metadata.phone_locked = true;
                    payload.metadata.phone_password = phonePassword;
+                }
+
+                // For mega-clue, if multiple lock passwords were set, store them under metadata.mega_clue.required_codes
+                if (evidenceType === 'mega_clue' && isLocked) {
+                   payload.metadata = payload.metadata || {};
+                   payload.metadata.mega_clue = payload.metadata.mega_clue || {};
+                   // normalize to array of strings
+                   payload.metadata.mega_clue.required_codes = Array.isArray(lockPasses) ? lockPasses : [];
                 }
 
          // attach person dossier metadata only for document evidence
@@ -1928,12 +2005,34 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             <label style={{fontWeight: 'bold'}}>🔒 ATIVAR SENHA DE ACESSO (Pista)</label>
                          </div>
                          {isLocked && (
-                            <input 
-                               placeholder="Senha da pista (Ex: KIAN)" 
-                               value={lockPass} 
-                               onChange={e=>setLockPass(e.target.value)} 
-                               style={{borderColor:'red', color:'red', fontWeight:'bold', padding:'8px 12px', width: '100%'}} 
-                            />
+                            evidenceType === 'mega_clue' ? (
+                              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                                 {megaRequiredPuzzleIds.length === 0 ? (
+                                    <div style={{fontSize:12, color:'#f2b775'}}>Selecione os quebra-cabeças necessários na aba "MEGA" para definir quantas senhas serão solicitadas.</div>
+                                 ) : (
+                                    megaRequiredPuzzleIds.map((id, idx) => (
+                                       <input
+                                          key={id || idx}
+                                          placeholder={`Senha ${idx + 1} (Ex: KIAN)`}
+                                          value={lockPasses[idx] || ''}
+                                          onChange={e => {
+                                             const next = [...lockPasses];
+                                             next[idx] = e.target.value;
+                                             setLockPasses(next);
+                                          }}
+                                          style={{borderColor:'red', color:'red', fontWeight:'bold', padding:'8px 12px', width: '100%'}}
+                                       />
+                                    ))
+                                 )}
+                              </div>
+                            ) : (
+                              <input 
+                                 placeholder="Senha da pista (Ex: KIAN)" 
+                                 value={lockPass} 
+                                 onChange={e=>setLockPass(e.target.value)} 
+                                 style={{borderColor:'red', color:'red', fontWeight:'bold', padding:'8px 12px', width: '100%'}} 
+                              />
+                            )
                          )}
                       </div>
                       
@@ -3112,8 +3211,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {/* Coluna esquerda: Uploads e Configuração */}
                   <div style={{ flex: 1 }}>
                     {/* Upload Imagem Base */}
-                    <div className="field-block" style={{ marginBottom: 12 }}>
-                      <label>📷 IMAGEM BASE / VISÍVEL</label>
+                              <div className="field-block" style={{ marginBottom: 12 }}>
+                                 <label>📷 IMAGEM BASE (opcional)</label>
                       <label className="upload-btn">
                         SELECIONAR
                         <input type="file" accept="image/*" hidden onChange={handleForensicBaseImageSelect} />
@@ -3121,7 +3220,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       {forensicBasePreview && (
                         <div style={{ marginTop: 8, maxWidth: '100%' }}>
                           <img src={forensicBasePreview} alt="base" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6 }} />
-                          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Base (dimensão será usada como referência)</div>
+                                       <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Base (dimensão será usada como referência)</div>
+                                       <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Se já selecionou a imagem principal na aba Visual, não precisa reenviar aqui.</div>
                         </div>
                       )}
                     </div>
@@ -3139,6 +3239,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Oculta (será redimensionada se necessário)</div>
                         </div>
                       )}
+                                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                                    <button className="upload-btn" onClick={() => {
+                                       if (!forensicBasePreview && !previewUrl) { alert('Por favor, selecione a imagem base primeiro.'); return; }
+                                       setUvEditorBaseUrl(forensicBasePreview || previewUrl);
+                                       setUvEditorPurpose('forensic');
+                                       setEditorMode('uv');
+                                    }}>🖌️ EDITAR (UV Editor)</button>
+                                    <div style={{ fontSize: 11, color: '#888', alignSelf: 'center' }}>Abra o editor para gerar saída RGB do conteúdo oculto.</div>
+                                 </div>
                     </div>
 
                     {/* Seletor de Canal */}
@@ -3168,6 +3277,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         </button>
                       </div>
                     </div>
+
+                              <div className="field-block" style={{ marginBottom: 12 }}>
+                                 <label>🔁 MODO DE SAÍDA</label>
+                                 <div style={{ fontSize: 13, color: '#ccc' }}>
+                                    <label style={{ fontSize: 12 }}>
+                                       <input type="checkbox" checked={forensicAlwaysOverlay} onChange={(e) => setForensicAlwaysOverlay(e.target.checked)} />&nbsp;Forçar sobreposição visível (gera imagem RGB)
+                                    </label>
+                                 </div>
+                              </div>
 
                     {/* Botão de Processamento */}
                     <button
@@ -3611,12 +3729,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             </div>
          </div>
       )}
-
-      {editorMode && previewUrl && (
+      {editorMode && (previewUrl || uvEditorBaseUrl) && (
          <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
             <div style={{width:'min(1200px,96%)'}}>
               <UVEditor 
-                 baseImageUrl={previewUrl}
+                 baseImageUrl={uvEditorBaseUrl || previewUrl}
                  mode={editorMode || 'uv'}
                  initialImageFile={editorMode === 'filter' ? filterInitialImage : undefined}
                  onSave={(file) => { 
@@ -3625,7 +3742,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     setEditorMode(null);
                     setFilterInitialImage(null);
                  }}
-                 onClose={() => { setEditorMode(null); setFilterInitialImage(null); }}
+                 onClose={() => { setEditorMode(null); setFilterInitialImage(null); setUvEditorBaseUrl(null); setUvEditorPurpose(null); }}
               />
             </div>
          </div>

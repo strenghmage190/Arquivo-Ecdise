@@ -26,9 +26,30 @@ export function validateFile(file: File, type: 'image' | 'video' | 'audio' | 'an
 
   // Check type
   if (type !== 'any') {
+    // Log incoming file.type for debugging (may be empty string)
+    try { console.debug('validateFile - file.type:', file.type, 'file.name:', file.name); } catch (e) {}
+
     const allowedTypes = type === 'image' ? ALLOWED_IMAGE_TYPES : type === 'video' ? ALLOWED_VIDEO_TYPES : ALLOWED_AUDIO_TYPES;
-    if (!allowedTypes.includes(file.type)) {
-      return { valid: false, error: `Tipo de arquivo não suportado: ${file.type}` };
+
+    // If file.type is empty, try to infer from file name extension
+    let typeToCheck = file.type;
+    if (!typeToCheck) {
+      const ext = (file.name || '').split('.').pop() || '';
+      const extLower = ext.toLowerCase();
+      if (extLower === 'png') typeToCheck = 'image/png';
+      else if (extLower === 'jpg' || extLower === 'jpeg') typeToCheck = 'image/jpeg';
+      else if (extLower === 'webp') typeToCheck = 'image/webp';
+      else if (extLower === 'gif') typeToCheck = 'image/gif';
+      else if (extLower === 'mp4') typeToCheck = 'video/mp4';
+      else if (extLower === 'webm') typeToCheck = 'video/webm';
+      else if (extLower === 'mov' || extLower === 'qt') typeToCheck = 'video/quicktime';
+      else if (extLower === 'mp3' || extLower === 'mpeg') typeToCheck = 'audio/mpeg';
+      else if (extLower === 'wav') typeToCheck = 'audio/wav';
+      else if (extLower === 'ogg') typeToCheck = 'audio/ogg';
+    }
+
+    if (!allowedTypes.includes(typeToCheck)) {
+      return { valid: false, error: `Tipo de arquivo não suportado: ${typeToCheck || file.type || ''}` };
     }
   }
 
@@ -135,6 +156,9 @@ export async function uploadInvestigationImage(
   onProgress?: (progress: number) => void
 ): Promise<string | null> {
   try {
+    // Log incoming file.type for debugging
+    try { console.debug('uploadInvestigationImage - received file.type:', file.type, 'file.name:', file.name); } catch (e) {}
+
     // Validar arquivo antes de processar
     const validation = validateFile(file, 'image');
     if (!validation.valid) {

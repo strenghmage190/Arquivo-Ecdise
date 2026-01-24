@@ -1,0 +1,22 @@
+// base/_base.scss
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  // Define a base para a fonte da aplicação, se necessário
+  font-family: 'Inter', sans-serif; // Exemplo de uma boa fonte de UI
+}
+
+/* Acessibilidade: respeitar movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

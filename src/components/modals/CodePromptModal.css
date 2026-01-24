@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
   --hacker-green: #0f0;
-  --hacker-dim: #003300;
+  --hacker-dim: #030;
   --hacker-dark: #050a05;
   --cypher-cyan: #00f3ff;
   --error-red: #ff2a2a;
-  --terminal-bg: rgba(5, 10, 5, 0.95);
-  --scanline-color: rgba(18, 16, 16, 0.5);
-  --font-stack: 'Share Tech Mono', 'Courier New', monospace;
+  --terminal-bg: rgb(5 10 5 / 95%);
+  --scanline-color: rgb(18 16 16 / 50%);
+  --font-stack: "Share Tech Mono", "Courier New", monospace;
 }
 
 .code-prompt-overlay {
@@ -16,8 +16,8 @@
   inset: 0;
   background-color: #000;
   background-image:
-    linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+    linear-gradient(rgb(0 255 0 / 10%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(0 255 0 / 10%) 1px, transparent 1px);
   background-size: 40px 40px;
   display: flex;
   align-items: center;
@@ -28,7 +28,7 @@
 }
 
 .code-prompt-overlay::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at center, transparent 30%, black 100%);
@@ -42,14 +42,14 @@
   background: var(--terminal-bg);
   border: 1px solid var(--hacker-green);
   box-shadow:
-    0 0 20px rgba(0, 255, 0, 0.2),
-    inset 0 0 40px rgba(0, 50, 0, 0.5);
+    0 0 20px rgb(0 255 0 / 20%),
+    inset 0 0 40px rgb(0 50 0 / 50%);
   overflow: hidden;
   animation: turnOnScreen 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .code-prompt-modal::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border: 1px solid transparent;
@@ -69,31 +69,28 @@
 }
 
 .code-prompt-modal::before {
-  content: ' ';
+  content: " ";
   display: block;
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: linear-gradient(
-      rgba(18, 16, 16, 0) 50%,
-      rgba(0, 0, 0, 0.25) 50%
-  ),
-  linear-gradient(
+  inset: 0;
+  background:
+    linear-gradient(rgb(18 16 16 / 0%) 50%, rgb(0 0 0 / 25%) 50%),
+    linear-gradient(
       90deg,
-      rgba(255, 0, 0, 0.06),
-      rgba(0, 255, 0, 0.02),
-      rgba(0, 0, 255, 0.06)
-  );
+      rgb(255 0 0 / 6%),
+      rgb(0 255 0 / 2%),
+      rgb(0 0 255 / 6%)
+    );
   z-index: 99;
-  background-size: 100% 2px, 3px 100%;
+  background-size:
+    100% 2px,
+    3px 100%;
   pointer-events: none;
   opacity: 0.6;
 }
 
 .code-prompt-header {
-  background: rgba(0, 255, 0, 0.05);
+  background: rgb(0 255 0 / 5%);
   padding: 15px 20px;
   border-bottom: 1px solid var(--hacker-green);
   display: flex;
@@ -114,7 +111,7 @@
 }
 
 .code-prompt-header h3::before {
-  content: 'SYS LOCKED';
+  content: "SYS LOCKED";
   font-size: 10px;
   margin-right: 15px;
   background: var(--hacker-green);
@@ -153,14 +150,14 @@
   border: 1px dashed #333;
   padding: 15px;
   margin-bottom: 20px;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   font-size: 12px;
   min-height: 100px;
   position: relative;
 }
 
 .code-prompt-terminal::after {
-  content: 'MEM: 64TB // ENCRYPTION: ACTIVE';
+  content: "MEM: 64TB // ENCRYPTION: ACTIVE";
   position: absolute;
   bottom: 2px;
   right: 5px;
@@ -183,9 +180,17 @@
   word-break: break-all;
 }
 
-.terminal-line.info .terminal-text { color: #aaa; }
-.terminal-line.success .terminal-text { color: var(--hacker-green); text-shadow: 0 0 4px var(--hacker-green); }
-.terminal-line.error .terminal-text { color: var(--error-red); text-shadow: 0 0 4px var(--error-red); }
+.terminal-line.info .terminal-text {
+  color: #aaa;
+}
+.terminal-line.success .terminal-text {
+  color: var(--hacker-green);
+  text-shadow: 0 0 4px var(--hacker-green);
+}
+.terminal-line.error .terminal-text {
+  color: var(--error-red);
+  text-shadow: 0 0 4px var(--error-red);
+}
 
 .blinking-cursor {
   display: inline-block;
@@ -212,7 +217,7 @@
 
 .code-input {
   width: 100%;
-  background: rgba(0, 20, 0, 0.6);
+  background: rgb(0 20 0 / 60%);
   border: none;
   border-bottom: 2px solid var(--hacker-green);
   border-radius: 0;
@@ -225,18 +230,22 @@
   text-transform: uppercase;
   outline: none;
   transition: all 0.3s;
-  text-shadow: 2px 0 var(--error-red), -2px 0 blue;
-  box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+  text-shadow:
+    2px 0 var(--error-red),
+    -2px 0 blue;
+  box-shadow: inset 0 0 20px rgb(0 255 0 / 10%);
 }
 
 .code-input:focus {
-  background: rgba(0, 30, 0, 0.8);
-  box-shadow: 0 10px 20px -10px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.2);
+  background: rgb(0 30 0 / 80%);
+  box-shadow:
+    0 10px 20px -10px rgb(0 255 0 / 40%),
+    inset 0 0 30px rgb(0 255 0 / 20%);
   text-shadow: 0 0 8px var(--hacker-green);
 }
 
 .code-input::placeholder {
-  color: rgba(0, 255, 0, 0.2);
+  color: rgb(0 255 0 / 20%);
   text-shadow: none;
   font-size: 16px;
   letter-spacing: 2px;
@@ -246,8 +255,8 @@
 .code-input.error {
   border-bottom-color: var(--error-red);
   color: var(--error-red);
-  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-  box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.2);
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  box-shadow: inset 0 0 20px rgb(255 0 0 / 20%);
 }
 
 .code-error {
@@ -255,7 +264,7 @@
   margin-top: 8px;
   color: var(--error-red);
   font-size: 11px;
-  background: rgba(255,0,0,0.1);
+  background: rgb(255 0 0 / 10%);
   padding: 4px;
   border-left: 3px solid var(--error-red);
 }
@@ -271,13 +280,13 @@
 .code-prompt-feedback.success {
   border-color: var(--hacker-green);
   color: var(--hacker-green);
-  background: rgba(0, 255, 0, 0.1);
+  background: rgb(0 255 0 / 10%);
 }
 
 .code-prompt-feedback.error {
   border-color: var(--error-red);
   color: var(--error-red);
-  background: rgba(255, 0, 0, 0.1);
+  background: rgb(255 0 0 / 10%);
 }
 
 .code-prompt-actions {
@@ -313,11 +322,18 @@
 }
 
 .code-btn.primary::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 20%),
+    transparent
+  );
   transition: 0.5s;
 }
 
@@ -344,39 +360,75 @@
 
 .code-prompt-hint {
   margin-top: 25px;
-  border-top: 1px dashed rgba(0, 243, 255, 0.3);
+  border-top: 1px dashed rgb(0 243 255 / 30%);
   padding-top: 15px;
-  color: rgba(0, 243, 255, 0.7);
+  color: rgb(0 243 255 / 70%);
 }
 
 .code-prompt-hint small::before {
-  content: '[ CLUE_001 ] > ';
+  content: "[ CLUE_001 ] > ";
   color: var(--cypher-cyan);
   opacity: 0.8;
 }
 
 @keyframes turnOnScreen {
-  0% { transform: scale(1, 0.005); opacity: 0; }
-  30% { transform: scale(1, 0.005); opacity: 1; }
-  50% { transform: scale(1, 0.5); }
-  100% { transform: scale(1, 1); }
+  0% {
+    transform: scale(1, 0.005);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1, 0.005);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1, 0.5);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
 }
 
 @keyframes blinkWarn {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes blinkBlock {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes shake {
-  10%, 90% { transform: translate3d(-2px, 0, 0); }
-  20%, 80% { transform: translate3d(3px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
-  40%, 60% { transform: translate3d(5px, 0, 0); }
+  10%,
+  90% {
+    transform: translate3d(-2px, 0, 0);
+  }
+
+  20%,
+  80% {
+    transform: translate3d(3px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-5px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(5px, 0, 0);
+  }
 }
 
 .form-fade-in {
@@ -385,6 +437,12 @@
 }
 
 @keyframes fadeInCode {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

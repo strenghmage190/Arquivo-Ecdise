@@ -8,34 +8,32 @@
   --nexus-blue-glow: #00f3ff;
   --nexus-dark: #05080a;
   --nexus-glitch: #ff003c;
-  --crt-scanline: rgba(0, 243, 255, 0.03);
+  --crt-scanline: rgb(0 243 255 / 3%);
   --z-modal-top: 20000;
-  --muted: rgba(255, 255, 255, 0.4);
+  --muted: rgb(255 255 255 / 40%);
   --gold-accent: #c6a45f;
 }
 
 /* Modal Overlay */
 .investigation-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgb(0 0 0 / 70%);
   backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal-top);
   animation: fadeIn 0.3s ease-out;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 40px rgb(0 0 0 / 50%);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    backdrop-filter: blur(0px);
+    backdrop-filter: blur(0);
   }
+
   to {
     opacity: 1;
     backdrop-filter: blur(3px);
@@ -46,14 +44,11 @@
 .investigation-modal-overlay::before {
   content: "";
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: radial-gradient(
     ellipse at center,
     transparent 0%,
-    rgba(0, 0, 0, 0.4) 100%
+    rgb(0 0 0 / 40%) 100%
   );
   pointer-events: none;
   z-index: -1;
@@ -62,21 +57,18 @@
 /* Modal Dossier Container */
 .investigation-modal-dossier {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(5, 8, 10, 0.98),
-    rgba(5, 15, 25, 0.96)
-  );
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: linear-gradient(135deg, rgb(5 8 10 / 98%), rgb(5 15 25 / 96%));
+  border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 8px;
   width: 95vw;
   max-width: 1200px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 40px rgba(0, 243, 255, 0.15),
-              inset 0 0 40px rgba(0, 243, 255, 0.05),
-              0 0 80px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    0 0 40px rgb(0 243 255 / 15%),
+    inset 0 0 40px rgb(0 243 255 / 5%),
+    0 0 80px rgb(0 0 0 / 80%);
   animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   backdrop-filter: blur(10px);
   overflow: hidden;
@@ -87,6 +79,7 @@
     opacity: 0;
     transform: translateY(40px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -110,7 +103,7 @@
   left: 10px;
   border-right: none;
   border-bottom: none;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 10px rgb(0 243 255 / 30%);
 }
 
 .investigation-modal-dossier::after {
@@ -118,17 +111,17 @@
   right: 10px;
   border-left: none;
   border-top: none;
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 10px rgb(0 243 255 / 30%);
 }
 
 /* Dossier Header */
 .investigation-dossier-header {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  border-bottom: 1px solid rgb(0 243 255 / 20%);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
   flex-shrink: 0;
 }
 
@@ -138,13 +131,13 @@
   color: var(--nexus-blue);
   letter-spacing: 2px;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  text-shadow: 0 0 10px rgb(0 243 255 / 30%);
   margin: 0;
 }
 
 .investigation-close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(255 255 255 / 10%);
   color: var(--muted);
   width: 32px;
   height: 32px;
@@ -158,10 +151,10 @@
 }
 
 .investigation-close-btn:hover {
-  background: rgba(255, 0, 60, 0.1);
+  background: rgb(255 0 60 / 10%);
   border-color: var(--nexus-glitch);
   color: var(--nexus-glitch);
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.2);
+  box-shadow: 0 0 12px rgb(255 0 60 / 20%);
 }
 
 /* Tabs Header */
@@ -169,8 +162,8 @@
   display: flex;
   gap: 4px;
   padding: 0 20px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(0 0 0 / 20%);
+  border-bottom: 1px solid rgb(0 243 255 / 15%);
   overflow-x: auto;
   flex-shrink: 0;
   -webkit-overflow-scrolling: touch;
@@ -181,7 +174,7 @@
 }
 
 .investigation-tabs-header::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
 }
 
 .investigation-tabs-header::-webkit-scrollbar-thumb {
@@ -208,16 +201,16 @@
 
 .investigation-tab-btn:hover {
   color: var(--nexus-blue);
-  border-bottom-color: rgba(0, 243, 255, 0.4);
-  background: rgba(0, 243, 255, 0.05);
+  border-bottom-color: rgb(0 243 255 / 40%);
+  background: rgb(0 243 255 / 5%);
 }
 
 .investigation-tab-btn.active {
   color: var(--nexus-blue);
   border-bottom-color: var(--nexus-blue);
-  background: rgba(0, 243, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 243, 255, 0.15);
-  text-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+  background: rgb(0 243 255 / 10%);
+  box-shadow: 0 2px 8px rgb(0 243 255 / 15%);
+  text-shadow: 0 0 8px rgb(0 243 255 / 30%);
 }
 
 /* Dossier Body */
@@ -235,18 +228,20 @@
 }
 
 .investigation-dossier-body::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgb(0 0 0 / 30%);
   border-radius: 10px;
 }
 
 .investigation-dossier-body::-webkit-scrollbar-thumb {
   background: var(--nexus-blue);
-  box-shadow: 0 0 10px var(--nexus-blue), inset 0 0 6px rgba(0, 243, 255, 0.5);
+  box-shadow:
+    0 0 10px var(--nexus-blue),
+    inset 0 0 6px rgb(0 243 255 / 50%);
   border-radius: 10px;
 }
 
 .investigation-dossier-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 243, 255, 0.9);
+  background: rgb(0 243 255 / 90%);
   box-shadow: 0 0 15px var(--nexus-blue-glow);
 }
 
@@ -262,13 +257,10 @@
 .investigation-tab-content::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: repeating-linear-gradient(
     0deg,
-    transparent 0px,
+    transparent 0,
     var(--crt-scanline) 1px,
     transparent 2px
   );
@@ -287,7 +279,7 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 243, 255, 0.03) 50%,
+    rgb(0 243 255 / 3%) 50%,
     transparent 100%
   );
   animation: scanline 8s linear infinite;
@@ -299,6 +291,7 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(200vh);
   }
@@ -312,22 +305,22 @@
 /* Field Block */
 .investigation-field-block {
   padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgb(0 0 0 / 30%);
+  border: 1px solid rgb(255 255 255 / 5%);
   border-left: 3px solid var(--nexus-blue);
   border-radius: 6px;
   transition: all 0.2s ease;
 }
 
 .investigation-field-block:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgb(0 0 0 / 40%);
   border-left-color: var(--nexus-blue-glow);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 0 12px rgb(0 243 255 / 10%);
 }
 
 .investigation-field-block.error {
   border-left-color: var(--nexus-glitch);
-  background: rgba(255, 0, 60, 0.05);
+  background: rgb(255 0 60 / 5%);
 }
 
 /* Field Title */
@@ -337,7 +330,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--gold-accent);
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   display: block;
 }
 
@@ -366,12 +359,12 @@ textarea[class*="investigation"],
 .investigation-textarea {
   width: 100%;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(0 0 0 / 40%);
+  border: 1px solid rgb(0 243 255 / 15%);
   border-radius: 6px;
   color: #eaf;
   font-size: 13px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   caret-color: var(--nexus-blue);
   transition: all 0.2s ease;
 }
@@ -382,8 +375,10 @@ textarea[class*="investigation"]:focus,
 .investigation-textarea:focus {
   outline: none;
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.2), inset 0 0 8px rgba(0, 243, 255, 0.05);
-  background: rgba(0, 243, 255, 0.03);
+  box-shadow:
+    0 0 12px rgb(0 243 255 / 20%),
+    inset 0 0 8px rgb(0 243 255 / 5%);
+  background: rgb(0 243 255 / 3%);
 }
 
 textarea[class*="investigation"],
@@ -397,8 +392,8 @@ select[class*="investigation"],
 .investigation-select {
   width: 100%;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(0 0 0 / 40%);
+  border: 1px solid rgb(0 243 255 / 15%);
   border-radius: 6px;
   color: #eaf;
   font-size: 13px;
@@ -410,7 +405,7 @@ select[class*="investigation"]:focus,
 .investigation-select:focus {
   outline: none;
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.1);
+  box-shadow: 0 0 12px rgb(0 243 255 / 10%);
 }
 
 /* Checkbox & Radio */
@@ -421,8 +416,8 @@ input[type="radio"][class*="investigation"],
   width: 18px;
   height: 18px;
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(0 0 0 / 30%);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -440,14 +435,14 @@ input[type="radio"][class*="investigation"]:checked,
 .investigation-radio:checked {
   background: var(--nexus-blue);
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+  box-shadow: 0 0 12px rgb(0 243 255 / 30%);
 }
 
 input[type="checkbox"][class*="investigation"]:hover,
 input[type="radio"][class*="investigation"]:hover,
 .investigation-checkbox:hover,
 .investigation-radio:hover {
-  border-color: rgba(0, 243, 255, 0.3);
+  border-color: rgb(0 243 255 / 30%);
 }
 
 /* Label */
@@ -467,8 +462,12 @@ label.investigation-label {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(0, 243, 255, 0.05));
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: linear-gradient(
+    135deg,
+    rgb(0 243 255 / 10%),
+    rgb(0 243 255 / 5%)
+  );
+  border: 1px solid rgb(0 243 255 / 20%);
   color: var(--nexus-blue);
   padding: 10px 14px;
   border-radius: 6px;
@@ -482,9 +481,13 @@ label.investigation-label {
 
 .investigation-upload-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 243, 255, 0.2);
-  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 243, 255, 0.08));
-  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 4px 16px rgb(0 243 255 / 20%);
+  background: linear-gradient(
+    135deg,
+    rgb(0 243 255 / 15%),
+    rgb(0 243 255 / 8%)
+  );
+  border-color: rgb(0 243 255 / 40%);
 }
 
 .investigation-upload-btn:active {
@@ -503,7 +506,7 @@ label.investigation-label {
   color: var(--nexus-blue);
   margin-left: 8px;
   padding: 4px 8px;
-  background: rgba(0, 243, 255, 0.1);
+  background: rgb(0 243 255 / 10%);
   border-radius: 4px;
   font-weight: 600;
 }
@@ -512,8 +515,8 @@ label.investigation-label {
 .investigation-image-preview-box {
   width: 100%;
   height: 140px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgb(0 0 0 / 30%);
+  border: 1px solid rgb(255 255 255 / 5%);
   margin-top: 6px;
   background-size: contain;
   background-position: center;
@@ -521,22 +524,22 @@ label.investigation-label {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.1);
+  color: rgb(255 255 255 / 10%);
   border-radius: 6px;
   overflow: hidden;
   transition: all 0.2s ease;
 }
 
 .investigation-image-preview-box:hover {
-  border-color: rgba(0, 243, 255, 0.2);
-  box-shadow: inset 0 0 12px rgba(0, 243, 255, 0.05);
+  border-color: rgb(0 243 255 / 20%);
+  box-shadow: inset 0 0 12px rgb(0 243 255 / 5%);
 }
 
 /* Stamp Button */
 .investigation-btn-stamp {
   background: transparent;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgb(255 255 255 / 6%);
   padding: 8px 12px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -546,21 +549,21 @@ label.investigation-label {
 }
 
 .investigation-btn-stamp:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgb(255 255 255 / 15%);
 }
 
 .investigation-btn-stamp.active {
   border-color: var(--nexus-glitch);
   color: var(--nexus-glitch);
-  box-shadow: 0 8px 18px rgba(255, 0, 60, 0.06);
-  background: rgba(255, 0, 60, 0.05);
+  box-shadow: 0 8px 18px rgb(255 0 60 / 6%);
+  background: rgb(255 0 60 / 5%);
 }
 
 /* Footer */
 .investigation-dossier-footer {
-  background: rgba(5, 8, 10, 0.98);
+  background: rgb(5 8 10 / 98%);
   padding: 12px 20px;
-  border-top: 1px solid rgba(0, 243, 255, 0.2);
+  border-top: 1px solid rgb(0 243 255 / 20%);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -569,13 +572,13 @@ label.investigation-label {
   bottom: 0;
   z-index: 10001;
   backdrop-filter: blur(10px);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 -2px 10px rgb(0 0 0 / 30%);
 }
 
 /* Button Cancel */
 .investigation-btn-cancel {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(255 255 255 / 8%);
   color: var(--muted);
   padding: 10px 16px;
   border-radius: 6px;
@@ -590,13 +593,13 @@ label.investigation-label {
 }
 
 .investigation-btn-cancel:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: rgb(255 255 255 / 20%);
+  background: rgb(255 255 255 / 2%);
 }
 
 /* Button Save */
 .investigation-btn-save {
-  background: linear-gradient(135deg, var(--nexus-blue), rgba(0, 243, 255, 0.7));
+  background: linear-gradient(135deg, var(--nexus-blue), rgb(0 243 255 / 70%));
   border: none;
   color: #051018;
   padding: 10px 20px;
@@ -607,13 +610,13 @@ label.investigation-label {
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.8px;
-  box-shadow: 0 4px 16px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 4px 16px rgb(0 243 255 / 20%);
   position: relative;
   z-index: 101;
 }
 
 .investigation-btn-save:hover {
-  box-shadow: 0 6px 24px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 6px 24px rgb(0 243 255 / 40%);
   transform: translateY(-2px);
 }
 
@@ -628,7 +631,7 @@ label.investigation-label {
 }
 
 /* Responsive */
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .investigation-modal-dossier {
     width: 95vw;
     max-height: 90vh;
@@ -661,7 +664,7 @@ label.investigation-label {
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .investigation-modal-dossier {
     width: 98vw;
     max-height: 95vh;
@@ -688,7 +691,7 @@ label.investigation-label {
 }
 
 /* Large screens */
-@media (min-width: 1400px) {
+@media (width >= 1400px) {
   .investigation-modal-dossier {
     max-width: 1400px;
   }
@@ -711,15 +714,15 @@ label.investigation-label {
 /* Error state */
 .investigation-error {
   border-color: var(--nexus-glitch);
-  background: rgba(255, 0, 60, 0.05);
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.1);
+  background: rgb(255 0 60 / 5%);
+  box-shadow: 0 0 12px rgb(255 0 60 / 10%);
 }
 
 /* Success state */
 .investigation-success {
-  border-color: #00ff00;
-  background: rgba(0, 255, 0, 0.05);
-  box-shadow: 0 0 12px rgba(0, 255, 0, 0.1);
+  border-color: #0f0;
+  background: rgb(0 255 0 / 5%);
+  box-shadow: 0 0 12px rgb(0 255 0 / 10%);
 }
 
 /* Hide scrollbar in specific cases */
