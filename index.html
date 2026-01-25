@@ -9,6 +9,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Suppress noisy extension-injected syntax errors (e.g. webpage_content_reporter.js)
+      window.addEventListener('error', function (e) {
+        try {
+          var fn = e.filename || (e && e.target && e.target.src) || '';
+          var msg = e && e.message ? e.message : '';
+          if (fn.indexOf('webpage_content_reporter.js') !== -1 || msg.indexOf("Unexpected token 'export'") !== -1 && fn) {
+            e.preventDefault();
+            console.warn('Suppressed extension error from', fn || msg);
+          }
+        } catch (err) {
+          // ignore
+        }
+      }, true);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
