@@ -401,9 +401,12 @@
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
-  flex-wrap: wrap;
-  max-width: 48%;
+  flex-wrap: nowrap; /* prevent actions from wrapping to multiple lines */
+  max-width: 60%; /* allow more space for actions on wide screens */
   box-sizing: border-box;
+  overflow-x: auto; /* allow horizontal scroll instead of wrapping */
+  overflow-y: visible; /* allow dropdowns to extend vertically */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Menu de Botões */
@@ -505,7 +508,9 @@
 }
 .actions {
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 .btn-tool-tab {
   white-space: nowrap;

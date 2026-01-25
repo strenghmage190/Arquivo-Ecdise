@@ -45,6 +45,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   // Lazy render para economizar re-renders e trabalho de imagem fora da viewport
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasScanned, setHasScanned] = useState(false);
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -56,7 +57,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          obs.disconnect();
+          if (!hasScanned) setHasScanned(true);
+        } else {
+          setIsVisible(false);
         }
       });
     }, { rootMargin: '200px', threshold: 0.01 });
@@ -92,21 +95,35 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     );
   }
 
-  const rootClass = `clue-card ${specialType} ${(status ? `status-${(status === 'verified' ? 'true' : status)}` : '')} ${locked ? 'is-locked' : ''} ${performanceMode ? 'performance-mode' : ''}`.trim();
+  const rootClasses = [
+    'clue-card',
+    specialType,
+    hasScanned ? 'scanned' : '',
+    status ? `status-${(status === 'verified' ? 'true' : status)}` : '',
+    locked ? 'is-locked' : '',
+    performanceMode ? 'performance-mode' : ''
+  ].filter(Boolean).join(' ');
 
-  // ✅ Determinar classe do content container
-  let contentContainerClass = 'card-content-container gm-view';
-  
-  if (locked && playerView && !isGameMaster) {
-    contentContainerClass = 'card-content-container locked-view';
-  } else if ((cardType === 'glitch' || cardType === 'encrypted') && playerView && !isGameMaster) {
-    contentContainerClass = 'card-content-container glitch-view';
-  } else if (!image) {
-    contentContainerClass = 'card-content-container loading-view';
+  // Determinar classe do content container de forma explícita e previsível
+  let contentContainerClass = 'card-content-container';
+
+  if (playerView && !isGameMaster) {
+    if (locked) {
+      contentContainerClass += ' locked-view';
+    } else if (cardType === 'glitch' || cardType === 'encrypted') {
+      contentContainerClass += ' glitch-view';
+    }
+  }
+
+  // placeholder enquanto a imagem não estiver visível; caso contrário, gm-view
+  if (!isVisible) {
+    contentContainerClass += ' loading-placeholder';
+  } else {
+    contentContainerClass += ' gm-view';
   }
 
   return (
-    <div ref={cardRef} className={rootClass} id={`card-${id}`} data-testid={`card-${id}`} data-card-type={cardType} data-locked={locked} data-player-view={playerView}>
+    <div ref={cardRef} className={rootClasses} id={`card-${id}`} data-testid={`card-${id}`} data-card-type={cardType} data-locked={locked} data-player-view={playerView}>
       <div className="scanner-line" />
 
       <div className="clue-image-container">

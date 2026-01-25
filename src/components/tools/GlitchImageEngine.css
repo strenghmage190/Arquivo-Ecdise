@@ -125,6 +125,12 @@
   transition: width 120ms linear;
 }
 
+.glitch-meter-bar.flash {
+  box-shadow: 0 0 16px rgb(0 255 170 / 80%), 0 0 36px rgb(100 150 255 / 40%);
+  transform: scaleY(1.03);
+  transition: box-shadow 220ms ease, transform 220ms ease, width 120ms linear;
+}
+
 .glitch-meter-label {
   position: absolute;
   inset: 0;
@@ -230,5 +236,99 @@
   .decoding-spinner {
     border-top-color: #64b5ff;
     opacity: 0.6;
+  }
+}
+
+/* New variable-driven styles for improved performance and RGB/scanline effects */
+.glitch-frame {
+  /* container-level variables (overridden inline from React) */
+  --image-url: none;
+  --glitch-strength: 0;
+  --clarity: 1;
+  --rgb-offset: 0;
+  --shift-delta: 0;
+  --freq-delta: 0;
+  --chroma-delta: 0;
+}
+
+.glitch-base {
+  position: absolute;
+  inset: 0;
+  background-image: var(--image-url);
+  background-size: cover;
+  background-position: center center;
+  will-change: filter, transform, opacity, background-image;
+  filter: blur(calc(var(--glitch-strength) * 6px)) contrast(calc(1 + var(--glitch-strength) * 0.6)) saturate(calc(1 + var(--glitch-strength) * 0.7));
+  transform: translateX(calc(var(--shift-delta) * var(--glitch-strength) * 0.6px)) scale(calc(1 + var(--glitch-strength) * 0.04));
+  opacity: calc(0.55 + var(--clarity) * 0.45);
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+.glitch-rgb-layers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.glitch-rgb-layers::before,
+.glitch-rgb-layers::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--image-url);
+  background-size: cover;
+  background-position: center center;
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.glitch-rgb-layers::before {
+  filter: hue-rotate(-8deg) saturate(1.1);
+  transform: translateX(calc(var(--rgb-offset) * 0.6px));
+}
+
+.glitch-rgb-layers::after {
+  filter: hue-rotate(20deg) saturate(1.05);
+  transform: translateX(calc(var(--rgb-offset) * -0.6px));
+}
+
+.glitch-scanlines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0.04) 1px
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  opacity: calc(0.12 + var(--glitch-strength) * 0.5);
+}
+
+.glitch-slice {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  background-image: var(--image-url);
+  background-position: 50% var(--slice-pos);
+  background-size: cover;
+  background-repeat: no-repeat;
+  will-change: transform, filter, opacity;
+  mix-blend-mode: screen;
+  transform: translateX(calc(var(--local-shift-x) * 1px)) translateY(calc(var(--local-shift-y) * 1px));
+  filter: brightness(calc(1 + var(--local-chroma) * 0.25)) saturate(calc(1 + var(--local-chroma) * 0.8));
+  opacity: calc(0.6 + var(--local-chroma) * 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-base,
+  .glitch-rgb-layers::before,
+  .glitch-rgb-layers::after,
+  .glitch-slice {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }

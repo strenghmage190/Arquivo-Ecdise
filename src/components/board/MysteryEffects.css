@@ -1,38 +1,21 @@
-/* Animação de Luz Falhando (Lâmpada velha) */
+/* Simplified UV flicker animation */
 @keyframes uv-flicker {
-  0% {
+  0%, 50%, 100% {
     opacity: 0.9;
   }
-  3% {
+  25% {
     opacity: 0.8;
   }
-  6% {
-    opacity: 0.95;
-  }
-  7% {
-    opacity: 0.7;
-  }
-  8% {
-    opacity: 0.95;
-  }
-  100% {
+  75% {
     opacity: 1;
   }
 }
 
-/* O "Noise" estático (aquela chiadeira de TV) */
+/* Reduce expensive properties for better performance */
 .uv-noise-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
-  opacity: 0.28;
-  mix-blend-mode: overlay;
+  opacity: 0.1;
   z-index: 5;
-  will-change: opacity, transform;
+  /* Removed redundant will-change properties */
 }
 
 /* O circulo roxo da lanterna (A Lente) */
@@ -45,18 +28,16 @@
   pointer-events: none;
   mix-blend-mode: hard-light;
   z-index: 10;
-  will-change: opacity, transform;
 }
 
 /* A Tinta Secreta em si */
 .hidden-ink-layer {
   /* neutral amplify for any neon color */
 
-  filter: brightness(1.6) saturate(1.6) contrast(1.2);
+  filter: brightness(1.4) saturate(1.4) contrast(1.1);
   mix-blend-mode: screen;
-  animation: uv-flicker 3.6s infinite alternate;
+  animation: uv-flicker 4.5s infinite alternate;
   z-index: 9;
-  will-change: opacity, filter;
 }
 
 /* Robust container and hard flicker for better visibility */
@@ -100,12 +81,10 @@
   width: 100%;
   height: 100%;
   background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.15;
+  opacity: 0.1; /* Reduced opacity for better performance */
   pointer-events: none;
   z-index: 200; /* sit above main image for UV effects */
-  will-change: opacity, transform;
-  /* mask animations are expensive; hint the browser where possible */
-  will-change: mask-image, opacity, transform;
+  will-change: opacity; /* Removed redundant will-change properties */
 }
 
 /* forensic canvas overlay for channel isolation */
@@ -137,18 +116,18 @@
   pointer-events: none;
   z-index: 210;
   mix-blend-mode: overlay;
-  transition: opacity 0.2s ease-out;
+  transition: opacity 0.3s ease-out; /* Slightly slower transition for smoother effect */
+  opacity: 0.3; /* Reduced default opacity */
   will-change: opacity, filter;
-  will-change: mask-image, opacity, filter;
 }
 
 .secret-ink {
   /* use neutral blend & boosts so any drawn UV color (green/purple/etc.) becomes visible */
 
-  filter: brightness(1.8) contrast(1.4) saturate(2);
+  filter: brightness(1.5) contrast(1.2) saturate(1.6); /* Reduced filter intensity */
   mix-blend-mode: screen;
   z-index: 220;
-  animation: flicker-hard 4s infinite linear;
+  animation: flicker-hard 5s infinite linear; /* Slower animation for better performance */
   pointer-events: none;
   will-change: opacity, filter;
   will-change: mask-image, opacity, filter;
@@ -222,4 +201,28 @@
   margin: auto;
   box-shadow: 0 0 30px rgb(0 0 0 / 50%);
   border: 1px solid rgb(255 255 255 / 4%);
+}
+
+/* Move inline styles to CSS classes for caching */
+.uv-container {
+  cursor: default;
+  --uv-radius: 120px;
+  --mouse-x: 0px;
+  --mouse-y: 0px;
+}
+
+.uv-container.uv-active {
+  cursor: none;
+}
+
+.uv-container .bg-blur {
+  object-fit: cover;
+  filter: blur(20px) brightness(0.35);
+  transform: scale(1.06);
+}
+
+.uv-container .main-evidence {
+  object-fit: contain;
+  filter: brightness(1) contrast(1) saturate(1);
+  transition: filter 0.1s linear;
 }

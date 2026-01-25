@@ -327,6 +327,16 @@
   box-shadow: 0 0 20px rgb(198 164 95 / 80%);
 }
 
+/* Visual feedback when a slider is correct */
+.param-control .slider.correct::-webkit-slider-thumb {
+  background: #4caf50;
+  box-shadow: 0 0 18px rgba(76,175,80,0.9);
+}
+.param-control .slider.correct::-moz-range-thumb {
+  background: #4caf50;
+  box-shadow: 0 0 18px rgba(76,175,80,0.9);
+}
+
 .param-control small {
   display: block;
   color: #888;

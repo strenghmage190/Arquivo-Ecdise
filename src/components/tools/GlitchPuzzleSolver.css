@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   background: #000;
-  color: #0f0;
+  color: rgb(21, 209, 184);
   font-family: "Share Tech Mono", "Courier New", monospace;
   position: relative;
   overflow: auto;

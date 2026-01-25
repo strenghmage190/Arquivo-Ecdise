@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import './MysteryEffects.css';
 import useThrottledMouse from '../../hooks/useThrottledMouse';
 
@@ -76,21 +76,27 @@ export function MysteryImage({
 
   // preload base/hidden images to avoid flashing on first reveal
   useEffect(() => {
-    try {
-      if (baseSrc) { const i = new Image(); i.src = baseSrc; }
-      if (hiddenSrc) { const h = new Image(); h.src = hiddenSrc; }
-      if (filterLayerSrc) { const f = new Image(); f.src = filterLayerSrc; }
-    } catch (e) {}
+    const preloadImage = (src: string | undefined) => {
+      if (!src) return;
+      const img = new Image();
+      img.src = src;
+      img.onload = () => console.debug(`Image preloaded: ${src}`);
+      img.onerror = () => console.warn(`Failed to preload image: ${src}`);
+    };
+
+    preloadImage(baseSrc);
+    preloadImage(hiddenSrc);
+    preloadImage(filterLayerSrc);
   }, [baseSrc, hiddenSrc, filterLayerSrc]);
 
   // mask is now applied via CSS using the container's CSS variables
 
-  const bgStyle: React.CSSProperties = {
+  const bgStyle: React.CSSProperties = useMemo(() => ({
     backgroundSize: fit,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
-    transition: 'filter 0.1s linear'
-  };
+    transition: 'filter 0.1s linear',
+  }), [fit]);
 
   const bgImage = baseSrc ? `url(${baseSrc})` : 'none';
   const hiddenImage = hiddenSrc ? `url(${hiddenSrc})` : 'none';
@@ -114,16 +120,22 @@ export function MysteryImage({
     ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)'
     : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
 
-  const filterStyle: React.CSSProperties = {
-    backgroundSize: fit,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center',
-    transition: 'filter 0.1s linear',
-    position: 'absolute', inset: 0,
-    zIndex: 5,
-    filter: baseFilter
-  };
+  const filterStyle: React.CSSProperties = useMemo(() => {
+    const baseFilter = isUVMode
+      ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)'
+      : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
 
+    return {
+      backgroundSize: fit,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      transition: 'filter 0.1s linear',
+      position: 'absolute',
+      inset: 0,
+      zIndex: 5,
+      filter: baseFilter,
+    };
+  }, [isUVMode, channelFilter, filters, fit]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
   // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas quando o jogador se aproximar
@@ -146,6 +158,24 @@ export function MysteryImage({
     const distortionLevel = Math.abs(filters.brightness - 100) + Math.abs(filters.contrast - 100) + Math.abs(filters.saturate - 100);
     hiddenLayerOpacity = Math.min(1, distortionLevel / 40); // aumentar sensibilidade no modo legado
   }
+
+  // Precompute overlayStyle with useMemo so hooks are not called conditionally during render
+  const overlayStyle: React.CSSProperties = useMemo<React.CSSProperties>(() => ({
+    backgroundSize: fit,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+    transition: 'opacity 0.12s linear',
+    position: 'absolute',
+    inset: 0,
+    zIndex: 30,
+    pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
+    backgroundImage: filterLayerSrc ? filterImage : hiddenImage,
+    // render the overlay normally (avoid 'screen' making it faint)
+    mixBlendMode: 'normal' as any,
+    opacity: Math.min(1, hiddenLayerOpacity * 1.8),
+    // increase contrast/saturation to make secret content pop
+    filter: 'contrast(1.6) saturate(1.15)'
+  }), [fit, hiddenLayerOpacity, filterLayerSrc, filterImage, hiddenImage]);
 
   // Debug temporário: ajuda a identificar por que a camada pode permanecer invisível
   try {
@@ -239,6 +269,27 @@ export function MysteryImage({
     return () => { cancelled = true; img.removeEventListener('load', onload); };
   }, [baseSrc, forensicChannel]);
 
+  const handleResize = useCallback(() => {
+    try {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setRADIUS(Math.min(rect.width, rect.height) / 4);
+    } catch (e) {
+      console.error('Error computing UV radius:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    handleResize();
+    const ro = new ResizeObserver(() => handleResize());
+    if (containerRef.current) ro.observe(containerRef.current);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [handleResize]);
+
   return (
     <div
       className={`uv-container ${isUVMode ? 'uv-active' : ''} ${className}`}
@@ -266,27 +317,7 @@ export function MysteryImage({
 
       {/* 2. CAMADA DO PUZZLE DE TRATAMENTO */}
       {(filterLayerSrc || hiddenSrc) && !isUVMode && (
-        (() => {
-          // overlay shouldn't inherit the base filter (it was reducing contrast/visibility)
-          // amplify opacity aggressively when needed
-          const overlayOpacity = Math.min(1, hiddenLayerOpacity * 1.8);
-          const overlayStyle: React.CSSProperties = {
-            backgroundSize: fit,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            transition: 'opacity 0.12s linear',
-            position: 'absolute', inset: 0,
-            zIndex: 30,
-            pointerEvents: 'none',
-            backgroundImage: filterLayerSrc ? filterImage : hiddenImage,
-            // render the overlay normally (avoid 'screen' making it faint)
-            mixBlendMode: 'normal',
-            opacity: overlayOpacity,
-            // increase contrast/saturation to make secret content pop
-            filter: 'contrast(1.6) saturate(1.15)'
-          };
-          return <div style={overlayStyle} />;
-        })()
+        <div style={overlayStyle} />
       )}
 
       {isUVMode && hasSecret && (

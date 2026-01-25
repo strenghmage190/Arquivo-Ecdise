@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import './GlitchImageEngine.css';
+import { useSmoothedValues, useGlitchState } from './glitchHooks';
 
 export interface GlitchImageEngineProps {
   imageUrl: string;
@@ -61,65 +62,83 @@ const GlitchImageEngineComponent: React.FC<GlitchImageEngineProps> = ({
   onResolved,
 }) => {
   const seeds = useMemo(() => buildSeeds(imageUrl || 'glitch'), [imageUrl]);
-  const freqDelta = Math.abs(playerFrequency - targetFrequency);
-  const shiftDelta = Math.abs(playerShift - targetShift);
-  const chromaDelta = Math.abs(playerChromatic - targetChromatic);
 
-  const normalized = clamp01((freqDelta / 50) + (shiftDelta / 100) + (chromaDelta / 100));
-  const glitchStrength = solved ? 0 : clamp01(0.15 + normalized * 0.9);
-  const clarity = solved ? 1 : clamp01(1 - normalized * 0.85);
-  
-  // Estado de decodificação (quando está próximo mas ainda não resolveu)
-  const isDecoding = !solved && normalized < 0.12;
-
-  // fire resolved callback once when all deltas are within tolerance
-  const didSignalRef = useRef(false);
-  useEffect(() => {
-    if (didSignalRef.current) return;
-    const withinTolerance = freqDelta <= 1 && shiftDelta <= 2 && chromaDelta <= 2;
-    if (withinTolerance) {
-      didSignalRef.current = true;
-      onResolved?.();
-    }
-  }, [freqDelta, shiftDelta, chromaDelta, onResolved]);
+  const smoothed = useSmoothedValues(playerFrequency, playerShift, playerChromatic, imageUrl);
+  const { freqDelta, shiftDelta, chromaDelta, normalized, glitchStrength, clarity, isDecoding } = useGlitchState(
+    smoothed,
+    targetFrequency,
+    targetShift,
+    targetChromatic,
+    solved,
+    onResolved,
+  );
 
   const sliceCount = Math.max(3, Math.round(6 + glitchStrength * 12));
-  const slices = useMemo(() => seeds.slice(0, sliceCount), [seeds, sliceCount]);
+  const slices = useMemo(() => seeds.slice(0, sliceCount).map(slice => ({
+    ...slice,
+    top: slice.top * (1 + glitchStrength * 0.1),
+    height: slice.height * (1 + glitchStrength * 0.1),
+  })), [seeds, sliceCount, glitchStrength]);
 
-  // Memoizar cálculos de filtro para evitar recalcular quando props não mudam
-  const baseFilter = useMemo(
-    () => `blur(${glitchStrength * 4}px) contrast(${1 + glitchStrength * 0.4}) saturate(${1 + glitchStrength * 0.5}) ${computeDropShadowMemo(chromaDelta)}`,
-    [glitchStrength, chromaDelta]
-  );
-  const baseTranslate = useMemo(
-    () => (shiftDelta * glitchStrength * 0.4) * (Math.sin((playerFrequency + 13) * 0.3) >= 0 ? 1 : -1),
-    [shiftDelta, glitchStrength, playerFrequency]
-  );
-  const grainOpacity = useMemo(
-    () => clamp01(0.25 + glitchStrength * 0.7),
-    [glitchStrength]
-  );
+  const grainOpacity = clamp01(0.35 + glitchStrength * 0.8);
+  const [displayClarity, setDisplayClarity] = React.useState<number | null>(null);
+  const [flashMeter, setFlashMeter] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.debug('[GlitchImageEngine] props', {
+        imageUrl,
+        targetFrequency,
+        targetShift,
+        targetChromatic,
+        playerFrequency,
+        playerShift,
+        playerChromatic,
+        solved,
+      });
+      // eslint-disable-next-line no-console
+      console.debug('[GlitchImageEngine] computed', { freqDelta, shiftDelta, chromaDelta, normalized, glitchStrength, clarity, displayClarity });
+    } catch (e) {}
+  }, [imageUrl, targetFrequency, targetShift, targetChromatic, playerFrequency, playerShift, playerChromatic, solved, freqDelta, shiftDelta, chromaDelta, normalized, glitchStrength, clarity]);
+
+  useEffect(() => {
+    if (displayClarity === null) {
+      setDisplayClarity(clarity);
+      return;
+    }
+    if (Math.abs(displayClarity - clarity) > 0.005) {
+      // eslint-disable-next-line no-console
+      console.debug('[GlitchImageEngine] clarity changed', { before: displayClarity, after: clarity });
+      setDisplayClarity(clarity);
+      setFlashMeter(true);
+      const t = setTimeout(() => setFlashMeter(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [clarity, displayClarity]);
+
+  const glitchStyle = {
+    '--image-url': `url(${imageUrl})`,
+    '--glitch-strength': String(glitchStrength),
+    '--clarity': String(clarity),
+    '--rgb-offset': String(1 + glitchStrength * 12),
+    '--shift-delta': String(shiftDelta),
+    '--freq-delta': String(freqDelta),
+    '--chroma-delta': String(chromaDelta),
+  } as React.CSSProperties;
 
   return (
     <div className={`glitch-engine ${className || ''}`} style={{ height }}>
-      <div className="glitch-frame">
-        <img
-          src={imageUrl}
-          alt="evidence"
-          className="glitch-base"
-          style={{
-            filter: baseFilter,
-            transform: `translateX(${baseTranslate}px) scale(${1 + glitchStrength * 0.04})`,
-            opacity: 0.55 + clarity * 0.45,
-          }}
-        />
+      <div className="glitch-frame" style={glitchStyle}>
+        <div className="glitch-base" />
+        <div className="glitch-rgb-layers" />
 
-        {/* Sliced overlays */}
+        {/* Sliced overlays (pass only local variables via CSS) */}
         <div className="glitch-slices">
           {slices.map((slice, idx) => {
-            const localShift = (Math.sin(slice.phase * 10 + playerShift) * 0.5 + 0.5) * shiftDelta * glitchStrength * 0.6;
+            const localShift = (Math.sin(slice.phase * 10 + smoothed.s) * 0.5 + 0.5) * shiftDelta * glitchStrength * 0.6;
+            const localShakeY = (Math.sin(slice.phase * 7 + smoothed.f) * 0.5) * (freqDelta * 0.03) * glitchStrength;
             const chroma = clamp01((chromaDelta / 100) * (0.6 + slice.phase * 0.8));
-            const shadow = computeDropShadowMemo(chromaDelta * (0.6 + slice.phase * 0.5));
             return (
               <div
                 key={`${slice.top}-${idx}`}
@@ -127,21 +146,18 @@ const GlitchImageEngineComponent: React.FC<GlitchImageEngineProps> = ({
                 style={{
                   top: `${slice.top}%`,
                   height: `${slice.height}%`,
-                  backgroundImage: `url(${imageUrl})`,
-                  backgroundPosition: `50% ${slice.top}%`,
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  transform: `translateX(${localShift}px)`,
-                  filter: `${shadow} brightness(${1 + chroma * 0.25}) saturate(${1 + chroma * 0.8})`,
-                  opacity: clamp01(0.6 + chroma * 0.3),
-                }}
+                  '--slice-pos': `${slice.top}%`,
+                  '--local-shift-x': String(localShift),
+                  '--local-shift-y': String(localShakeY),
+                  '--local-chroma': String(chroma),
+                } as React.CSSProperties}
               />
             );
           })}
         </div>
 
-        {/* Noise / film */}
         <div className="glitch-grain" style={{ opacity: grainOpacity }} />
+        <div className="glitch-scanlines" />
 
         {/* Decoding animation */}
         {isDecoding && !solved && (
@@ -166,7 +182,7 @@ const GlitchImageEngineComponent: React.FC<GlitchImageEngineProps> = ({
       </div>
 
       <div className="glitch-meter">
-        <div className="glitch-meter-bar" style={{ width: `${Math.round(clarity * 100)}%` }} />
+        <div className={`glitch-meter-bar ${flashMeter ? 'flash' : ''}`} style={{ width: `${Math.round(clarity * 100)}%` }} />
         <span className="glitch-meter-label">Nitidez: {Math.round(clarity * 100)}%</span>
       </div>
     </div>
@@ -174,18 +190,7 @@ const GlitchImageEngineComponent: React.FC<GlitchImageEngineProps> = ({
 };
 
 // React.memo para evitar re-renders quando props não mudam
-export const GlitchImageEngine = React.memo(GlitchImageEngineComponent, (prevProps, nextProps) => {
-  return (
-    prevProps.imageUrl === nextProps.imageUrl &&
-    prevProps.targetFrequency === nextProps.targetFrequency &&
-    prevProps.targetShift === nextProps.targetShift &&
-    prevProps.targetChromatic === nextProps.targetChromatic &&
-    prevProps.playerFrequency === nextProps.playerFrequency &&
-    prevProps.playerShift === nextProps.playerShift &&
-    prevProps.playerChromatic === nextProps.playerChromatic &&
-    prevProps.solved === nextProps.solved &&
-    prevProps.height === nextProps.height
-  );
-});
+// Use default React.memo shallow comparison to avoid subtle comparator bugs
+export const GlitchImageEngine = React.memo(GlitchImageEngineComponent);
 
 export default GlitchImageEngine;

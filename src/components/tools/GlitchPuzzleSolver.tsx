@@ -87,27 +87,18 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
   const [chroma, setChroma] = useState(resolvedConfig.start_chromatic ?? 50);
   
   // ✅ FIXED: Removido shadowing - apenas debouncedConfig agora (estados desnecessários removidos)
-  const [debouncedConfig, setDebouncedConfig] = useState({ freq, shift, chroma });
-  
   const [aligned, setAligned] = useState(alreadySolved || false);
+  const [isAligned, setIsAligned] = useState(false); // player has aligned sliders but hasn't confirmed
   const [verified, setVerified] = useState(alreadySolved || !needsKeyword);
   const [keywordInput, setKeywordInput] = useState('');
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [showUV, setShowUV] = useState(false);
   
-  // ✅ Debounce ALL slider values together (50ms delay) - prevents desync
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedConfig({ freq, shift, chroma });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [freq, shift, chroma]);
-  
-  // ✅ FIXED: Agora são apenas constantes derivadas (não shadowing de estados)
-  const debouncedFreq = debouncedConfig.freq;
-  const debouncedShift = debouncedConfig.shift;
-  const debouncedChroma = debouncedConfig.chroma;
+  // Using immediate slider values for real-time feedback
+  const debouncedFreq = freq;
+  const debouncedShift = shift;
+  const debouncedChroma = chroma;
   const tolF = typeof resolvedConfig.tolerance_frequency === 'number' ? resolvedConfig.tolerance_frequency : 1;
   const tolS = typeof resolvedConfig.tolerance_shift === 'number' ? resolvedConfig.tolerance_shift : 2;
   const tolC = typeof resolvedConfig.tolerance_chromatic === 'number' ? resolvedConfig.tolerance_chromatic : 2;
@@ -167,22 +158,25 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
     }
   }, [alreadySolved, cardId, parsedMetadata, resolvedConfig, securityLayer]);
 
-  useEffect(() => {
-    // Fase 1: estabilização pelos sliders
-    const isAligned =
-      Math.abs(freq - target.f) <= tolF &&
-      Math.abs(shift - target.s) <= tolS &&
-      Math.abs(chroma - target.c) <= tolC;
-
-    // Só marcar como alinhado após imagem carregar
-    if ((isAligned || revealAlways) && !aligned && imageLoaded) {
-      setAligned(true);
-    }
-  }, [freq, shift, chroma, target.f, target.s, target.c, aligned, revealAlways, tolF, tolS, tolC, imageLoaded]);
-
+  // Computed solved state (moved up so other effects can reference it)
+  // Computed solved state (moved up so other effects can reference it)
   const alignmentSatisfied = !needsAlignment || aligned;
   const keywordSatisfied = !needsKeyword || verified;
   const isSolved = alreadySolved || (alignmentSatisfied && keywordSatisfied);
+
+  useEffect(() => {
+    // Fase 1: detectar quando sliders estão aproximadamente corretos,
+    // mas NÃO resolver o puzzle automaticamente — apenas habilitar o botão de confirmação.
+    if (isSolved) return;
+
+    const freqCorrect = Math.abs(freq - target.f) <= tolF;
+    const shiftCorrect = Math.abs(shift - target.s) <= tolS;
+    const chromaCorrect = Math.abs(chroma - target.c) <= tolC;
+
+    // Consider revealAlways: if the security layer requests always-visible, treat as aligned
+    const ready = (revealAlways && imageLoaded) || (freqCorrect && shiftCorrect && chromaCorrect);
+    setIsAligned(Boolean(ready));
+  }, [freq, shift, chroma, target.f, target.s, target.c, revealAlways, tolF, tolS, tolC, imageLoaded, isSolved]);
 
   // Verificar proximidade para revelar pistas sem exigir alinhamento perfeito
   const isNearlyAligned = 
@@ -256,6 +250,20 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
   useEffect(() => {
     validateSecurityLayer(resolvedConfig.security_layer);
   }, [resolvedConfig.security_layer]);
+
+  // Adicionar estado para monitorar nitidez
+  const [clarity, setClarity] = useState(0);
+
+  // Atualizar nitidez dinamicamente com base nos valores do GlitchImageEngine
+  useEffect(() => {
+    const freqCorrect = Math.abs(freq - target.f) <= tolF;
+    const shiftCorrect = Math.abs(shift - target.s) <= tolS;
+    const chromaCorrect = Math.abs(chroma - target.c) <= tolC;
+
+    const normalized = clamp01((Math.abs(freq - target.f) / 50) + (Math.abs(shift - target.s) / 100) + (Math.abs(chroma - target.c) / 100));
+    const newClarity = clamp01(1 - normalized * 0.85);
+    setClarity(newClarity);
+  }, [freq, shift, chroma, target.f, target.s, target.c, tolF, tolS, tolC]);
 
   return (
     <div className="solver-container">
@@ -403,6 +411,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
 
           <div className="solver-footer">
             <div className="sync-status">
+              <span className="sync-ok">Nitidez: {Math.round(clarity * 100)}%</span>
               {Math.abs(freq - target.f) <= tolF && <span className="sync-ok">✓ FREQ</span>}
               {Math.abs(shift - target.s) <= tolS && <span className="sync-ok">✓ SHIFT</span>}
               {Math.abs(chroma - target.c) <= tolC && <span className="sync-ok">✓ CHROMA</span>}
@@ -423,8 +432,24 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
               </div>
             )}
           </div>
+          {/* Botão de confirmação — jogador confirma após alinhar os sliders */}
+          <div style={{marginTop:12, display:'flex', justifyContent:'center'}}>
+            <button
+              className="btn-submit"
+              onClick={() => setAligned(true)}
+              disabled={!isAligned || aligned}
+              style={{ padding: '10px 14px', fontSize: 13, cursor: !isAligned || aligned ? 'not-allowed' : 'pointer' }}
+            >
+              {isAligned ? '✓ DECODIFICAR IMAGEM' : 'AGUARDANDO ALINHAMENTO...'}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+// Utility function to clamp a value between 0 and 1
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

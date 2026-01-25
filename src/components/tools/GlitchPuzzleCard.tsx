@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { playLockIn } from '../../utils/sound';
 import { updateInvestigationCard } from '../../api/investigations';
 import { addCollectedCode, isPuzzleSolved } from '../../utils/codeTracking';
 import { useDisplayConfig } from '../../config/displayConfig';
@@ -28,7 +29,7 @@ interface Props {
   cardId: string;
   investigationId: string;
   puzzleData: GlitchPuzzleData;
-  onSolved?: (rewardCode: string) => void;
+  onSolved?: (rewardCode: string, cardUpdates?: any) => void;
   onClose?: () => void;
   isGameMaster?: boolean;
 }
@@ -52,6 +53,25 @@ export default function GlitchPuzzleCard({
     '[LOG]: Decodificador iniciado. Ajuste os sliders até estabilizar a imagem.'
   ]);
   const [justSolved, setJustSolved] = useState(false);
+  const [isAligned, setIsAligned] = useState(false);
+  const [isFreqCorrect, setIsFreqCorrect] = useState(false);
+  const [isShiftCorrect, setIsShiftCorrect] = useState(false);
+  const [isChromaCorrect, setIsChromaCorrect] = useState(false);
+
+  const prevFreqCorrectRef = useRef(false);
+  const prevShiftCorrectRef = useRef(false);
+  const prevChromaCorrectRef = useRef(false);
+
+  // Reset correctness tracking when puzzle/card changes
+  useEffect(() => {
+    prevFreqCorrectRef.current = false;
+    prevShiftCorrectRef.current = false;
+    prevChromaCorrectRef.current = false;
+    setIsFreqCorrect(false);
+    setIsShiftCorrect(false);
+    setIsChromaCorrect(false);
+    setIsAligned(false);
+  }, [cardId, puzzleData.id]);
   
   // ✅ EDIÇÃO DE PUZZLE - Estados de Edição
   const [isEditing, setIsEditing] = useState(false);
@@ -83,6 +103,29 @@ export default function GlitchPuzzleCard({
     setPlayerChroma(puzzleData.start_chromatic ?? 12);
   }, [cardId, investigationId, puzzleData.solved, puzzleData.start_chromatic, puzzleData.start_frequency, puzzleData.start_shift]);
 
+  // Load saved progress from localStorage when component mounts
+  useEffect(() => {
+    try {
+      const key = `glitch_puzzle_${cardId}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (typeof obj.freq === 'number') setPlayerFreq(obj.freq);
+        if (typeof obj.shift === 'number') setPlayerShift(obj.shift);
+        if (typeof obj.chroma === 'number') setPlayerChroma(obj.chroma);
+      }
+    } catch (e) {}
+  }, [cardId]);
+
+  // Persist progress when sliders change
+  useEffect(() => {
+    try {
+      const key = `glitch_puzzle_${cardId}`;
+      const payload = { freq: playerFreq, shift: playerShift, chroma: playerChroma };
+      localStorage.setItem(key, JSON.stringify(payload));
+    } catch (e) {}
+  }, [playerFreq, playerShift, playerChroma, cardId]);
+
   useEffect(() => {
     if (!baseImage) return;
     if (solved || solvedOnceRef.current) return;
@@ -92,10 +135,29 @@ export default function GlitchPuzzleCard({
     const chromaCorrect = Math.abs(playerChroma - puzzleData.correct_chromatic) <= 2;
     const allCorrect = freqCorrect && shiftCorrect && chromaCorrect;
 
-    if (allCorrect) {
-      solvedOnceRef.current = true;
-      handleSolved();
-    }
+    // Visual states
+    setIsFreqCorrect(freqCorrect);
+    setIsShiftCorrect(shiftCorrect);
+    setIsChromaCorrect(chromaCorrect);
+
+    // Play a short feedback sound when a parameter becomes correct (only once per param)
+    try {
+      if (freqCorrect && !prevFreqCorrectRef.current) {
+        prevFreqCorrectRef.current = true;
+        try { playLockIn(); } catch (e) {}
+      }
+      if (shiftCorrect && !prevShiftCorrectRef.current) {
+        prevShiftCorrectRef.current = true;
+        try { playLockIn(); } catch (e) {}
+      }
+      if (chromaCorrect && !prevChromaCorrectRef.current) {
+        prevChromaCorrectRef.current = true;
+        try { playLockIn(); } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Set aligned state but DO NOT auto-resolve; require player confirmation
+    setIsAligned(allCorrect);
   }, [baseImage, playerFreq, playerShift, playerChroma, puzzleData.correct_frequency, puzzleData.correct_shift, puzzleData.correct_chromatic, solved]);
 
   useEffect(() => {
@@ -125,19 +187,23 @@ export default function GlitchPuzzleCard({
 
     setLoading(true);
     try {
-      const newMetadata = {
-        glitch_puzzle: {
+      const updates: any = {
+        // Atualiza a imagem principal do card para a imagem resolvida
+        image_url: puzzleData.original_image_url,
+
+        // Atualiza os metadados para marcar o puzzle como resolvido
+        metadata: {
           ...puzzleData,
           solved: true,
         }
       };
 
-      await updateInvestigationCard(cardId, {
-        metadata: newMetadata,
-      });
+      // 1) Atualiza no banco de dados
+      await updateInvestigationCard(cardId, updates);
 
+      // 2) Aviso ao componente pai para atualizar a UI imediatamente
       if (onSolved) {
-        setTimeout(() => onSolved(puzzleData.reward_code), 500);
+        setTimeout(() => onSolved(puzzleData.reward_code, updates), 500);
       }
     } catch (err) {
       console.error('Erro ao salvar solução:', err);
@@ -806,7 +872,7 @@ export default function GlitchPuzzleCard({
               value={playerFreq}
               onChange={e => setPlayerFreq(parseInt(e.target.value))}
               disabled={loading || solved}
-              className="slider"
+              className={`slider ${isFreqCorrect ? 'correct' : ''}`}
             />
             <small>Alinhe para reduzir as fatias horizontais.</small>
           </div>
@@ -822,7 +888,7 @@ export default function GlitchPuzzleCard({
               value={playerShift}
               onChange={e => setPlayerShift(parseInt(e.target.value))}
               disabled={loading || solved}
-              className="slider"
+              className={`slider ${isShiftCorrect ? 'correct' : ''}`}
             />
             <small>Quanto mais longe, mais a imagem se desloca lateralmente.</small>
           </div>
@@ -838,10 +904,21 @@ export default function GlitchPuzzleCard({
               value={playerChroma}
               onChange={e => setPlayerChroma(parseInt(e.target.value))}
               disabled={loading || solved}
-              className="slider"
+              className={`slider ${isChromaCorrect ? 'correct' : ''}`}
             />
             <small>Reduza para remover a aberração de cores.</small>
           </div>
+        </div>
+
+        <div style={{marginTop:12, display:'flex', justifyContent:'center'}}>
+          <button
+            className="btn-submit"
+            onClick={handleSolved}
+            disabled={!isAligned || loading || solved}
+            style={{ padding: '10px 14px', fontSize: 13, cursor: !isAligned || solved ? 'not-allowed' : 'pointer' }}
+          >
+            {isAligned ? (loading ? 'PROCESSANDO...' : '✓ DECODIFICAR IMAGEM') : 'AGUARDANDO ALINHAMENTO...'}
+          </button>
         </div>
 
         <div className="terminal">

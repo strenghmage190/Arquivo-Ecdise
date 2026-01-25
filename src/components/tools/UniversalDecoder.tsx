@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CipherLib from '../../utils/ciphers';
+import { hexToText, hexToBytes, textToHex, xorDecodeHex, enigmaDecodeHex } from '../../utils/hexEncoders';
 import EnigmaMachine from './EnigmaMachine';
 import './UniversalDecoder.css';
 
@@ -8,6 +9,8 @@ export default function UniversalDecoder() {
   const [input, setInput] = useState('');
   const [param, setParam] = useState<string | number>('1');
   const [enigmaOutput, setEnigmaOutput] = useState('');
+  const [hexMethod, setHexMethod] = useState<'auto' | 'utf8hex' | 'xor' | 'enigma'>('auto');
+  const [hexKey, setHexKey] = useState('');
 
   let result = '';
   if (mode === 'caesar') {
@@ -17,7 +20,14 @@ export default function UniversalDecoder() {
   else if (mode === 'a1z26') result = CipherLib.a1z26(input);
   else if (mode === 'vigenere') result = CipherLib.vigenere(input, String(param), true);
   else if (mode === 'binary') result = CipherLib.binaryToString(input);
-  else if (mode === 'hex') result = CipherLib.hexToString(input);
+  else if (mode === 'hex') {
+    try {
+      if (hexMethod === 'auto') result = CipherLib.hexToString(input);
+      else if (hexMethod === 'utf8hex') result = hexToText(input);
+      else if (hexMethod === 'xor') result = xorDecodeHex(input, hexKey);
+      else if (hexMethod === 'enigma') result = enigmaDecodeHex(input, hexKey);
+    } catch (e) { result = `Erro ao decodificar: ${String(e)}`; }
+  }
   else if (mode === 'base64') result = CipherLib.base64ToString(input);
 
   return (
@@ -53,6 +63,20 @@ export default function UniversalDecoder() {
                 <input type="number" value={param as any} onChange={e => setParam(e.target.value)} />
               </div>
             )}
+              {mode === 'hex' && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                  <label>Método:</label>
+                  <select value={hexMethod} onChange={e => setHexMethod(e.target.value as any)}>
+                    <option value="auto">Detectar/Texto</option>
+                    <option value="utf8hex">Hex (UTF-8)</option>
+                    <option value="xor">XOR + Hex</option>
+                    <option value="enigma">Enigma-simples + Hex</option>
+                  </select>
+                  {(hexMethod === 'xor' || hexMethod === 'enigma') && (
+                    <input placeholder="Chave" value={hexKey} onChange={e => setHexKey(e.target.value)} style={{ marginLeft: 8 }} />
+                  )}
+                </div>
+              )}
             {mode === 'vigenere' && (
               <div className="decoder-params">
                 <label>Palavra-Chave (Key):</label>

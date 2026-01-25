@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import NumericKeypad from './NumericKeypad';
+import PatternLock from './PatternLock';
 import './PhoneViewer.css';
 
 interface PhoneMessage {
@@ -24,9 +25,10 @@ interface PhoneViewerProps {
    isLocked?: boolean;
    password?: string | number;
    fullscreen?: boolean;
+   passwordType?: 'pin' | 'pattern';
 }
 
-export default function PhoneViewer({ chatData, contactName, isLocked = false, password, fullscreen = false }: PhoneViewerProps): React.ReactElement {
+export default function PhoneViewer({ chatData, contactName, isLocked = false, password, fullscreen = false, passwordType = 'pin' }: PhoneViewerProps): React.ReactElement {
    const [unlocked, setUnlocked] = useState(!isLocked);
    const [isBooting, setIsBooting] = useState(false);
    
@@ -65,16 +67,24 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
                      <div className="locked-sub">Acesse com o PIN definido</div>
                   </div>
                   
-                  {isBooting ? (
+                           {isBooting ? (
                     <div className="booting-screen">
                       <div className="spinner"></div>
                       <p>Descriptografando...</p>
                     </div>
                   ) : (
-                    <NumericKeypad 
-                       code={password} 
-                       onUnlock={handleUnlock} 
-                    />
+                              // support both numeric PIN and pattern unlock
+                              (String(passwordType) === 'pattern') ? (
+                                 <PatternLock
+                                    code={String(password)}
+                                    onUnlock={handleUnlock}
+                                 />
+                              ) : (
+                                 <NumericKeypad 
+                                    code={password} 
+                                    onUnlock={handleUnlock} 
+                                 />
+                              )
                   )}
                </div>
             </div>

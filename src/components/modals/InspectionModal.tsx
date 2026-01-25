@@ -103,6 +103,46 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
   const [serverCard, setServerCard] = useState<any | null>(null);
   const [showMoreTools, setShowMoreTools] = useState(false);
+  const moreToolsBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [moreToolsPos, setMoreToolsPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const moreToolsDropdownRef = useRef<HTMLDivElement | null>(null);
+  const DROPDOWN_VERTICAL_OFFSET = 40; // increased nudge so dropdown appears further below header buttons
+
+  useEffect(() => {
+    if (!showMoreTools) return;
+    const handleDocClick = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (moreToolsDropdownRef.current && moreToolsDropdownRef.current.contains(target)) return;
+      if (moreToolsBtnRef.current && moreToolsBtnRef.current.contains(target)) return;
+      setShowMoreTools(false);
+    };
+
+    const handleReposition = () => {
+      const btn = moreToolsBtnRef.current;
+      const modalEl = fileRef.current;
+      if (!btn || !modalEl) return;
+      const btnRect = btn.getBoundingClientRect();
+      const modalRect = modalEl.getBoundingClientRect();
+      setMoreToolsPos({
+        left: Math.max(8, (btnRect.left - (modalRect.left || 0))),
+        top: Math.max(8, (btnRect.bottom - (modalRect.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
+        width: btnRect.width,
+      });
+    };
+
+    document.addEventListener('mousedown', handleDocClick);
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    // initial reposition
+    handleReposition();
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocClick);
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [showMoreTools]);
   const [videoUploadingInspection, setVideoUploadingInspection] = useState(false);
   // Novo estado: modal de áudio em tela cheia
   const [audioExpanderOpen, setAudioExpanderOpen] = useState(false);
@@ -154,8 +194,38 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
 
   const handleSecuritySolved = () => {
-    setPuzzleSolved(true);
-    setShowGlitchSolver(false);
+    (async () => {
+      setPuzzleSolved(true);
+      setShowGlitchSolver(false);
+
+      const cardObj = serverCard || card;
+      if (!cardObj) return;
+
+      let meta: any = {};
+      try {
+        meta = cardObj.metadata && typeof cardObj.metadata === 'object' ? cardObj.metadata : (typeof cardObj.metadata === 'string' ? JSON.parse(cardObj.metadata) : {});
+      } catch (e) { meta = {}; }
+
+      const nextGlitch = { ...(meta.glitch_puzzle || {}), solved: true, solved_at: new Date().toISOString() };
+      const nextMetadata = { ...meta, glitch_puzzle: nextGlitch };
+      const focused = nextGlitch.focused_image_url || nextGlitch.original_image_url || null;
+
+      const updates: any = { metadata: nextMetadata };
+      if (focused) updates.image_url = focused;
+
+      try {
+        // Persist change on server and use returned card as canonical
+        const updated = await updateInvestigationCard(cardObj.id, updates as any);
+        setServerCard(updated);
+      } catch (err) {
+        console.error('Falha ao persistir solução do puzzle no servidor:', err);
+        // fallback: optimistic local update so UI reflects solved state
+        const updatedCard: any = { ...cardObj, metadata: nextMetadata };
+        if (focused) updatedCard.image_url = focused;
+        setServerCard(updatedCard);
+        alert('Solução aplicada localmente, mas falha ao salvar no servidor. Tente novamente ou verifique a conexão.');
+      }
+    })();
   };
 
   // Controle de qual ferramenta visual está ativa
@@ -396,6 +466,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     } catch { parsedMetadata = {}; }
     const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
     const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
+    // Mega-clue metadata (compat: mega_clue or megaClue)
+    const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
 
     // Phone keypad configuration (separate from card lock)
     const phoneIsLocked = Boolean(parsedMetadata?.phone_locked);
@@ -519,6 +591,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               contactName={currentCard.title}
               isLocked={phoneIsLocked}
               password={phonePassword}
+              passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
             />
           </div>
         );
@@ -701,7 +774,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   {securityLayer?.require_keyword && (
                     <span style={{fontSize:12, color:'#ffc78b'}}>Assinatura digital exigida</span>
                   )}
-                  <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(true)} style={{marginTop:6}}>🧩 ABRIR DECODIFICADOR</button>
+                  <button
+                    className="btn-tool-tab"
+                    onClick={() => {
+                      // At click time we may or may not have a glitch config available.
+                      // If none, surface a useful message instead of doing nothing.
+                      if (!glitchSolverConfig) {
+                        alert('Nenhum puzzle configurado para este cartão. Peça ao Mestre para configurar a camada de segurança.');
+                        return;
+                      }
+                      setShowGlitchSolver(true);
+                    }}
+                    style={{marginTop:6}}
+                  >
+                    🧩 ABRIR DECODIFICADOR
+                  </button>
                 </div>
               </div>
             </div>
@@ -741,7 +828,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             })()}
 
             {localThermal && !fullscreenOpen && (
-              <div className="thermal-overlay" aria-hidden>
+              <div className="thermal-overlay" aria-hidden="true">
                 <canvas className="thermal-canvas" ref={thermalCanvasRef} />
               </div>
             )}
@@ -749,9 +836,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             <div className="ui-corners" aria-hidden />
 
             {localThermal && (
-              <div className="thermal-scale" aria-hidden>
+              <div className="thermal-scale" aria-hidden="true">
                 <span className="temp-high">42°C</span>
-                <div className="gradient-bar" />
+                <div className="gradient-bar"></div>
                 <span className="temp-low">12°C</span>
               </div>
             )}
@@ -768,6 +855,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               contactName={currentCard.title}
               isLocked={phoneIsLocked}
               password={phonePassword}
+              passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
             />
           </div>
         );
@@ -878,6 +966,66 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
   const modal = (
     <div className="inspect-backdrop" ref={backdropRef} onClick={onClose}>
+      {/* Dropdown portal for the 'MAIS' menu - positioned relative to modal */}
+      {showMoreTools && moreToolsPos && (
+        <div
+          ref={moreToolsDropdownRef}
+          style={{
+            position: 'absolute',
+            left: `${moreToolsPos.left}px`,
+            top: `${moreToolsPos.top}px`,
+            background: '#111',
+            border: '1px solid #222',
+            padding: 8,
+            zIndex: 400,
+            minWidth: 200,
+            borderRadius: 6,
+            boxShadow: '0 8px 30px rgba(0,0,0,0.6)'
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {currentCard.audio_url && (
+            <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
+          )}
+          {(() => {
+            const meta = currentCard?.metadata;
+            const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
+            const thermalKeyword = meta?.thermal_keyword;
+            const thermalUnlocked = meta?.thermal_unlocked === true;
+            const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
+            const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
+
+            return (
+              <button
+                type="button"
+                className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  opacity: isLocked ? 0.5 : 1,
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => {
+                  if (isLocked) {
+                    alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`);
+                    return;
+                  }
+                  setLocalThermal(!localThermal);
+                  setShowMoreTools(false);
+                }}
+                title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
+              >
+                🌡️ TERMAL {isLocked ? '🔒' : ''}
+              </button>
+            );
+          })()}
+          <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
+          <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
+          <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
+          <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+        </div>
+      )}
       <div
         className="inspect-file"
         ref={fileRef}
@@ -974,55 +1122,25 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button
                     className="btn-tool-tab"
-                    onClick={(e) => { e.stopPropagation(); setShowMoreTools(s => !s); }}
+                    ref={moreToolsBtnRef}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const btn = moreToolsBtnRef.current;
+                      if (!btn) { setShowMoreTools(s => !s); return; }
+                      const modalEl = fileRef.current;
+                      const btnRect = btn.getBoundingClientRect();
+                      const modalRect = modalEl?.getBoundingClientRect();
+                                      setMoreToolsPos({
+                                        left: Math.max(8, (btnRect.left - (modalRect?.left || 0))),
+                                        top: Math.max(8, (btnRect.bottom - (modalRect?.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
+                                        width: btnRect.width,
+                                      });
+                      setShowMoreTools(s => !s);
+                    }}
                     aria-expanded={showMoreTools}
                   >
                     MAIS ▾
                   </button>
-                  {showMoreTools && (
-                    <div style={{ position: 'absolute', right: 0, top: '100%', background: '#111', border: '1px solid #222', padding: 8, zIndex: 200, minWidth: 200 }} onClick={e => e.stopPropagation()}>
-                      {card.audio_url && (
-                          <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
-                        )}
-                        {(() => {
-                          const meta = currentCard?.metadata;
-                          const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
-                          const thermalKeyword = meta?.thermal_keyword;
-                          const thermalUnlocked = meta?.thermal_unlocked === true;
-                          const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
-                          const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
-                          
-                          return (
-                            <button 
-                              type="button" 
-                              className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`} 
-                              style={{ 
-                                display: 'block', 
-                                width: '100%', 
-                                textAlign: 'left',
-                                opacity: isLocked ? 0.5 : 1,
-                                cursor: isLocked ? 'not-allowed' : 'pointer'
-                              }} 
-                              onClick={() => { 
-                                if (isLocked) {
-                                  alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`);
-                                  return;
-                                }
-                                setLocalThermal(!localThermal); 
-                                setShowMoreTools(false); 
-                              }}
-                              title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
-                            >
-                              🌡️ TERMAL {isLocked ? '🔒' : ''}
-                            </button>
-                          );
-                        })()}
-                        <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
-                        <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
-                        <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
-                        <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
-                    </div>
-                  )}
                 </div>
 
                 {/* Phone open/close button removed per request */}
@@ -1179,6 +1297,29 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                  </div>
               )}
 
+              {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
+              {megaClueMeta && (
+                <div className="metadata-box" style={{ marginTop: 12 }}>
+                  <h4>VERDADE FINAL</h4>
+                  {((megaClueMeta.unlocked === true) || isGameMaster) ? (
+                    <div style={{ color: '#ddd', fontSize: 13 }}>
+                      {megaClueMeta.final_truth_text ? (
+                        <div style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>{megaClueMeta.final_truth_text}</div>
+                      ) : (
+                        <div style={{ color: '#888' }}>Nenhuma verdade final fornecida.</div>
+                      )}
+                      {megaClueMeta.image_url && (
+                        <div style={{ marginTop: 8 }}>
+                          <img src={megaClueMeta.image_url} alt="Verdade final" style={{ maxWidth: '100%', borderRadius: 6 }} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#888' }}>Verdade final bloqueada — colecione os códigos para desbloquear.</div>
+                  )}
+                </div>
+              )}
+
               {/* METADADOS LIMPOS E ORGANIZADOS */}
                 {card.metadata && card.metadata.field_values && Object.keys(card.metadata.field_values).length > 0 && (
                   <div className="metadata-box">
@@ -1203,7 +1344,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         };
                         const label = labelMap[key] || key;
                         return (
-                          <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #1a1a1a', padding:'6px 0'}}>
+                          <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #222', padding:'6px 0'}}>
                             <span style={{color:'#c6a45f', fontSize:11}}>{label}:</span>
                             <div style={{color:'#ddd', fontSize:12, marginTop:2}}>
                               {key === 'gps_coords' && typeof val === 'string' ? (
@@ -1349,7 +1490,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return security ? { ...parsedMetadata.glitch_puzzle, security_layer: security } : parsedMetadata.glitch_puzzle;
   }, [parsedMetadata]);
 
-  const glitchPortal = showGlitchSolver && isGlitchPuzzleGlobal && glitchSolverConfig && !glitchSolverConfig.solved
+  const glitchPortal = showGlitchSolver && glitchSolverConfig && !glitchSolverConfig.solved
     ? createPortal(
         <div className="glitch-solver-backdrop" onClick={() => setShowGlitchSolver(false)}>
           <div className="glitch-solver-modal" onClick={(e) => e.stopPropagation()}>
@@ -1414,6 +1555,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   contactName={currentCard.title}
                   isLocked={phoneIsLocked}
                   password={phonePassword}
+                  passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
                   fullscreen={true}
                 />
               </div>

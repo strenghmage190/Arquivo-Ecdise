@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './HexViewer.css';
 
 interface Props {
   hiddenMessage?: string;
@@ -32,19 +33,9 @@ export default function HexViewer({ hiddenMessage = '' }: Props) {
   }, [hiddenMessage]);
 
   return (
-    <div style={{
-      background: '#000044',
-      color: '#fff',
-      fontFamily: 'monospace',
-      fontSize: '12px',
-      padding: '10px',
-      height: '300px',
-      overflowY: 'auto',
-      whiteSpace: 'pre-wrap',
-      border: '2px solid #aaa'
-    }}>
-      <div style={{ color: '#ff0', marginBottom: 10 }}>VISUALIZADOR HEXADECIMAL v1.0</div>
-      {content}
+    <div className="hex-viewer" style={{ ['--hex-height' as any]: '300px' }}>
+      <div className="hex-title">VISUALIZADOR HEXADECIMAL v1.0</div>
+      <div className="hex-content">{content}</div>
     </div>
   );
 }

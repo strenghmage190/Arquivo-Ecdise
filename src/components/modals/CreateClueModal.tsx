@@ -18,40 +18,20 @@ import {
 
 import PhoneViewer from '../tools/PhoneViewer';
 import NumericKeypad from '../tools/NumericKeypad';
+import PatternLock from '../tools/PatternLock';
 import SpectrogramCreator from '../tools/SpectrogramCreator';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import './CreateClueModal.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
-
-import { supabase } from '../../supabaseClient';
-import AudioForge from '../tools/AudioForge';
 import GlitchImageEngine from '../tools/GlitchImageEngine';
-import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
+import AudioForge from '../tools/AudioForge';
 import ForensicChannelEditor, { ForensicConfig } from '../tools/ForensicChannelEditor';
-
+import { supabase } from '../../supabaseClient';
+import { FieldVisibilityConfig, defaultFieldVisibility, fieldVisibilityPresets } from '../../config/fieldVisibilityConfig';
 const LOCKED_PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/xcAAwEB/aurbZkAAAAASUVORK5CYII=';
 
-// Presets de Visibilidade de Campos
-const VISIBILITY_PRESETS = {
-  MINIMAL: {
-    fileProperties: { visibleFields: ['fileType', 'dateCreated'] },
-    glitchPuzzle: { visibleSections: ['calibrationControls', 'rewardCode'] },
-    megaClue: { visibleSections: ['progress'] },
-    customMetadata: { enableCustomFields: false, defaultVisibleCustomFields: [], hiddenByDefault: [] },
-  },
-  DEFAULT: {
-    fileProperties: { visibleFields: ['fileType', 'size', 'cameraModel', 'dateCreated', 'gpsCoords', 'ownerName'] },
-    glitchPuzzle: { visibleSections: ['accessInstructions', 'hint', 'calibrationControls', 'logs', 'rewardCode'] },
-    megaClue: { visibleSections: ['hints', 'progress'] },
-    customMetadata: { enableCustomFields: true, defaultVisibleCustomFields: ['audio_config', 'thermal_keyword', 'device_owner'], hiddenByDefault: ['internal_id'] },
-  },
-  FULL: {
-    fileProperties: { visibleFields: ['fileType', 'size', 'cameraModel', 'dateCreated', 'gpsCoords', 'ownerName', 'hexComment', 'technicalNote'] },
-    glitchPuzzle: { visibleSections: ['accessInstructions', 'hint', 'calibrationControls', 'logs', 'rewardCode', 'correctAnswerWhenSolved'] },
-    megaClue: { visibleSections: ['hints', 'progress', 'answer', 'requiredPuzzles'] },
-    customMetadata: { enableCustomFields: true, defaultVisibleCustomFields: [], hiddenByDefault: [] },
-  },
-};
+// Presets de Visibilidade de Campos (importado de config)
+const VISIBILITY_PRESETS = fieldVisibilityPresets;
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
@@ -75,6 +55,8 @@ interface EditingChatMessage {
    sender: ChatSender;
    type: string;
    text: string;
+   image_url?: string | null;
+   media?: any;
 }
 
 export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
@@ -182,6 +164,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [chatData, setChatData] = useState<EditingChatMessage[] | null>(null);
    const [chatContactName, setChatContactName] = useState<string>('Desconhecido');
    const [editingChatList, setEditingChatList] = useState<EditingChatMessage[]>([]);
+   const fileInputsRef = React.useRef<Record<number, HTMLInputElement | null>>({});
+   const [chatUploadProgress, setChatUploadProgress] = useState<Record<number, number>>({});
    const [quickChatText, setQuickChatText] = useState('');
    const [quickChatSender, setQuickChatSender] = useState<ChatSender>('them');
    const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega' | 'campos' | 'display' | 'forense'>('geral');
@@ -277,6 +261,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
    // HEX VIEWER
    const [hexCode, setHexCode] = useState('');
+   // HEX ENCODING OPTIONS
+   const [hexEncodingMethod, setHexEncodingMethod] = useState<'plain' | 'utf8hex' | 'xor' | 'enigma'>('plain');
+   const [hexEncodingKey, setHexEncodingKey] = useState('');
 
    // PERSON / DOSSIER
    const [isPerson, setIsPerson] = useState(false);
@@ -294,6 +281,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [phoneHasKeypad, setPhoneHasKeypad] = useState(false);
    const [phonePassword, setPhonePassword] = useState('');
    const [showKeypadEditor, setShowKeypadEditor] = useState(false);
+   const [phoneLockType, setPhoneLockType] = useState<'pin' | 'pattern'>('pin');
 
    // EVIDENCE TYPE
    const [evidenceType, setEvidenceType] = useState<'document' | 'glitch_puzzle' | 'mega_clue'>('document');
@@ -830,6 +818,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          // Phone settings
          phoneHasKeypad,
          phonePassword,
+         phoneLockType,
          
          // Chat data
          chatContactName,
@@ -965,6 +954,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       
       if (data.phoneHasKeypad !== undefined) setPhoneHasKeypad(data.phoneHasKeypad);
       if (data.phonePassword !== undefined) setPhonePassword(data.phonePassword);
+      if (data.phoneLockType !== undefined) setPhoneLockType(data.phoneLockType);
       
       if (data.chatContactName !== undefined) setChatContactName(data.chatContactName);
       if (data.chatData !== undefined) setChatData(data.chatData);
@@ -1103,6 +1093,100 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       };
       return sanitize(input, maxDepth);
    };
+
+      // --- Hex encoding helpers ---
+      const bytesToHex = (bytes: Uint8Array) => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      const textToUtf8Bytes = (s: string) => {
+         try { return new TextEncoder().encode(s); } catch { return new Uint8Array([]); }
+      };
+
+      const textToHex = (s: string) => bytesToHex(textToUtf8Bytes(s));
+
+      const xorEncode = (text: string, key: string) => {
+         if (!key) return textToHex(text);
+         const data = textToUtf8Bytes(text);
+         const k = textToUtf8Bytes(key);
+         if (k.length === 0) return textToHex(text);
+         const out = new Uint8Array(data.length);
+         for (let i = 0; i < data.length; i++) out[i] = data[i] ^ k[i % k.length];
+         return bytesToHex(out);
+      };
+
+      // Simple Enigma-like implementation over A-Z (non-letters are passed through)
+      const simpleEnigmaTransform = (text: string, key: string) => {
+         const A = 65;
+         // basic rotor wirings (as offsets)
+         const rotorWires = [
+            'EKMFLGDQVZNTOWYHXUSPAIBRCJ',
+            'AJDKSIRUXBLHWTMCQGZNPYFVOE',
+            'BDFHJLCPRTXVZNYEIWGAKMUSQO'
+         ];
+         const reflector = 'YRUHQSLDPXNGOKMIEBFZCWVJAT';
+
+         // initialize rotor positions from key bytes (sum modulo 26)
+         const keyBytes = textToUtf8Bytes(key || '');
+         const pos = [0,0,0];
+         for (let i = 0; i < keyBytes.length; i++) {
+            pos[i % 3] = (pos[i % 3] + keyBytes[i]) % 26;
+         }
+
+         const encodeChar = (ch: string) => {
+            const code = ch.charCodeAt(0);
+            const isUpper = code >= 65 && code <= 90;
+            const isLower = code >= 97 && code <= 122;
+            if (!isUpper && !isLower) return ch;
+            const base = isUpper ? 65 : 97;
+            let c = code - base;
+
+            // forward through rotors
+            for (let r = 0; r < 3; r++) {
+               const wiring = rotorWires[r];
+               const idx = (c + pos[r]) % 26;
+               const mapped = wiring.charCodeAt(idx) - A;
+               c = (mapped - pos[r] + 26) % 26;
+            }
+
+            // reflector
+            c = reflector.charCodeAt(c) - A;
+
+            // back through rotors (inverse)
+            for (let r = 2; r >= 0; r--) {
+               const wiring = rotorWires[r];
+               // find index where wiring[index] === char
+               const letter = String.fromCharCode(A + c);
+               const idx = wiring.indexOf(letter);
+               c = (idx - pos[r] + 26) % 26;
+            }
+
+            // step rotors (simple stepping)
+            pos[0] = (pos[0] + 1) % 26;
+            if (pos[0] === 0) { pos[1] = (pos[1] + 1) % 26; if (pos[1] === 0) pos[2] = (pos[2] + 1) % 26; }
+
+            return String.fromCharCode(base + c);
+         };
+
+         let out = '';
+         for (const ch of text) out += encodeChar(ch);
+         return out;
+      };
+
+      const encodeHexForMetadata = (text: string, method: 'plain' | 'utf8hex' | 'xor' | 'enigma', key: string) => {
+         if (!text) return '';
+         switch (method) {
+            case 'plain':
+               return text;
+            case 'utf8hex':
+               return textToHex(text);
+            case 'xor':
+               return xorEncode(text, key || 'key');
+            case 'enigma': {
+               const transformed = simpleEnigmaTransform(text, key || '');
+               return textToHex(transformed);
+            }
+            default:
+               return text;
+         }
+      };
 
    // HANDLERS FORENSE (RGB Channel Steganography)
    const handleForensicBaseImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1357,8 +1441,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          
          // optional external link + qr
          if (externalLink) metadata.external_link = externalLink;
-        // hex code for HexViewer
-        if (hexCode) metadata.hex_code = hexCode;
+        // hex code for HexViewer (encoded according to selection)
+        if (hexCode) {
+           try {
+              metadata.hex_code = encodeHexForMetadata(hexCode, hexEncodingMethod, hexEncodingKey);
+           } catch (err) {
+              metadata.hex_code = hexCode;
+           }
+        }
         // thermal metadata flag
         if (thermalEnabled) {
            metadata.thermal = true;
@@ -1543,6 +1633,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    payload.metadata = payload.metadata || {};
                    payload.metadata.phone_locked = true;
                    payload.metadata.phone_password = phonePassword;
+                   payload.metadata.phone_lock_type = phoneLockType || 'pin';
                 }
 
                 // For mega-clue, if multiple lock passwords were set, store them under metadata.mega_clue.required_codes
@@ -1643,6 +1734,27 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       setEditingChatList((list) => [...list, { sender: quickChatSender, type: 'text', text }]);
       setQuickChatText('');
    };
+
+     const handleChatImageSelected = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+           setChatUploadProgress(p => ({ ...(p||{}), [idx]: 5 }));
+           const publicUrl = await uploadInvestigationImage(file, investigationId, (progress) => {
+              setChatUploadProgress(p => ({ ...(p||{}), [idx]: progress }));
+           });
+           setEditingChatList(prev => {
+              const copy = [...prev];
+              copy[idx] = { ...copy[idx], image_url: publicUrl, type: 'image', text: copy[idx].text || '' } as any;
+              return copy;
+           });
+        } catch (err: any) {
+           console.error('Erro upload chat image', err);
+           alert('Falha ao enviar imagem: ' + (err?.message || String(err)));
+        } finally {
+           setTimeout(() => setChatUploadProgress(p => { const c = { ...(p||{}) }; delete c[idx]; return c; }), 800);
+        }
+     };
 
    const lockPreviewEnabled = phoneHasKeypad && Boolean(phonePassword);
 
@@ -2068,9 +2180,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                            <option value="system">Sistema</option>
                                         </select>
                                         <textarea rows={2} value={m.text} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], text: e.target.value }; setEditingChatList(copy); }} />
-                                        <div className="chat-buttons">
+                                        <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                                           {m.image_url && <img src={m.image_url} alt="preview" style={{maxWidth:160, borderRadius:6}} />}
+                                           {chatUploadProgress[idx] ? (
+                                              <div style={{fontSize:12, color:'#9cc'}}>{`Enviando imagem: ${chatUploadProgress[idx]}%`}</div>
+                                           ) : null}
+                                        </div>
+                                        <div className="chat-buttons" style={{display:'flex', gap:6, alignItems:'center'}}>
                                            <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx,1); setEditingChatList(copy); }}>✖</button>
                                            <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx+1,0,{ sender:'me', type:'text', text:'' }); setEditingChatList(copy); }}>+</button>
+                                           <input ref={el => fileInputsRef.current[idx] = el} type="file" accept="image/*" style={{display:'none'}} onChange={(e) => handleChatImageSelected(idx, e)} />
+                                           <button className="upload-btn" onClick={() => { fileInputsRef.current[idx]?.click(); }}>📎 Anexar Imagem</button>
                                         </div>
                                      </div>
                                   ))
@@ -2106,7 +2226,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                      chatData={editingChatList} 
                                      contactName={chatContactName} 
                                      isLocked={lockPreviewEnabled}
-                                     password={lockPreviewEnabled ? phonePassword : undefined}
+                                    password={lockPreviewEnabled ? phonePassword : undefined}
+                                    passwordType={phoneLockType}
                                   />
                                </div>
                                <div className="chat-preview-label">Preview do Dispositivo</div>
@@ -2154,25 +2275,48 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                               maxLength={6}
                                               style={{flex: 1, borderColor:'#00b894', color:'#00b894', fontWeight:'bold', padding:'6px 10px'}} 
                                            />
-                                           <button 
-                                              className="upload-btn"
-                                              onClick={() => setShowKeypadEditor(!showKeypadEditor)}
-                                              style={{background: showKeypadEditor ? '#333' : '#00b894', color: '#fff', padding: '6px 12px'}}
-                                           >
-                                              {showKeypadEditor ? '⌨️' : '🔢'}
-                                           </button>
+                                           <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                                              <select value={phoneLockType} onChange={e => setPhoneLockType(e.target.value as any)} style={{height:34}}>
+                                                 <option value="pin">PIN (numérico)</option>
+                                                 <option value="pattern">Padrão (3×3)</option>
+                                              </select>
+
+                                              <button 
+                                                 className="upload-btn"
+                                                 onClick={() => setShowKeypadEditor(!showKeypadEditor)}
+                                                 style={{background: showKeypadEditor ? '#333' : '#00b894', color: '#fff', padding: '6px 12px'}}
+                                              >
+                                                 {showKeypadEditor ? '⌨️' : '🔢'}
+                                              </button>
+                                           </div>
                                         </div>
                                         
-                                        {showKeypadEditor && phonePassword && (
+                                        {showKeypadEditor && (
                                            <div style={{padding: 20, background: '#0a0a0a', borderRadius: 8}}>
                                               <div style={{fontSize: 11, marginBottom: 10, color: '#888'}}>Preview do Keypad:</div>
-                                              <NumericKeypad 
-                                                 code={phonePassword} 
-                                                 onInput={(value) => setPhonePassword(value)}
-                                                 onUnlock={() => {
-                                                    setShowKeypadEditor(false);
-                                                 }} 
-                                              />
+                                              {phoneLockType === 'pattern' ? (
+                                                 <div>
+                                                    <div style={{fontSize:11, color:'#bbb', marginBottom:8}}>Modo editor de Padrão — clique nos pontos e pressione <strong>OK</strong></div>
+                                                    <PatternLock
+                                                       code={phonePassword || null}
+                                                       allowEdit={true}
+                                                       onInput={(value) => setPhonePassword(String(value || ''))}
+                                                       onUnlock={() => { setShowKeypadEditor(false); }}
+                                                    />
+                                                    <div style={{marginTop:8, display:'flex', gap:8}}>
+                                                       <button className="upload-btn" onClick={() => setPhonePassword('')}>Limpar Padrão</button>
+                                                       <button className="btn-save" onClick={() => setShowKeypadEditor(false)}>Salvar</button>
+                                                    </div>
+                                                 </div>
+                                              ) : (
+                                                 phonePassword !== undefined && (
+                                                    <NumericKeypad 
+                                                       code={phonePassword} 
+                                                       onInput={(value) => setPhonePassword(value)}
+                                                       onUnlock={() => { setShowKeypadEditor(false); }} 
+                                                    />
+                                                 )
+                                              )}
                                            </div>
                                         )}
                                      </div>
@@ -2830,6 +2974,18 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                        placeholder="Ex: SAFE_ROOM_LEVEL_7 ou CLASSIFIED_DATA_2025"
                        style={{ width: '100%', marginTop: 6, background: '#0a0a1a', border: '1px solid rgba(100,100,255,0.3)', color: '#8fb', fontFamily: 'monospace', fontSize: 11 }}
                     />
+                   <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                      <label style={{ marginRight: 6 }}>Método:</label>
+                      <select value={hexEncodingMethod} onChange={e => setHexEncodingMethod(e.target.value as any)}>
+                         <option value="plain">Texto (padrão)</option>
+                         <option value="utf8hex">Hex (UTF-8)</option>
+                         <option value="xor">XOR + Hex</option>
+                         <option value="enigma">Enigma-simples + Hex</option>
+                      </select>
+                      {(hexEncodingMethod === 'xor' || hexEncodingMethod === 'enigma') && (
+                        <input placeholder="Chave" value={hexEncodingKey} onChange={e => setHexEncodingKey(e.target.value)} style={{ marginLeft: 8 }} />
+                      )}
+                   </div>
                  </div>
               </div>
             )}

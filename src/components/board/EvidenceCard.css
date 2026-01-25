@@ -5,28 +5,29 @@
 /* === CARD BASE === */
 .clue-card,
 .card-node {
-  width: 220px !important;
+  width: 220px;
   min-height: 280px;
-  display: flex !important;
-  flex-direction: column !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   background: linear-gradient(
     135deg,
     rgb(5 8 12 / 98%),
     rgb(10 15 20 / 95%)
-  ) !important;
-  border: 1px solid rgb(0 243 255 / 15%) !important;
+  );
+  border: 1px solid rgb(0 243 255 / 15%);
   border-radius: 8px;
   box-shadow:
     0 10px 40px rgb(0 0 0 / 90%),
     0 0 0 1px rgb(0 243 255 / 8%),
     inset 0 1px 0 rgb(255 255 255 / 2%);
   position: relative;
-  overflow: hidden !important;
+  overflow: visible !important;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   font-family: "Share Tech Mono", "Courier New", monospace;
   backdrop-filter: blur(12px);
-  color: #e0e0e0 !important;
-  padding: 0 !important;
+  color: #e0e0e0;
+  padding: 0;
 }
 
 .clue-card::before {
@@ -47,7 +48,7 @@
     0 20px 50px rgb(0 0 0 / 95%),
     0 0 20px rgb(0 243 255 / 20%),
     inset 0 1px 0 rgb(255 255 255 / 5%);
-  border-color: rgb(0 243 255 / 40%) !important;
+  border-color: rgb(0 243 255 / 40%);
 }
 
 /* === HIDDEN CLUES (GM SPECTER MODE) === */
@@ -83,7 +84,8 @@
   height: 3px;
   background: linear-gradient(90deg, transparent, #00f3ff, transparent);
   box-shadow: 0 0 15px rgb(0 243 255 / 90%);
-  animation: scan 4s infinite ease-in-out;
+  /* animation is controlled via state or hover to limit CPU usage */
+  animation: none;
   z-index: 100;
   pointer-events: none;
   opacity: 0.6;
@@ -111,6 +113,12 @@
   }
 }
 
+/* Play scan once when card is marked 'scanned' or while hovering */
+.clue-card.scanned .scanner-line,
+.clue-card:hover .scanner-line {
+  animation: scan 4s ease-in-out 1;
+}
+
 /* === IMAGE CONTAINER === */
 .clue-image-container {
   width: 100%;
@@ -119,6 +127,7 @@
   background: #000;
   overflow: hidden;
   border-bottom: 1px solid rgb(0 243 255 / 20%);
+  flex-shrink: 0;
 }
 
 .clue-image-container img,
@@ -361,8 +370,8 @@
 }
 
 .clue-card.is-locked .clue-info h3 {
-  color: #555;
-  background: linear-gradient(90deg, transparent, #111, transparent);
+  color: #bdbdbd; /* Tornar legível mesmo quando bloqueado */
+  background: none;
   padding: 4px 10px;
   letter-spacing: 4px;
 }
@@ -375,7 +384,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  z-index: 2;
+  align-items: center; /* Centraliza o conteúdo horizontalmente */
+  z-index: auto; /* Evita que interfira na barra de decisão */
+  color: #e0e0e0;
+  min-height: 0; /* Garantir que a seção possa encolher dentro do flex container */
+  overflow: hidden; /* impede crescimento descontrolado que empurra a barra */
 }
 
 .clue-info h3 {
@@ -404,12 +417,15 @@
   background: rgb(0 0 0 / 60%);
   border-top: 1px solid rgb(0 243 255 / 15%);
   padding: 10px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 20;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 99999 !important; /* Eleva a barra acima de qualquer elemento */
+  position: relative; /* Garante que ela respeite o contexto de empilhamento */
   backdrop-filter: blur(4px);
+  flex-shrink: 0;
 }
 
 .divider {
@@ -427,7 +443,7 @@
 .btn-decision {
   background: transparent;
   border: 1px solid transparent;
-  color: #666;
+  color: #bdbdbd; /* contraste melhor por padrão */
   width: 36px;
   height: 36px;
   border-radius: 6px;
@@ -444,6 +460,8 @@
   font-size: 18px;
   pointer-events: none;
   transition: transform 0.2s;
+  fill: currentColor; /* garante que ícones herdem a cor do botão */
+  stroke: currentColor; /* cobre svgs que usam stroke em vez de fill */
 }
 
 .btn-decision:hover svg {
@@ -482,6 +500,27 @@
   text-shadow: 0 0 12px #00f3ff;
   border-color: rgb(0 243 255 / 50%);
   box-shadow: 0 0 15px rgb(0 243 255 / 20%);
+}
+
+/* === ACTIVE STATES (BOTÕES) === */
+.btn-decision.true.active {
+  color: #00ff41; /* Verde para "Confirmado" */
+}
+
+.btn-decision.theory.active {
+  color: #fc0; /* Amarelo para "Hipótese" */
+}
+
+.btn-decision.false.active {
+  color: #ff003c; /* Vermelho para "Descartado" */
+}
+
+/* Mantém efeito de hover mesmo em botões ativos */
+.btn-decision.true.active:hover,
+.btn-decision.theory.active:hover,
+.btn-decision.false.active:hover {
+  transform: scale(1.1);
+  filter: brightness(1.15);
 }
 
 /* === ACTIVE STATES === */
@@ -716,7 +755,7 @@
 
 /* === SELECTION STATE === */
 .card-node.selected {
-  outline: none !important;
+  outline: none;
   box-shadow:
     0 8px 25px rgb(0 243 255 / 40%),
     0 0 40px rgb(0 243 255 / 30%) !important;
@@ -724,6 +763,12 @@
 }
 
 /* === LEGACY COMPATIBILITY === */
+/*
+  NOTE: legacy compatibility rules were causing high-specificity conflicts
+  (e.g. `.clue-info * { color: inherit !important; }`) which made text
+  disappear and overrode status styles. These rules are commented out to
+  restore predictable styling. Re-enable selectively if needed.
+
 .card-node,
 .card-photo-container,
 .card-photo {
@@ -738,6 +783,7 @@
 .clue-info * {
   color: inherit !important;
 }
+*/
 
 /* === CARD CONTENT CONTAINER === */
 .card-content-container {

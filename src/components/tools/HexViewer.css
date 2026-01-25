@@ -1,0 +1,56 @@
+.hex-viewer {
+  background: linear-gradient(180deg, rgb(var(--nexus-dark-rgb, 5,8,10) / 64%), rgb(var(--nexus-dark-rgb, 5,8,10) / 92%));
+  color: var(--nexus-blue);
+  font-family: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
+  font-size: 12px;
+  padding: 12px;
+  height: var(--hex-height, 300px);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid rgb(0 243 255 / 6%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 60%), 0 0 12px var(--primary-glow-medium);
+  background-blend-mode: overlay;
+}
+
+.hex-title {
+  color: #cfeff0;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgb(255 255 255 / 3%);
+  padding-bottom: 6px;
+}
+
+.hex-content {
+  line-height: 1.25;
+  word-break: break-word;
+  color: rgb(223 239 243 / 0.95);
+}
+
+.hex-hidden {
+  display: inline-block;
+  color: var(--nexus-glitch);
+  background: rgb(var(--nexus-blue-rgb, 0,243,255) / 6%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin: 0 2px;
+  box-shadow: 0 4px 14px rgb(var(--nexus-blue-rgb, 0,243,255) / 10%);
+}
+
+/* Subtle scrollbar styling for webkit */
+.hex-viewer::-webkit-scrollbar {
+  width: 10px;
+}
+.hex-viewer::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border-radius: 6px;
+  border: 2px solid rgb(0 243 255 / 6%);
+}
+
+@media (max-width: 520px) {
+  .hex-viewer { font-size: 11px; padding: 10px; }
+  .hex-title { font-size: 12px; }
+}

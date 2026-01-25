@@ -110,9 +110,11 @@ export function validatePolyfills(): PolyfillValidationResult {
   // ============================================================================
   try {
     const root = document.documentElement;
-    const cssVars = getComputedStyle(root).cssText;
-    
-    if (cssVars.includes('--z-modal-base')) {
+    // Prefer checking the actual computed value for the CSS variable. `cssText` may be empty
+    // in some environments even when variables are loaded via stylesheets.
+    const modalVar = getComputedStyle(root).getPropertyValue('--z-modal-base')?.trim();
+
+    if (modalVar) {
       checks['CSS variables loaded'] = true;
     } else {
       warnings.push('CSS variables (--z-modal-base) not found - animations might not work correctly');
@@ -120,6 +122,7 @@ export function validatePolyfills(): PolyfillValidationResult {
     }
   } catch (e) {
     warnings.push(`Error checking CSS variables: ${e}`);
+    checks['CSS variables loaded'] = false;
   }
 
   // ============================================================================
