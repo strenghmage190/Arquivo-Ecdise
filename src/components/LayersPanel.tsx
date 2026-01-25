@@ -207,7 +207,7 @@ export function LayersPanel(props: LayersPanelProps) {
   }, [layers, searchQuery]);
 
   return (
-    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{display:'flex', flexDirection:'column', minWidth:360, maxWidth:520, minHeight:0}}>
+    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{display:'flex', flexDirection:'column', minWidth:360, maxWidth:900, minHeight:0, resize:'horizontal', overflow:'auto'}}>
       <div className="layers-header">
         <h4>📦 Camadas ({layers.length})</h4>
         <input
@@ -305,7 +305,7 @@ export function LayersPanel(props: LayersPanelProps) {
       ) : null}
       {/* Selected-layer properties handled in right properties panel; context menu used for quick actions */}
 
-      <div className="layers-list-container">
+      <div className="layers-list-container" style={{flex:1, minHeight:0, overflow:'auto'}}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="layers-list">
             {(provided) => (

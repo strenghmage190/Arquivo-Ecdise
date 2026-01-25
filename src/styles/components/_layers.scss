@@ -6,22 +6,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  min-height: 200px;
-  max-height: 500px;
+  min-height: 260px;
+  max-height: 85vh; // allow the panel to grow with viewport but stay constrained
   padding: var(--spacing-lg);
   background: var(--bg-1);
   border-radius: var(--radius-lg);
 
   h4 {
     margin: 0;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     font-weight: 700;
     color: var(--primary);
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: 6px;
     
     &::before {
       content: '';
@@ -37,13 +37,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   padding-bottom: var(--spacing-md);
   border-bottom: 1px solid var(--border-color);
 
   .layers-header-buttons {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: 6px;
   }
 
   button {
@@ -51,8 +51,29 @@
   }
 }
 
+/* Header: reduce gear icon size and tighten spacing */
+.layers-header input[type="text"], .layers-header .layers-search-input {
+  flex: 1 1 auto;
+  max-width: 100%;
+  margin: 0 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.layers-header .layers-actions-toggle {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px; /* smaller emoji/glyph */
+  line-height: 1;
+}
+
 .layers-list {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -115,8 +136,8 @@
   
   // Thumbnail da camada (fixo 40x40)
   &__thumbnail {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 4px;
     background: var(--bg-2);
     border: 1px solid #ccc;
@@ -149,7 +170,7 @@
   
   &__title {
     color: var(--text-color);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -253,7 +274,7 @@
 /* Compatibility rules for JSX classnames used in LayerItem.tsx */
 .layer-item-thumbnail {
   width: 40px;
-  height: 40px;
+  height: 56px;
   border-radius: 4px;
   background: var(--bg-2);
   border: 1px solid #ccc;
@@ -340,12 +361,29 @@
   }
 
   .layer-item {
-    grid-template-columns: 28px 1fr auto;
-    padding: var(--spacing-sm);
-    
+    grid-template-columns: 34px 1fr auto;
+    padding: calc(var(--spacing-sm) * 0.8);
+
     &__thumbnail {
-      width: 28px;
-      height: 28px;
+      width: 34px;
+      height: 34px;
     }
   }
+}
+
+/* Ensure the list container allows footer/header to stay visible */
+.layers-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0; /* enable proper scrolling inside flex */
+  overflow: auto; /* allow scrolling of the layer list area */
+}
+
+.layers-footer {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  padding: calc(var(--spacing-sm) * 0.75) var(--spacing-lg);
+  background: transparent;
 }

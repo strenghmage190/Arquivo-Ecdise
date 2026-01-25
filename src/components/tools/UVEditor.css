@@ -559,6 +559,10 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
 .properties-panel {
   background: rgb(0 0 0 / 12%);
   border: 1px solid rgb(255 255 255 / 2%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0; /* allow children to shrink and scroll */
 }
 
 .layers-panel {
@@ -691,7 +695,7 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   opacity: 0.95;
 }
 
-<<<<<<< Updated upstream
+/* merged upstream changes */
 /* Layers action toolbar shown when user toggles actions in LayersPanel */
 .layers-action-bar {
   display: flex;
@@ -759,6 +763,15 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   border-radius: 6px;
 }
 
+/* Make the main layers panel inside properties fill remaining vertical space
+   when other sections are collapsed */
+.properties-panel > .uv-sidebar-section.layers-section,
+.properties-panel > .layers-panel {
+  flex: 1 1 auto;
+  min-height: 0; /* essential for inner scrolling */
+  overflow: auto;
+}
+
 /* Inputs: thin sliders and inputs */
 .properties-panel input[type="range"],
 .uv-range {
@@ -794,11 +807,13 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 8px;
-=======
 .layers-list .layer-item.layer--selected {
   background: var(--bg-elevated);
   border-left: 3px solid var(--accent-cyan);
   padding-left: 8px; /* compensate for left border */
+}
+
+  justify-content: space-between;
 }
 
 /* Also support the `active` class used by LayerItem component */
@@ -872,7 +887,6 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 8px;
->>>>>>> Stashed changes
   justify-content: space-between;
 }
 
