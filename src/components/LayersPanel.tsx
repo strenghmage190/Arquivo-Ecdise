@@ -1,37 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-
-// Debug: attach a global capturing listener as soon as this module loads so we can
-// observe right-clicks even if the component's effects aren't mounted.
-if (typeof window !== 'undefined') {
-  try {
-    console.debug('[LayersPanel] module loaded - adding global contextmenu capture listener');
-    const __lp_global_ctx = (ev: MouseEvent) => {
-      try {
-        const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
-        console.debug('[LayersPanel][globalCtxCapture]', {
-          clientX: ev.clientX,
-          clientY: ev.clientY,
-          targetTag: (ev.target as any)?.tagName,
-          elemAtPoint: el ? `${el.tagName}${el.className ? ' .' + el.className : ''}` : null,
-        });
-      } catch (e) {
-        console.error('[LayersPanel] globalCtxCapture error', e);
-      }
-    };
-    window.addEventListener('contextmenu', __lp_global_ctx, true);
-    (window as any).__lp_global_ctx = __lp_global_ctx;
-  } catch (e) {
-    console.error('[LayersPanel] failed to attach global listener', e);
-  }
-}
 import { LayerItem } from './LayerItem';
 import { Layer } from './tools/UVEditor';
 import { Tooltip } from './ui/Tooltip';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { LayerPreview } from './LayerPreview';
-
-// Memoize LayerItem to prevent unnecessary re-renders
-const MemoizedLayerItem = React.memo(LayerItem);
 
 interface LayersPanelProps {
   layers: Layer[];
@@ -46,7 +18,6 @@ interface LayersPanelProps {
   onRenameLayer: (id: string, newName: string) => void;
   onSetEditingLayerName: (id: string | null) => void;
   onMoveLayer: (fromIndex: number, toIndex: number) => void;
-  // Optional: handles complex reorder between lists (top-level and groups)
   onReorder?: (source: { droppableId: string; index: number }, destination: { droppableId: string; index: number }) => void;
   onCreateGroup: () => void;
   onAddDrawingLayer: () => void;
@@ -61,7 +32,8 @@ interface LayersPanelProps {
   onBatchUnlock: (ids: string[]) => void;
 }
 
-export function LayersPanel({ layers, selectedLayer, onMoveLayer, ...props }: LayersPanelProps) {
+export function LayersPanel(props: LayersPanelProps) {
+  const { layers, selectedLayer, onMoveLayer } = props;
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
   const [showActionsBar, setShowActionsBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 :root {
   --bg: #0f172a;
@@ -9,14 +9,7 @@
 
 body {
   margin: 0;
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   background: var(--bg);
   color: var(--fg);
 }
@@ -38,9 +31,7 @@ body {
     spin 1.2s linear infinite,
     pulse 2s ease-in-out infinite;
   position: relative;
-  box-shadow:
-    0 0 20px rgb(0 243 255 / 30%),
-    inset 0 0 10px rgb(0 243 255 / 10%);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
 }
 
 .loading-spinner::before {
@@ -74,30 +65,17 @@ body {
 }
 
 @keyframes pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 20px rgb(0 243 255 / 30%),
-      inset 0 0 10px rgb(0 243 255 / 10%);
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
   }
-
-  50% {
-    box-shadow:
-      0 0 30px rgb(0 243 255 / 50%),
-      inset 0 0 15px rgb(0 243 255 / 20%);
+  50% { 
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.2);
   }
 }
 
 @keyframes blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 0.3;
-  }
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
 }
 
 /* --- MOBILE HELPERS: regras responsivas básicas --- */
@@ -252,75 +230,3 @@ body {
 /* 5) Image performance hint: encourage using responsive images via picture/srcset */
 
 /* Global guard for large images already handled above (max-width:100%). */
-
-/* Layers panel footer */
-.layers-footer {
-  padding: 8px;
-  border-top: 1px solid var(--border-color, rgb(255 255 255 / 8%));
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: var(--nexus-dark, #0b0f14);
-}
-
-.uv-sidebar-section.layers-section {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1 1 auto;
-}
-
-.layers-list-container {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.layers-footer button {
-  background: rgb(255 255 255 / 3%);
-  border: 1px solid rgb(255 255 255 / 6%);
-  color: var(--fg, #e6eef8);
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.layers-footer button:hover {
-  background: rgb(255 255 255 / 6%);
-}
-
-.layers-footer button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Small pencil edit button shown on layer rows to replace contextmenu edit */
-.layer-item-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.layer-edit-btn {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: var(--fg, #e6eef8);
-  opacity: 0.9;
-  transition: background 120ms ease, transform 80ms ease;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.layer-edit-btn svg {
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-.layer-edit-btn:active { transform: translateY(1px); }
