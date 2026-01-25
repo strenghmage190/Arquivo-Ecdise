@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getInvestigationById } from '../api';
-import { InvestigationBoard } from '../components/board/InvestigationBoard';
+import InvestigationBoard from '../components/board/InvestigationBoard';
 import BootScreen from '../components/layout/BootScreen';
 
 export default function Investigation() {
