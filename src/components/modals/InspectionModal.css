@@ -1417,3 +1417,120 @@ input[type="number"].filter-number {
     transform: translate(-50%, -50%) scale(1.02);
   }
 }
+
+/* Waveform zoomable container and controls */
+.waveform-zoomable {
+  overflow: hidden;
+  cursor: zoom-in;
+  position: relative;
+  will-change: transform;
+}
+
+.waveform-controls {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 60;
+}
+
+.waveform-controls .zoom-btn {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 243, 255, 0.16);
+  color: #00f3ff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.waveform-controls .zoom-btn:hover {
+  background: rgba(0, 243, 255, 0.06);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 243, 255, 0.06);
+}
+
+/* Improved expand button styling */
+.btn-expand {
+  background: linear-gradient(180deg, rgba(0,243,255,0.06), rgba(0,243,255,0.02));
+  border-color: rgba(0,243,255,0.22);
+  box-shadow: 0 6px 20px rgba(0,243,255,0.06);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.btn-expand:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 36px rgba(0,243,255,0.12);
+  color: #fff;
+}
+
+
+/* Image zoomable container and controls */
+.image-zoomable {
+  overflow: hidden;
+  cursor: zoom-in;
+  position: relative;
+  will-change: transform;
+}
+
+.image-zoomable .large-evidence-img,
+.image-zoomable canvas,
+.image-zoomable img {
+  transition: transform 200ms ease;
+  pointer-events: auto;
+  touch-action: none; /* allow pointer events for panning */
+}
+
+.image-controls {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 220; /* ensure it sits above image overlays */
+  pointer-events: auto;
+}
+
+.image-controls .img-zoom-btn {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 243, 255, 0.16);
+  color: #00f3ff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.image-controls .img-zoom-btn:hover {
+  background: rgba(0, 243, 255, 0.06);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 243, 255, 0.06);
+}
+
+/* When zoomed (dataset attribute set), change cursor to indicate panning */
+[data-image-zoom]:not([data-image-zoom="1"]) {
+  cursor: grab !important;
+}
+
+/* Show controls only while hovering for less visual clutter */
+.image-controls { opacity: 0; transition: opacity 140ms ease; }
+.image-zoomable:hover .image-controls { opacity: 1; }
+
+.image-zoomable .large-evidence-img,
+.image-zoomable canvas,
+.image-zoomable img { cursor: zoom-in; }
+

@@ -1,80 +1,312 @@
 .enigma-chassis {
-  background: #2b2b2b;
-  padding: 20px;
-  border-radius: 8px;
-  border: 4px solid #111;
+  --e-black: #111111;
+  --e-panel: #1a1a1a;
+  --e-gold: #cfaa6e;
+  --e-gold-dim: #8a7042;
+  --e-metal: #d6d6d6;
+  --e-shadow-out: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+  --e-glow: 0 0 10px rgba(207, 170, 110, 0.4);
+
+  background:
+    linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,1) 100%),
+    repeating-linear-gradient(45deg, #111 0px, #161616 2px);
+  padding: 30px;
+  border-radius: 12px;
+  border-top: 1px solid #333;
+  border-bottom: 4px solid #000;
   box-shadow:
-    inset 0 0 50px #000,
-    0 5px 20px rgb(0 0 0 / 50%);
+    inset 0 0 40px rgba(0,0,0,0.8),
+    0 20px 50px rgba(0,0,0,0.9),
+    0 0 0 4px #0a0a0a;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  position: relative;
 }
 
+/* Placa decorativa de marca/modelo */
+.enigma-plate {
+  font-family: 'Georgia', serif;
+  font-weight: 700;
+  background: radial-gradient(circle, #222, #000);
+  color: var(--e-gold);
+  padding: 8px 16px;
+  border: 2px solid var(--e-gold-dim);
+  font-size: 13px;
+  margin: 0 auto 24px auto;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.5),
+    inset 0 0 10px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  width: fit-content;
+}
+
+/* Área dos Rotores */
 .rotors-display {
   display: flex;
   gap: 15px;
-  margin-bottom: 20px;
+  justify-content: center;
+  margin-bottom: 25px;
+  padding: 15px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
 }
 
+/* Janela Individual do Rotor */
 .rotor-window {
-  background: #d4d4d4;
-  border: 2px solid #555;
-  border-radius: 4px;
-  width: 50px;
+  position: relative;
+  width: 100px;
+  height: 140px; /* Mais alto para acomodar os botões */
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: inset 0 5px 10px rgb(0 0 0 / 50%);
+  justify-content: center;
+  /* Removemos o círculo fixo e criamos um "slot" vertical */
+}
+
+/* O "Rotor" em si (a parte redonda/metálica) */
+.rotor-wheel {
+  /* Assumindo que você envolverá a letra em uma div extra, 
+     ou aplicando isso diretamente onde estava o background antigo */
+  background:
+    linear-gradient(90deg, #888 0%, #eee 40%, #ddd 60%, #888 100%);
+  border: 1px solid #555;
+  border-radius: 4px; /* Levemente arredondado como um cilindro visto de frente */
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 20px rgba(0,0,0,0.2),
+    0 5px 15px rgba(0,0,0,0.6);
+  z-index: 2;
+  position: relative;
+  /* Efeito de ranhuras no metal */
+  background-image: repeating-linear-gradient(90deg, transparent 0, transparent 2px, rgba(0,0,0,0.05) 3px);
+}
+
+/* rotor select (model label) */
+.rotor-select {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: transparent;
+  color: #ddd;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+
+
+.rotor-number { margin-top: 8px; }
+
+.rotor-letter {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: 38px;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  z-index: 3;
+}
+
+/* Controles (Botões cima/baixo) */
+.rotor-window .rotor-controls {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
 }
 
 .rotor-window button {
-  width: 100%;
-  border: none;
-  background: #999;
+  pointer-events: auto;
+  position: static;
+  transform: none;
+  width: 70px;
+  height: 25px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
   cursor: pointer;
-  font-size: 10px;
-  height: 20px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+  transition: all 0.1s ease;
+  z-index: 1;
 }
+
+/* Moldando os botões para parecerem engrenagens */
+.rotor-window button:first-of-type {
+  border-radius: 6px 6px 0 0;
+  margin-bottom: -5px; /* Conecta visualmente ao rotor */
+  padding-bottom: 5px;
+}
+.rotor-window button:last-of-type {
+  border-radius: 0 0 6px 6px;
+  margin-top: -5px;
+  padding-top: 5px;
+}
+
 .rotor-window button:hover {
-  background: #bbb;
+  background: linear-gradient(180deg, #444 0%, #2a2a2a 100%);
+  color: var(--e-gold);
 }
-
-.rotor-letter {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  height: 40px;
-  line-height: 40px;
-}
-.rotor-number {
-  font-size: 9px;
-  color: #666;
-  margin-bottom: 2px;
-}
-
-.enigma-plate {
-  font-family: "Times New Roman", serif;
-  font-weight: bold;
+.rotor-window button:active {
   background: #111;
-  color: #daa520;
-  padding: 5px 15px;
-  border: 1px solid #daa520;
-  font-size: 10px;
-  margin-bottom: 20px;
-  letter-spacing: 2px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+  transform: translateY(1px);
 }
 
+/* Adicionando ícones de seta via CSS puro nos botões */
+.rotor-window button::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+.rotor-window button:first-of-type::after { border-bottom: 6px solid currentColor; }
+.rotor-window button:last-of-type::after { border-top: 6px solid currentColor; }
+
+/* Ajuste fino do input de anel */
+.ring-input {
+  position: absolute;
+  top: 5px;
+  right: 5px; /* Canto superior direito do card */
+  transform: none;
+  width: 24px;
+  height: 24px;
+  background: #000;
+  color: var(--e-gold);
+  border: 1px solid var(--e-gold-dim);
+  border-radius: 50%;
+  font-size: 10px;
+  text-align: center;
+  line-height: 22px;
+  padding: 0;
+  z-index: 5;
+}
+.ring-input:focus {
+  border-color: #fff;
+  box-shadow: 0 0 5px var(--e-gold);
+  outline: none;
+}
+
+/* Reflector control styling */
+.reflector-label {
+  color: #ddd;
+  font-size: 12px;
+  margin-right: 6px;
+  align-self: center;
+}
+.reflector-select {
+  background: transparent;
+  color: #ddd;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Lampboard */
+.lampboard {
+  background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+  color: var(--e-gold);
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 20px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* Área de Visualização do Texto (Simulando lâmpadas/fitas) */
 .enigma-keyboard {
   background: #000;
-  color: #fff;
-  font-family: monospace;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Courier Prime', 'Courier New', monospace;
   text-transform: uppercase;
   width: 100%;
-  padding: 15px;
-  border: 2px solid #666;
+  padding: 20px;
+  border: 4px solid #1a1a1a;
+  border-radius: 8px;
+  font-size: 20px;
+  letter-spacing: 2px;
+  line-height: 1.5;
+  text-align: left;
+  min-height: 100px;
+  box-shadow:
+    inset 0 0 20px #000,
+    0 1px 0 rgba(255,255,255,0.1);
+  word-break: break-all;
+}
+
+/* Inputs do Plugboard */
+.plugboard-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-top: 15px;
+  background: #0f0f0f;
+  color: var(--e-gold);
+  border: 1px solid #333;
+  border-bottom: 2px solid #333;
   border-radius: 4px;
-  font-size: 18px;
-  text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.plugboard-input:focus {
+  outline: none;
+  border-color: var(--e-gold-dim);
+  background: #141414;
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,0.8),
+    0 0 8px rgba(207, 170, 110, 0.1);
+}
+.plugboard-input::placeholder {
+  color: #444;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+/* Remove controles padrão do input number */
+.enigma-chassis input[type=number]::-webkit-inner-spin-button,
+.enigma-chassis input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+  .enigma-chassis { padding: 15px; width: 95%; }
+  .rotors-display { gap: 8px; padding: 10px; }
+  .rotor-window { width: 70px; height: 110px; }
+  .rotor-wheel { width: 55px; height: 55px; }
+  .rotor-letter { font-size: 26px; }
+  .rotor-window button { width: 55px; }
+  .ring-input { right: 0; top: 0; width: 20px; height: 20px; font-size: 9px; line-height: 18px; }
 }

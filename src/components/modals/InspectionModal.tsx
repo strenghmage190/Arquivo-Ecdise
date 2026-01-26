@@ -577,6 +577,220 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       };
     }, [visualMode, audioSources.src]);
 
+    // Waveform zoom controls: double-click to zoom near cursor, plus/minus buttons
+    React.useEffect(() => {
+      const wf = waveformRef.current;
+      if (!wf) return;
+
+      const container: HTMLElement = wf;
+      container.classList.add('waveform-zoomable');
+      if (!container.style.position) container.style.position = 'relative';
+
+      // create controls overlay
+      const controls = document.createElement('div');
+      controls.className = 'waveform-controls';
+      controls.innerHTML = '<button type="button" aria-label="Zoom in" class="zoom-btn">+</button><button type="button" aria-label="Zoom out" class="zoom-btn">−</button>';
+      container.appendChild(controls);
+
+      const btns = controls.querySelectorAll('.zoom-btn');
+      let currentZoom = 1;
+
+      const setZoom = (z: number, originPercent = 50) => {
+        currentZoom = z;
+        container.style.transformOrigin = `${originPercent}% 50%`;
+        container.style.transition = 'transform 220ms ease';
+        container.style.transform = `scale(${currentZoom})`;
+        container.dataset.waveformZoom = String(currentZoom);
+      };
+
+      const handleDbl = (e: MouseEvent) => {
+        try {
+          e.stopPropagation();
+          const rect = container.getBoundingClientRect();
+          const x = (e.clientX - rect.left);
+          const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
+          const target = currentZoom === 1 ? 1.6 : 1;
+          setZoom(target, percent);
+        } catch (err) {
+          // ignore
+        }
+      };
+
+      const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(3, currentZoom + 0.2), 50); };
+      const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.2), 50); };
+
+      container.addEventListener('dblclick', handleDbl);
+      if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
+      if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
+
+      const keyHandler = (e: KeyboardEvent) => {
+        if (document.activeElement && (document.activeElement === wf || wf.contains(document.activeElement))) {
+          if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
+          if (e.key === '-') { handleZoomOut(e as any); }
+          if (e.key === '0') { setZoom(1, 50); }
+        }
+      };
+      window.addEventListener('keydown', keyHandler);
+
+      return () => {
+        window.removeEventListener('keydown', keyHandler);
+        container.removeEventListener('dblclick', handleDbl);
+        try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) {}
+        if (controls.parentElement === container) container.removeChild(controls);
+        container.style.transform = '';
+        container.style.transformOrigin = '';
+        delete container.dataset.waveformZoom;
+        container.classList.remove('waveform-zoomable');
+      };
+    }, [waveformRef, visualMode, audioSources.src]);
+
+    // Image zoom controls: double-click to zoom centered at click, plus/minus buttons, and panning when zoomed
+    React.useEffect(() => {
+      if (visualMode !== 'image') return;
+      const modal = fileRef.current;
+      if (!modal) return;
+
+      const container = modal.querySelector('.evidence-display-area') as HTMLElement | null;
+      if (!container) return;
+
+      // prefer inner wrapper (uv-container or large-evidence-img) so controls sit on top of the visual layer
+      const innerEl = (container.querySelector('.uv-container, .large-evidence-img') as HTMLElement | null) || container;
+
+      // target the image/canvas element inside the inner wrapper
+      const imgEl = innerEl.querySelector('img.main-evidence, canvas.thermal-canvas, img') as HTMLElement | null;
+      if (imgEl) imgEl.style.willChange = 'transform';
+
+      innerEl.classList.add('image-zoomable');
+
+      const controls = document.createElement('div');
+      controls.className = 'image-controls';
+      controls.innerHTML = '<button type="button" aria-label="Zoom in" class="img-zoom-btn">+</button><button type="button" aria-label="Zoom out" class="img-zoom-btn">−</button>';
+      innerEl.appendChild(controls);
+
+      let currentZoom = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let dragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let startOffsetX = 0;
+      let startOffsetY = 0;
+
+      const applyTransform = () => {
+        const target = imgEl || container;
+        if (!target) return;
+        target.style.transition = 'transform 180ms ease';
+        target.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${currentZoom})`;
+        if (currentZoom > 1) target.style.cursor = dragging ? 'grabbing' : 'grab';
+        else target.style.cursor = 'zoom-in';
+        if (innerEl) (innerEl as any).dataset.imageZoom = String(currentZoom);
+      };
+
+      const clampOffsets = () => {
+        if (!imgEl || !innerEl) return;
+        const imgRect = imgEl.getBoundingClientRect();
+        const contRect = innerEl.getBoundingClientRect();
+        const displayW = imgRect.width * currentZoom;
+        const displayH = imgRect.height * currentZoom;
+        const maxX = Math.max(0, (displayW - contRect.width) / 2);
+        const maxY = Math.max(0, (displayH - contRect.height) / 2);
+        offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+        offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+      };
+
+      const setZoom = (z: number, originPercent = 50) => {
+        currentZoom = Math.max(1, Math.min(6, z));
+        if (imgEl) imgEl.style.transformOrigin = `${originPercent}% 50%`;
+        // if resetting to 1, clear offsets
+        if (currentZoom <= 1.001) {
+          offsetX = 0; offsetY = 0;
+        } else {
+          clampOffsets();
+        }
+        applyTransform();
+      };
+
+      const handleDbl = (e: MouseEvent) => {
+        try {
+          e.stopPropagation();
+          const rect = innerEl.getBoundingClientRect();
+          const x = (e.clientX - rect.left);
+          const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
+          const targetZoom = currentZoom === 1 ? 2 : 1;
+          setZoom(targetZoom, percent);
+        } catch (err) {
+          // ignore
+        }
+      };
+
+      const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(6, currentZoom + 0.5), 50); };
+      const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.5), 50); };
+
+      const onPointerDown = (ev: PointerEvent) => {
+        if (currentZoom <= 1) return;
+        dragging = true;
+        dragStartX = ev.clientX;
+        dragStartY = ev.clientY;
+        startOffsetX = offsetX;
+        startOffsetY = offsetY;
+        (ev.target as Element).setPointerCapture?.(ev.pointerId);
+        applyTransform();
+      };
+
+      const onPointerMove = (ev: PointerEvent) => {
+        if (!dragging) return;
+        const dx = ev.clientX - dragStartX;
+        const dy = ev.clientY - dragStartY;
+        offsetX = startOffsetX + dx;
+        offsetY = startOffsetY + dy;
+        clampOffsets();
+        applyTransform();
+      };
+
+      const onPointerUp = (ev: PointerEvent) => {
+        dragging = false;
+        try { (ev.target as Element).releasePointerCapture?.(ev.pointerId); } catch {}
+        applyTransform();
+      };
+
+      innerEl.addEventListener('dblclick', handleDbl);
+      const btns = controls.querySelectorAll('.img-zoom-btn');
+      if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
+      if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
+
+      const targetForPointers = imgEl || innerEl || container;
+      targetForPointers.addEventListener('pointerdown', onPointerDown as any);
+      window.addEventListener('pointermove', onPointerMove as any);
+      window.addEventListener('pointerup', onPointerUp as any);
+
+      const keyHandler = (e: KeyboardEvent) => {
+        if (visualMode !== 'image') return;
+        if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
+        if (e.key === '-') { handleZoomOut(e as any); }
+        if (e.key === '0') { setZoom(1, 50); }
+      };
+      window.addEventListener('keydown', keyHandler);
+
+      // initial reset
+      setZoom(1, 50);
+
+      return () => {
+        window.removeEventListener('keydown', keyHandler);
+        try { innerEl.removeEventListener('dblclick', handleDbl); } catch (e) {}
+        try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) {}
+        try { targetForPointers.removeEventListener('pointerdown', onPointerDown as any); window.removeEventListener('pointermove', onPointerMove as any); window.removeEventListener('pointerup', onPointerUp as any); } catch (e) {}
+        try { if (controls.parentElement === innerEl) innerEl.removeChild(controls); } catch (e) {}
+        const target = imgEl || innerEl || container;
+        if (target) {
+          target.style.transform = '';
+          target.style.transformOrigin = '';
+          target.style.cursor = '';
+        }
+        try { delete (innerEl as any).dataset.imageZoom; } catch (e) {}
+        try { innerEl.classList.remove('image-zoomable'); } catch (e) {}
+      };
+    }, [visualMode, fileRef, unifiedMedia.imageUrl, currentCard?.image_url]);
+
     // Renderizador inteligente da Área Visual
     const renderVisualContent = () => {
       // Metadata seguro para detectar subtipos (ex: glitch_puzzle)
@@ -872,7 +1086,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         <div className="inspect-file" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
           <div className="inspect-header">
             <div className="meta-info"><span className="case-stamp">EVIDÊNCIA — N/D</span></div>
-            <div className="actions"><button className="btn-close-modal" onClick={onClose}>&times;</button></div>
+            <div className="actions"><button className="btn-close" onClick={onClose}>&times;</button></div>
           </div>
           <div style={{ padding: 20, color: '#ccc' }}>
             <h3>Sem dados do cartão</h3>
@@ -1062,7 +1276,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               </div>
               <div className="actions">
                 <button 
-                  className="btn-tool-tab" 
+                  className="btn-tool-tab btn-expand" 
                   title={visualMode === 'audio' ? 'Expandir para tela cheia' : visualMode === 'phone' ? 'Expandir celular' : 'Expandir imagem'}
                   onClick={(e)=>{ 
                     e.stopPropagation();
@@ -1147,7 +1361,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 {/* Expandir button moved to main toolbar as contextual control */}
 
-                <button className="btn-close-modal" onClick={onClose}>&times;</button>
+                <button className="btn-close" onClick={onClose}>&times;</button>
               </div>
             </>
           ) : (

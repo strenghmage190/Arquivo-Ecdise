@@ -17,6 +17,7 @@ import ConspiracyBoard from './ConspiracyBoard';
 import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import './EvidenceCard.css';
+import './investigation.css';
 import EvidenceCard from './EvidenceCard';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
