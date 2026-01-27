@@ -10,6 +10,7 @@ import InvitePage from './pages/Invite';
 import TestPage from './pages/TestPage';
 import MobileTestPage from './pages/MobileTestPage';
 import SystemOverlays from './components/ui/SystemOverlays';
+import MobileControls from './components/MobileControls';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
           </Routes>
         </div>
           <SystemOverlays />
+        <MobileControls />
       </BrowserRouter>
     </AuthProvider>
   );

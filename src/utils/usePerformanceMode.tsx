@@ -23,6 +23,15 @@ export default function usePerformanceMode() {
   const setPreset = useCallback((p: Preset) => setPresetState(p), []);
   const toggle = useCallback(() => setEnabledState((s) => !s), []);
 
+  // Add performance monitoring
+  useEffect(() => {
+    const observer = new PerformanceObserver((list) => {
+      list.getEntries().forEach((entry) => console.log(entry));
+    });
+    observer.observe({ entryTypes: ['paint', 'measure'] });
+    return () => observer.disconnect();
+  }, []);
+
   return {
     enabled,
     extended,

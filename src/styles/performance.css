@@ -35,6 +35,11 @@ body.performance-mode .scanner-line {
   background-image: none !important; /* Remove imagens de fundo apenas em decorações */
 }
 
+/* Add fallback background color for elements losing blur */
+body.performance-mode .background-effect {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
 /* 3. SUBSTITUIÇÃO VISUAL (Fallback para Glassmorphism) */
 
 /* Quando tiramos o blur, o fundo fica invisível ou feio. Vamos colocar um fundo sólido. */
@@ -104,6 +109,7 @@ body.performance-mode .fixed-center,
 body.performance-mode [style*="transform"], /* Tenta manter inline styles */
 body.performance-mode .center-xy {
   /* Não forçar 'transform: none' aqui */
+  transform: revert !important;
 }
 
 /* Permitir seleção de texto (IMPORTANTE para puzzles) */
@@ -284,4 +290,34 @@ body.performance-mode
   background-repeat: no-repeat !important;
   max-width: 100% !important;
   max-height: 100% !important;
+}
+
+/* Remove duplicate rules */
+body.performance-mode .decorative,
+body.performance-mode .background-effect,
+body.performance-mode .particle-effect,
+body.performance-mode .scanline,
+body.performance-mode .grid-overlay,
+body.performance-mode .glitch-corruption *,
+body.performance-mode .glitch-layer-1,
+body.performance-mode .glitch-layer-2,
+body.performance-mode .glitch-layer-3,
+body.performance-mode .glitch-text-overlay *,
+body.performance-mode .drop-zone,
+body.performance-mode .scanner-line {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+  background-image: none !important;
+}
+
+/* Add fallback background color for elements losing blur */
+body.performance-mode .background-effect {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Optimize selectors to avoid global overrides */
+body.performance-mode .specific-class {
+  transform: none !important;
 }

@@ -93,13 +93,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const el = fileRef.current;
     const cleans: Array<() => void> = [];
     try {
-      if (backdropRef.current) cleans.push(markPerfKeep(backdropRef.current));
+      if (backdropRef.current) {
+        backdropRef.current.setAttribute('data-perf-keep', '1');
+        cleans.push(() => backdropRef.current?.removeAttribute('data-perf-keep'));
+      }
     } catch {}
     try {
-      if (el) cleans.push(markPerfKeep(el));
+      if (el) {
+        el.setAttribute('data-perf-keep', '1');
+        cleans.push(() => el.removeAttribute('data-perf-keep'));
+      }
     } catch {}
-    return () => cleans.forEach((c) => { try { c(); } catch {} });
-  }, []);
+    return () => cleans.forEach((c) => c());
+  }, [fileRef, backdropRef]);
+
+  useEffect(() => {
+    if (localUV && document.body.classList.contains('performance-mode')) {
+      console.warn('UV mode is limited in performance mode.');
+      setLocalUV(false);
+    }
+  }, [localUV]);
+
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
   const [serverCard, setServerCard] = useState<any | null>(null);
   const [showMoreTools, setShowMoreTools] = useState(false);
@@ -244,16 +258,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card]);
 
-  // initialize localThermal from card metadata when card changes
+  // Do NOT auto-enable thermal when a card contains thermal metadata.
+  // Keep thermal off until the user explicitly toggles it via the UI button.
   React.useEffect(() => {
     try {
-      const meta = card?.metadata;
-      const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
-      // Check if thermal is unlocked (no keyword or already unlocked)
-      const thermalKeyword = meta?.thermal_keyword;
-      const thermalUnlocked = meta?.thermal_unlocked === true;
-      const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
-      setLocalThermal(canUseThermal);
+      setLocalThermal(false);
     } catch (e) {}
   }, [card]);
 
@@ -948,7 +957,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 aria-label="Linha do tempo do áudio"
               />
 
-              <div style={{display:'flex', alignItems:'center', gap:6, color:'#00f3ff', fontFamily:'Share Tech Mono, monospace', fontSize:12}}>
+            <div style={{display:'flex', alignItems:'center', gap:6, color:'#00f3ff', fontFamily:'Share Tech Mono, monospace', fontSize:12}}>
                 <span>{formatTime(audioPosition)}</span>
                 <span style={{opacity:0.6}}>/</span>
                 <span>{formatTime(audioDuration)}</span>

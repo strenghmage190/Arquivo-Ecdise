@@ -203,7 +203,9 @@ body.performance-mode .cctv-wrapper.filter-thermal video {
 /* CRÍTICO: UV editor - preservar filtros/overlays quando necessário */
 body.performance-mode .uv-editor-panel .uv-canvas,
 body.performance-mode .uv-editor-panel .uv-layer,
-body.performance-mode .uv-editor-panel .uv-visual {
+body.performance-mode .uv-editor-panel .uv-visual,
+body.performance-mode .inspection-modal .thermal-canvas,
+body.performance-mode .inspection-modal .backdrop {
   filter: initial !important;
   backdrop-filter: initial !important;
   animation: initial !important;
