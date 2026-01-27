@@ -86,7 +86,7 @@ body {
   .container,
   .main-content {
     width: 100%;
-    padding: 10px;
+    padding: 16px;
     box-sizing: border-box;
   }
 
@@ -121,13 +121,13 @@ body {
   /* Ajustes específicos do quadro de investigação */
   .mobile-hud {
     position: fixed;
-    bottom: 14px;
-    left: 12px;
-    right: 12px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     z-index: 15000;
     pointer-events: auto;
   }

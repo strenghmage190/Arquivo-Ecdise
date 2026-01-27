@@ -1722,3 +1722,9 @@ body.space-panning .corkboard-canvas:active {
   border-color: #f39c12 !important;
   color: #f39c12 !important;
 }
+
+@media (max-width: 768px) {
+  .main-fab-trigger {
+    display: none;
+  }
+}

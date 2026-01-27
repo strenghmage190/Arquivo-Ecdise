@@ -1,0 +1,20 @@
+.fab-toggle-mode {
+  position: fixed;
+  bottom: 80px; /* Above the Bottom Bar */
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: transform 0.1s;
+}
+
+.fab-toggle-mode:active {
+  transform: scale(0.95);
+}

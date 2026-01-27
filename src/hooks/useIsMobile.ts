@@ -12,8 +12,30 @@ const debounce = (func: Function, delay: number) => {
 export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
+  const detectTouchSupport = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return Boolean((window as any).ontouchstart !== undefined || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || (navigator as any).msMaxTouchPoints > 0);
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const detectMobileUA = () => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(ua);
+  };
+
   const checkMobile = useCallback(() => {
-    setIsMobile(window.innerWidth <= 768);
+    const smallWidth = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const touch = detectTouchSupport();
+    const uaMobile = detectMobileUA();
+
+    // Only consider mobile when the viewport is small AND we detect a touch-capable device
+    // or the user agent reports a mobile device. This prevents forcing "mobile" mode on desktop when
+    // the user toggles a mobile preview in devtools or manually resizes the window.
+    setIsMobile(Boolean(smallWidth && (touch || uaMobile)));
   }, []);
 
   useEffect(() => {

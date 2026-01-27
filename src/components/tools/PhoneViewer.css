@@ -296,8 +296,19 @@
 /* Responsive - Ajustes para telas menores */
 @media (width <= 768px) {
   .nexus-phone-mockup {
-    width: clamp(300px, 85vw, 360px);
+    width: 90vw;
     max-height: 80vh;
+    border-radius: 16px;
+  }
+
+  .phone-header {
+    height: 60px;
+    padding: 12px;
+  }
+
+  .chat-body {
+    padding: 12px;
+    font-size: 14px;
   }
 }
 

@@ -30,6 +30,7 @@ import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
 import CreatorHub from '../modals/CreatorHub';
 const GMOverwatch = React.lazy(() => import('./GMOverwatch'));
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useWindowSize } from '../../hooks/useWindowSize';
 import BottomSheet from '../ui/BottomSheet';
 import usePerformanceMode from '../../utils/usePerformanceMode';
 // Local fallback for BoardButton (avoids missing module error)
@@ -152,6 +153,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
   const [playerView, setPlayerView] = useState<boolean>(() => true);
   const isMobile = useIsMobile();
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
   // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
   const isMobileDevice = isMobile;
   const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
@@ -215,7 +217,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return () => { window.dispatchEvent(new Event('modal-closed')); };
   }, [anyModalOpen]);
 
-  const corkboardRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   // draggingRef stores info about the currently dragged card(s)
   const draggingRef = useRef<{
     id: string;
@@ -247,7 +249,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
   // Convert screen pixel coordinates to board/world coordinates considering zoom and origin
   const getWorldPosition = (clientX: number, clientY: number) => {
-    const board = corkboardRef.current?.getBoundingClientRect();
+    const board = boardRef.current?.getBoundingClientRect();
     if (!board) return { x: 0, y: 0 };
     // (Mouse - board.left) / zoom + origin
     return {
@@ -464,8 +466,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       const found = matches.find((m: any) => (m as any).visibility === 'hidden') || matches[0];
 
       // compute center position
-      const centerX = origin.x + (window.innerWidth / 2) / zoom;
-      const centerY = origin.y + (window.innerHeight / 2) / zoom;
+      const centerX = origin.x + (windowWidth / 2) / zoom;
+      const centerY = origin.y + (windowHeight / 2) / zoom;
 
       // Se for pista oculta, revelar
       if ((found as any).visibility === 'hidden') {
@@ -520,8 +522,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       const hiddenCard = data[0] as any;
 
       // Compute center position for reveal
-      const centerX = origin.x + (window.innerWidth / 2) / zoom;
-      const centerY = origin.y + (window.innerHeight / 2) / zoom;
+      const centerX = origin.x + (windowWidth / 2) / zoom;
+      const centerY = origin.y + (windowHeight / 2) / zoom;
 
       // Reveal the card
       await api.updateInvestigationCard(hiddenCard.id, {
@@ -782,7 +784,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
   // Marquee: start on shift+mousedown on background, update on move, finalize on mouseup
   const startMarquee = (e: MouseEvent) => {
-    const board = corkboardRef.current?.getBoundingClientRect();
+    const board = boardRef.current?.getBoundingClientRect();
     if (!board) return;
     const sx = e.clientX - board.left;
     const sy = e.clientY - board.top;
@@ -811,8 +813,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             maxX = Math.max(maxX, p.x + w);
             maxY = Math.max(maxY, p.y + h);
           });
-          const boardRect = corkboardRef.current?.getBoundingClientRect();
-          const viewW = boardRect?.width ?? window.innerWidth;
+          const boardRect = boardRef.current?.getBoundingClientRect();
+          const viewW = boardRect?.width ?? windowWidth;
           const viewH = boardRect?.height ?? window.innerHeight;
           const boxW = Math.max(1, maxX - minX);
           const boxH = Math.max(1, maxY - minY);
@@ -851,7 +853,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     const handleMouseMove = (e: MouseEvent) => {
       // update marquee if active
       if (marqueeStartRef.current) {
-        const board = corkboardRef.current?.getBoundingClientRect();
+        const board = boardRef.current?.getBoundingClientRect();
         if (!board) return;
         const sx = e.clientX - board.left;
         const sy = e.clientY - board.top;
@@ -899,7 +901,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         d.hasMoved = true;
       }
       // compute movement relative to the corkboard element using world coordinates
-      const board = corkboardRef.current?.getBoundingClientRect();
+      const board = boardRef.current?.getBoundingClientRect();
       const screenX = board ? (e.clientX - board.left) : e.clientX;
       const screenY = board ? (e.clientY - board.top) : e.clientY;
       const worldX = origin.x + screenX / zoom;
@@ -947,7 +949,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         if (dist < 5) return;
         d.hasMoved = true;
       }
-      const board = corkboardRef.current?.getBoundingClientRect();
+      const board = boardRef.current?.getBoundingClientRect();
       const screenX = board ? (t.clientX - board.left) : t.clientX;
       const screenY = board ? (t.clientY - board.top) : t.clientY;
       const worldX = origin.x + screenX / zoom;
@@ -1334,8 +1336,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   };
 
   const panToPosition = (x: number, y: number) => {
-    const boardRect = corkboardRef.current?.getBoundingClientRect();
-    const viewW = boardRect?.width ?? window.innerWidth;
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
     const viewH = boardRect?.height ?? window.innerHeight;
     // center the given board coords (x,y) in view
     setOrigin({ x: x - viewW / (2 * zoom), y: y - viewH / (2 * zoom) });
@@ -1558,8 +1560,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   // Helper: open Create Clue modal centered on view
   const handleCreateClue = () => {
     setEditingCard(null);
-    const boardRect = corkboardRef.current?.getBoundingClientRect();
-    const viewW = boardRect?.width ?? window.innerWidth;
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
     const viewH = boardRect?.height ?? window.innerHeight;
     const cx = viewW / 2;
     const bx = origin.x + cx / zoom;
@@ -1574,7 +1576,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     setZoom((prev) => {
       const candidate = prev + delta;
       const newZoom = Math.min(Math.max(candidate, 0.1), 3);
-      const boardRect = corkboardRef.current?.getBoundingClientRect();
+      const boardRect = boardRef.current?.getBoundingClientRect();
       const originNow = originRef.current;
       if (boardRect && originNow) {
         const centerX = originNow.x + (boardRect.width / 2) / prev;
@@ -1602,7 +1604,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         const delta = -e.deltaY;
         const scaleFactor = 0.05;
         // compute new zoom and adjust origin so zoom centers on mouse pointer
-        const boardRect = corkboardRef.current?.getBoundingClientRect();
+        const boardRect = boardRef.current?.getBoundingClientRect();
         const pointerX = e.clientX;
         const pointerY = e.clientY;
         setZoom(prev => {
@@ -1646,7 +1648,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         const newZoom = initialZoom * (distance / initialDistance);
         setZoom(Math.max(0.1, Math.min(3, newZoom)));
         // Center zoom on midpoint of touches
-        const boardRect = corkboardRef.current?.getBoundingClientRect();
+        const boardRect = boardRef.current?.getBoundingClientRect();
         if (boardRect) {
           const midX = (touch1.clientX + touch2.clientX) / 2;
           const midY = (touch1.clientY + touch2.clientY) / 2;
@@ -1665,7 +1667,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       }
     };
 
-    const boardEl = corkboardRef.current;
+    const boardEl = boardRef.current;
     if (boardEl) {
       boardEl.addEventListener('wheel', handleWheel, { passive: false });
       boardEl.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -1696,7 +1698,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         <div className="header-right" />
       </header>
       {contextMenu && (() => {
-        const board = corkboardRef.current?.getBoundingClientRect();
+        const board = boardRef.current?.getBoundingClientRect();
         const left = board ? (board.left + (contextMenu.x - origin.x) * zoom) : 120;
         const top = board ? (board.top + (contextMenu.y - origin.y) * zoom) : 120;
         return (
@@ -1968,14 +1970,14 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       )}
 
       <div
-        ref={corkboardRef}
+        ref={boardRef}
         className="corkboard-canvas"
         onTouchStart={(e) => {
           try {
             const t = (e.touches && e.touches[0]) as Touch | undefined;
             if (!t) return;
             // start pan when touching the background (not a card) — always enabled on mobile
-            if (e.target === corkboardRef.current || e.target === e.currentTarget) {
+            if (e.target === boardRef.current || e.target === e.currentTarget) {
               if (e.touches.length === 1) {
                 panningRef.current = { startX: t.clientX, startY: t.clientY, originX: origin.x, originY: origin.y } as any;
               }
@@ -1984,7 +1986,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         }}
         onMouseMove={(e) => {
           if (!isUV) return;
-          const boardRect = corkboardRef.current?.getBoundingClientRect();
+          const boardRect = boardRef.current?.getBoundingClientRect();
           if (!boardRect) return;
           const lx = e.clientX - boardRect.left;
           const ly = e.clientY - boardRect.top;
@@ -1993,10 +1995,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         }}
         onMouseLeave={() => { console.debug('uv overlay leave', { isUV, performanceMode }); setOverlayPos((o) => o ? { ...o, over: false } : null); }}
         onMouseDown={(e) => {
-          if (e.target === corkboardRef.current || e.target === e.currentTarget) {
+          if (e.target === boardRef.current || e.target === e.currentTarget) {
             // close any open context menu when clicking the background
             setContextMenu(null);
-            const board = corkboardRef.current?.getBoundingClientRect();
+            const board = boardRef.current?.getBoundingClientRect();
             if (!board) return;
             const isLeft = e.button === 0;
             const isMiddle = e.button === 1;
@@ -2019,7 +2021,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         }}
         onContextMenu={(e) => {
           e.preventDefault();
-          const board = corkboardRef.current?.getBoundingClientRect();
+          const board = boardRef.current?.getBoundingClientRect();
           if (!board) return;
           const sx = e.clientX - board.left;
           const sy = e.clientY - board.top;
@@ -2110,7 +2112,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             })}
             {connectionMode && connectionStart && mousePos && (() => {
               const a = getCardCenter(connectionStart);
-              const board = corkboardRef.current?.getBoundingClientRect();
+              const board = boardRef.current?.getBoundingClientRect();
               if (!a || !board) return null;
               const mx = (mousePos.x - board.left) / zoom + origin.x;
               const my = (mousePos.y - board.top) / zoom + origin.y;
@@ -2147,7 +2149,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const board = corkboardRef.current?.getBoundingClientRect();
+                  const board = boardRef.current?.getBoundingClientRect();
                   const sx = board ? e.clientX - board.left : 0;
                   const sy = board ? e.clientY - board.top : 0;
                   const worldX = origin.x + sx / zoom;
@@ -2217,7 +2219,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     })();
                     origPositions[id] = { x: p.x, y: p.y };
                   });
-                  const boardRect = corkboardRef.current?.getBoundingClientRect();
+                  const boardRect = boardRef.current?.getBoundingClientRect();
                   const startScreenX = boardRect ? t.clientX - boardRect.left : t.clientX;
                   const startScreenY = boardRect ? t.clientY - boardRect.top : t.clientY;
                   const startWorldX = origin.x + startScreenX / zoom;
@@ -2331,20 +2333,22 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       </div>
 
           {/* --- HUD EXCLUSIVO PARA CELULAR --- */}
-          <div className="mobile-hud">
+          {isMobileDevice && (
+            <div className="mobile-hud">
 
-            {/* mobile mode toggles removed — pan is the default on touch devices */}
+              {/* mobile mode toggles removed — pan is the default on touch devices */}
 
-            {/* 2. BOTTOM SHEET MENU */}
-            <div className="mobile-fab-container">
-              <button 
-                className="main-fab-trigger" 
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                ☰
-              </button>
+              {/* 2. BOTTOM SHEET MENU */}
+              <div className="mobile-fab-container">
+                <button 
+                  className="main-fab-trigger" 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  ☰
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <BottomSheet isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} title="Ferramentas de Investigação">
             <h3>Ferramentas</h3>
@@ -2438,8 +2442,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 setTimeout(() => setLastCreatedId(null), 6000);
               } else {
                 // compute center position for new card
-                const boardRect = corkboardRef.current?.getBoundingClientRect();
-                const viewW = boardRect?.width ?? window.innerWidth;
+                const boardRect = boardRef.current?.getBoundingClientRect();
+                const viewW = boardRect?.width ?? windowWidth;
                 const viewH = boardRect?.height ?? window.innerHeight;
                 const cx = origin.x + (viewW / 2) / zoom;
                 const cy = origin.y + (viewH / 2) / zoom;

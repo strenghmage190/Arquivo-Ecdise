@@ -4,6 +4,7 @@ import { fetchCards } from '../../api/investigations';
 import { fetchConspiracyBoard, saveConspiracyBoard } from '../../api/whiteboard';
 import { supabase } from '../../supabaseClient';
 import { eventManager } from '../../utils/EventManager';
+import { useWindowSize } from '../../hooks/useWindowSize';
 import './ConspiracyBoard.css';
 
 interface Props {
@@ -18,6 +19,7 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [remoteUpdate, setRemoteUpdate] = useState<any | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const { width: windowWidth, height: windowHeight } = useWindowSize();
   
   // ✅ TODOS os Refs declarados no topo do componente (fora de useEffect)
   const lastSaveTimeRef = useRef<number>(0);
@@ -239,8 +241,8 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
       let canvasHeight = rect.height;
       if (!canvasWidth || canvasWidth <= 0 || !canvasHeight || canvasHeight <= 0) {
         const sidebarWidth = sidebarOpen ? 280 : 50; 
-        canvasWidth = window.innerWidth - sidebarWidth;
-        canvasHeight = window.innerHeight - 60;
+        canvasWidth = windowWidth - sidebarWidth;
+        canvasHeight = windowHeight - 60;
       }
 
       const appState = excalidrawAPI.getAppState?.() || {};

@@ -955,7 +955,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               </div>
             </div>
 
-            <div style={{color:'#777', fontSize:11}}>Dica: clique em 🎵 EXPANDIR para usar espectrograma e controles completos.</div>
+            <div style={{ color: '#777', fontSize: '11px' }}>
+              Dica: clique em <span role="img" aria-label="musical note">🎵</span> EXPANDIR para usar espectrograma e controles completos.
+            </div>
           </div>
         );
       }

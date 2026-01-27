@@ -14,6 +14,7 @@ export default function Home() {
   const [newDescription, setNewDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   
 
   async function handleLogout() {
@@ -71,6 +72,14 @@ export default function Home() {
     }
   }
 
+  async function handleHomeClick() {
+    navigate('/'); // Navigate to the home screen
+  }
+
+  function handleMoreOptions() {
+    setShowMoreMenu(!showMoreMenu);
+  }
+
   return (
     <div className="home-screen nexus-page">
       <Desktop cases={cases} />
@@ -83,6 +92,12 @@ export default function Home() {
           <button className="action-btn primary" onClick={() => { setShowCreateModal(true); setNewTitle(''); }}>
             <span aria-hidden>✚</span>
             NOVO CASO
+          </button>
+          <button className="action-btn secondary" onClick={handleHomeClick}>
+            HOME
+          </button>
+          <button className="action-btn secondary" onClick={handleMoreOptions}>
+            <span aria-hidden>⋮</span>
           </button>
         </div>
       </div>
@@ -149,6 +164,15 @@ export default function Home() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {showMoreMenu && (
+        <div className="more-menu">
+          <ul>
+            <li><button onClick={() => alert('Opção 1 clicada')}>Opção 1</button></li>
+            <li><button onClick={() => alert('Opção 2 clicada')}>Opção 2</button></li>
+            <li><button onClick={() => alert('Opção 3 clicada')}>Opção 3</button></li>
+          </ul>
         </div>
       )}
     </div>

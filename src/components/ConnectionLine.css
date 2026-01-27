@@ -1,0 +1,11 @@
+.connection-group {
+  pointer-events: all;
+}
+
+.connection-group path {
+  transition: stroke 0.2s;
+}
+
+.connection-group:hover path:last-child {
+  stroke: blue; /* Highlight the visible line on hover */
+}
