@@ -1534,3 +1534,134 @@ input[type="number"].filter-number {
 .image-zoomable canvas,
 .image-zoomable img { cursor: zoom-in; }
 
+/* Mobile / narrow viewport tweaks: transform modal into fullscreen, make HUDs bottom sheets,
+   keep header actions horizontally scrollable, stack details, and ensure close button is reachable */
+@media (max-width: 768px) {
+  /* 1. Tela cheia */
+  .inspect-file {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  /* 2. Header com scroll horizontal e fixo comportamento */
+  .inspect-header {
+    flex-wrap: nowrap !important; /* evita quebra de linhas */
+    overflow-x: auto !important; /* permite scroll horizontal */
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding-right: 72px !important; /* espaço para o botão fechar */
+  }
+  .inspect-header::-webkit-scrollbar { display: none; }
+
+  /* Garanta que o botão de fechar sempre fique visível e clicável */
+  .inspect-header .btn-close,
+  .inspect-header .btn-close-modal {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 9999 !important;
+    background: rgba(0,0,0,0.75) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* 3. Painéis HUD viram bottom sheets */
+  .tools-hud-panel,
+  .filters-overlay-panel {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 50vh !important;
+    height: auto !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 14px !important;
+    overflow: auto !important;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.7) !important;
+    z-index: 950 !important;
+    animation: none !important;
+  }
+
+  .tools-hud-panel::-webkit-scrollbar,
+  .filters-overlay-panel::-webkit-scrollbar { width: 6px !important; }
+
+  /* 4. Rodapé (inspect-details): empilhar em coluna */
+  .inspect-details {
+    flex-direction: column !important;
+    max-height: 30vh !important;
+    min-height: 60px !important;
+    padding: 12px !important;
+    overflow: auto !important;
+  }
+
+  .text-col {
+    padding-right: 0 !important;
+    margin-bottom: 10px !important;
+    max-height: 50% !important;
+  }
+
+  .controls-col {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+  }
+
+  /* reduz a altura mínima do visual para priorizar a imagem em tela cheia */
+  .inspect-visual-area,
+  .evidence-display-area {
+    min-height: calc(100vh - 120px) !important;
+    max-height: calc(100vh - 120px) !important;
+  }
+
+  /* evite que elementos interativos fiquem ocultos atrás do bottom sheet */
+  .inspect-file .image-controls,
+  .inspect-file .waveform-controls {
+    right: 12px !important;
+    top: 12px !important;
+    z-index: 980 !important;
+  }
+
+  /* Hide large decorative elements that clutter small screens */
+  .ui-corners,
+  .grid-overlay,
+  .thermal-scale {
+    display: none !important;
+  }
+
+  /* Ensure actions in header don't wrap and are accessible via horizontal scroll */
+  .actions {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* touch targets a bit larger for mobile */
+  .btn-tool-tab,
+  .btn-channel,
+  .btn-reset,
+  .btn-reset-filters,
+  .btn-edit-ref {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    min-height: 44px !important;
+  }
+}
+
