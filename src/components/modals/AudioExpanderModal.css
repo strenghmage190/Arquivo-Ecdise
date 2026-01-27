@@ -141,7 +141,7 @@
 }
 
 /* Responsive */
-@media (width <= 1024px) {
+@media (max-width: 1024px) {
   .audio-expander-modal {
     width: 98vw;
     height: 95vh;
@@ -152,7 +152,7 @@
   }
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .audio-expander-modal {
     width: 100vw;
     height: 100vh;
@@ -174,4 +174,8 @@
     height: 36px;
     font-size: 18px;
   }
+
+  /* tighten content padding and allow vertical stacking when narrow */
+  .audio-expander-content { padding: 12px; }
+  .audio-expander-modal { overflow-y: auto; }
 }

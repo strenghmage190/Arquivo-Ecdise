@@ -30,7 +30,8 @@ body.mobile-mode .investigation-board {
   position: fixed;
   top: 0;
   left: 0;
-  touch-action: none;
+  /* permitir rolagem nativa quando o dispositivo for mobile; gestos específicos serão tratados no layer do canvas */
+  touch-action: auto;
 }
 
 body.mobile-mode .investigation-board .mobile-controls {
@@ -49,7 +50,8 @@ body.mobile-mode .investigation-board .mobile-controls {
   z-index: 100; /* Garante que fique acima de menus antigos */
   background-color: #0f0f11;
   font-family: var(--font-body);
-  touch-action: none;
+  /* permitir rolagem/gestos nativos em containers interiores; o canvas captura gestos próprios */
+  touch-action: auto;
 }
 
 /* Fundo Pontilhado (Tático) */
@@ -69,6 +71,8 @@ body.mobile-mode .investigation-board .mobile-controls {
   );
   background-size: 30px 30px;
   background-color: #0f0f11;
+  /* O canvas é onde o app lida com pan/gestures personalizados */
+  touch-action: none;
 }
 .corkboard-canvas:active {
   cursor: grabbing;
@@ -86,6 +90,17 @@ body.mobile-mode .investigation-board .mobile-controls {
   overflow: visible !important;
   transform-origin: 0 0;
   will-change: transform;
+  /* transform layer usa gestos JS para pan/zoom */
+  touch-action: none;
+}
+
+/* Permitir rolagem nativa em listas e painéis roláveis (mobile) */
+.finder-list,
+.clue-list-scroll,
+.investigation-insights-list,
+.investigation-chat-phone-preview {
+  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Camada de Conexões (SVG) */

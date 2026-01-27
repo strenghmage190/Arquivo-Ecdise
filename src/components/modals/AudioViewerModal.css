@@ -319,7 +319,7 @@
    Responsivo
    ============================================================ */
 
-@media (width <= 1024px) {
+@media (max-width: 1024px) {
   .audio-viewer-modal {
     width: 98vw;
     height: 98vh;
@@ -335,7 +335,7 @@
   }
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .audio-viewer-modal {
     width: 100vw;
     height: 100vh;
@@ -346,6 +346,8 @@
 
   .audio-viewer-waveform {
     height: 80px;
+    margin: 12px 12px;
+    padding: 10px;
   }
 
   .audio-viewer-play-btn {
@@ -360,6 +362,11 @@
   .audio-viewer-title {
     font-size: 14px;
   }
+
+  /* Stack controls on narrow screens for better spacing */
+  .audio-viewer-controls { flex-direction: column; align-items: stretch; gap: 8px; }
+  .audio-viewer-time { justify-content: space-between; }
+  .audio-viewer-spectrum-controls { overflow-x: auto; }
 }
 
 /* ============================================================
