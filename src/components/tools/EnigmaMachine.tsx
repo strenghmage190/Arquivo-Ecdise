@@ -21,11 +21,173 @@ const REFLECTORS: Record<string, string> = {
   C: 'FVPJIAOYEDRZXWGCTKUQSBNMHL',
 };
 
+export default function EnigmaMachine({ onOutput }: { onOutput: (s: string) => void }) {
+  const [model, setModel] = useState('Enigma M3');
+  const [rotorOrder, setRotorOrder] = useState(['I', 'II', 'III']);
+  const [positions, setPositions] = useState(['A', 'A', 'A']);
+  const [ringSettings, setRingSettings] = useState([1, 1, 1]);
+  const [reflector, setReflector] = useState('B');
+  const [plugPairs, setPlugPairs] = useState('');
+  const [foreignChars, setForeignChars] = useState('Include');
+  const [inputText, setInputText] = useState('');
+  const [outputText, setOutputText] = useState('');
+
+  const encodeText = (text: string) => {
+    const rotors = rotorOrder.map((label, i) => {
+      const position = ALPHABET.indexOf(positions[i]);
+      const ring = ringSettings[i] - 1;
+      return new Rotor(ROTOR_SPECS[label], position, ring);
+    });
+
+    const stepRotors = () => {
+      const [right, middle, left] = rotors;
+      if (middle.atNotch()) {
+        middle.rotate();
+        left.rotate();
+      } else if (right.atNotch()) {
+        middle.rotate();
+      }
+      right.rotate();
+    };
+
+    return text
+      .toUpperCase()
+      .split('')
+      .map(char => {
+        if (!ALPHABET.includes(char)) {
+          return foreignChars === 'Include' ? char : '';
+        }
+        stepRotors();
+        let c = applyPlugboard(char, plugPairs);
+        c = rotors.reduce((acc, rotor) => rotor.forward(acc), c);
+        c = (REFLECTORS[reflector] || REFLECTORS.B)[ALPHABET.indexOf(c)];
+        c = rotors.reduceRight((acc, rotor) => rotor.backward(acc), c);
+        return applyPlugboard(c, plugPairs);
+      })
+      .join('');
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputText(val);
+    const encoded = encodeText(val);
+    setOutputText(encoded);
+    onOutput(encoded);
+  };
+
+  const resetMachine = () => {
+    setRotorOrder(['I', 'II', 'III']);
+    setPositions(['A', 'A', 'A']);
+    setRingSettings([1, 1, 1]);
+    setReflector('B');
+    setPlugPairs('');
+    setForeignChars('Include');
+    setInputText('');
+    setOutputText('');
+  };
+
+  return (
+    <div className="enigma-machine">
+      <div className="machine-settings">
+        <label>Model</label>
+        <select value={model} onChange={e => setModel(e.target.value)}>
+          <option>Enigma M3</option>
+          <option>Enigma M4</option>
+        </select>
+
+        <label>Reflector</label>
+        <select value={reflector} onChange={e => setReflector(e.target.value)}>
+          {Object.keys(REFLECTORS).map(r => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+
+        <label>Foreign Characters</label>
+        <select value={foreignChars} onChange={e => setForeignChars(e.target.value)}>
+          <option>Include</option>
+          <option>Ignore</option>
+        </select>
+      </div>
+
+      <div className="rotor-settings">
+        {rotorOrder.map((rotor, i) => (
+          <div key={i} className="rotor">
+            <label>Rotor {i + 1}</label>
+            <select
+              value={rotor}
+              onChange={e => {
+                const newOrder = [...rotorOrder];
+                newOrder[i] = e.target.value;
+                setRotorOrder(newOrder);
+              }}
+            >
+              {Object.keys(ROTOR_SPECS).map(r => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+
+            <label>Position</label>
+            <input
+              type="text"
+              value={positions[i]}
+              onChange={e => {
+                const newPositions = [...positions];
+                newPositions[i] = e.target.value.toUpperCase();
+                setPositions(newPositions);
+              }}
+            />
+
+            <label>Ring</label>
+            <input
+              type="number"
+              min={1}
+              max={26}
+              value={ringSettings[i]}
+              onChange={e => {
+                const newSettings = [...ringSettings];
+                newSettings[i] = Math.max(1, Math.min(26, parseInt(e.target.value || '1')));
+                setRingSettings(newSettings);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="plugboard">
+        <label>Plugboard</label>
+        <input
+          type="text"
+          value={plugPairs}
+          onChange={e => setPlugPairs(e.target.value)}
+          placeholder="Enter pairs (e.g., AB CD EF)"
+        />
+      </div>
+
+      <div className="text-areas">
+        <div>
+          <label>Plaintext</label>
+          <textarea value={inputText} onChange={handleInput} placeholder="Enter text to encode" />
+        </div>
+        <div>
+          <label>Ciphertext</label>
+          <textarea value={outputText} readOnly />
+        </div>
+      </div>
+
+      <button onClick={resetMachine}>Reset</button>
+    </div>
+  );
+}
+
 class Rotor {
   wiring: string;
   notch: string;
-  position: number; // 0-25
-  ring: number; // 0-25
+  position: number;
+  ring: number;
 
   constructor(spec: RotorSpec, position = 0, ring = 0) {
     this.wiring = spec.wiring;
@@ -42,7 +204,6 @@ class Rotor {
     this.position = (this.position + 1) % 26;
   }
 
-  // encode from right->left (entry to exit)
   forward(c: string) {
     const idx = ALPHABET.indexOf(c);
     const shifted = (idx + this.position - this.ring + 26) % 26;
@@ -51,7 +212,6 @@ class Rotor {
     return ALPHABET[out];
   }
 
-  // encode from left->right (return path)
   backward(c: string) {
     const idx = ALPHABET.indexOf(c);
     const shifted = (idx + this.position - this.ring + 26) % 26;
@@ -73,125 +233,4 @@ function applyPlugboard(c: string, pairs: string) {
     }
   });
   return mapping[c] || c;
-}
-
-export default function EnigmaMachine({ onOutput }: { onOutput: (s: string) => void }) {
-  // rotorOrder is left->right as user sees it
-  const [rotorOrder, setRotorOrder] = useState(['I', 'II', 'III']);
-  const [positions, setPositions] = useState(['A', 'A', 'A']); // letters left->right
-  const [ringSettings, setRingSettings] = useState([1, 1, 1]); // 1-26 shown to user
-  const [reflector, setReflector] = useState('B');
-  const [plugPairs, setPlugPairs] = useState('');
-  const [inputText, setInputText] = useState('');
-  const [lamp, setLamp] = useState('');
-
-  const makeRotors = () => {
-    // rotorOrder: [left, middle, right]
-    // internal rotors array: [right, middle, left]
-    const leftLabel = rotorOrder[0];
-    const middleLabel = rotorOrder[1];
-    const rightLabel = rotorOrder[2];
-
-    const left = new Rotor(ROTOR_SPECS[leftLabel], ALPHABET.indexOf(positions[0]), Math.max(0, (ringSettings[0] - 1)));
-    const middle = new Rotor(ROTOR_SPECS[middleLabel], ALPHABET.indexOf(positions[1]), Math.max(0, (ringSettings[1] - 1)));
-    const right = new Rotor(ROTOR_SPECS[rightLabel], ALPHABET.indexOf(positions[2]), Math.max(0, (ringSettings[2] - 1)));
-    return [right, middle, left];
-  };
-
-  const stepRotors = (rotors: Rotor[]) => {
-    // rotors array: [right, middle, left]
-    const right = rotors[0];
-    const middle = rotors[1];
-    const left = rotors[2];
-
-    // double-stepping behaviour (notch detection uses rotor's current position)
-    if (middle.atNotch()) {
-      middle.rotate();
-      left.rotate();
-    } else if (right.atNotch()) {
-      middle.rotate();
-    }
-    right.rotate();
-  };
-
-  const encodeChar = (ch: string) => {
-    if (!ALPHABET.includes(ch)) return ch;
-
-    const rotors = makeRotors();
-    stepRotors(rotors);
-
-    // plugboard in
-    let c = applyPlugboard(ch, plugPairs);
-
-    // forward through rotors (right -> left)
-    c = rotors[0].forward(c);
-    c = rotors[1].forward(c);
-    c = rotors[2].forward(c);
-
-    // reflector
-    c = (REFLECTORS[reflector] || REFLECTORS.B)[ALPHABET.indexOf(c)];
-
-    // backward through rotors (left -> right)
-    c = rotors[2].backward(c);
-    c = rotors[1].backward(c);
-    c = rotors[0].backward(c);
-
-    // plugboard out
-    c = applyPlugboard(c, plugPairs);
-    // set lamp and return
-    setLamp(c);
-    return c;
-  };
-
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.toUpperCase();
-    if (val.length > inputText.length) {
-      const char = val.slice(-1);
-      const out = encodeChar(char);
-      onOutput(out);
-    }
-    setInputText(val);
-  };
-
-  return (
-    <div className="enigma-chassis">
-      <div className="rotors-display">
-        {positions.map((p, i) => (
-          <div key={i} className="rotor-window">
-            <select className="rotor-select" value={rotorOrder[i]} onChange={e => { const ro = [...rotorOrder]; ro[i] = e.target.value; setRotorOrder(ro); }}>
-              {Object.keys(ROTOR_SPECS).map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <div className="rotor-controls">
-              <button onClick={() => { const newP = [...positions]; const idx = (ALPHABET.indexOf(newP[i]) + 1) % 26; newP[i] = ALPHABET[idx]; setPositions(newP); }}>▲</button>
-              <button onClick={() => { const newP = [...positions]; const idx = (ALPHABET.indexOf(newP[i]) - 1 + 26) % 26; newP[i] = ALPHABET[idx]; setPositions(newP); }}>▼</button>
-            </div>
-            <div className="rotor-wheel">
-              <div className="rotor-letter">{p}</div>
-            </div>
-            <div className="rotor-number">{p}</div>
-            <input className="ring-input" type="number" min={1} max={26} value={ringSettings[i]} onChange={e => { const v = Math.max(1, Math.min(26, parseInt(e.target.value || '1'))); const r = [...ringSettings]; r[i] = v; setRingSettings(r); }} />
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <label className="reflector-label">Reflector</label>
-            <select className="reflector-select" value={reflector} onChange={e => setReflector(e.target.value)}>
-              {Object.keys(REFLECTORS).map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <div style={{ flex: 1 }} />
-          </div>
-          <input className="plugboard-input" placeholder="Pareamentos plugboard (ex: HL MO AJ)" value={plugPairs} onChange={e => setPlugPairs(e.target.value)} />
-        </div>
-        <div style={{ width: 72, textAlign: 'center' }}>
-          <div style={{ color: '#999', fontSize: 12 }}>Lamp</div>
-          <div className="lampboard" style={{ marginTop: 6 }}>{lamp}</div>
-        </div>
-      </div>
-
-      <input className="enigma-keyboard" value={inputText} onChange={handleInput} placeholder="DIGITE AQUI PARA CIFRAR..." />
-    </div>
-  );
 }

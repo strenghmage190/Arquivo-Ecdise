@@ -207,9 +207,9 @@ export function LayersPanel(props: LayersPanelProps) {
   }, [layers, searchQuery]);
 
   return (
-    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{display:'flex', flexDirection:'column', minWidth:360, maxWidth:900, minHeight:0, resize:'horizontal', overflow:'auto'}}>
+    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{display:'flex', flexDirection:'column', minWidth:360, maxWidth:900, height:'100%', minHeight:0, resize:'horizontal', overflow:'hidden'}}>
       <div className="layers-header">
-        <h4>📦 Camadas ({layers.length})</h4>
+        <h4>Camadas ({layers.length})</h4>
         <input
           type="text"
           placeholder="Buscar camadas..."
@@ -291,18 +291,7 @@ export function LayersPanel(props: LayersPanelProps) {
         </div>
       ) : null}
 
-      {selectedLayerObj ? (
-        <div className="selected-opacity" style={{display:'flex', alignItems:'center', gap:8, padding:'6px 0'}}>
-          <label style={{fontSize:12, color:'var(--text-color-dimmed)'}}>Opacidade</label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={selectedLayerObj.opacity ?? 100}
-            onChange={e => { if (props.onUpdateLayerOpacity) props.onUpdateLayerOpacity(selectedLayerObj.id, Number((e.target as HTMLInputElement).value)); }}
-          />
-        </div>
-      ) : null}
+      {/* Opacidade agora acessível via o menu de contexto/engrenagem; removido do layout principal para economizar espaço */}
       {/* Selected-layer properties handled in right properties panel; context menu used for quick actions */}
 
       <div className="layers-list-container" style={{flex:1, minHeight:0, overflow:'auto'}}>
@@ -453,16 +442,29 @@ export function LayersPanel(props: LayersPanelProps) {
 
       {/* Rodapé com botões de ação */}
       <div className="layers-footer">
-        <Tooltip id="add-drawing-footer" text="Criar nova camada de desenho">
-          <button onClick={props.onAddDrawingLayer}>Nova Camada</button>
-        </Tooltip>
-        <Tooltip id="create-group-footer" text="Criar um grupo de camadas">
-          <button onClick={props.onCreateGroup}>Novo Grupo</button>
-        </Tooltip>
+        <div className="layers-footer-left">
+          <Tooltip id="add-drawing-footer" text="Criar nova camada">
+            <button className="icon-btn" aria-label="Criar nova camada" onClick={props.onAddDrawingLayer}>
+              <i className="icon-add" />
+            </button>
+          </Tooltip>
+
+          <Tooltip id="create-group-footer" text="Criar novo grupo">
+            <button className="icon-btn" aria-label="Criar novo grupo" onClick={props.onCreateGroup}>
+              <i className="icon-folder" />
+            </button>
+          </Tooltip>
+        </div>
+
         <div style={{flex:1}} />
-        <Tooltip id="delete-selected-footer" text="Excluir camadas selecionadas">
-          <button onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>Excluir</button>
-        </Tooltip>
+
+        <div className="layers-footer-right">
+          <Tooltip id="delete-selected-footer" text="Excluir camadas selecionadas">
+            <button className="icon-btn danger" aria-label="Excluir camadas selecionadas" onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>
+              <i className="icon-trash" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {renderContextMenu()}

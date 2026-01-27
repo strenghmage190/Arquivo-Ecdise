@@ -9,7 +9,9 @@
   background: rgb(5 8 10 / 85%);
   border: 1px solid rgb(0 243 255 / 20%);
   border-radius: 6px;
-  overflow: hidden;
+  /* constrain height so modal doesn't push page scroll — modal itself scrolls */
+  max-height: 80vh;
+  overflow: auto;
   font-family: "Share Tech Mono", monospace;
   box-shadow: 0 0 20px rgb(0 243 255 / 8%);
 }
@@ -53,6 +55,11 @@
 
 .decoder-body {
   padding: 20px;
+  /* let the outer `.decoder-station` handle scrolling to avoid double scrollbars */
+  max-height: none;
+  overflow: visible;
+  -webkit-overflow-scrolling: auto;
+  padding-right: 6px;
 }
 
 .decoder-input {
@@ -111,3 +118,37 @@
   border-color: rgb(0 243 255 / 40%);
   box-shadow: 0 0 8px rgb(0 243 255 / 10%);
 }
+
+/* Custom scrollbars (WebKit + Firefox) */
+.output-screen {
+  scrollbar-color: var(--nexus-blue) rgba(0,0,0,0.25);
+  scrollbar-width: thin;
+}
+.output-screen::-webkit-scrollbar{
+  width:12px;
+  height:12px;
+}
+.output-screen::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.02);
+  border-radius:10px;
+}
+.output-screen::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, var(--nexus-blue), #00a7c7);
+  border-radius:10px;
+  border:2px solid rgba(0,0,0,0.25);
+}
+.output-screen::-webkit-scrollbar-thumb:hover{
+  filter:brightness(0.95);
+}
+
+.decoder-tabs{
+  scrollbar-color: var(--nexus-blue) transparent;
+}
+.decoder-tabs::-webkit-scrollbar{ height:8px; }
+.decoder-tabs::-webkit-scrollbar-track{ background:transparent; }
+.decoder-tabs::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,var(--nexus-blue), #008fb0); border-radius:999px; }
+
+/* ensure any other scrollable panels inside decoder-station follow the same style */
+.decoder-station ::-webkit-scrollbar{ width:10px; height:10px; }
+.decoder-station ::-webkit-scrollbar-thumb{ background: linear-gradient(180deg,var(--nexus-blue), #00a7c7); border-radius:8px; }
+.decoder-station{ scrollbar-width:thin; scrollbar-color: var(--nexus-blue) rgba(0,0,0,0.15); }

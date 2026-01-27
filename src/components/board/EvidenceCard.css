@@ -174,29 +174,29 @@
   right: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   z-index: 110;
 }
 
 .type-badge {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   background: rgb(0 0 0 / 92%);
   border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 80%);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 80%);
   backdrop-filter: blur(8px);
-  font-size: 16px;
-  transition: all 0.2s;
+  font-size: 18px;
+  transition: all 0.18s;
 }
 
 .type-badge.small {
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
 }
 
 .type-badge:hover {
@@ -444,9 +444,9 @@
   background: transparent;
   border: 1px solid transparent;
   color: #bdbdbd; /* contraste melhor por padrão */
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,7 +457,7 @@
 
 .btn-decision svg,
 .btn-decision i {
-  font-size: 18px;
+  font-size: 22px;
   pointer-events: none;
   transition: transform 0.2s;
   fill: currentColor; /* garante que ícones herdem a cor do botão */
@@ -743,13 +743,26 @@
 
 @media (pointer: coarse) {
   .btn-decision {
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
   }
 
   .btn-decision svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .type-badge {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .type-badge.small {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
   }
 }
 
@@ -784,6 +797,42 @@
   color: inherit !important;
 }
 */
+
+/* ==========================
+   Custom scrollbars - Nexus
+   Applies to scrollable regions inside clue cards
+   ========================== */
+.clue-card {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #00f3ff rgba(0,0,0,0.15);
+}
+.clue-card ::-webkit-scrollbar{
+  width:10px;
+  height:10px;
+}
+.clue-card ::-webkit-scrollbar-track{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-radius:10px;
+}
+.clue-card ::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, #00f3ff, #008fb0);
+  border-radius:10px;
+  border:2px solid rgba(0,0,0,0.45);
+}
+.clue-card ::-webkit-scrollbar-thumb:hover{
+  filter:brightness(.95);
+}
+
+/* Specific tweaks for image/container scroll areas */
+.clue-image-container::-webkit-scrollbar{ height:8px; }
+.clue-image-container::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,#00f3ff,#00a7c7); border-radius:6px; }
+
+/* Keep decision-bar from adding its own scroll but style if present */
+.decision-bar::-webkit-scrollbar{ height:8px; }
+.decision-bar::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,#00f3ff,#00a7c7); border-radius:6px; }
+
+/* utility small muted scroll thumb for compact badges */
+.badges-container ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.08); border-radius:6px; }
 
 /* === CARD CONTENT CONTAINER === */
 .card-content-container {

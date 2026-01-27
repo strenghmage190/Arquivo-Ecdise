@@ -8,7 +8,7 @@ export default function UniversalDecoder() {
   const [mode, setMode] = useState('caesar');
   const [input, setInput] = useState('');
   const [param, setParam] = useState<string | number>('1');
-  const [enigmaOutput, setEnigmaOutput] = useState('');
+  
   const [hexMethod, setHexMethod] = useState<'auto' | 'utf8hex' | 'xor' | 'enigma'>('auto');
   const [hexKey, setHexKey] = useState('');
 
@@ -46,12 +46,7 @@ export default function UniversalDecoder() {
       <div className="decoder-body">
         {mode === 'enigma' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <EnigmaMachine onOutput={(char) => setEnigmaOutput(prev => prev + char)} />
-            <div className="output-screen">
-              <div style={{ color: '#666', fontSize: 10 }}>OUTPUT (FITAMENTO):</div>
-              <div style={{ color: '#ff0', fontSize: 18, marginTop: 5, wordBreak: 'break-all' }}>{enigmaOutput}</div>
-              <button onClick={() => setEnigmaOutput('')} style={{ marginTop: 10, fontSize: 10 }}>LIMPAR FITA</button>
-            </div>
+            <EnigmaMachine onOutput={() => {}} />
           </div>
         ) : (
           <>

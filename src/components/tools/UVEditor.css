@@ -699,8 +699,8 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
 /* Layers action toolbar shown when user toggles actions in LayersPanel */
 .layers-action-bar {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 4px 8px; /* compact action bar */
   align-items: center;
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0));
   border-top: 1px solid rgba(255,255,255,0.03);
@@ -709,9 +709,10 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
   color: inherit;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 13px;
 }
 .layers-actions-toggle {
   background: rgba(255,255,255,0.03);
