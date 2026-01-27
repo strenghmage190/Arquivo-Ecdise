@@ -1001,9 +1001,45 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     // MANTIDO: mousemove precisa ser nativo para performance (rafId)
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+
+    // Also handle touch events globally so dragging via touch works reliably on mobile
+    const handleTouchMoveWindow = (ev: TouchEvent) => {
+      ev.preventDefault();
+      const t = ev.touches[0];
+      if (!t) return;
+
+      // 1. Panning
+      if (panningRef.current) {
+        const dx = (t.clientX - panningRef.current.startX) / (zoomRef.current || 1);
+        const dy = (t.clientY - panningRef.current.startY) / (zoomRef.current || 1);
+        scheduleOriginUpdate(panningRef.current.originX - dx, panningRef.current.originY - dy);
+        return;
+      }
+
+      // 2. Dragging
+      if (draggingRef.current && draggingRef.current.isDragging) {
+        const d = draggingRef.current as any;
+        const worldNow = getWorldPosition(t.clientX, t.clientY);
+        const nextX = worldNow.x - (d.offsetX || 0);
+        const nextY = worldNow.y - (d.offsetY || 0);
+        schedulePositionUpdate(d.id, { x: nextX, y: nextY });
+        if (d.id) scheduleDebouncedSave(d.id);
+      }
+    };
+
+    const handleTouchEndWindow = (ev: TouchEvent) => {
+      // reuse mouseup finalizer
+      handleMouseUp();
+    };
+
+    window.addEventListener('touchmove', handleTouchMoveWindow, { passive: false } as AddEventListenerOptions);
+    window.addEventListener('touchend', handleTouchEndWindow as any);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMoveWindow as any);
+      window.removeEventListener('touchend', handleTouchEndWindow as any);
     };
   }, []);
 

@@ -11,6 +11,10 @@
 /* Remove blue highlight on touch for Android/iOS */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Apply touch-action adjustments only in mobile-mode */
+body.mobile-mode * {
   touch-action: manipulation;
 }
 

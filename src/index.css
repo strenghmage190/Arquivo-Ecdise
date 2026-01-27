@@ -207,7 +207,7 @@ body {
 }
 
 /* Corkboard canvas: handle touch-based panning ourselves and show grab cursor */
-.corkboard-canvas {
+body.mobile-mode .corkboard-canvas {
   touch-action: none;
   -webkit-touch-callout: none;
   cursor: grab;

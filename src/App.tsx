@@ -65,6 +65,13 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ isOpen, onClose, onSa
 function App() {
   const [interactionMode, setInteractionMode] = useState<'pan' | 'edit'>('pan');
   const isMobile = useIsMobile();
+  React.useEffect(() => {
+    try {
+      if (isMobile) document.body.classList.add('mobile-mode');
+      else document.body.classList.remove('mobile-mode');
+    } catch (e) { /* ignore server */ }
+    return () => {};
+  }, [isMobile]);
 
   return (
     <AuthProvider>
