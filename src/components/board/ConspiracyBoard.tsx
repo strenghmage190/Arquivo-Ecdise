@@ -1,5 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Excalidraw, MainMenu, WelcomeScreen } from '@excalidraw/excalidraw';
+import './ConspiracyBoard.css';
+// load Excalidraw dynamically to avoid bundling it into the main chunk
+const useExcalidrawModule = () => {
+  const [mod, setMod] = React.useState<any | null>(null);
+  React.useEffect(() => {
+    let mounted = true;
+    import('@excalidraw/excalidraw').then(m => { if (mounted) setMod(m); }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+  return mod;
+}
 import { fetchCards } from '../../api/investigations';
 import { fetchConspiracyBoard, saveConspiracyBoard } from '../../api/whiteboard';
 import { supabase } from '../../supabaseClient';
@@ -13,6 +23,7 @@ interface Props {
 
 export default function ConspiracyBoard({ investigationId, onClose }: Props) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<any | null>(null);
+  const ExcalidrawModule = useExcalidrawModule();
   const [cards, setCards] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -371,22 +382,33 @@ export default function ConspiracyBoard({ investigationId, onClose }: Props) {
         </div>
 
         <div className="excalidraw-container" ref={excalidrawContainerRef}>
-          <Excalidraw 
-            excalidrawAPI={(api) => setExcalidrawAPI(api)} 
-            theme="dark"
-          >
-            <WelcomeScreen>
-              <WelcomeScreen.Center>
-                <WelcomeScreen.Center.Heading>
-                  Arraste as pistas do arquivo para conectar os fatos.
-                </WelcomeScreen.Center.Heading>
-              </WelcomeScreen.Center>
-            </WelcomeScreen>
-            <MainMenu>
-              <MainMenu.DefaultItems.ClearCanvas />
-              <MainMenu.DefaultItems.ToggleTheme />
-            </MainMenu>
-          </Excalidraw>
+          {!ExcalidrawModule ? (
+            <div>Carregando editor...</div>
+          ) : (
+            (() => {
+              const Excal = ExcalidrawModule.Excalidraw as any;
+              const WelcomeScreen = ExcalidrawModule.WelcomeScreen;
+              const MainMenu = ExcalidrawModule.MainMenu;
+              return (
+                <Excal
+                  excalidrawAPI={(api: any) => setExcalidrawAPI(api)}
+                  theme="dark"
+                >
+                  <WelcomeScreen>
+                    <WelcomeScreen.Center>
+                      <WelcomeScreen.Center.Heading>
+                        Arraste as pistas do arquivo para conectar os fatos.
+                      </WelcomeScreen.Center.Heading>
+                    </WelcomeScreen.Center>
+                  </WelcomeScreen>
+                  <MainMenu>
+                    <MainMenu.DefaultItems.ClearCanvas />
+                    <MainMenu.DefaultItems.ToggleTheme />
+                  </MainMenu>
+                </Excal>
+              );
+            })()
+          )}
         </div>
       </div>
     </div>

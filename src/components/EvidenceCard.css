@@ -1,0 +1,60 @@
+.evidence-card {
+  min-width: 160px;
+  max-width: 280px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+
+.card-content {
+  padding: 0 12px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.card-actions {
+  display: flex;
+  border-top: 1px solid #eee;
+  height: 44px;
+}
+
+.card-action-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.evidence-card * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@media (max-width: 768px) {
+  .evidence-card {
+    min-width: 140px;
+    max-width: 240px;
+  }
+
+  .card-content {
+    font-size: 16px;
+  }
+}

@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Excalidraw, exportToBlob, MainMenu, WelcomeScreen } from "@excalidraw/excalidraw";
-const ExcalidrawAny: any = Excalidraw;
 import './Sketchpad.css';
+
+// Load Excalidraw dynamically to avoid huge vendor chunk at initial load
+const useExcalidrawModule = () => {
+  const [mod, setMod] = useState<any | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    import('@excalidraw/excalidraw').then((m) => { if (mounted) setMod(m); }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+  return mod;
+}
 
 interface SketchpadProps {
   initialData?: any;
@@ -11,6 +20,7 @@ interface SketchpadProps {
 }
 
 export default function Sketchpad({ initialData, onSaveImage, onClose, backgroundImageUrl }: SketchpadProps) {
+  const ExcalidrawModule = useExcalidrawModule();
   const parsed = typeof initialData === 'string' ? JSON.parse(initialData) : (initialData || null);
   const [elements, setElements] = useState<any[]>(parsed?.elements || []);
   const [appState, setAppState] = useState<any>(parsed?.appState || {});
@@ -31,7 +41,9 @@ export default function Sketchpad({ initialData, onSaveImage, onClose, backgroun
     }
 
     try {
-      const blob = await exportToBlob({
+      // ensure exportToBlob is loaded from the dynamic module
+      const mod = ExcalidrawModule || (await import('@excalidraw/excalidraw'));
+      const blob = await mod.exportToBlob({
         elements,
         mimeType: "image/png",
         appState: {
@@ -65,28 +77,38 @@ export default function Sketchpad({ initialData, onSaveImage, onClose, backgroun
         </div>
 
         <div className="excalidraw-wrapper">
-          <ExcalidrawAny
-            className="excalidraw"
-            theme="dark"
-            initialData={parsed || undefined}
-            
-            onChange={(elements_, state) => { setElements(elements_ as any as any[]); setAppState(state); }}
-            onPointerUpdate={() => { /* noop for now */ }}
-            onPaste={(data, event) => { return false; }}
-          >
-            <WelcomeScreen>
-              <WelcomeScreen.Center>
-                <WelcomeScreen.Center.Heading>
-                  Criar Ritual ou Mapa
-                </WelcomeScreen.Center.Heading>
-              </WelcomeScreen.Center>
-            </WelcomeScreen>
-            <MainMenu>
-               <MainMenu.DefaultItems.ClearCanvas />
-               <MainMenu.DefaultItems.ToggleTheme />
-               <MainMenu.DefaultItems.ChangeCanvasBackground />
-            </MainMenu>
-          </ExcalidrawAny>
+          {!ExcalidrawModule ? (
+            <div>Carregando editor...</div>
+          ) : (
+            (() => {
+              const Excal = ExcalidrawModule.Excalidraw as any;
+              const MainMenu = ExcalidrawModule.MainMenu;
+              const WelcomeScreen = ExcalidrawModule.WelcomeScreen;
+              return (
+                <Excal
+                  className="excalidraw"
+                  theme="dark"
+                  initialData={parsed || undefined}
+                  onChange={(elements_, state) => { setElements(elements_ as any as any[]); setAppState(state); }}
+                  onPointerUpdate={() => { /* noop for now */ }}
+                  onPaste={(data, event) => { return false; }}
+                >
+                  <WelcomeScreen>
+                    <WelcomeScreen.Center>
+                      <WelcomeScreen.Center.Heading>
+                        Criar Ritual ou Mapa
+                      </WelcomeScreen.Center.Heading>
+                    </WelcomeScreen.Center>
+                  </WelcomeScreen>
+                  <MainMenu>
+                     <MainMenu.DefaultItems.ClearCanvas />
+                     <MainMenu.DefaultItems.ToggleTheme />
+                     <MainMenu.DefaultItems.ChangeCanvasBackground />
+                  </MainMenu>
+                </Excal>
+              );
+            })()
+          )}
         </div>
       </div>
     </div>

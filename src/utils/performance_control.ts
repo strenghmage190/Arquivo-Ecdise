@@ -26,11 +26,14 @@ const PRESETS: Record<Preset, Record<string, string | number>> = {
 };
 
 function applyPresetVars(preset: Preset) {
+  if (typeof window === 'undefined' || !document.documentElement) return;
   try {
     const vars = PRESETS[preset];
     const root = document.documentElement;
     Object.keys(vars).forEach((k) => root.style.setProperty(k, String(vars[k])));
-  } catch {}
+  } catch (e) {
+    console.error('Failed to apply performance preset:', e);
+  }
 }
 
 export function enablePerformanceMode(preset: Preset = 'balanced') {
@@ -50,7 +53,9 @@ export function disablePerformanceMode() {
 
 export function togglePerformanceMode(preset: Preset = 'balanced') {
   const currently = readInitialState().enabled;
-  if (currently) disablePerformanceMode(); else enablePerformanceMode(preset);
+  console.log(`Toggling performance mode: ${currently ? 'Disabling' : 'Enabling'} with preset ${preset}`);
+  if (currently) disablePerformanceMode();
+  else enablePerformanceMode(preset);
 }
 
 export function setExtendedMode(enabled: boolean) {

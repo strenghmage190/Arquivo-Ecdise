@@ -1,0 +1,46 @@
+.investigation-board-container {
+  touch-action: none; /* Disable default browser gestures */
+  overflow: hidden;
+  position: fixed; /* Occupy the entire screen */
+  inset: 0;
+}
+
+.toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: space-around;
+  background: var(--bg-color);
+  border-top: 1px solid var(--border);
+  z-index: 1000;
+}
+
+@media (min-width: 768px) {
+  .toolbar {
+    top: 0;
+    left: 0;
+    width: 60px;
+    height: 100vh;
+    flex-direction: column;
+    border-top: none;
+    border-right: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 12px; /* Larger touch area */
+  }
+
+  input[type="text"] {
+    min-height: 44px;
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom); /* Respect safe area for iPhones with FaceID */
+  }
+}

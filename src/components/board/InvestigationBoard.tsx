@@ -2229,7 +2229,23 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   });
                   const primaryOffsetX = startWorldX - pos.x;
                   const primaryOffsetY = startWorldY - pos.y;
-                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false } as any;
+                  const next = {
+                    id: card.id,
+                    startX: t.clientX,
+                    startY: t.clientY,
+                    startScreenX,
+                    startScreenY,
+                    startWorldX,
+                    startWorldY,
+                    origPositions,
+                    origX: pos.x,
+                    origY: pos.y,
+                    pointerOffsets,
+                    offsetX: primaryOffsetX,
+                    offsetY: primaryOffsetY,
+                    hasMoved: false,
+                    isDragging: false
+                  } as any;
                   draggingRef.current = next;
                 }}
                 onDoubleClick={async (e) => {

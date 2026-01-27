@@ -23,4 +23,20 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'process.env.IS_PREACT': JSON.stringify('false'),
   },
+  build: {
+    // Reduce large vendor chunk sizes by splitting common libs
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
+            if (id.includes('excalidraw')) return 'vendor-excalidraw';
+            return 'vendor';
+          }
+        }
+      }
+    },
+    // Relax warning threshold a bit to avoid noisy warnings for intentionally large chunks
+    chunkSizeWarningLimit: 1500
+  }
 });
