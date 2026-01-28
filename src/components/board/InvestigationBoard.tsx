@@ -1878,7 +1878,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         <BottomNavigationBar isGameMaster={isGameMaster} />
       )}
 
-      <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={viewerMode ? 'true' : 'false'}>
+      {!isMobileDevice && (
+        <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={viewerMode ? 'true' : 'false'}>
         {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
           {/* Criar Nova Evidência - Único portal para criar pistas, puzzles e mega-pistas */}
@@ -2042,7 +2043,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar">+</button>
           <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset">⟲</button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Doomsday clock (scene timer) */}
       <DoomsdayClock targetTime={doomsdayTarget} isGameMaster={isGameMaster} onUpdate={async (minutesDelta: number) => {
@@ -2317,6 +2319,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 }}
                 onTouchStart={(ev) => {
                   ev.stopPropagation();
+                  // Prevent default to avoid browser touch gestures (scrolling)
+                  // and ensure our touchmove handlers receive events reliably on mobile.
+                  if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
                   const t = ev.touches[0];
                   // On touch, default to selecting this card (no modifier keys)
                   const newSelected = [card.id];
@@ -2608,14 +2613,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         />
       )}
       {decoderOpen && (
-        <div style={{ position: 'fixed', right: 20, top: 80, width: 560, height: '72vh', zIndex: 12000, background: '#0b0b0d', border: '1px solid #333', padding: 12, borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ color: '#c6a45f', fontWeight: 700 }}>DECODIFICADOR UNIVERSAL</div>
-            <div>
-              <button className="hud-btn" onClick={() => setDecoderOpen(false)}>✖ Fechar</button>
-            </div>
+        <div className="decoder-overlay-wrapper">
+          <div className="decoder-header-mobile">
+            <div style={{ color: '#c6a45f', fontWeight: 700 }}>DECODIFICADOR</div>
+            <button className="hud-btn" onClick={() => setDecoderOpen(false)}>✖</button>
           </div>
-          <div style={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <UniversalDecoder />
           </div>
         </div>

@@ -36,14 +36,15 @@
 
   filter: brightness(1.4) saturate(1.4) contrast(1.1);
   mix-blend-mode: screen;
-  animation: uv-flicker 4.5s infinite alternate;
+  /* slower, less frequent flicker to reduce paint cost */
+  animation: uv-flicker 7s infinite alternate;
   z-index: 9;
 }
 
 /* Robust container and hard flicker for better visibility */
 .uv-container {
   width: 100%;
-  height: 140px; /* Altura fixa obrigatória */
+  min-height: 140px; /* Allow flexible layout while keeping minimum height */
   position: relative;
   background-color: #000;
   border-radius: 2px;
@@ -81,7 +82,7 @@
   width: 100%;
   height: 100%;
   background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.1; /* Reduced opacity for better performance */
+  opacity: 0.06; /* Lowered further to reduce paint cost */
   pointer-events: none;
   z-index: 200; /* sit above main image for UV effects */
   will-change: opacity; /* Removed redundant will-change properties */
@@ -117,20 +118,21 @@
   z-index: 210;
   mix-blend-mode: overlay;
   transition: opacity 0.3s ease-out; /* Slightly slower transition for smoother effect */
-  opacity: 0.3; /* Reduced default opacity */
+  opacity: 0.15; /* Reduced default opacity for less overdraw */
   will-change: opacity, filter;
 }
 
 .secret-ink {
   /* use neutral blend & boosts so any drawn UV color (green/purple/etc.) becomes visible */
 
-  filter: brightness(1.5) contrast(1.2) saturate(1.6); /* Reduced filter intensity */
+  /* Slightly reduced filter intensity to lower GPU cost */
+  filter: brightness(1.3) contrast(1.08) saturate(1.35);
   mix-blend-mode: screen;
   z-index: 220;
-  animation: flicker-hard 5s infinite linear; /* Slower animation for better performance */
+  /* Longer animation reduces frame churn */
+  animation: flicker-hard 8s infinite linear;
   pointer-events: none;
   will-change: opacity, filter;
-  will-change: mask-image, opacity, filter;
 }
 
 /* When UV mode is active, suppress editor selection/focus visuals inside the container
@@ -183,8 +185,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(20px) brightness(0.35);
-  transform: scale(1.06); /* avoid visible edges when blurred */
+  /* Reduced blur radius to lower heavy Gaussian blur cost */
+  filter: blur(12px) brightness(0.38);
+  transform: scale(1.03);
   pointer-events: none;
   z-index: 0;
 }

@@ -16,6 +16,74 @@
   box-shadow: 0 0 20px rgb(0 243 255 / 8%);
 }
 
+/* --- CORREÇÃO MOBILE FORÇADA --- */
+@media (max-width: 768px) {
+  .decoder-station {
+    /* When embedded inside the wrapper, keep static positioning so wrapper header remains clickable */
+    position: static !important;
+    
+    /* Tamanho Fluido */
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 80vh !important; /* Altura máxima segura */
+
+    margin: 0 !important;
+    
+    /* Rolagem do corpo */
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+  }
+
+  /* ABAS DESLIZANTES (Scroll Horizontal) */
+  .decoder-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important; /* PROIBIDO quebrar linha */
+    overflow-x: auto !important; /* PERMITIR rolagem */
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    
+    /* Suavidade no iOS */
+    -webkit-overflow-scrolling: touch;
+    
+    /* Visual */
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+    height: 50px !important; /* Altura fixa para área de toque */
+  }
+
+  /* Botões das abas */
+  .decoder-tabs button {
+    flex: 0 0 auto !important; /* Não deixa o botão encolher */
+    padding: 0 20px !important;
+    font-size: 13px !important;
+    height: 100% !important;
+    white-space: nowrap !important; /* Texto não quebra */
+  }
+
+  /* Corpo do conteúdo */
+  .decoder-body {
+    flex: 1 !important;
+    overflow-y: auto !important; /* Scroll vertical no conteúdo */
+    padding: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Ajustes dos inputs */
+  .decoder-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important; /* Letra maior para ler melhor */
+  }
+}
+
+/* Esconde a barra de rolagem das abas para ficar mais limpo */
+.decoder-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .decoder-tabs {
   display: flex;
   background: rgb(0 0 0 / 30%);

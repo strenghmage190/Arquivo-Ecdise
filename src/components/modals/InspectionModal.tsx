@@ -106,7 +106,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const moreToolsBtnRef = useRef<HTMLButtonElement | null>(null);
   const [moreToolsPos, setMoreToolsPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const moreToolsDropdownRef = useRef<HTMLDivElement | null>(null);
-  const DROPDOWN_VERTICAL_OFFSET = 40; // increased nudge so dropdown appears further below header buttons
+  const [menuView, setMenuView] = useState<'tools' | 'media'>('tools');
+  const DROPDOWN_VERTICAL_OFFSET = 12; // smaller nudge so dropdown sits closer to header buttons
 
   useEffect(() => {
     if (!showMoreTools) return;
@@ -777,10 +778,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       // Wheel Zoom (Mouse)
       const onWheel = (e: WheelEvent) => {
-        if (e.ctrlKey || state.scale > 1) {
+        // Always use wheel to control zoom when pointer is over the container.
+        // Use a scaled delta so each tick feels smooth.
+        try {
           e.preventDefault();
-          zoom(e.deltaY > 0 ? -0.2 : 0.2);
-        }
+        } catch (err) {}
+        const delta = -Math.sign(e.deltaY) * 0.12; // negative because wheel down usually positive deltaY
+        // apply smaller delta when scale is already high for finer control
+        const step = Math.abs(state.scale) > 2 ? delta * 0.6 : delta;
+        zoom(step);
       };
       container.addEventListener('wheel', onWheel, { passive: false });
 
@@ -1253,16 +1259,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     contactNameInferred = first?.contact || first?.name || first?.sender || null;
   }
 
+  // Media availability helpers for dropdown menu
+  const hasImage = !!currentCard.image_url;
+  const hasVideo = !!currentCard.video_url || !!unifiedMedia.videoUrl;
+  const hasAudio = !!audioSources.src;
+  const hasChat = !!_headerChatList?.length;
+  const mediaCount = [hasImage, hasVideo, hasAudio, hasChat].filter(Boolean).length;
+
   const modal = (
     <div className="inspect-backdrop" ref={backdropRef} onClick={onClose}>
       {/* Dropdown portal for the 'MAIS' menu - positioned relative to modal */}
       {showMoreTools && moreToolsPos && (
         <div
           ref={moreToolsDropdownRef}
-          style={{
+            style={{
             position: 'absolute',
             left: `${moreToolsPos.left}px`,
-            top: `${moreToolsPos.top}px`,
+              top: `${moreToolsPos.top - 12}px`,
             background: '#111',
             border: '1px solid #222',
             padding: 8,
@@ -1273,46 +1286,60 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           }}
           onClick={e => e.stopPropagation()}
         >
-          {currentCard.audio_url && (
-            <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>📻 INVESTIGAR ÁUDIO</button>
-          )}
-          {(() => {
-            const meta = currentCard?.metadata;
-            const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
-            const thermalKeyword = meta?.thermal_keyword;
-            const thermalUnlocked = meta?.thermal_unlocked === true;
-            const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
-            const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
-
-            return (
-              <button
-                type="button"
-                className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'left',
-                  opacity: isLocked ? 0.5 : 1,
-                  cursor: isLocked ? 'not-allowed' : 'pointer'
-                }}
-                onClick={() => {
-                  if (isLocked) {
-                    alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`);
-                    return;
-                  }
-                  setLocalThermal(!localThermal);
-                  setShowMoreTools(false);
-                }}
-                title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
-              >
-                🌡️ TERMAL {isLocked ? '🔒' : ''}
+          {menuView === 'media' ? (
+            <>
+              <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}>⬅ VOLTAR</button>
+              <hr className="divider" />
+              {hasImage && (
+                <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}>📸 FOTO</button>
+              )}
+              {hasVideo && (
+                <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
+              )}
+              {hasAudio && (
+                <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>🎵 ÁUDIO</button>
+              )}
+              {hasChat && (
+                <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
+              )}
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn-tool-tab btn-highlight" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('media')}>
+                📂 MÍDIA ({mediaCount}) ▸
               </button>
-            );
-          })()}
-          <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
-          <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
-          <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
-          <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+              <hr className="divider" />
+              {(() => {
+                const meta = currentCard?.metadata;
+                const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
+                const thermalKeyword = meta?.thermal_keyword;
+                const thermalUnlocked = meta?.thermal_unlocked === true;
+                const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
+                const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
+
+                return (
+                  <button
+                    type="button"
+                    className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', opacity: isLocked ? 0.5 : 1, cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                    onClick={() => {
+                      if (isLocked) { alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`); return; }
+                      setLocalThermal(!localThermal);
+                      setShowMoreTools(false);
+                    }}
+                    title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
+                  >
+                    🌡️ TERMAL {isLocked ? '🔒' : ''}
+                  </button>
+                );
+              })()}
+
+              <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
+              <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
+              <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
+              <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+            </>
+          )}
         </div>
       )}
       <div
@@ -1343,10 +1370,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 {/* Toggle buttons for available media types */}
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                    {card.image_url && <button className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} onClick={() => setVisualMode('image')}>FOTO</button>}
-                    {currentCard.video_url && <button className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} onClick={() => setVisualMode('video')}>VÍDEO</button>}
-                    {(currentCard.audio_url || unifiedMedia.audioUrl || parsedMetadata?.audio_url || parsedMetadata?.audio || parsedMetadata?.audio_base_url) && <button className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} onClick={() => setVisualMode('audio')}>ÁUDIO</button>}
-                    {_headerChatList && _headerChatList.length > 0 && <button className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} onClick={() => setVisualMode('phone')}>CHATS</button>}
+                  {/* Mídias movidas para o menu "MAIS" — mantém o cabeçalho limpo */}
                 </div>
               </div>
               <div className="actions">

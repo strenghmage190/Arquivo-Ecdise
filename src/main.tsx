@@ -6,6 +6,7 @@ import './index.css';
 import './styles/nexus.css';
 import './styles/animations.css';
 import './styles/performance.css';
+import './mobile-cleanup.css';
 // Ensure UVEditor styles are always available (avoid relying on dynamic import timing)
 import './components/tools/UVEditor.css';
 import EventEmitter from 'eventemitter3';

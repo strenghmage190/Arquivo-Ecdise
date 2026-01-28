@@ -142,6 +142,8 @@ body.mobile-mode .investigation-board .mobile-controls {
   z-index: 10;
   user-select: none;
   cursor: grab;
+  /* Ensure touch events are handled by JS (prevent native scrolling on cards) */
+  touch-action: none;
   transform: translate3d(0, 0, 0); /* Aceleração de GPU */
   transition:
     box-shadow 0.2s,
@@ -399,6 +401,74 @@ body.space-panning .corkboard-canvas:active {
   left: 8px;
   top: 72px;
   z-index: 2200;
+}
+
+/* --- DECODIFICADOR (WRAPPER GERAL) --- */
+
+/* Estilo Padrão (Desktop): Barra Lateral Flutuante */
+.decoder-overlay-wrapper {
+  position: fixed;
+  right: 20px;
+  top: 80px;
+  width: 560px;
+  height: 72vh;
+  z-index: 12000;
+  background: #0b0b0d;
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+}
+
+.decoder-header-mobile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* --- ESTILO MOBILE (Correção do "Torto") --- */
+@media (max-width: 768px) {
+  .decoder-overlay-wrapper {
+    /* Reseta posições do desktop */
+    right: auto !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    
+    /* Tamanho para celular */
+    width: 95vw !important;
+    height: auto !important;
+    max-height: 85vh !important;
+    
+    /* Visual */
+    background: rgba(10, 12, 15, 0.98) !important;
+    border: 1px solid var(--nexus-blue, #00f3ff) !important;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9) !important;
+    padding: 16px !important;
+  }
+
+  /* Ajuste interno para não quebrar o layout */
+  .decoder-overlay-wrapper > div {
+    width: 100%;
+  }
+  
+  /* Garante que o componente UniversalDecoder (filho) preencha o espaço */
+  .decoder-station {
+    width: 100% !important;
+    height: auto !important;
+    max-height: calc(85vh - 96px) !important;
+    border: 1px solid rgba(0,243,255,0.06) !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6) !important;
+    background: rgba(5,8,10,0.98) !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    transform: none !important;
+    position: static !important; /* Remove o fixed interno que criamos antes */
+    overflow: auto !important;
+  }
 }
 
 .filter-group {

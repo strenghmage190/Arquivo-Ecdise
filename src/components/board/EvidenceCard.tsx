@@ -132,7 +132,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       data-locked={locked}
       data-player-view={playerView}
       style={{
-        touchAction: 'auto',
+        touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         WebkitTapHighlightColor: 'transparent'

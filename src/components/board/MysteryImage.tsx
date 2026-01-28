@@ -185,89 +185,120 @@ export function MysteryImage({
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  // Only redraw the forensic canvas when the source image or the requested
-  // forensic channel changes. This avoids expensive reprocessing when unrelated
-  // props (filters / isUVMode) change.
+  const workerRef = useRef<Worker | null>(null);
+
+  // If OffscreenCanvas + Worker are available, offload pixel work to a dedicated worker.
+  // Fallback to main-thread processing if not supported.
   useEffect(() => {
-    if (forensicChannel === 'all') return; // no canvas processing required
+    if (forensicChannel === 'all') return;
     if (!baseSrc) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = baseSrc;
-    imageRef.current = img;
+    const MAX_DIM = 800; // keep reduced size to limit pixel work
+
+    const supportsOffscreen = typeof (window as any).OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined';
 
     let cancelled = false;
-    const onload = async () => {
+
+    const cleanupWorker = () => {
+      if (workerRef.current) {
+        try { workerRef.current.terminate(); } catch (e) {}
+        workerRef.current = null;
+      }
+    };
+
+    const doMainThreadProcessing = async () => {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = baseSrc;
+      await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); });
       if (cancelled) return;
       try {
         const naturalW = img.naturalWidth || img.width || 1024;
         const naturalH = img.naturalHeight || img.height || 768;
-        // cap maximum dimension to reduce pixel-processing cost and improve FPS
-        const MAX_DIM = 1200; // adjust if you want higher fidelity
         const scale = Math.min(1, MAX_DIM / Math.max(naturalW, naturalH));
         const targetW = Math.max(1, Math.round(naturalW * scale));
         const targetH = Math.max(1, Math.round(naturalH * scale));
-        canvas.width = targetW;
-        canvas.height = targetH;
-        // ensure canvas element will scale visually to fit the container while preserving aspect ratio
-        try {
-          (canvas as any).style.maxWidth = '100%';
-          (canvas as any).style.maxHeight = '100%';
-          (canvas as any).style.width = 'auto';
-          (canvas as any).style.height = '100%';
-          (canvas as any).style.left = '50%';
-          (canvas as any).style.top = '50%';
-          (canvas as any).style.transform = 'translate(-50%, -50%)';
-        } catch (e) {}
-
+        canvas.width = targetW; canvas.height = targetH;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // prefer createImageBitmap where available (faster in many browsers)
         if ((window as any).createImageBitmap) {
           try {
             const bitmap = await (window as any).createImageBitmap(img);
             ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
             try { bitmap.close?.(); } catch (e) {}
           } catch (e) {
-            // fallback
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           }
-        } else {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
+        } else ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // small optimization: work on the scaled canvas only (fewer pixels)
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         for (let i = 0, len = data.length; i < len; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          let intensity = 0;
-          let cr = 0, cg = 0, cb = 0;
-          if (forensicChannel === 'r') { intensity = r; cr = 255; cg = 0; cb = 0; }
-          else if (forensicChannel === 'g') { intensity = g; cr = 0; cg = 255; cb = 0; }
-          else if (forensicChannel === 'b') { intensity = b; cr = 0; cg = 0; cb = 255; }
-          data[i] = cr;
-          data[i + 1] = cg;
-          data[i + 2] = cb;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          let intensity = 0, cr = 0, cg = 0, cb = 0;
+          if (forensicChannel === 'r') { intensity = r; cr = 255; }
+          else if (forensicChannel === 'g') { intensity = g; cg = 255; }
+          else if (forensicChannel === 'b') { intensity = b; cb = 255; }
+          data[i] = cr; data[i + 1] = cg; data[i + 2] = cb;
           data[i + 3] = Math.max(0, Math.min(255, Math.round(intensity)));
         }
         ctx.putImageData(imageData, 0, 0);
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.debug('MysteryImage canvas processing failed', e);
+        console.debug('MysteryImage main-thread canvas processing failed', e);
       }
     };
 
-    img.addEventListener('load', onload);
-    return () => { cancelled = true; img.removeEventListener('load', onload); };
+    if (supportsOffscreen) {
+      try {
+        cleanupWorker();
+        const w = new Worker(new URL('../../workers/forensicWorker.ts', import.meta.url), { type: 'module' });
+        workerRef.current = w;
+        const offscreen = (canvas as any).transferControlToOffscreen();
+        const msg = { canvas: offscreen, src: baseSrc, channel: forensicChannel, maxDim: MAX_DIM } as any;
+        w.postMessage(msg, [offscreen]);
+      } catch (e) {
+        // if worker path fails for any reason, fallback to main thread
+        doMainThreadProcessing();
+      }
+    } else {
+      doMainThreadProcessing();
+    }
+
+    return () => { cancelled = true; cleanupWorker(); };
   }, [baseSrc, forensicChannel]);
+
+  // Performance: write pointer CSS vars directly to the container to avoid
+  // re-rendering the React tree on every mouse move. useThrottledMouse still
+  // provides coarse updates, but RAF ensures smooth, coalesced DOM writes.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let rafId: number | null = null;
+    const updateVars = () => {
+      try {
+        el.style.setProperty('--mouse-x', `${xy.x}px`);
+        el.style.setProperty('--mouse-y', `${xy.y}px`);
+      } catch (e) {}
+      rafId = null;
+    };
+
+    if (isUVMode) {
+      if (rafId == null) rafId = requestAnimationFrame(updateVars);
+    }
+
+    return () => { if (rafId != null) cancelAnimationFrame(rafId); };
+  }, [xy.x, xy.y, isUVMode]);
+
+  // Expose radius as CSS var via DOM writes to avoid inline style churn
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    try { el.style.setProperty('--uv-radius', `${RADIUS}px`); } catch (e) {}
+  }, [RADIUS]);
 
   const handleResize = useCallback(() => {
     try {

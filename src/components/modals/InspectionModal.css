@@ -448,6 +448,29 @@
     0 0 20px rgb(0 243 255 / 15%);
 }
 
+/* Dropdown helper styles */
+.divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin: 6px 0;
+}
+
+.btn-highlight {
+  background-color: rgba(0, 243, 255, 0.06);
+  color: #00f3ff;
+  font-weight: 700;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+
+.btn-tool-tab {
+  margin: 0; /* ensure stacked dropdown buttons have no gaps */
+}
+
 /* Reduce gap so items fit in one line on narrow screens */
 @media (width <= 900px) {
   .inspect-header {
@@ -1731,6 +1754,9 @@ input[type="number"].filter-number {
     border-radius: 0 !important;
     border: none !important;
     font-size: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: auto !important;
   }
 
   .inspect-header {
@@ -1804,13 +1830,14 @@ input[type="number"].filter-number {
   .tools-hud-panel::-webkit-scrollbar, .filters-overlay-panel::-webkit-scrollbar { width: 6px !important; }
   .tools-hud-panel .hud-title { font-size: 11px; }
   .inspect-visual-area, .evidence-display-area {
-    min-height: calc(100vh - 120px) !important;
-    max-height: calc(100vh - 120px) !important;
+    min-height: auto !important;
+    max-height: none !important;
     padding: 6px !important;
+    flex: 0 0 auto !important;
   }
   .inspect-details { flex-direction: column !important; max-height: 30vh !important; min-height: 60px !important; padding: 10px !important; overflow: auto !important; }
   .text-col { padding-right: 0 !important; margin-bottom: 8px !important; max-height: 50% !important; font-size: 13px !important; }
-  .controls-col { width: 100% !important; display: flex !important; flex-direction: row !important; gap: 8px !important; overflow-x: auto !important; }
+  .controls-col { width: 100% !important; display: flex !important; flex-direction: row !important; gap: 8px !important; overflow-x: auto !important; order: -1 !important; }
   .image-controls, .waveform-controls { right: 12px !important; top: 12px !important; z-index: 980 !important; }
   .ui-corners, .grid-overlay, .thermal-scale { display: none !important; }
   .filter-number { width: 56px; font-size: 12px; }
