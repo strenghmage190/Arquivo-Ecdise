@@ -123,7 +123,21 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   }
 
   return (
-    <div ref={cardRef} className={rootClasses} id={`card-${id}`} data-testid={`card-${id}`} data-card-type={cardType} data-locked={locked} data-player-view={playerView}>
+    <div
+      ref={cardRef}
+      className={rootClasses}
+      id={`card-${id}`}
+      data-testid={`card-${id}`}
+      data-card-type={cardType}
+      data-locked={locked}
+      data-player-view={playerView}
+      style={{
+        touchAction: 'auto',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
+    >
       <div className="scanner-line" />
 
       <div className="clue-image-container">

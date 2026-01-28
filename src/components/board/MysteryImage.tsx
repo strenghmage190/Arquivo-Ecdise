@@ -305,7 +305,7 @@ export function MysteryImage({
     >
       {/* Background decorative blur (fills sides with color from the image) - optional */}
       {baseSrc && !isUVMode && ambientBlur && (
-        <img src={baseSrc} className="bg-blur" alt="" loading="lazy" />
+        <img src={baseSrc} className="bg-blur" alt="" loading="lazy" draggable={false} style={{ pointerEvents: 'none' }} />
       )}
       {/* Base image always rendered as background layer (keeps layout stable) */}
       <div style={{ ...filterStyle, backgroundImage: bgImage, position: 'absolute', inset: 0 }} />
@@ -338,7 +338,8 @@ export function MysteryImage({
           className="main-evidence"
           alt="evidence"
           loading="lazy"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10 }}
+          draggable={false}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10, pointerEvents: 'none' }}
         />
       )}
 

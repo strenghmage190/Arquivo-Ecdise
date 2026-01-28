@@ -644,152 +644,172 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       };
     }, [waveformRef, visualMode, audioSources.src]);
 
-    // Image zoom controls: double-click to zoom centered at click, plus/minus buttons, and panning when zoomed
+    // Lógica de Zoom Otimizada (Sincroniza UV e Filtros)
     React.useEffect(() => {
-      if (visualMode !== 'image') return;
-      const modal = fileRef.current;
-      if (!modal) return;
+      // Só roda se for modo imagem ou vídeo (se quiser zoom em vídeo)
+      if (visualMode !== 'image' && visualMode !== 'video') return;
+      
+      // Procura o elemento correto dependendo se estamos no Fullscreen ou no Modal normal
+      const context = fullscreenOpen ? document.body : fileRef.current;
+      if (!context) return;
 
-      const container = modal.querySelector('.evidence-display-area') as HTMLElement | null;
+      // O alvo é o WRAPPER que segura a imagem base e a camada UV
+      // Procuramos classes comuns de containers de imagem misteriosa
+      const container = context.querySelector('.evidence-display-area, .fullscreen-stage') as HTMLElement | null;
       if (!container) return;
 
-      // prefer inner wrapper (uv-container or large-evidence-img) so controls sit on top of the visual layer
-      const innerEl = (container.querySelector('.uv-container, .large-evidence-img') as HTMLElement | null) || container;
+      // O elemento que será transformado (Escalado/Movido)
+      // Tenta achar o container interno do MysteryImage (.uv-container ou .large-evidence-img)
+      // Se não achar, usa o próprio container.
+      const transformTarget = (container.querySelector('.uv-container, .large-evidence-img') as HTMLElement | null) || 
+                              (container.querySelector('img') as HTMLElement | null);
 
-      // target the image/canvas element inside the inner wrapper
-      const imgEl = innerEl.querySelector('img.main-evidence, canvas.thermal-canvas, img') as HTMLElement | null;
-      if (imgEl) imgEl.style.willChange = 'transform';
+      if (!transformTarget) return;
 
-      innerEl.classList.add('image-zoomable');
+      // Prepara o elemento para aceleração de hardware.
+      // Nota: ativamos o modo de performance apenas durante o arraste (will-change = 'transform').
+      // Aqui deixamos em 'auto' para que o navegador redesenhe em alta qualidade quando não estiver arrastando.
+      transformTarget.style.willChange = 'auto';
+      transformTarget.style.transformOrigin = 'center center'; // Zoom no centro facilita no mobile
+      
+      // Adiciona controles visuais se não existirem
+      if (!container.querySelector('.image-controls')) {
+        const controls = document.createElement('div');
+        controls.className = 'image-controls';
+        controls.innerHTML = '<button type="button" class="img-zoom-btn">+</button><button type="button" class="img-zoom-btn">−</button>';
+        // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
+        if (!fullscreenOpen) container.appendChild(controls);
+      }
 
-      const controls = document.createElement('div');
-      controls.className = 'image-controls';
-      controls.innerHTML = '<button type="button" aria-label="Zoom in" class="img-zoom-btn">+</button><button type="button" aria-label="Zoom out" class="img-zoom-btn">−</button>';
-      innerEl.appendChild(controls);
-
-      let currentZoom = 1;
-      let offsetX = 0;
-      let offsetY = 0;
-      let dragging = false;
-      let dragStartX = 0;
-      let dragStartY = 0;
-      let startOffsetX = 0;
-      let startOffsetY = 0;
-
-      const applyTransform = () => {
-        const target = imgEl || container;
-        if (!target) return;
-        target.style.transition = 'transform 180ms ease';
-        target.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${currentZoom})`;
-        if (currentZoom > 1) target.style.cursor = dragging ? 'grabbing' : 'grab';
-        else target.style.cursor = 'zoom-in';
-        if (innerEl) (innerEl as any).dataset.imageZoom = String(currentZoom);
+      // Estado local do Zoom (Mutable para performance)
+      let state = {
+        scale: 1,
+        panning: false,
+        pointX: 0,
+        pointY: 0,
+        startX: 0,
+        startY: 0
       };
 
-      const clampOffsets = () => {
-        if (!imgEl || !innerEl) return;
-        const imgRect = imgEl.getBoundingClientRect();
-        const contRect = innerEl.getBoundingClientRect();
-        const displayW = imgRect.width * currentZoom;
-        const displayH = imgRect.height * currentZoom;
-        const maxX = Math.max(0, (displayW - contRect.width) / 2);
-        const maxY = Math.max(0, (displayH - contRect.height) / 2);
-        offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
-        offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+      const updateTransform = () => {
+        transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px) scale(${state.scale})`;
+        transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
       };
 
-      const setZoom = (z: number, originPercent = 50) => {
-        currentZoom = Math.max(1, Math.min(6, z));
-        if (imgEl) imgEl.style.transformOrigin = `${originPercent}% 50%`;
-        // if resetting to 1, clear offsets
-        if (currentZoom <= 1.001) {
-          offsetX = 0; offsetY = 0;
-        } else {
-          clampOffsets();
-        }
-        applyTransform();
-      };
+      // --- HANDLERS DE MOUSE/TOUCH ---
 
-      const handleDbl = (e: MouseEvent) => {
+      const onMouseDown = (e: MouseEvent | TouchEvent) => {
+        if (state.scale <= 1) return; // Só arrasta se tiver zoom
+        e.preventDefault();
+        state.panning = true;
+        
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        state.startX = clientX - state.pointX;
+        state.startY = clientY - state.pointY;
+
+        // ATIVA modo performance durante o movimento (pode ficar levemente borrado mas melhora fluidez)
         try {
-          e.stopPropagation();
-          const rect = innerEl.getBoundingClientRect();
-          const x = (e.clientX - rect.left);
-          const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
-          const targetZoom = currentZoom === 1 ? 2 : 1;
-          setZoom(targetZoom, percent);
-        } catch (err) {
-          // ignore
+          transformTarget.style.willChange = 'transform';
+        } catch (err) {}
+
+        updateTransform();
+      };
+
+      const onMouseMove = (e: MouseEvent | TouchEvent) => {
+        if (!state.panning) return;
+        e.preventDefault();
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        state.pointX = clientX - state.startX;
+        state.pointY = clientY - state.startY;
+
+        // Garante que will-change está ativo durante o movimento
+        try {
+          if (transformTarget.style.willChange !== 'transform') transformTarget.style.willChange = 'transform';
+        } catch (err) {}
+
+        updateTransform();
+      };
+
+      const onMouseUp = () => {
+        state.panning = false;
+        // DESATIVA modo performance para forçar redesenho em alta qualidade
+        try { transformTarget.style.willChange = 'auto'; } catch (err) {}
+        updateTransform();
+      };
+
+      // Zoom via Botões ou Roda do Mouse
+      const zoom = (delta: number) => {
+        const newScale = Math.max(1, Math.min(8, state.scale + delta));
+        state.scale = newScale;
+        if (newScale === 1) {
+          state.pointX = 0;
+          state.pointY = 0;
+        }
+        updateTransform();
+      };
+
+      // Listeners
+      const btns = container.querySelectorAll('.img-zoom-btn');
+      const btnIn = btns[0]; 
+      const btnOut = btns[1];
+
+      const handleIn = (e: Event) => { e.stopPropagation(); zoom(0.5); };
+      const handleOut = (e: Event) => { e.stopPropagation(); zoom(-0.5); };
+
+      if(btnIn) btnIn.addEventListener('click', handleIn);
+      if(btnOut) btnOut.addEventListener('click', handleOut);
+      
+      // Adiciona eventos ao container (para pegar o click em qualquer lugar)
+      container.addEventListener('mousedown', onMouseDown);
+      container.addEventListener('mousemove', onMouseMove);
+      container.addEventListener('mouseup', onMouseUp);
+      container.addEventListener('mouseleave', onMouseUp);
+      
+      // Touch events (Mobile)
+      container.addEventListener('touchstart', onMouseDown, { passive: false });
+      container.addEventListener('touchmove', onMouseMove, { passive: false });
+      container.addEventListener('touchend', onMouseUp);
+
+      // Wheel Zoom (Mouse)
+      const onWheel = (e: WheelEvent) => {
+        if (e.ctrlKey || state.scale > 1) {
+          e.preventDefault();
+          zoom(e.deltaY > 0 ? -0.2 : 0.2);
         }
       };
+      container.addEventListener('wheel', onWheel, { passive: false });
 
-      const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(6, currentZoom + 0.5), 50); };
-      const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.5), 50); };
-
-      const onPointerDown = (ev: PointerEvent) => {
-        if (currentZoom <= 1) return;
-        dragging = true;
-        dragStartX = ev.clientX;
-        dragStartY = ev.clientY;
-        startOffsetX = offsetX;
-        startOffsetY = offsetY;
-        (ev.target as Element).setPointerCapture?.(ev.pointerId);
-        applyTransform();
-      };
-
-      const onPointerMove = (ev: PointerEvent) => {
-        if (!dragging) return;
-        const dx = ev.clientX - dragStartX;
-        const dy = ev.clientY - dragStartY;
-        offsetX = startOffsetX + dx;
-        offsetY = startOffsetY + dy;
-        clampOffsets();
-        applyTransform();
-      };
-
-      const onPointerUp = (ev: PointerEvent) => {
-        dragging = false;
-        try { (ev.target as Element).releasePointerCapture?.(ev.pointerId); } catch {}
-        applyTransform();
-      };
-
-      innerEl.addEventListener('dblclick', handleDbl);
-      const btns = controls.querySelectorAll('.img-zoom-btn');
-      if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
-      if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
-
-      const targetForPointers = imgEl || innerEl || container;
-      targetForPointers.addEventListener('pointerdown', onPointerDown as any);
-      window.addEventListener('pointermove', onPointerMove as any);
-      window.addEventListener('pointerup', onPointerUp as any);
-
-      const keyHandler = (e: KeyboardEvent) => {
-        if (visualMode !== 'image') return;
-        if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
-        if (e.key === '-') { handleZoomOut(e as any); }
-        if (e.key === '0') { setZoom(1, 50); }
-      };
-      window.addEventListener('keydown', keyHandler);
-
-      // initial reset
-      setZoom(1, 50);
+      // Double Click Reset
+      const onDblClick = () => {
+        state.scale = state.scale > 1 ? 1 : 2.5; // Toggle zoom
+        state.pointX = 0; state.pointY = 0;
+        updateTransform();
+      }
+      container.addEventListener('dblclick', onDblClick);
 
       return () => {
-        window.removeEventListener('keydown', keyHandler);
-        try { innerEl.removeEventListener('dblclick', handleDbl); } catch (e) {}
-        try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) {}
-        try { targetForPointers.removeEventListener('pointerdown', onPointerDown as any); window.removeEventListener('pointermove', onPointerMove as any); window.removeEventListener('pointerup', onPointerUp as any); } catch (e) {}
-        try { if (controls.parentElement === innerEl) innerEl.removeChild(controls); } catch (e) {}
-        const target = imgEl || innerEl || container;
-        if (target) {
-          target.style.transform = '';
-          target.style.transformOrigin = '';
-          target.style.cursor = '';
-        }
-        try { delete (innerEl as any).dataset.imageZoom; } catch (e) {}
-        try { innerEl.classList.remove('image-zoomable'); } catch (e) {}
+        if(btnIn) btnIn.removeEventListener('click', handleIn);
+        if(btnOut) btnOut.removeEventListener('click', handleOut);
+        container.removeEventListener('mousedown', onMouseDown);
+        container.removeEventListener('mousemove', onMouseMove);
+        container.removeEventListener('mouseup', onMouseUp);
+        container.removeEventListener('mouseleave', onMouseUp);
+        container.removeEventListener('touchstart', onMouseDown);
+        container.removeEventListener('touchmove', onMouseMove);
+        container.removeEventListener('touchend', onMouseUp);
+        container.removeEventListener('wheel', onWheel);
+        container.removeEventListener('dblclick', onDblClick);
+        
+        // Cleanup transform and reset will-change so browser may re-render in full quality
+        try { transformTarget.style.willChange = 'auto'; } catch (err) {}
+        transformTarget.style.transform = '';
       };
-    }, [visualMode, fileRef, unifiedMedia.imageUrl, currentCard?.image_url]);
+    }, [visualMode, fullscreenOpen, currentCard]); // Recria se abrir o fullscreen
 
     // Renderizador inteligente da Área Visual
     const renderVisualContent = () => {
@@ -1171,6 +1191,59 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   // only run when these change
   }, [visualMode, currentCard.image_url, effectiveHasChat]);
+
+  // Listen for mobile "inspection:select-tool" events dispatched by the BottomNavigationBar
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent).detail as { tool?: string } | undefined;
+        const tool = detail?.tool;
+        if (!tool) return;
+
+        switch (tool) {
+          case 'image':
+          case 'video':
+          case 'audio':
+          case 'phone':
+            setVisualMode(tool as any);
+            break;
+          case 'filters':
+            disableAllBut('filters');
+            break;
+          case 'forense':
+            disableAllBut('forense');
+            break;
+          case 'hex':
+            disableAllBut('hex');
+            break;
+          case 'decoder':
+            disableAllBut('decoder');
+            break;
+          case 'lens':
+            disableAllBut('lens');
+            break;
+          case 'thermal':
+            setLocalThermal((v: boolean) => !v);
+            break;
+          case 'uv':
+            setLocalUV((v: boolean) => !v);
+            break;
+          case 'glitch':
+            setShowGlitchSolver(true);
+            break;
+          case 'expand':
+            setFullscreenOpen(true);
+            break;
+          default:
+            break;
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    window.addEventListener('inspection:select-tool', handler as EventListener);
+    return () => window.removeEventListener('inspection:select-tool', handler as EventListener);
+  }, [setVisualMode, disableAllBut, setLocalThermal, setLocalUV, setShowGlitchSolver, setFullscreenOpen]);
 
   // derive contact name for header/meta display (prefer explicit column, then metadata, then chat payload)
   const contactNameFromPayload = currentCard.chat_contact_name ?? _maybeMeta?.chat_contact_name ?? null;
@@ -1739,80 +1812,110 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       {createPortal(modal, document.body)}
       {glitchPortal}
       
-      {/* Fullscreen Modal para Imagens e Phone */}
+      {/* MODO EXPANDIR (FULLSCREEN) RENOVADO */}
       {fullscreenOpen && createPortal(
-        <div style={{position:'fixed', inset:0, zIndex:30000, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column'}} onClick={() => setFullscreenOpen(false)}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:12}} onClick={(e)=>e.stopPropagation()}>
-            <div style={{color:'#fff'}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,6)}</div>
-            <div style={{display:'flex', gap:8}}>
-              {visualMode !== 'phone' && (
-                <>
-                  <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setLocalUV(prev=>!prev); }}>{localUV? 'UV ON':'UV OFF'}</button>
-                  <button className={`btn-tool-tab ${localThermal ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setLocalThermal(prev=>!prev); }}>{localThermal ? 'TERMAL ON' : 'TERMAL'}</button>
-                  <button className={`btn-tool-tab ${forensicMode !== 'none' ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setForensicMode(prev => prev === 'channel' ? 'none' : 'channel'); }}>{forensicMode !== 'none' ? 'FORENSE ON' : 'FORENSE'}</button>
-                  <select value={forensicChannel} onChange={e=>setForensicChannel(e.target.value as any)} style={{marginLeft:6}} onClick={e=>e.stopPropagation()}>
-                    <option value="all">ALL</option>
-                    <option value="r">R</option>
-                    <option value="g">G</option>
-                    <option value="b">B</option>
-                  </select>
-                  <button className={`btn-tool-tab ${fullscreenOnlyTreatment ? 'active-green' : ''}`} onClick={e=>{ e.stopPropagation(); setFullscreenOnlyTreatment(prev=>!prev); }}>{fullscreenOnlyTreatment ? 'TRATAR SÓ NA EXPANSÃO' : 'TRATAR NA TELA'}</button>
-                  <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setBrightness(100); setContrast(100); setSaturation(100); }}>RESET</button>
-                </>
-              )}
-              <button className="btn-tool-tab" onClick={e=>{ e.stopPropagation(); setFullscreenOpen(false); }}>FECHAR</button>
+        <div className="fullscreen-viewer">
+          
+          {/* HUD SUPERIOR: Título e Fechar */}
+          <div className="fullscreen-hud-top">
+            <div>
+              <div style={{color:'#fff', fontWeight:'bold', letterSpacing:1}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,4)}</div>
+              <div style={{color:'#00f3ff', fontSize:10, marginTop:2}}>{localUV ? 'LUZ UV ATIVA' : 'MODO PADRÃO'}</div>
             </div>
+            <button className="btn-hud-close" onClick={() => setFullscreenOpen(false)}>×</button>
           </div>
-          <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
+
+          {/* ÁREA DA IMAGEM (STAGE) */}
+          {/* A classe fullscreen-stage é alvo do nosso useEffect de Zoom novo */}
+          <div className="fullscreen-stage" onClick={(e) => e.stopPropagation()}>
             {visualMode === 'phone' ? (
               <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                <PhoneViewer 
-                  chatData={_headerChatList} 
-                  contactName={currentCard.title}
-                  isLocked={phoneIsLocked}
-                  password={phonePassword}
-                  passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
-                  fullscreen={true}
-                />
+                 <PhoneViewer 
+                    chatData={_headerChatList} 
+                    contactName={currentCard.title}
+                    isLocked={phoneIsLocked}
+                    password={phonePassword}
+                    passwordType={parsedMetadata?.phone_lock_type || 'pin'}
+                    fullscreen={true}
+                 />
               </div>
             ) : (
-              <div style={{width:'90%', height:'90%', position:'relative'}}>
-                <MysteryImage
-                  baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                  hiddenSrc={currentCard.image_uv_url}
-                  filterLayerSrc={currentCard.image_filter_layer}
-                  filters={{ brightness, contrast, saturate: saturation }}
-                  revealSettings={(() => {
-                    let reveal: any = null;
-                    try {
-                      const m = currentCard.metadata && typeof currentCard.metadata === 'object'
-                        ? currentCard.metadata
-                        : (typeof currentCard.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
-                      reveal = m?.image_filter_reveal ?? null;
-                    } catch (e) { reveal = null; }
-                    return reveal;
-                  })()}
-                  isUVMode={localUV}
-                  fit="contain"
-                  className="large-evidence-img"
-                  style={{ height: '100%', width: '100%' }}
-                  forensicChannel={forensicChannel}
-                />
-                {localThermal && (
-                  <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
-                )}
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {/* MysteryImage Renderizado aqui dentro */}
+                  <MysteryImage
+                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                    hiddenSrc={currentCard.image_uv_url}
+                    filterLayerSrc={currentCard.image_filter_layer}
+                    filters={{ brightness, contrast, saturate: saturation }}
+                    revealSettings={fullscreenOnlyTreatment ? null : (() => {
+                       try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
+                    })()}
+                    isUVMode={localUV}
+                    fit="contain"
+                    className="large-evidence-img"
+                    style={{ maxHeight: '100%', maxWidth: '100%' }} 
+                    forensicChannel={forensicChannel}
+                  />
+                  
+                  {/* Camada Termal sobreposta (se ativa) */}
+                  {localThermal && (
+                    <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
+                  )}
               </div>
             )}
           </div>
+
+          {/* HUD INFERIOR: Ferramentas (Só aparece se não for celular/chat) */}
           {visualMode !== 'phone' && (
-          <div style={{padding:12, display:'flex', gap:12, alignItems:'center', justifyContent:'center'}} onClick={e=>e.stopPropagation()}>
-            <label style={{color:'#fff'}}>BRILHO {brightness}%</label>
-            <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} />
-            <label style={{color:'#fff'}}>CONTRASTE {contrast}%</label>
-            <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} />
-            <label style={{color:'#fff'}}>SAT {saturation}%</label>
-            <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} />
-          </div>
+            <div className="fullscreen-hud-bottom">
+              
+              {/* Botões de Ação */}
+              <div style={{display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center'}}>
+                <button className={`btn-hud ${localUV ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setLocalUV(!localUV)}}>
+                  🔦 LUZ UV
+                </button>
+                
+                <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setLocalThermal(!localThermal)}}>
+                  🌡️ TERMAL
+                </button>
+
+                <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel')}}>
+                  🔬 FORENSE
+                </button>
+
+                {forensicMode === 'channel' && (
+                   <select 
+                     className="btn-hud" 
+                     value={forensicChannel} 
+                     onChange={e=>setForensicChannel(e.target.value as any)}
+                     onClick={e=>e.stopPropagation()}
+                     style={{appearance:'none', paddingRight:30}}
+                   >
+                     <option value="all">RGB (Todos)</option>
+                     <option value="r">RED (Vermelho)</option>
+                     <option value="g">GREEN (Verde)</option>
+                     <option value="b">BLUE (Azul)</option>
+                   </select>
+                )}
+              </div>
+
+              {/* Sliders de Tratamento */}
+              <div className="hud-sliders">
+                <div className="hud-slider-group">
+                  <span>BRI</span>
+                  <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                </div>
+                <div className="hud-slider-group">
+                  <span>CON</span>
+                  <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                </div>
+                <div className="hud-slider-group">
+                  <span>SAT</span>
+                  <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                </div>
+                <button className="btn-hud" style={{fontSize:10, padding:'4px 8px'}} onClick={()=> {setBrightness(100); setContrast(100); setSaturation(100)}}>RESET</button>
+              </div>
+            </div>
           )}
         </div>, document.body
       )}

@@ -33,6 +33,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useWindowSize } from '../../hooks/useWindowSize';
 import BottomSheet from '../ui/BottomSheet';
 import usePerformanceMode from '../../utils/usePerformanceMode';
+import BottomNavigationBar from '../BottomNavigationBar';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -1720,6 +1721,75 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     };
   }, [zoom, origin, isPinching, initialDistance, initialZoom]);
 
+  // Listener para eventos do Menu Mobile
+  useEffect(() => {
+    const handleMobileTool = (e: CustomEvent) => {
+      const toolId = e.detail;
+      console.log('Mobile Tool Action:', toolId);
+
+      switch (toolId) {
+        case 'create':
+          setCreateModalOpen(true);
+          break;
+        case 'connect': {
+          setConnectionMode((prev) => {
+            const next = !prev;
+            if (!next) setConnectionStart(null); // Reset se estiver desligando
+            showToast({ id: 'mob-conn', message: next ? 'Modo Conexão: ATIVADO. Toque em duas cartas.' : 'Modo Conexão: DESATIVADO' });
+            return next;
+          });
+          break;
+        }
+        case 'search':
+          setShowFinder((prev) => !prev);
+          break;
+        case 'uv':
+          setIsUV((prev) => !prev);
+          showToast({ id: 'mob-uv', message: isUV ? 'Luz UV: APAGADA' : 'Luz UV: ACESA' });
+          break;
+        case 'reset-cam':
+          setOrigin({ x: 0, y: 0 });
+          setZoom(1);
+          break;
+        case 'organize':
+          // Abre o menu de organizar ou organiza direto
+          if (window.confirm("Reorganizar o quadro automaticamente?")) {
+             handleAutoOrganize('timeline');
+          }
+          break;
+        case 'decoder':
+          setDecoderOpen(true);
+          break;
+        case 'undo':
+          undo();
+          break;
+        case 'terminal':
+          setTerminalOpen((prev) => !prev);
+          break;
+        case 'conspiracy':
+          setShowSharedBoard(true);
+          break;
+        case 'redo':
+          redo();
+          break;
+        case 'performance':
+          togglePerformanceMode();
+          showToast({ id: 'mob-perf', message: 'Modo Performance Alternado' });
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('investigation:tool', handleMobileTool as EventListener);
+    // Expor fallback global para garantir entrega mesmo quando o evento é disparado antes do listener
+    (window as any).handleInvestigationTool = (toolId: string) => handleMobileTool({ detail: toolId } as CustomEvent);
+    return () => {
+      window.removeEventListener('investigation:tool', handleMobileTool as EventListener);
+      try { delete (window as any).handleInvestigationTool; } catch (e) {}
+    };
+  }, [connectionMode, isUV, undo, redo, togglePerformanceMode, handleAutoOrganize]); // Adicione dependências relevantes
+
   return (
     <div className="investigation-board" data-performance-mode={performanceMode ? 'on' : 'off'}>
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
@@ -1803,6 +1873,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       })()}
       {/* Header moved to dedicated element above */}
 
+      {/* BARRA DE NAVEGAÇÃO MOBILE (NOVA) */}
+      {isMobileDevice && (
+        <BottomNavigationBar isGameMaster={isGameMaster} />
+      )}
+
       <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={viewerMode ? 'true' : 'false'}>
         {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
@@ -1861,8 +1936,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         {/* Grupo 2: Ferramentas */}
         <div className="toolbar-group">
           <button 
-            className={`hud-btn ${connectionMode ? 'active' : ''}`} 
-            onClick={() => { setConnectionMode(!connectionMode); if (connectionMode) setConnectionStart(null); }} 
+            className={`hud-btn connection ${connectionMode ? 'active' : ''}`} 
+            onClick={() => setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; })} 
             data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
           >
             🔗 CONECTAR

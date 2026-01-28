@@ -136,6 +136,12 @@
   max-height: 100%;
   object-fit: contain;
   display: block;
+  /* Melhora a nitidez ao escalar (útil para imagens com texto) */
+  image-rendering: -webkit-optimize-contrast;
+  /* Se preferir bordas mais serrilhadas, descomente a linha abaixo */
+  /* image-rendering: crisp-edges; */
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* UI corners - efeito visual nos cantos */
@@ -800,6 +806,183 @@
   text-transform: uppercase;
   text-shadow: 0 0 12px rgb(0 243 255 / 60%);
   font-family: "Share Tech Mono", monospace;
+}
+
+/* =========================================
+   MODO EXPANDIR (FULLSCREEN) MELHORADO
+   ========================================= */
+
+/* Container Fullscreen */
+.fullscreen-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Impede scroll da página de fundo */
+}
+
+/* Área da Imagem no Fullscreen */
+.fullscreen-stage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: radial-gradient(circle at center, #111 0%, #000 70%);
+}
+
+/* Make the inner wrapper fill the stage so the image can scale up */
+.fullscreen-stage > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0; /* remove extra padding so media can fully fill stage */
+  box-sizing: border-box;
+}
+
+/* Ensure the image/canvas inside fullscreen fills most of viewport while respecting aspect ratio */
+.fullscreen-stage .large-evidence-img,
+.fullscreen-stage img,
+.fullscreen-stage canvas {
+  max-width: 96vw;
+  max-height: 86vh;
+  /* keep element filling its container when MysteryImage positions it absolutely */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* allow the actual image element to scale while keeping inset absolute layout */
+.fullscreen-stage .uv-container img.main-evidence {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Ensure MysteryImage root positions its absolute children correctly in fullscreen */
+.fullscreen-stage .uv-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Force all MysteryImage layers to occupy the same fullscreen bounds */
+.fullscreen-stage .uv-container,
+.fullscreen-stage .uv-container > div,
+.fullscreen-stage .uv-container img.bg-blur,
+.fullscreen-stage .uv-container canvas.forensic-canvas,
+.fullscreen-stage .uv-container .main-evidence {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* layering order: background blur (behind), base image, overlay canvas */
+.fullscreen-stage .uv-container img.bg-blur { z-index: 2; }
+.fullscreen-stage .uv-container > div { z-index: 5; }
+.fullscreen-stage .uv-container .main-evidence { z-index: 10; }
+.fullscreen-stage .uv-container canvas.forensic-canvas { z-index: 30; }
+
+/* HUD Flutuante (Controles Superiores) */
+.fullscreen-hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
+  z-index: 30010;
+  pointer-events: none; /* Deixa clicar na imagem através do gradiente */
+}
+
+.fullscreen-hud-top > * {
+  pointer-events: auto; /* Reativa cliques nos botões */
+}
+
+/* HUD Flutuante (Controles Inferiores - Filtros/UV) */
+.fullscreen-hud-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
+  z-index: 30010;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Botões do HUD mais bonitos e translúcidos */
+.btn-hud {
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  color: #00f3ff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.btn-hud.active {
+  background: rgba(0, 243, 255, 0.25);
+  border-color: #00f3ff;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+}
+
+.btn-hud-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+/* Sliders Compactos para Fullscreen */
+.hud-sliders {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hud-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.hud-slider-group input[type=range] {
+  width: 100px;
+  height: 4px;
 }
 
 /* --- SLIDERS CUSTOMIZADOS (Correção das Barras Brancas) --- */
@@ -1537,7 +1720,7 @@ input[type="number"].filter-number {
 /* Mobile / narrow viewport tweaks: transform modal into fullscreen, make HUDs bottom sheets,
    keep header actions horizontally scrollable, stack details, and ensure close button is reachable */
 @media (max-width: 768px) {
-  /* 1. Tela cheia */
+  /* Existing behaviors kept but compressed: make modal fullscreen and reduce spacing/font sizes */
   .inspect-file {
     position: fixed !important;
     inset: 0 !important;
@@ -1547,40 +1730,43 @@ input[type="number"].filter-number {
     max-height: none !important;
     border-radius: 0 !important;
     border: none !important;
+    font-size: 14px !important;
   }
 
-  /* 2. Header com scroll horizontal e fixo comportamento */
   .inspect-header {
-    flex-wrap: nowrap !important; /* evita quebra de linhas */
-    overflow-x: auto !important; /* permite scroll horizontal */
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
-    height: 60px !important;
-    min-height: 60px !important;
-    padding-right: 72px !important; /* espaço para o botão fechar */
+    height: 56px !important;
+    min-height: 56px !important;
+    padding-right: 64px !important;
+    gap: 6px !important;
   }
   .inspect-header::-webkit-scrollbar { display: none; }
 
-  /* Garanta que o botão de fechar sempre fique visível e clicável */
   .inspect-header .btn-close,
   .inspect-header .btn-close-modal {
     position: fixed !important;
-    top: 10px !important;
-    right: 10px !important;
+    top: 8px !important;
+    right: 8px !important;
     z-index: 9999 !important;
     background: rgba(0,0,0,0.75) !important;
     border-radius: 8px !important;
     border: 1px solid rgba(255,255,255,0.06) !important;
-    width: 44px !important;
-    height: 44px !important;
+    width: 40px !important;
+    height: 40px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
   }
 
-  /* 3. Painéis HUD viram bottom sheets */
-  .tools-hud-panel,
-  .filters-overlay-panel {
+  /* Reduce sizes for buttons/actions to fit narrow header */ 
+  .actions { max-width: 100%; overflow-x: auto; gap: 6px; }
+  .btn-tool-tab { padding: 8px 10px; font-size: 11px; min-width: 44px; height: 36px; }
+  .btn-tool-tab.active-green, .btn-tool-tab.active-blue, .btn-tool-tab.active-purple { padding: 8px 10px; }
+  /* HUD -> bottom sheet */ 
+  .tools-hud-panel, .filters-overlay-panel {
     position: fixed !important;
     top: auto !important;
     bottom: 0 !important;
@@ -1588,80 +1774,72 @@ input[type="number"].filter-number {
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 50vh !important;
+    max-height: 40vh !important;
     height: auto !important;
     border-radius: 12px 12px 0 0 !important;
-    padding: 14px !important;
+    padding: 12px !important;
     overflow: auto !important;
     box-shadow: 0 -10px 40px rgba(0,0,0,0.7) !important;
     z-index: 950 !important;
     animation: none !important;
   }
-
-  .tools-hud-panel::-webkit-scrollbar,
-  .filters-overlay-panel::-webkit-scrollbar { width: 6px !important; }
-
-  /* 4. Rodapé (inspect-details): empilhar em coluna */
-  .inspect-details {
-    flex-direction: column !important;
-    max-height: 30vh !important;
-    min-height: 60px !important;
-    padding: 12px !important;
+  /* Allow modal content to scroll under the fixed bottom HUD by adding
+     extra bottom padding equal to HUD height so footer/metadata can be scrolled
+     into view above the HUD. Also enable overall modal scrolling. */
+  .inspect-file {
     overflow: auto !important;
-  }
-
-  .text-col {
-    padding-right: 0 !important;
-    margin-bottom: 10px !important;
-    max-height: 50% !important;
-  }
-
-  .controls-col {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-    overflow-x: auto !important;
-  }
-
-  /* reduz a altura mínima do visual para priorizar a imagem em tela cheia */
-  .inspect-visual-area,
-  .evidence-display-area {
-    min-height: calc(100vh - 120px) !important;
-    max-height: calc(100vh - 120px) !important;
-  }
-
-  /* evite que elementos interativos fiquem ocultos atrás do bottom sheet */
-  .inspect-file .image-controls,
-  .inspect-file .waveform-controls {
-    right: 12px !important;
-    top: 12px !important;
-    z-index: 980 !important;
-  }
-
-  /* Hide large decorative elements that clutter small screens */
-  .ui-corners,
-  .grid-overlay,
-  .thermal-scale {
-    display: none !important;
-  }
-
-  /* Ensure actions in header don't wrap and are accessible via horizontal scroll */
-  .actions {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* touch targets a bit larger for mobile */
-  .btn-tool-tab,
-  .btn-channel,
-  .btn-reset,
-  .btn-reset-filters,
-  .btn-edit-ref {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    min-height: 44px !important;
+  .inspect-visual-area {
+    /* reduce extra bottom padding so details sit after the visual area in normal flow */
+    padding-bottom: 16px !important;
   }
+
+  /* ensure metadata/footer rises above HUD when scrolled into view */
+  .inspect-details {
+    position: relative !important;
+    z-index: 960 !important;
+  }
+  .tools-hud-panel::-webkit-scrollbar, .filters-overlay-panel::-webkit-scrollbar { width: 6px !important; }
+  .tools-hud-panel .hud-title { font-size: 11px; }
+  .inspect-visual-area, .evidence-display-area {
+    min-height: calc(100vh - 120px) !important;
+    max-height: calc(100vh - 120px) !important;
+    padding: 6px !important;
+  }
+  .inspect-details { flex-direction: column !important; max-height: 30vh !important; min-height: 60px !important; padding: 10px !important; overflow: auto !important; }
+  .text-col { padding-right: 0 !important; margin-bottom: 8px !important; max-height: 50% !important; font-size: 13px !important; }
+  .controls-col { width: 100% !important; display: flex !important; flex-direction: row !important; gap: 8px !important; overflow-x: auto !important; }
+  .image-controls, .waveform-controls { right: 12px !important; top: 12px !important; z-index: 980 !important; }
+  .ui-corners, .grid-overlay, .thermal-scale { display: none !important; }
+  .filter-number { width: 56px; font-size: 12px; }
+  .filter-range { height: 6px; }
+  .image-zoomable .large-evidence-img, .image-zoomable canvas, .image-zoomable img { cursor: grab; }
+  .image-zoomable:active .large-evidence-img, .image-zoomable:active canvas, .image-zoomable:active img { cursor: grabbing; }
+  /* ensure touch smooth scrolling inside modal */ 
+  .inspect-file, .tools-hud-panel, .filters-overlay-panel { -webkit-overflow-scrolling: touch; }
+  /* Keep details in the normal document flow so they appear after the visual area
+     when the user scrolls; ensure Edit button is not fixed on mobile so scrolling
+     order is natural. */
+  .inspect-details {
+    position: static !important;
+    margin-top: 8px !important;
+    max-height: none !important;
+    min-height: 40px !important;
+    padding: 10px !important;
+    overflow: visible !important;
+    background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(10 15 20 / 98%)) !important;
+    border-top: 2px solid rgb(0 243 255 / 15%) !important;
+    border-radius: 6px !important;
+    z-index: auto !important;
+  }
+
+  .btn-edit-ref {
+    position: static !important;
+    margin: 10px 12px !important;
+    z-index: auto !important;
+  }
+
 }
 

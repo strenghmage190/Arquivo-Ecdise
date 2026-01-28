@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 60%);
-  z-index: 12000;
+  z-index: 30010; /* raised above mobile sheet (20002) to ensure visibility */
   display: flex;
   align-items: center;
   justify-content: center;

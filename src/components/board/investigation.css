@@ -1740,3 +1740,12 @@ body.space-panning .corkboard-canvas:active {
     display: none;
   }
 }
+
+/* Ensure toolbar floats above mobile bottom bar and sheet so connection controls are accessible */
+@media (max-width: 768px) {
+  .investigation-toolbar {
+    bottom: 80px; /* lift above the mobile bottom bar (60px) */
+    z-index: 20003; /* above mobile sheet (20002) and bottom bar (20001) */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

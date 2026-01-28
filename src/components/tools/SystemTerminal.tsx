@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import './SystemTerminal.css';
 
 interface SystemTerminalProps {
@@ -156,7 +157,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
 
   if (!isOpen) return null;
 
-  return (
+  const node = (
     <div className="terminal-overlay" onClick={() => onClose && onClose()}>
       <div className="terminal-window" onClick={e => e.stopPropagation()}>
         <div className="terminal-output">
@@ -182,4 +183,9 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return ReactDOM.createPortal(node, document.body);
+  }
+  return node;
 }
