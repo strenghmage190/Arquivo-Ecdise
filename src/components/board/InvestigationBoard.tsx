@@ -2319,9 +2319,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 }}
                 onTouchStart={(ev) => {
                   ev.stopPropagation();
-                  // Prevent default to avoid browser touch gestures (scrolling)
-                  // and ensure our touchmove handlers receive events reliably on mobile.
-                  if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
                   const t = ev.touches[0];
                   // On touch, default to selecting this card (no modifier keys)
                   const newSelected = [card.id];
@@ -2347,7 +2344,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   });
                   const primaryOffsetX = startWorldX - pos.x;
                   const primaryOffsetY = startWorldY - pos.y;
-                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false } as any;
+                  const next = { id: card.id, startX: t.clientX, startY: t.clientY, startScreenX, startScreenY, startWorldX, startWorldY, origPositions, origX: pos.x, origY: pos.y, pointerOffsets, offsetX: primaryOffsetX, offsetY: primaryOffsetY, hasMoved: false, isDragging: true } as any;
                   draggingRef.current = next;
                 }}
                 onDoubleClick={async (e) => {
