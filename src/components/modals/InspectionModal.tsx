@@ -229,6 +229,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     })();
   };
 
+  // Persist unlock to server so the card remains unlocked permanently
+  const persistUnlockForCard = async () => {
+    setIsUnlocked(true);
+    const cardObj = serverCard || card;
+    if (!cardObj || !cardObj.id) return;
+    try {
+      const updates: any = { is_locked: false, lock_password: null };
+      const updated = await updateInvestigationCard(cardObj.id, updates as any);
+      setServerCard(updated);
+    } catch (err) {
+      console.error('Falha ao persistir desbloqueio no servidor:', err);
+      // optimistic update already applied via setIsUnlocked(true)
+    }
+  };
+
   // Controle de qual ferramenta visual está ativa
   // 'image' | 'phone' | 'forense' | ...
   const [visualMode, setVisualMode] = useState<string>('image');
@@ -1527,12 +1542,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               const lockPass = card.lock_password;
               const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
               if (isNumeric) {
-                return <NumericKeypad code={lockPass} onUnlock={() => setIsUnlocked(true)} />;
+                return <NumericKeypad code={lockPass} onUnlock={persistUnlockForCard} />;
               }
               return (
                 <HackingTerminal
                   correctPassword={lockPass}
-                  onUnlock={() => setIsUnlocked(true)}
+                  onUnlock={persistUnlockForCard}
                   hint={card.description_public}
                 />
               );
