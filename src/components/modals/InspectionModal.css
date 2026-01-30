@@ -1045,6 +1045,13 @@
   touch-action: none; /* avoid browser gestures interfering while panning */
 }
 
+/* Allow the actual image/canvas inside the wrapper to receive pointer events
+   even though the wrapper itself is pointer-events:none. This keeps HUD
+   buttons clickable while allowing image interactions. */
+.image-zoom-wrapper > * {
+  pointer-events: auto;
+}
+
 .image-zoom-wrapper .large-evidence-img,
 .image-zoom-wrapper img,
 .image-zoom-wrapper canvas.forensic-canvas {

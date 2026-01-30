@@ -1079,7 +1079,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                               fit="contain"
                               className="large-evidence-img"
                               style={{ height: '100%', width: '100%' }}
-                              forensicChannel={forensicChannel}
+                                  forensicChannel={forensicChannel}
+                                  onToggleUV={() => setLocalUV((v:boolean) => !v)}
                             />
                           </div>
                         </>
@@ -1219,9 +1220,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   React.useEffect(() => {
     const handler = (e: Event) => {
       try {
-        const detail = (e as CustomEvent).detail as { tool?: string } | undefined;
+        const detail = (e as CustomEvent).detail as any;
         const tool = detail?.tool;
+        const action = detail?.action as string | undefined;
         if (!tool) return;
+
+        // Support press-and-hold actions for tools (action: 'start' | 'end')
+        if (tool === 'uv' && action) {
+          if (action === 'start') {
+            setLocalUV(true);
+            return;
+          }
+          if (action === 'end') {
+            setLocalUV(false);
+            return;
+          }
+        }
 
         switch (tool) {
           case 'image':

@@ -29,6 +29,7 @@ interface Props {
   pointerLocal?: { x: number; y: number; over: boolean } | undefined;
   forensicChannel?: 'all' | 'r' | 'g' | 'b';
   ambientBlur?: boolean;
+  onToggleUV?: () => void;
 }
 
 export function MysteryImage({
@@ -42,8 +43,9 @@ export function MysteryImage({
   className = '',
   style = {},
   fit = 'cover',
-  pointerLocal
-  , forensicChannel = 'all'
+  pointerLocal,
+  forensicChannel = 'all',
+  onToggleUV,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { xy, isHovering } = useThrottledMouse<HTMLDivElement>(
@@ -446,9 +448,64 @@ export function MysteryImage({
     <div
       className={`uv-container ${isUVMode ? 'uv-active' : ''} ${className}`}
       ref={containerRef}
+      onClick={(e) => {
+        try { e.stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          if (typeof onToggleUV === 'function') {
+            onToggleUV();
+            return;
+          }
+        } catch (err) {}
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv' }, bubbles: true }));
+        } catch (err) {}
+      }}
+      onPointerDown={(e) => {
+        try { (e as any).stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          // prefer explicit callback for press-start if parent provided a handler
+          if (typeof onToggleUV === 'function') {
+            // parent toggle won't support start/end; dispatch event instead
+          }
+        } catch (err) {}
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'start' }, bubbles: true }));
+        } catch (err) {}
+      }}
+      onPointerUp={(e) => {
+        try { (e as any).stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
+        } catch (err) {}
+      }}
+      onPointerLeave={(e) => {
+        try { (e as any).stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
+        } catch (err) {}
+      }}
+      // Touch fallback for older browsers that may not fire pointer events reliably
+      onTouchStart={(e) => {
+        try { e.stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'start' }, bubbles: true }));
+        } catch (err) {}
+      }}
+      onTouchEnd={(e) => {
+        try { e.stopPropagation(); } catch (err) {}
+        if (!hasSecret) return;
+        try {
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
+        } catch (err) {}
+      }}
       style={{
         ...style,
-        cursor: isUVMode ? 'none' : 'default',
+        cursor: hasSecret ? (isUVMode ? 'none' : 'pointer') : 'default',
         // MUDANÇA 1: Fundo preto no forense para contraste correto
         backgroundColor: isForensicActive ? '#000' : 'transparent',
         // ADICIONADO: evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
