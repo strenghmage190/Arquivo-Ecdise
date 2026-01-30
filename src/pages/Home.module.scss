@@ -1,10 +1,11 @@
 /* Consolidated Home styles as CSS Module (from Home.css) */
 .home-screen {
   position: relative;
-  padding: 36px;
+  padding: 20px;
+  font-size: 16px;
   background:
-    radial-gradient(circle at 20% 20%, rgb(0 243 255 / 6%), transparent 35%),
-    radial-gradient(circle at 80% 0%, rgb(255 0 60 / 8%), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgb(0 243 255 / 8%), transparent 35%),
+    radial-gradient(circle at 80% 0%, rgb(255 0 60 / 10%), transparent 30%),
     var(--nexus-dark);
   min-height: 100vh;
   box-sizing: border-box;
@@ -40,9 +41,10 @@
 
 .action-bar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: space-around;
 }
 
 .title-badge {
@@ -76,60 +78,67 @@
 }
 
 .case-grid {
-  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  align-items: start;
+  margin-top: 18px;
 }
 
 .case-new-card {
-  border: 1px dashed rgb(0 243 255 / 35%);
-  height: 200px;
+  border: 1px dashed rgb(0 243 255 / 28%);
+  min-height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   cursor: pointer;
   border-radius: 10px;
-  background: linear-gradient(145deg, rgb(0 243 255 / 8%), rgb(0 0 0 / 50%));
-  box-shadow:
-    inset 0 0 20px rgb(0 243 255 / 10%),
-    0 12px 30px rgb(0 0 0 / 45%);
+  background: linear-gradient(145deg, rgb(0 243 255 / 6%), rgb(0 0 0 / 48%));
+  box-shadow: inset 0 0 18px rgb(0 243 255 / 8%);
   color: var(--nexus-blue);
-  transition: all 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  padding: 12px;
 }
 
 .case-new-card span {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
 }
 
 .case-new-card small {
   margin-top: 6px;
   color: var(--muted);
+  font-size: 12px;
 }
 
 .case-new-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-4px);
   border-color: var(--nexus-blue);
-  box-shadow: 0 14px 28px rgb(0 243 255 / 12%);
+  box-shadow: 0 12px 26px rgb(0 243 255 / 10%);
 }
 
 .case-card {
-  background: linear-gradient(160deg, rgb(255 255 255 / 3%), rgb(0 0 0 / 55%));
+  background: linear-gradient(160deg, rgb(255 255 255 / 4%), rgb(0 0 0 / 52%));
   border: 1px solid rgb(0 243 255 / 10%);
-  padding: 20px;
-  height: 200px;
+  padding: 14px;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   border-radius: 10px;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 55%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 48%);
   cursor: pointer;
   position: relative;
-  overflow: visible;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.case-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .case-card::before {
@@ -197,10 +206,11 @@
 .case-desc {
   margin: 10px 0 0;
   color: #c7e7f0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
   max-height: 3.2em;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .case-card:hover {
@@ -210,9 +220,9 @@
 }
 
 .case-card h2 {
-  margin: 8px 0 0;
+  margin: 6px 0;
   color: #e9fcff;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 0.5px;
   position: relative;
   z-index: 3;
@@ -248,16 +258,27 @@
 
 @media (width <= 900px) {
   .home-screen {
-    padding: 24px;
+    padding: 16px;
   }
 
   .action-bar {
-    width: 100%;
+    gap: 6px;
   }
 
   .case-new-card,
   .case-card {
-    height: 180px;
+    height: 130px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .case-card h2 {
+    font-size: 14px;
+  }
+
+  .case-desc {
+    font-size: 11px;
+    line-height: 1.3;
   }
 }
 

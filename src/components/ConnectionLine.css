@@ -1,39 +1,74 @@
 /* Styles for connection lines and selected state */
 .connection-group {
-  color: red; /* used by SVG stroke via currentColor */
+  color: #888; /* Cor padrão mais neutra */
+  cursor: pointer;
+  pointer-events: all;
 }
 
 .connection-hitbox {
   cursor: pointer;
+  pointer-events: stroke;
 }
 
 .connection-path {
-  transition: stroke 120ms ease, stroke-width 120ms ease, opacity 120ms ease;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease, filter 0.2s ease;
   stroke: currentColor;
   stroke-width: 2;
+  opacity: 0.8;
+  pointer-events: none; /* let the hitbox capture events */
+}
+
+/* Estado Selecionado */
+.connection-group.selected {
+  color: #00bcd4; /* Azul neon */
+  z-index: 10;
+}
+
+.connection-group.selected .connection-path {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(0,188,212,0.8));
   opacity: 1;
 }
 
-.connection-group.selected {
-  color: #00bcd4; /* highlight color when selected */
+/* Hover effect */
+.connection-group:hover .connection-path {
+  color: #fff; /* Fica branco ao passar o mouse */
+  stroke-width: 3;
 }
 
-.connection-group.selected .connection-path {
-  stroke-width: 4;
+/* --- ESTILO DO MENU DE CONTEXTO --- */
+.connection-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  min-width: 120px;
+  animation: fadeIn 0.1s ease-out;
 }
 
-/* Optional subtle glow for selected connection (supported in modern browsers) */
-.connection-group.selected .connection-path {
-  filter: drop-shadow(0 0 6px rgba(0,188,212,0.6));
-}
-.connection-group {
-  pointer-events: all;
+.connection-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: #ff4d4d; /* Vermelho para deletar */
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
 }
 
-.connection-group path {
-  transition: stroke 0.2s;
+.connection-context-menu button:hover {
+  background-color: rgba(255, 77, 77, 0.1);
 }
 
-.connection-group:hover path:last-child {
-  stroke: blue; /* Highlight the visible line on hover */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }

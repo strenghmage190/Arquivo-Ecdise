@@ -34,6 +34,7 @@ import { useWindowSize } from '../../hooks/useWindowSize';
 import BottomSheet from '../ui/BottomSheet';
 import usePerformanceMode from '../../utils/usePerformanceMode';
 import BottomNavigationBar from '../BottomNavigationBar';
+import ConnectionLine from '../ConnectionLine';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -53,6 +54,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
+  // Context menu state for connection right-click
+  const [connectionContextMenu, setConnectionContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -281,6 +284,44 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       console.error('Erro ao carregar quadro', e);
     }
   };
+
+  const handleConnectionContextMenu = (e: React.MouseEvent, connectionId: string) => {
+    e.preventDefault();
+    setConnectionContextMenu({ x: e.clientX, y: e.clientY, id: connectionId });
+  };
+
+  const handleDeleteConnection = async () => {
+    if (!connectionContextMenu) return;
+    try {
+      await connApi.deleteInvestigationConnection(connectionContextMenu.id);
+      setConnectionContextMenu(null);
+      await loadBoard();
+    } catch (err) {
+      console.error('Erro ao deletar conexão', err);
+    }
+  };
+
+  const closeConnectionContextMenu = () => setConnectionContextMenu(null);
+
+  // Delete a connection by id (used for double-click delete)
+  const handleDeleteConnectionById = async (id: string) => {
+    try {
+      await connApi.deleteInvestigationConnection(id);
+      await loadBoard();
+    } catch (err) {
+      console.error('Erro ao deletar conexão (double-click)', err);
+    }
+  };
+
+  // Close custom context menu when clicking anywhere else
+  useEffect(() => {
+    const handler = (ev: MouseEvent) => {
+      // Close only on left-click (button === 0). Ignore right-clicks.
+      if (ev.button === 0 && connectionContextMenu) setConnectionContextMenu(null);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [connectionContextMenu]);
 
   // Terminal / ARG search: reveals a hidden card based on keyword_unlock (exact or ilike)
   const handleThermalUnlock = async (keyword: string): Promise<{ success: boolean; message: string; card?: any }> => {
@@ -2195,16 +2236,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               const width = type === 'mystic' ? 2.5 : 3;
               const cls = `connection-line type-${type}`;
               return (
-                <line
+                  <ConnectionLine
                   key={conn.id}
+                  pathData={`M ${a.x} ${a.y} L ${b.x} ${b.y}`}
+                    onSelect={(e) => { e.stopPropagation(); /* selection logic can go here */ }}
+                    onContextMenu={(e) => handleConnectionContextMenu(e, conn.id)}
+                    onDoubleClick={(e) => { e.stopPropagation(); handleDeleteConnectionById(conn.id); }}
+                  style={{ color: stroke }}
                   className={cls}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke={stroke}
-                  strokeWidth={width}
-                  strokeDasharray={dash}
+                  isSelected={false}
                 />
               );
             })}
@@ -2220,6 +2260,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               return <line className="temp-line" x1={a.x} y1={a.y} x2={mx} y2={my} stroke={stroke} strokeWidth={width} strokeDasharray={dash} />;
             })()}
           </svg>
+
+          {connectionContextMenu && (
+            <div
+              className="connection-context-menu"
+              style={{ top: connectionContextMenu.y, left: connectionContextMenu.x }}
+            >
+              <button onClick={handleDeleteConnection}>🗑️ Apagar Conexão</button>
+            </div>
+          )}
 
           {cards.filter(card => !card.is_hidden || (isGameMaster && showHiddenClues)).map((card) => {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };

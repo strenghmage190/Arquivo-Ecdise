@@ -15,7 +15,6 @@ export default function Home() {
   const [newDescription, setNewDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [creating, setCreating] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
   
 
   async function handleLogout() {
@@ -78,7 +77,7 @@ export default function Home() {
   }
 
   function handleMoreOptions() {
-    setShowMoreMenu(!showMoreMenu);
+    // removed
   }
 
   return (
@@ -90,21 +89,12 @@ export default function Home() {
           <h1 className="nexus-title">ARQUIVOS DA ORDEM</h1>
         </div>
         <div className={styles['action-bar']}>
-          <Button variant="primary" onClick={() => { setShowCreateModal(true); setNewTitle(''); }}>
-            <span aria-hidden>✚</span>
-            NOVO CASO
-          </Button>
-          <Button variant="secondary" onClick={handleHomeClick}>
-            HOME
-          </Button>
-          <Button variant="secondary" onClick={handleMoreOptions}>
-            <span aria-hidden>⋮</span>
-          </Button>
+          {/* Botões removidos */}
         </div>
       </div>
 
           <div className={styles['case-grid']}>
-        {/* Botão Novo Caso */}
+        {/* Botão Novo Caso restaurado */}
         <div onClick={() => { setShowCreateModal(true); setNewTitle(''); }} className={styles['case-new-card']}>
           <span>+ NOVO CASO</span>
           <small>Iniciar investigação</small>
@@ -125,7 +115,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Terminal is available via HUD shortcuts */}
+      {/* Terminal is disponível via atalhos HUD */}
 
       {showCreateModal && (
         <div className={styles['quick-modal']} role="dialog" aria-modal="true" onClick={() => setShowCreateModal(false)}>
@@ -167,15 +157,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showMoreMenu && (
-        <div className="more-menu">
-          <ul>
-            <li><button onClick={() => alert('Opção 1 clicada')}>Opção 1</button></li>
-            <li><button onClick={() => alert('Opção 2 clicada')}>Opção 2</button></li>
-            <li><button onClick={() => alert('Opção 3 clicada')}>Opção 3</button></li>
-          </ul>
-        </div>
-      )}
+      {/* more-menu removed */}
     </div>
   );
 }
