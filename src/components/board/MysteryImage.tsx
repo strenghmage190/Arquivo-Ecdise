@@ -30,6 +30,7 @@ interface Props {
   forensicChannel?: 'all' | 'r' | 'g' | 'b';
   ambientBlur?: boolean;
   onToggleUV?: () => void;
+  allowImageUVControl?: boolean;
 }
 
 export function MysteryImage({
@@ -46,6 +47,7 @@ export function MysteryImage({
   pointerLocal,
   forensicChannel = 'all',
   onToggleUV,
+  allowImageUVControl = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { xy, isHovering } = useThrottledMouse<HTMLDivElement>(
@@ -451,6 +453,12 @@ export function MysteryImage({
       onClick={(e) => {
         try { e.stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
+        // ignore clicks that are part of a double-click (detail > 1)
+        try {
+          const detail = (e as any).detail as number | undefined;
+          if (typeof detail === 'number' && detail > 1) return;
+        } catch (err) {}
         try {
           if (typeof onToggleUV === 'function') {
             onToggleUV();
@@ -458,12 +466,13 @@ export function MysteryImage({
           }
         } catch (err) {}
         try {
-          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv' }, bubbles: true }));
+          (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', origin: 'image' }, bubbles: true }));
         } catch (err) {}
       }}
       onPointerDown={(e) => {
         try { (e as any).stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
         try {
           // prefer explicit callback for press-start if parent provided a handler
           if (typeof onToggleUV === 'function') {
@@ -477,6 +486,7 @@ export function MysteryImage({
       onPointerUp={(e) => {
         try { (e as any).stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
         } catch (err) {}
@@ -484,6 +494,7 @@ export function MysteryImage({
       onPointerLeave={(e) => {
         try { (e as any).stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
         } catch (err) {}
@@ -492,6 +503,7 @@ export function MysteryImage({
       onTouchStart={(e) => {
         try { e.stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'start' }, bubbles: true }));
         } catch (err) {}
@@ -499,6 +511,7 @@ export function MysteryImage({
       onTouchEnd={(e) => {
         try { e.stopPropagation(); } catch (err) {}
         if (!hasSecret) return;
+        if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
         } catch (err) {}

@@ -1078,9 +1078,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                               isUVMode={localUV}
                               fit="contain"
                               className="large-evidence-img"
-                              style={{ height: '100%', width: '100%' }}
-                                  forensicChannel={forensicChannel}
-                                  onToggleUV={() => setLocalUV((v:boolean) => !v)}
+                                style={{ height: '100%', width: '100%' }}
+                                forensicChannel={forensicChannel}
+                                allowImageUVControl={false}
                             />
                           </div>
                         </>
