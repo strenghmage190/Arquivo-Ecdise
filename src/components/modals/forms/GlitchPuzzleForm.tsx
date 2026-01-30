@@ -5,7 +5,16 @@ import { supabase } from '../../../supabaseClient';
 import './GlitchPuzzleForm.css';
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
-  const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
+  const originalName = file.name || 'audio';
+  const ext = originalName.split('.').pop() || '';
+  const base = originalName.replace(/\.[^/.]+$/, '')
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120);
+  const safeName = `audio_${Date.now()}_${base}${ext ? '.' + ext : ''}`;
+  const path = `${investigationId}/${safeName}`;
   const { data, error } = await supabase.storage.from('investigation-assets').upload(path, file);
   if (error) throw error;
   const { data: publicData } = await supabase.storage.from('investigation-assets').getPublicUrl(path);
