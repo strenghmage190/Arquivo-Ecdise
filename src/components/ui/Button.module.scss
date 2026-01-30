@@ -1,0 +1,58 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+}
+:root {
+  /* fallback palette if global variables are not present */
+  --btn-primary-start: #00f3ff;
+  --btn-primary-end: #ff003c;
+  --btn-text-dark: #051018;
+}
+
+.primary {
+  background: linear-gradient(90deg, var(--btn-primary-start, var(--nexus-blue, #00f3ff)), var(--btn-primary-end, var(--nexus-glitch, #ff003c)));
+  color: var(--btn-text-dark, #051018);
+  box-shadow: 0 8px 30px rgb(0 243 255 / 15%);
+}
+
+.secondary {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(0,243,255,0.12);
+}
+
+.ghost {
+  background: transparent;
+  color: inherit;
+  opacity: 0.95;
+}
+
+.solid {
+  background: linear-gradient(90deg, var(--btn-primary-start, #00f3ff), var(--btn-primary-end, #ff003c));
+  color: var(--btn-text-dark, #051018);
+}
+
+.caseDelete {
+  background: rgba(0,0,0,0.4);
+  color: #f8d7da;
+  border-radius: 4px;
+  padding: 0.25rem 0.45rem;
+}
+
+.close {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

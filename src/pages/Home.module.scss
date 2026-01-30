@@ -1,4 +1,4 @@
-/* Home Page Styling */
+/* Consolidated Home styles as CSS Module (from Home.css) */
 .home-screen {
   position: relative;
   padding: 36px;
@@ -10,7 +10,6 @@
   box-sizing: border-box;
 }
 
-/* Scanlines sutis no fundo */
 .home-screen::before {
   content: "";
   position: absolute;
@@ -44,38 +43,6 @@
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgb(0 243 255 / 6%);
-  border: 1px solid rgb(0 243 255 / 18%);
-  color: #cfeff0;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.18s ease;
-  text-transform: uppercase;
-}
-
-.action-btn.primary {
-  background: linear-gradient(90deg, #00f3ff, #ff003c);
-  border-color: rgb(255 255 255 / 18%);
-  color: #051018;
-  box-shadow: 0 8px 30px rgb(0 243 255 / 15%);
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgb(0 243 255 / 12%);
-}
-
-.action-btn.primary:hover {
-  box-shadow: 0 10px 30px rgb(255 0 60 / 22%);
 }
 
 .title-badge {
@@ -165,7 +132,6 @@
     border-color 0.18s ease;
 }
 
-/* Cantoneiras decorativas nos cards */
 .case-card::before {
   content: "";
   position: absolute;
@@ -269,7 +235,7 @@
   }
 }
 
-.case-card .meta {
+.meta {
   font-size: 12px;
   color: var(--muted);
 }
@@ -280,7 +246,6 @@
   letter-spacing: 2px;
 }
 
-/* Responsividade */
 @media (width <= 900px) {
   .home-screen {
     padding: 24px;
@@ -296,7 +261,6 @@
   }
 }
 
-/* Quick create modal */
 .quick-modal {
   position: fixed;
   inset: 0;
@@ -432,7 +396,6 @@
   }
 }
 
-/* Added responsive design for smaller screens */
 @media (max-width: 768px) {
   .home-screen {
     padding: 20px;

@@ -289,49 +289,34 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       return { success: false, message: 'Palavra-chave vazia.' };
     }
     try {
+      // Server-side filter: ask Postgres to match JSON metadata ->> thermal_keyword (case-insensitive)
       const { data, error } = await supabase
         .from('investigation_cards')
-        .select('*')
+        .select('id, metadata')
         .eq('investigation_id', investigationId)
-        .limit(300);
+        .ilike('metadata->>thermal_keyword', q)
+        .limit(1);
 
       if (error) throw error;
       if (!data || data.length === 0) {
-        return { success: false, message: 'Nenhum arquivo disponível nesta investigação.' };
+        return { success: false, message: 'Palavra-chave não reconhecida pelo sistema.' };
       }
 
-      const lowered = q.toLowerCase();
-      const thermalCard = data.find((row: any) => {
-        try {
-          const meta = row.metadata || (row.data && row.data.metadata) || null;
-          if (meta) {
-            const km = typeof meta === 'string' ? (() => { try { return JSON.parse(meta); } catch { return null; } })() : meta;
-            const thermalKeyword = km && km.thermal_keyword;
-            if (thermalKeyword && String(thermalKeyword).toLowerCase() === lowered) {
-              return true;
-            }
-          }
-        } catch (e) {
-          // ignore parse errors
-        }
-        return false;
-      });
+      const thermalCard = data[0] as any;
+      try {
+        const meta = typeof thermalCard.metadata === 'string' ? JSON.parse(thermalCard.metadata) : (thermalCard.metadata || {});
+        meta.thermal_unlocked = true;
+        // Persist change
+        await api.updateInvestigationCard(thermalCard.id, { metadata: meta } as any);
+        try { playAudio('/sounds/success_chime.mp3'); } catch {}
 
-      if (thermalCard) {
-        try {
-          const meta = typeof (thermalCard as any).metadata === 'string' ? JSON.parse((thermalCard as any).metadata) : ((thermalCard as any).metadata || {});
-          meta.thermal_unlocked = true;
-          await api.updateInvestigationCard((thermalCard as any).id, { metadata: meta } as any);
-          try { playAudio('/sounds/success_chime.mp3'); } catch {}
-          await loadBoard();
-          return { success: true, message: 'Modo termal desbloqueado com sucesso.', card: thermalCard };
-        } catch (err) {
-          console.error('Error unlocking thermal mode', err);
-          return { success: false, message: 'Erro ao processar desbloqueio.' };
-        }
+        // Update local state to avoid reloading the whole board
+        setCards((prev) => prev.map((c) => (c.id === thermalCard.id ? { ...c, metadata: meta } : c)));
+        return { success: true, message: 'Modo termal desbloqueado com sucesso.', card: thermalCard };
+      } catch (err) {
+        console.error('Error unlocking thermal mode', err);
+        return { success: false, message: 'Erro ao processar desbloqueio.' };
       }
-
-      return { success: false, message: 'Palavra-chave não reconhecida pelo sistema.' };
     } catch (err: any) {
       console.error('ThermalUnlock error', err);
       return { success: false, message: 'Erro de comunicação com o servidor.' };
@@ -1937,11 +1922,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         {/* Grupo 2: Ferramentas */}
         <div className="toolbar-group">
           <button 
-            className={`hud-btn connection ${connectionMode ? 'active' : ''}`} 
+            className={`hud-btn icon-only connection ${connectionMode ? 'active' : ''}`} 
             onClick={() => setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; })} 
             data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
           >
-            🔗 CONECTAR
+            🔗
           </button>
 
           {connectionMode && (

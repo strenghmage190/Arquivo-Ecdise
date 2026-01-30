@@ -1,3 +1,31 @@
+/* Styles for connection lines and selected state */
+.connection-group {
+  color: red; /* used by SVG stroke via currentColor */
+}
+
+.connection-hitbox {
+  cursor: pointer;
+}
+
+.connection-path {
+  transition: stroke 120ms ease, stroke-width 120ms ease, opacity 120ms ease;
+  stroke: currentColor;
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.connection-group.selected {
+  color: #00bcd4; /* highlight color when selected */
+}
+
+.connection-group.selected .connection-path {
+  stroke-width: 4;
+}
+
+/* Optional subtle glow for selected connection (supported in modern browsers) */
+.connection-group.selected .connection-path {
+  filter: drop-shadow(0 0 6px rgba(0,188,212,0.6));
+}
 .connection-group {
   pointer-events: all;
 }

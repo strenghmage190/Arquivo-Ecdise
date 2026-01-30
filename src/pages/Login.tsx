@@ -95,15 +95,16 @@ export default function Login() {
           <span>Terminal de Acesso C.R.I.S. // Ver 4.0.2</span>
         </h1>
         
-        <p style={{ textAlign: 'center', marginBottom: 20, color: '#888' }}>
+        <p style={{ textAlign: 'center', marginBottom: 20, color: '#E5E7EB' }}>
           {isSignUp ? 'RECRUTAMENTO DE NOVOS AGENTES' : 'ACESSO AO SISTEMA'}
         </p>
 
         <form onSubmit={handleAuth}>
           <div className="input-group">
-            <label>IDENTIFICAÇÃO (EMAIL)</label>
-            <input 
-              type="email" 
+            <label htmlFor="login-email">IDENTIFICAÇÃO (EMAIL)</label>
+            <input
+              id="login-email"
+              type="email"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -112,9 +113,10 @@ export default function Login() {
           </div>
 
           <div className="input-group">
-            <label>SENHA DE ACESSO</label>
-            <input 
-              type="password" 
+            <label htmlFor="login-password">SENHA DE ACESSO</label>
+            <input
+              id="login-password"
+              type="password"
               required
               value={password}
               onChange={handlePasswordChange}
@@ -122,7 +124,7 @@ export default function Login() {
             />
           </div>
 
-          <button disabled={loading} className="btn-access">
+          <button type="submit" disabled={loading} className="btn-access" aria-label={isSignUp ? 'Enviar solicitação de recrutamento' : 'Iniciar sessão'}>
             {loading ? 'PROCESSANDO...' : (isSignUp ? 'ENVIAR SOLICITAÇÃO' : 'INICIAR SESSÃO')}
           </button>
 
@@ -131,13 +133,13 @@ export default function Login() {
 
         <div className="auth-switch">
           {isSignUp ? 'Já possui credencial?' : 'Ainda não é um agente?'}
-          <button type="button" onClick={() => { setIsSignUp(!isSignUp); setMsg(''); }}>
+          <button type="button" onClick={() => { setIsSignUp(!isSignUp); setMsg(''); }} aria-pressed={isSignUp} aria-label={isSignUp ? 'Ir para tela de login' : 'Ir para recrutamento'}>
             {isSignUp ? 'Acesse aqui' : 'Recrutar-se'}
           </button>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 10 }}>
-          <button type="button" onClick={() => navigate('/reset-password')} style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer' }}>
+          <button type="button" onClick={() => navigate('/reset-password')} style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer' }} aria-label="Redefinir senha">
             Esqueci minha senha
           </button>
         </div>

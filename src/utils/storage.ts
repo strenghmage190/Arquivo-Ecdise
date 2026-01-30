@@ -80,8 +80,15 @@ async function retryWithBackoff<T>(
   throw lastError;
 }
 
-// Resize/compress image in browser using canvas, returns a File/Blob
-async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1200, quality = 0.8): Promise<File | Blob> {
+/**
+ * Resize/compress image in browser using canvas, returns a File or Blob.
+ * Useful to call before upload to reduce payload size and improve upload time.
+ * - `maxWidth`/`maxHeight` limit the output dimensions
+ * - `quality` adjusts JPEG quality (0..1)
+ * The function is exported so it can be reused by callers that perform client-side
+ * image processing (e.g. drag-n-drop upload flows) to provide consistent resizing.
+ */
+export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1200, quality = 0.8): Promise<File | Blob> {
   if (!file.type.startsWith('image/')) return file;
 
   const dataUrl = await new Promise<string>((res, rej) => {

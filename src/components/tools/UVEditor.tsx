@@ -30,10 +30,11 @@ export interface Layer {
 
 interface UVEditorProps {
   baseImageUrl: string;
-  onSave: (file: File) => void;
+  onSave: (file: File, meta?: { targetChannel?: 'R' | 'G' | 'B' }) => void;
   onClose: () => void;
-  mode?: 'uv' | 'filter';
+  mode?: 'uv' | 'filter' | 'rgb';
   initialImageFile?: File | null;
+  showForensicControls?: boolean;
 }
 
 const COLOR_PALETTES = {
@@ -55,10 +56,10 @@ const COLOR_PALETTES = {
   ],
 };
 
-export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', initialImageFile }: UVEditorProps) {
+export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', initialImageFile, showForensicControls = false }: UVEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState(mode === 'filter' ? '#ffffff' : '#b366ff');
+  const [color, setColor] = useState(mode === 'filter' ? '#ffffff' : '#ff0000'); // Default to red for RGB mode
   const [brushSize, setBrushSize] = useState(mode === 'filter' ? 18 : 6);
   const [maskBrushSoftness, setMaskBrushSoftness] = useState(0.6);
   const [maskBrushOpacity, setMaskBrushOpacity] = useState(1);
@@ -131,6 +132,12 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
   const strokePointsRef = useRef<Array<{x:number,y:number}>>([]);
   const drawingTargetCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingMaskRef = useRef<boolean>(false);
+
+  const [targetChannel, setTargetChannel] = useState<'R' | 'G' | 'B'>('R');
+
+  const handleTargetChannelChange = (channel: 'R' | 'G' | 'B') => {
+    setTargetChannel(channel);
+  };
 
   // Helper: get base image bounds in canvas "world" (CSS pixel) coordinates
   const getImageBounds = () => {
@@ -1555,23 +1562,23 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
                 try {
                   if (child.type === 'text') {
                     const measure = ctx.measureText(child.text || '');
-                    const cw = measure.width;
-                    const ch = (child.size || textSize) * 1.2;
+                    const childW = measure.width;
+                    const childH = (child.size || textSize) * 1.2;
                     const left = (child.x || 0);
-                    const top = (child.y || 0);
+                    const top = (child.y || 0) - childH / 2;
                     minX = Math.min(minX, left);
                     minY = Math.min(minY, top);
-                    maxX = Math.max(maxX, left + cw);
-                    maxY = Math.max(maxY, top + ch);
+                    maxX = Math.max(maxX, left + childW);
+                    maxY = Math.max(maxY, top + childH);
                   } else if (child.type === 'image' && child.img) {
-                    const cw = child.img.naturalWidth * (child.scale || 1);
-                    const ch = child.img.naturalHeight * (child.scale || 1);
-                    const left = (child.x || 0) - cw/2;
-                    const top = (child.y || 0) - ch/2;
+                    const childW = child.img.naturalWidth * (child.scale || 1);
+                    const childH = child.img.naturalHeight * (child.scale || 1);
+                    const left = (child.x || 0) - childW / 2;
+                    const top = (child.y || 0) - childH / 2;
                     minX = Math.min(minX, left);
                     minY = Math.min(minY, top);
-                    maxX = Math.max(maxX, left + cw);
-                    maxY = Math.max(maxY, top + ch);
+                    maxX = Math.max(maxX, left + childW);
+                    maxY = Math.max(maxY, top + childH);
                   } else if (child.type === 'drawing') {
                     const cssW = cssWidthRef.current || 0;
                     const cssH = cssHeightRef.current || 0;
@@ -1580,7 +1587,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
                     maxX = Math.max(maxX, (child.x || 0) + cssW);
                     maxY = Math.max(maxY, (child.y || 0) + cssH);
                   }
-                } catch(e) {}
+                } catch (e) {}
               }
               if (minX === Infinity) { minX = 0; minY = 0; maxX = 0; maxY = 0; }
               const w = maxX - minX;
@@ -1729,6 +1736,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
       setTool('draw');
       setTextValue('');
       redrawAll();
+      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
       return true;
     }
 
@@ -2157,8 +2165,8 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
         if (canvasEl && pid !== null && typeof pid === 'number') {
           (canvasEl as any).releasePointerCapture?.(pid);
         }
+        activePointerIdRef.current = null;
       } catch (e) {}
-      activePointerIdRef.current = null;
     };
 
     window.addEventListener('pointermove', handleMove);
@@ -2182,7 +2190,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
     canvas.toBlob((blob) => {
       if (!blob) return;
       const file = new File([blob], `uv_layer_${Date.now()}.png`, { type: 'image/png' });
-      onSave(file);
+      try { onSave(file, { targetChannel }); } catch (e) { try { onSave(file); } catch (e) {} }
     });
   };
 
@@ -2812,7 +2820,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
       // Export current canvas and deliver via onSave
       handleFinish();
     } catch (e) {
-      try { onSave(new File([], 'uv-export.png')); } catch (e) {}
+      try { onSave(new File([], 'uv-export.png'), { targetChannel }); } catch (e) { try { onSave(new File([], 'uv-export.png')); } catch (e) {} }
     }
   };
 
@@ -2949,6 +2957,34 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
               <input className="uv-range" type="range" min={1} max={200} value={brushSize} onChange={e => setBrushSize(Number((e.target as HTMLInputElement).value))} />
             </div>
           )}
+          {expandedSections.properties && showForensicControls && (
+            <div style={{marginTop:12}}>
+              <label>Canal Alvo</label>
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button
+                  type="button"
+                  onClick={() => handleTargetChannelChange('R')}
+                  style={{padding:'8px 10px', background: targetChannel === 'R' ? '#f44' : 'transparent', color: targetChannel === 'R' ? '#100' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                >
+                  🔴 R
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTargetChannelChange('G')}
+                  style={{padding:'8px 10px', background: targetChannel === 'G' ? '#4f4' : 'transparent', color: targetChannel === 'G' ? '#020' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                >
+                  🟢 G
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTargetChannelChange('B')}
+                  style={{padding:'8px 10px', background: targetChannel === 'B' ? '#44f' : 'transparent', color: targetChannel === 'B' ? '#001' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                >
+                  🔵 B
+                </button>
+              </div>
+            </div>
+          )}
           {expandedSections.properties && (
             <div style={{marginTop:12}}>
               <label>Máscara: Suavidade do Pincel</label>
@@ -2980,7 +3016,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'uv', i
               {imageEl ? (
                 <div style={{marginTop:8}}>
                   <div style={{fontSize:12,opacity:0.8}}>Pré-visualização</div>
-                  <img src={imageEl.src} alt="preview" style={{maxWidth:'100%', marginTop:6}} />
+                  <img src={imageEl.src} alt="preview" loading="lazy" style={{maxWidth:'100%', marginTop:6}} />
                 </div>
               ) : (
                 <div style={{marginTop:8, fontSize:13, opacity:0.9}}>Carregando imagem... Aguarde antes de clicar no canvas.</div>

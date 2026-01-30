@@ -1,9 +1,13 @@
 {
+  "extends": "stylelint-config-standard",
   "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": ["tailwind", "apply", "variants", "responsive"]
+      }
+    ],
     "color-no-invalid-hex": true,
-    "block-no-empty": true,
-    "declaration-block-trailing-semicolon": "always",
-    "no-extra-semicolons": true,
-    "max-empty-lines": 2
+    "block-no-empty": true
   }
 }

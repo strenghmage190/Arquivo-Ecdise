@@ -18,6 +18,7 @@ const MOBILE_TOOLS = [
 const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaster = false }) => {
   const [showMore, setShowMore] = React.useState(false);
   const toggleBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const firstToolRef = React.useRef<HTMLButtonElement | null>(null);
 
   const closeSheet = React.useCallback(() => {
     try {
@@ -30,6 +31,17 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
     // give browser a tick to update aria-hidden then focus the toggle
     setTimeout(() => { try { toggleBtnRef.current?.focus(); } catch (e) {} }, 0);
   }, []);
+
+  // focus first tool when sheet opens; handle Escape to close
+  React.useEffect(() => {
+    if (showMore) {
+      setTimeout(() => { try { firstToolRef.current?.focus(); } catch (e) {} }, 0);
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { closeSheet(); } };
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }
+    return undefined;
+  }, [showMore, closeSheet]);
 
   React.useEffect(() => {
     console.debug('BottomNav: showMore state', showMore);
@@ -66,36 +78,44 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
   };
 
   // Build sheet/overlay as portal so it's not clipped by parent containers
+  const visibleTools = MOBILE_TOOLS.filter((t) => !(t.gmOnly && !isGameMaster));
+
   const sheet = (
     <>
       {/* Overlay Escuro quando menu está aberto */}
       {showMore && (
-        <div className="mobile-menu-overlay" onClick={closeSheet} />
+        <div className="mobile-menu-overlay" onClick={closeSheet} tabIndex={-1} aria-hidden={!showMore} />
       )}
 
       {/* Menu Gaveta (Bottom Sheet) */}
-      <div className={`mobile-tools-sheet ${showMore ? 'open' : ''}`} role="dialog" aria-hidden={!showMore}>
+      <div
+        id="mobile-tools-sheet"
+        className={`mobile-tools-sheet ${showMore ? 'open' : ''}`}
+        role="dialog"
+        aria-hidden={!showMore}
+        aria-modal={showMore}
+        aria-labelledby="mobile-tools-title"
+        onKeyDown={(e) => { if (e.key === 'Escape') closeSheet(); }}
+      >
         <div className="mobile-sheet-header">
-          <span>FERRAMENTAS</span>
-          <button type="button" className="close-btn" onClick={closeSheet}>✖</button>
+          <span id="mobile-tools-title">FERRAMENTAS</span>
+          <button type="button" className="close-btn" onClick={closeSheet} aria-label="Fechar ferramentas">✖</button>
         </div>
-        
+
         <div className="mobile-tools-grid">
-          {MOBILE_TOOLS.map((tool) => {
-            if (tool.gmOnly && !isGameMaster) return null;
-            
-            return (
-              <button 
-                key={tool.id} 
-                type="button"
-                className="mobile-tool-btn"
-                      onClick={() => { console.debug('BottomNav: click tool', tool.id); triggerTool(tool.id); }}
-              >
-                <span className="tool-icon">{tool.icon}</span>
-                <span className="tool-label">{tool.label}</span>
-              </button>
-            );
-          })}
+          {visibleTools.map((tool, idx) => (
+            <button
+              key={tool.id}
+              ref={idx === 0 ? firstToolRef : undefined}
+              type="button"
+              className="mobile-tool-btn"
+              onClick={() => { console.debug('BottomNav: click tool', tool.id); triggerTool(tool.id); }}
+              aria-label={tool.label}
+            >
+              <span className="tool-icon">{tool.icon}</span>
+              <span className="tool-label">{tool.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </>

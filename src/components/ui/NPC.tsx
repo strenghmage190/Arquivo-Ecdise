@@ -15,7 +15,7 @@ export default function NPC({ id, name, avatarUrl, role, bio, onInteract }: NPCP
       <div style={{ width: 72, height: 72, borderRadius: 6, background: '#222', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {avatarUrl ? (
           // eslint-disable-next-line jsx-a11y/img-redundant-alt
-          <img src={avatarUrl} alt={`avatar ${name}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={avatarUrl} alt={`avatar ${name}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>{name?.charAt?.(0) ?? '?'}</div>
         )}

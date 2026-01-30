@@ -91,31 +91,54 @@ export default function ForensicChannelEditor({
     const baseImage = baseImageRef.current;
     if (!canvas || !baseImage) return;
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size to match base image
-    canvas.width = baseImage.naturalWidth || baseImage.width;
-    canvas.height = baseImage.naturalHeight || baseImage.height;
+    // Determine display size based on container to avoid layout jumps
+    const container = canvas.parentElement as HTMLElement | null;
+    const containerRect = container ? container.getBoundingClientRect() : { width: baseImage.naturalWidth, height: baseImage.naturalHeight };
 
-    // Draw base image
-    ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+    const backingWidth = baseImage.naturalWidth || baseImage.width;
+    const backingHeight = baseImage.naturalHeight || baseImage.height;
+    const maxDisplayWidth = Math.max(100, (containerRect.width || backingWidth) - 20);
+    const aspect = backingWidth / backingHeight;
+    const displayWidth = Math.min(backingWidth, Math.round(maxDisplayWidth));
+    const displayHeight = Math.round(displayWidth / aspect);
 
-    // Create overlay canvas
+    // Backing store size = intrinsic image size; CSS size = display size
+    canvas.width = Math.max(1, backingWidth);
+    canvas.height = Math.max(1, backingHeight);
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    // Compute scale factor between logical display coords and backing pixels
+    const scale = canvas.width / displayWidth;
+
+    // Clear and draw base image using scaled logical coords
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.drawImage(baseImage, 0, 0, displayWidth, displayHeight);
+    ctx.restore();
+
+    // Create overlay canvas with same backing store dimensions
     const overlayCanvas = document.createElement('canvas');
     overlayCanvas.width = canvas.width;
     overlayCanvas.height = canvas.height;
     const overlayCtx = overlayCanvas.getContext('2d');
     if (!overlayCtx) return;
 
-    // Draw overlay based on type
+    // Draw overlay using logical display sizes but scaled to backing store
+    overlayCtx.save();
+    overlayCtx.scale(scale, scale);
     if (overlayType === 'text' && text.trim()) {
-      drawTextOverlay(overlayCtx, canvas.width, canvas.height);
+      drawTextOverlay(overlayCtx, displayWidth, displayHeight);
     } else if (overlayType === 'image' && overlayImageRef.current) {
-      drawImageOverlay(overlayCtx, canvas.width, canvas.height);
+      drawImageOverlay(overlayCtx, displayWidth, displayHeight);
     }
+    overlayCtx.restore();
 
-    // Process and merge channels
+    // Process and merge channels using backing store dimensions
     if (overlayType !== 'none') {
       mergeChannels(ctx, overlayCtx, canvas.width, canvas.height);
     }
@@ -321,20 +344,32 @@ export default function ForensicChannelEditor({
               <label>🎯 CANAL ALVO</label>
               <div className="channel-buttons">
                 <button
+                  type="button"
                   className={`channel-btn channel-r ${targetChannel === 'R' ? 'active' : ''}`}
-                  onClick={() => setTargetChannel('R')}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setTargetChannel('R'); }}
+                  aria-pressed={targetChannel === 'R'}
+                  tabIndex={0}
                 >
                   RED (R)
                 </button>
                 <button
+                  type="button"
                   className={`channel-btn channel-g ${targetChannel === 'G' ? 'active' : ''}`}
-                  onClick={() => setTargetChannel('G')}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setTargetChannel('G'); }}
+                  aria-pressed={targetChannel === 'G'}
+                  tabIndex={0}
                 >
                   GREEN (G)
                 </button>
                 <button
+                  type="button"
                   className={`channel-btn channel-b ${targetChannel === 'B' ? 'active' : ''}`}
-                  onClick={() => setTargetChannel('B')}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setTargetChannel('B'); }}
+                  aria-pressed={targetChannel === 'B'}
+                  tabIndex={0}
                 >
                   BLUE (B)
                 </button>
@@ -402,7 +437,7 @@ export default function ForensicChannelEditor({
                 />
                 {overlayImageUrl && (
                   <div className="overlay-preview">
-                    <img src={overlayImageUrl} alt="Overlay" />
+                    <img src={overlayImageUrl} alt="Overlay" loading="lazy" />
                   </div>
                 )}
               </div>

@@ -524,7 +524,7 @@ export default function GlitchPuzzleCard({
           </div>
 
           <div className="image-reveal">
-            <img src={puzzleData.original_image_url || baseImage} alt="Original Decodificada" />
+            <img src={puzzleData.original_image_url || baseImage} alt="Original Decodificada" loading="lazy" />
             <div className="decode-label">IMAGEM ORIGINAL REVELADA</div>
           </div>
 

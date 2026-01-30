@@ -8,12 +8,11 @@ import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import InvestigationPage from './pages/Investigation';
 import InvitePage from './pages/Invite';
-import TestPage from './pages/TestPage';
 import MobileTestPage from './pages/MobileTestPage';
 import SystemOverlays from './components/ui/SystemOverlays';
 import BottomNavigationBar from './components/BottomNavigationBar';
-import InteractionToggleButton from './components/InteractionToggleButton';
-import ConnectionLine from './components/ConnectionLine';
+import ForensicBenchmarkPage from './pages/__dev/ForensicBenchmarkPage';
+// ConnectionLine removed for production layout
 import { Toaster } from 'react-hot-toast';
 
 type EvidenceCardProps = {
@@ -80,7 +79,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             
-            <Route path="/test" element={<TestPage />} />
+            {/* Test route removed - developer test page not included in production */}
 
             <Route path="/mobile-test" element={<MobileTestPage />} />
 
@@ -112,40 +111,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {process.env.NODE_ENV !== 'production' && (
+              <Route path="/__dev/forensic-benchmark" element={<ForensicBenchmarkPage />} />
+            )}
           </Routes>
-        </div>
-        <InspectionModal isOpen={true} onClose={() => {}} onSave={() => {}}>
-          <EvidenceCard 
-            title="Exemplo de Card" 
-            description="Descrição do card com texto longo que será cortado com ellipsis se necessário." 
-            onEdit={() => {}} 
-            onDelete={() => {}} 
-            onConnect={() => {}} 
-          />
-        </InspectionModal>
+          </div>
           <SystemOverlays />
       </BrowserRouter>
-      <InteractionToggleButton />
+      {/* Interaction toggle moved into mobile-only FAB in this file; removed global hand button */}
       <BottomNavigationBar />
-      <svg className="board-svg">
-        <ConnectionLine 
-          pathData="M10 10L100 100" 
-          onSelect={() => alert('Connection selected!')} 
-        />
-      </svg>
       <Toaster 
         position={isMobile ? "bottom-center" : "bottom-right"} 
         containerStyle={{
           bottom: isMobile ? 80 : 20, // Above the Bottom Bar on mobile
         }}
       />
-      <div 
-        className={`board-container ${interactionMode}`} 
-        style={{ touchAction: interactionMode === 'pan' ? 'none' : 'auto' }}
-      >
-        <div className="example-card">Card 1</div>
-        <div className="example-card">Card 2</div>
-      </div>
+      {/* Board container removed - example cards were for demo */}
       {isMobile && (
         <button 
           className="fab-toggle-mode" 

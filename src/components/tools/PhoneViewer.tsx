@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NumericKeypad from './NumericKeypad';
 import PatternLock from './PatternLock';
 import './PhoneViewer.css';
@@ -30,100 +30,114 @@ interface PhoneViewerProps {
 
 export default function PhoneViewer({ chatData, contactName, isLocked = false, password, fullscreen = false, passwordType = 'pin' }: PhoneViewerProps): React.ReactElement {
    const [unlocked, setUnlocked] = useState(!isLocked);
-   const [isBooting, setIsBooting] = useState(false);
-   
-   // Sincroniza o estado se a prop `isLocked` mudar de fora
+   const [currentTime, setCurrentTime] = useState('12:00');
+   const chatBodyRef = useRef<HTMLDivElement>(null);
+
    useEffect(() => {
       setUnlocked(!isLocked);
    }, [isLocked]);
+
+   // Relógio em tempo real para a barra de status
+   useEffect(() => {
+     const updateTime = () => {
+       const now = new Date();
+       setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+     };
+     updateTime();
+     const interval = setInterval(updateTime, 60000);
+     return () => clearInterval(interval);
+   }, []);
+
+   // Auto-scroll para a última mensagem
+   useEffect(() => {
+     if (chatBodyRef.current) {
+       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+     }
+   }, [chatData, unlocked]);
    
    const handleUnlock = () => {
-     setIsBooting(true);
-     setTimeout(() => {
        setUnlocked(true);
-       setIsBooting(false);
-     }, 1200);
    };
    
    const displayChat = Array.isArray(chatData) ? chatData : [];
    const resolveText = (msg: PhoneMessage) => msg.text || msg.message || msg.body || '';
 
-   // --- TELA DE BLOQUEIO ---
-   if (!unlocked && password) {
-      return (
-         <div className="phone-mockup-wrapper">
-            <div className={`nexus-phone-mockup locked ${fullscreen ? 'fullscreen' : ''}`}>
-               <div className="phone-header locked-header">
-                  <div className="contact-avatar locked-avatar">🔒</div>
-                  <div className="contact-info">
-                     <div className="contact-name">Dispositivo Bloqueado</div>
-                     <div className="contact-status">Autenticação Requerida</div>
-                  </div>
-               </div>
-
-               <div className="chat-body locked-body">
-                  <div className="locked-copy">
-                     <div className="locked-title">Interface Criptografada</div>
-                     <div className="locked-sub">Acesse com o PIN definido</div>
-                  </div>
-                  
-                           {isBooting ? (
-                    <div className="booting-screen">
-                      <div className="spinner"></div>
-                      <p>Descriptografando...</p>
-                    </div>
-                  ) : (
-                              // support both numeric PIN and pattern unlock
-                              (String(passwordType) === 'pattern') ? (
-                                 <PatternLock
-                                    code={String(password)}
-                                    onUnlock={handleUnlock}
-                                 />
-                              ) : (
-                                 <NumericKeypad 
-                                    code={password} 
-                                    onUnlock={handleUnlock} 
-                                 />
-                              )
-                  )}
-               </div>
-            </div>
-         </div>
-      );
-   }
-
-  // --- TELA DESBLOQUEADA ---
-  return (
+   // --- RENDERIZAÇÃO ---
+   return (
     <div className="phone-mockup-wrapper">
-       <div className={`nexus-phone-mockup ${fullscreen ? 'fullscreen' : ''}`}>
-          <div className="phone-header">
-             <div className="contact-avatar">{contactName ? contactName[0].toUpperCase() : '?'}</div>
-             <div className="contact-info">
-                <div className="contact-name">{contactName || 'Desconhecido'}</div>
-                <div className="contact-status">Online</div>
+       <div className={`nexus-phone-mockup ${fullscreen ? 'fullscreen' : ''} ${!unlocked ? 'locked' : ''}`}>
+          
+          {/* HARDWARE E UI DO SISTEMA */}
+          <div className="phone-notch" />
+          <div className="status-bar">
+             <span>{currentTime}</span>
+             <div style={{display:'flex', gap:6}}>
+                <span>5G</span>
+                <span>100%</span>
              </div>
           </div>
 
-          <div className="chat-body">
-             {displayChat.length > 0 ? displayChat.map((msg, i) => {
-                const text = resolveText(msg);
-                const imageUrl = msg.image_url || msg.photo;
-                return (
-                  <div key={i} className={`nexus-bubble ${msg.sender === 'me' ? 'sent' : 'received'}`}>
-                     {text && <div>{text}</div>}
-                     {imageUrl && <img src={imageUrl} alt="chat media" className="chat-image" />}
-                     <span className="msg-time">{msg.time || '00:00'}</span>
-                  </div>
-                );
-             }) : (
-                <div style={{textAlign:'center', color:'#555', fontSize:12, marginTop:20}}>
-                   Nenhuma mensagem recuperada.
+          {/* TELA DE BLOQUEIO */}
+          {!unlocked && password ? (
+             <div className="chat-body locked-body" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ marginBottom: 40, textAlign: 'center' }}>
+                   <div style={{ fontSize: 60 }}>🔒</div>
+                   <h3 style={{ margin: '10px 0', color: '#fff' }}>Acesso Restrito</h3>
+                   <p style={{ color: '#888', fontSize: 12 }}>Biometria falhou. Insira credenciais.</p>
                 </div>
-             )}
-          </div>
+                
+                {String(passwordType) === 'pattern' ? (
+                   <PatternLock code={String(password)} onUnlock={handleUnlock} />
+                ) : (
+                   <NumericKeypad code={password} onUnlock={handleUnlock} />
+                )}
+             </div>
+          ) : (
+             /* TELA DE CHAT (DESBLOQUEADA) */
+             <>
+                <div className="phone-header">
+                   <button style={{background:'none', border:'none', color:'#00f3ff', fontSize:20, cursor:'pointer', padding:0}}>←</button>
+                   <div className="contact-avatar">
+                      {contactName ? contactName[0].toUpperCase() : '?'}
+                   </div>
+                   <div className="contact-info">
+                      <div className="contact-name">{contactName || 'Desconhecido'}</div>
+                      <div className="contact-status">online agora</div>
+                   </div>
+                   <div style={{marginLeft:'auto', fontSize:20}}>⋮</div>
+                </div>
 
-          <div className="phone-input">[Canal Seguro /// Apenas Leitura]</div>
+                <div className="chat-body" ref={chatBodyRef}>
+                   {displayChat.length > 0 ? displayChat.map((msg, i) => {
+                      const text = resolveText(msg);
+                      const imageUrl = msg.image_url || msg.photo;
+                      const isMe = msg.sender === 'me' || msg.sender === 'eu';
+                      
+                                 return (
+                                    <div key={i} className={`nexus-bubble ${isMe ? 'sent' : 'received'}`}>
+                                        {imageUrl && <img src={imageUrl} alt="anexo" className="chat-image" loading="lazy" />}
+                           {text && <span className="msg-text">{text}</span>}
+                           <span className="msg-time">{msg.time || currentTime}</span>
+                        </div>
+                      );
+                   }) : (
+                      <div style={{ margin:'auto', color:'#555', fontSize:12, padding:20, textAlign:'center', background:'rgba(0,0,0,0.2)', borderRadius:10 }}>
+                         🔒 As mensagens deste chat são protegidas com criptografia de ponta-a-ponta.
+                      </div>
+                   )}
+                </div>
+
+                <div className="phone-input-area">
+                   <span className="input-icon">+</span>
+                   <div className="fake-input">Mensagem...</div>
+                   <span className="input-icon">🎤</span>
+                </div>
+             </>
+          )}
+
+          {/* BARRA HOME (iPhone Style) */}
+          <div className="home-indicator" />
        </div>
     </div>
-  );
+   );
 }

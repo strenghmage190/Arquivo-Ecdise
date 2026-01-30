@@ -131,6 +131,7 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
   const [forensicBaseImage, setForensicBaseImage] = useState<File | null>(null);
   const [forensicBasePreview, setForensicBasePreview] = useState<string | null>(null);
   const [forensicHiddenImage, setForensicHiddenImage] = useState<File | null>(null);
+  const skipAutoComposeRef = React.useRef(false);
   const [forensicHiddenPreview, setForensicHiddenPreview] = useState<string | null>(null);
   const [forensicTargetChannel, setForensicTargetChannel] = useState<'R' | 'G' | 'B'>('R');
   const [forensicResultPreview, setForensicResultPreview] = useState<string | null>(null);
@@ -291,6 +292,11 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
   // When the forensic hidden layer is provided, compose over base and replace main image
   useEffect(() => {
     if (!forensicHiddenImage) return;
+    // If flagged, skip the automatic composition (we keep the forensic layer separate)
+    if (skipAutoComposeRef.current) {
+      skipAutoComposeRef.current = false;
+      return;
+    }
     const doCompose = async () => {
       const baseSource = imgFile ?? previewUrl ?? null;
       if (!baseSource) { alert('Selecione a imagem base na aba Visual antes de aplicar a camada.'); return; }
@@ -716,12 +722,15 @@ export default function CreateClueModal_Refactored({ isOpen, onClose, investigat
                 <UVEditor
                   baseImageUrl={previewUrl || forensicBasePreview}
                   mode="uv"
-                  onSave={(file: File) => {
-                    // attach as forensic hidden image
+                  showForensicControls={true}
+                  onSave={(file: File, meta) => {
+                    // attach as forensic hidden image but skip auto-compose (keep separate)
+                    skipAutoComposeRef.current = true;
                     setForensicHiddenImage(file);
                     const reader = new FileReader();
                     reader.onload = () => setForensicHiddenPreview(String(reader.result));
                     reader.readAsDataURL(file);
+                    if (meta && (meta as any).targetChannel) setForensicTargetChannel((meta as any).targetChannel);
                     setShowForensicEditor(false);
                   }}
                   onClose={() => setShowForensicEditor(false)}

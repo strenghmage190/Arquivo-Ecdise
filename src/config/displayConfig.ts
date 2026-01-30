@@ -182,7 +182,7 @@ export function useDisplayConfig(): DisplayConfig {
   } catch (e) {
     console.warn('Erro ao carregar displayConfig do localStorage:', e);
   }
-  
+
   return defaultDisplayConfig;
 }
 
@@ -191,9 +191,79 @@ export function useDisplayConfig(): DisplayConfig {
  */
 export function saveDisplayConfig(config: DisplayConfig): void {
   try {
-    localStorage.setItem('displayConfig', JSON.stringify(config));
+    const data = JSON.stringify(config);
+    localStorage.setItem('displayConfig', data);
+    // Also persist to IndexedDB for more robust storage on larger payloads
+    idbSet('displayConfig', data).catch((err) => console.warn('IDB save failed', err));
     console.log('✅ Config de exibição salva');
   } catch (e) {
     console.error('❌ Erro ao salvar displayConfig:', e);
+  }
+}
+
+// ----------------------
+// Minimal IndexedDB helpers (no external deps)
+// ----------------------
+function openIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    try {
+      const req = indexedDB.open('site-investigacao', 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function idbGet(key: string): Promise<string | null> {
+  try {
+    const db = await openIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('kv', 'readonly');
+      const store = tx.objectStore('kv');
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+async function idbSet(key: string, value: string): Promise<void> {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite');
+    const store = tx.objectStore('kv');
+    const req = store.put(value, key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Initialize the displayConfig cache from IndexedDB and seed localStorage.
+ * Call this early on app startup to make the synchronous `useDisplayConfig()` pick up
+ * previously stored values without waiting for async loads later.
+ */
+export async function initDisplayConfigCache(): Promise<void> {
+  try {
+    const stored = await idbGet('displayConfig');
+    if (stored) {
+      try {
+        // Seed localStorage for synchronous reads
+        localStorage.setItem('displayConfig', stored);
+      } catch (e) {
+        console.warn('Falha ao semear localStorage com config do IDB', e);
+      }
+    }
+  } catch (e) {
+    // Fail silently — IndexedDB isn't critical
+    console.warn('initDisplayConfigCache failed:', e);
   }
 }

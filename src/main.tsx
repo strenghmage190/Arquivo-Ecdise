@@ -10,6 +10,7 @@ import './mobile-cleanup.css';
 // Ensure UVEditor styles are always available (avoid relying on dynamic import timing)
 import './components/tools/UVEditor.css';
 import EventEmitter from 'eventemitter3';
+import { initDisplayConfigCache } from './config/displayConfig';
 // import { setupGlobalMouseListeners } from './hooks/useGlobalMouseEvents'; // Desabilitado - cursor customizado removido
 import { validatePolyfills, logValidationResults } from './utils/validatePolyfills';
 
@@ -20,10 +21,14 @@ if (typeof window !== 'undefined') {
   (window as any).EventEmitter = (EventEmitter as any) || (window as any).EventEmitter;
 }
 
-// Render app first, then validate polyfills to ensure styles and globals are applied
+// Initialize config cache (IndexedDB -> localStorage) then render
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
-root.render(<App />);
+initDisplayConfigCache()
+  .catch((e) => console.warn('displayConfig cache init error', e))
+  .finally(() => {
+    root.render(<App />);
+  });
 
 // Defer validation to next animation frame so CSS and other imports settle
 requestAnimationFrame(() => {

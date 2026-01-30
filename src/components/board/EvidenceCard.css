@@ -2,6 +2,21 @@
    NEXUS EVIDENCE CARD - CYBERPUNK EDITION
    ========================================= */
 
+/* === CSS Variables === */
+:root {
+  --color-primary: #00f3ff;
+  --color-secondary: #8b5cf6;
+  --color-danger: #ff003c;
+  --color-warning: #fc0;
+  --color-success: #00ff41;
+  --color-background: rgb(5 8 12 / 98%);
+  --color-border: rgb(0 243 255 / 15%);
+  --color-shadow: rgb(0 0 0 / 90%);
+  --color-text: #e0e0e0;
+  --font-family-mono: "Share Tech Mono", "Courier New", monospace;
+  --transition-default: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
 /* === CARD BASE === */
 .clue-card,
 .card-node {
@@ -10,23 +25,19 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(
-    135deg,
-    rgb(5 8 12 / 98%),
-    rgb(10 15 20 / 95%)
-  );
-  border: 1px solid rgb(0 243 255 / 15%);
+  background: linear-gradient(135deg, var(--color-background), rgb(10 15 20 / 95%));
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow:
-    0 10px 40px rgb(0 0 0 / 90%),
-    0 0 0 1px rgb(0 243 255 / 8%),
+    0 10px 40px var(--color-shadow),
+    0 0 0 1px var(--color-border),
     inset 0 1px 0 rgb(255 255 255 / 2%);
   position: relative;
   overflow: visible !important;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  font-family: "Share Tech Mono", "Courier New", monospace;
+  transition: var(--transition-default);
+  font-family: var(--font-family-mono);
   backdrop-filter: blur(12px);
-  color: #e0e0e0;
+  color: var(--color-text);
   padding: 0;
 }
 
@@ -37,7 +48,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #00f3ff, transparent);
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   opacity: 0.4;
   pointer-events: none;
 }
@@ -45,34 +56,30 @@
 .clue-card:hover {
   transform: translateY(-6px) scale(1.02);
   box-shadow:
-    0 20px 50px rgb(0 0 0 / 95%),
-    0 0 20px rgb(0 243 255 / 20%),
+    0 20px 50px var(--color-shadow),
+    0 0 20px var(--color-primary),
     inset 0 1px 0 rgb(255 255 255 / 5%);
-  border-color: rgb(0 243 255 / 40%);
+  border-color: var(--color-primary);
 }
 
 /* === HIDDEN CLUES (GM SPECTER MODE) === */
 .card-node.hidden-clue {
   opacity: 0.7 !important;
   border-style: dashed !important;
-  border-color: rgb(139 92 246 / 50%) !important;
-  background: linear-gradient(
-    135deg,
-    rgb(139 92 246 / 8%),
-    rgb(109 40 217 / 4%)
-  ) !important;
+  border-color: var(--color-secondary) !important;
+  background: linear-gradient(135deg, var(--color-secondary), rgb(109 40 217 / 4%)) !important;
   box-shadow:
-    0 0 20px rgb(139 92 246 / 30%),
-    inset 0 1px 0 rgb(139 92 246 / 10%) !important;
+    0 0 20px var(--color-secondary),
+    inset 0 1px 0 var(--color-secondary) !important;
 }
 
 .card-node.hidden-clue:hover {
   transform: none !important;
   box-shadow:
-    0 0 30px rgb(139 92 246 / 50%),
-    0 10px 40px rgb(0 0 0 / 90%),
-    inset 0 1px 0 rgb(139 92 246 / 20%) !important;
-  border-color: rgb(139 92 246 / 80%) !important;
+    0 0 30px var(--color-secondary),
+    0 10px 40px var(--color-shadow),
+    inset 0 1px 0 var(--color-secondary) !important;
+  border-color: var(--color-secondary) !important;
 }
 
 /* === SCANNER LINE ANIMATION === */
@@ -82,9 +89,8 @@
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #00f3ff, transparent);
-  box-shadow: 0 0 15px rgb(0 243 255 / 90%);
-  /* animation is controlled via state or hover to limit CPU usage */
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  box-shadow: 0 0 15px var(--color-primary);
   animation: none;
   z-index: 100;
   pointer-events: none;
@@ -113,7 +119,6 @@
   }
 }
 
-/* Play scan once when card is marked 'scanned' or while hovering */
 .clue-card.scanned .scanner-line,
 .clue-card:hover .scanner-line {
   animation: scan 4s ease-in-out 1;
@@ -451,8 +456,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-default);
   position: relative;
+}
+
+.btn-decision:hover {
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+  border-color: rgb(255 255 255 / 20%);
 }
 
 .btn-decision svg,
@@ -735,7 +746,7 @@
 }
 
 /* === RESPONSIVE === */
-@media (width <= 360px) {
+@media (max-width: 360px) {
   .clue-card {
     width: 100% !important;
   }
@@ -766,120 +777,162 @@
   }
 }
 
-/* === SELECTION STATE === */
-.card-node.selected {
-  outline: none;
-  box-shadow:
-    0 8px 25px rgb(0 243 255 / 40%),
-    0 0 40px rgb(0 243 255 / 30%) !important;
-  border-color: rgb(0 243 255 / 80%) !important;
+/* === ACCESSIBILITY === */
+.btn-decision:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
 }
 
-/* === LEGACY COMPATIBILITY === */
-/*
-  NOTE: legacy compatibility rules were causing high-specificity conflicts
-  (e.g. `.clue-info * { color: inherit !important; }`) which made text
-  disappear and overrode status styles. These rules are commented out to
-  restore predictable styling. Re-enable selectively if needed.
-
-.card-node,
-.card-photo-container,
-.card-photo {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.card-title,
-.card-desc,
-.clue-info,
-.clue-info * {
-  color: inherit !important;
-}
-*/
-
-/* ==========================
-   Custom scrollbars - Nexus
-   Applies to scrollable regions inside clue cards
-   ========================== */
 .clue-card {
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: #00f3ff rgba(0,0,0,0.15);
-}
-.clue-card ::-webkit-scrollbar{
-  width:10px;
-  height:10px;
-}
-.clue-card ::-webkit-scrollbar-track{
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-  border-radius:10px;
-}
-.clue-card ::-webkit-scrollbar-thumb{
-  background: linear-gradient(180deg, #00f3ff, #008fb0);
-  border-radius:10px;
-  border:2px solid rgba(0,0,0,0.45);
-}
-.clue-card ::-webkit-scrollbar-thumb:hover{
-  filter:brightness(.95);
+  color-scheme: light dark; /* Support for light/dark mode */
 }
 
-/* Specific tweaks for image/container scroll areas */
-.clue-image-container::-webkit-scrollbar{ height:8px; }
-.clue-image-container::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,#00f3ff,#00a7c7); border-radius:6px; }
+/* === ADDITIONAL IMPROVEMENTS === */
 
-/* Keep decision-bar from adding its own scroll but style if present */
-.decision-bar::-webkit-scrollbar{ height:8px; }
-.decision-bar::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,#00f3ff,#00a7c7); border-radius:6px; }
-
-/* utility small muted scroll thumb for compact badges */
-.badges-container ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.08); border-radius:6px; }
-
-/* === CARD CONTENT CONTAINER === */
-.card-content-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
+/* === Consolidated Button Styles === */
+.btn-decision {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #bdbdbd;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  cursor: pointer;
+  transition: var(--transition-default);
+  position: relative;
 }
 
-.card-content-container.loading-placeholder {
-  background: linear-gradient(90deg, #0a0a0a 0%, #151515 50%, #0a0a0a 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.2s linear infinite;
+.btn-decision:hover {
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+  border-color: rgb(255 255 255 / 20%);
 }
 
-.card-content-container img,
-.card-content-container canvas {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.btn-decision svg,
+.btn-decision i {
+  font-size: 22px;
+  pointer-events: none;
+  transition: transform 0.2s;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
-/* GM View - Normal */
-.card-content-container.gm-view {
-  background: #000;
+.btn-decision:hover svg {
+  transform: scale(1.1);
 }
 
-/* Locked View - Access Denied */
-.card-content-container.locked-view {
-  background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+/* === Accessibility Enhancements === */
+.btn-decision:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
 }
 
-/* Glitch View - Data Corruption */
-.card-content-container.glitch-view {
-  background: linear-gradient(135deg, #0a0a1a 0%, #05050f 100%);
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+/* === Improved Responsiveness === */
+@media (max-width: 768px) {
+  .clue-card {
+    width: 180px;
+    min-height: 240px;
   }
+
+  .btn-decision {
+    width: 40px;
+    height: 40px;
+  }
+
+  .type-badge {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clue-card {
+    width: 100%;
+    min-height: 200px;
+  }
+
+  .clue-info h3 {
+    font-size: 12px;
+  }
+
+  .btn-decision {
+    width: 36px;
+    height: 36px;
+  }
+
+  .type-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+/* === Optimized Animations === */
+@keyframes pulse {
+  0%,
   100% {
-    background-position: 200% 0;
+    transform: scale(1);
+    opacity: 1;
   }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.type-badge.locked {
+  animation: pulse 2s infinite;
+}
+
+.type-badge.hidden {
+  animation: pulse 2s infinite;
+}
+
+/* === Utility Classes === */
+.text-center {
+  text-align: center;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block !important;
+}
+
+/* === Cleaned Up Scrollbar Styles === */
+.clue-card {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) rgba(0, 0, 0, 0.15);
+}
+
+.clue-card ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.clue-card ::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  border-radius: 10px;
+}
+
+.clue-card ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-primary), #008fb0);
+  border-radius: 10px;
+  border: 2px solid rgba(0, 0, 0, 0.45);
+}
+
+.clue-card ::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.95);
 }

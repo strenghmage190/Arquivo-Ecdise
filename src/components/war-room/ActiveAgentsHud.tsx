@@ -34,7 +34,7 @@ export const ActiveAgentsHud = ({ agents }: { agents: AgentPresence[] }) => {
                 }}
               >
                 {agent.avatar_url ? (
-                  <img src={agent.avatar_url} alt={agent.code_name} className="w-full h-full object-cover" />
+                  <img src={agent.avatar_url} alt={agent.code_name} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full text-xs font-mono font-bold text-white">
                     {agent.code_name.substring(0, 2).toUpperCase()}

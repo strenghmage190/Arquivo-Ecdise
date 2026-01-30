@@ -463,7 +463,7 @@ export default function MegaClueCard({
 
             {imageUrl && (
               <div className="truth-image">
-                <img src={imageUrl} alt="Verdade Final" />
+                <img src={imageUrl} alt="Verdade Final" loading="lazy" />
                 <div className="truth-label">A VERDADE REVELADA</div>
               </div>
             )}

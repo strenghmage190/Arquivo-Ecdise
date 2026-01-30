@@ -94,9 +94,9 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
 
       <div className="layer-item-thumbnail" onClick={(e) => { e.stopPropagation(); if (!layer.locked) props.onSelect(layer.id); }} style={{cursor: 'pointer'}}>
         {layer.img ? (
-          <img src={(layer.img as any)?.src || String(layer.img)} alt="Layer Thumbnail" className="layer-img-thumbnail" />
+          <img src={(layer.img as any)?.src || String(layer.img)} alt="Layer Thumbnail" className="layer-img-thumbnail" loading="lazy" />
         ) : layer.mask ? (
-          <img src={layer.mask.toDataURL()} alt="Mask Thumbnail" className="mask-thumbnail" />
+          <img src={layer.mask.toDataURL()} alt="Mask Thumbnail" className="mask-thumbnail" loading="lazy" />
         ) : (
           <div className="placeholder-thumbnail" />
         )}

@@ -455,6 +455,40 @@
   margin: 6px 0;
 }
 
+/* Make dividers inside the modal dropdown a subtle Nexus blue and a bit tighter */
+.inspect-file .divider {
+  border: none;
+  height: 1px;
+  background: rgba(0, 243, 255, 0.12);
+  margin: 4px 0;
+}
+
+/* Dropdown: remove spacing between items and style buttons as a unified list */
+.more-tools-dropdown {
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+
+.more-tools-dropdown .btn-tool-tab {
+  display: block !important;
+  width: 100% !important;
+  text-align: left !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+.more-tools-dropdown .btn-tool-tab:last-child {
+  border-bottom: none !important;
+}
+
 .btn-highlight {
   background-color: rgba(0, 243, 255, 0.06);
   color: #00f3ff;
@@ -465,6 +499,17 @@
   text-align: left;
   width: 100%;
   cursor: pointer;
+}
+
+/* Mostrar o botão 'MÍDIA' apenas em mobile; ocultar no desktop */
+.btn-tool-tab.btn-highlight {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .btn-tool-tab.btn-highlight {
+    display: block !important;
+  }
 }
 
 .btn-tool-tab {
@@ -488,6 +533,24 @@
     max-width: 90%;
     right: 5%;
   }
+}
+
+/* Media toggle shown in header (desktop). Hidden on small screens where 'MAIS' menu is preferred. */
+.media-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.media-toggle .btn-tool-tab {
+  padding: 6px 10px;
+  font-size: 11px;
+  min-width: auto;
+  border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+  .media-toggle { display: none !important; }
 }
 
 /* Make sure the visual area sits below the header and doesn't overlap */
@@ -782,7 +845,7 @@
     0 0 40px rgb(0 243 255 / 12%);
   padding: 18px;
   border-radius: 8px;
-  z-index: 100; /* sit above image but below modals */
+  z-index: 520; /* sit above image but below modals */
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(8px);
   scrollbar-width: thin;
@@ -915,6 +978,109 @@
 .fullscreen-stage .uv-container > div { z-index: 5; }
 .fullscreen-stage .uv-container .main-evidence { z-index: 10; }
 .fullscreen-stage .uv-container canvas.forensic-canvas { z-index: 30; }
+
+/* -----------------------------
+   Zoom UI / Controls & polish
+   ----------------------------- */
+
+/* container that can be zoomed should hint to browser about transform
+   and block touch-action to avoid scroll conflicts while panning */
+.image-zoomable,
+.fullscreen-stage .uv-container,
+.evidence-display-area {
+  touch-action: none; /* prevent native scrolling while panning */
+}
+
+/* Smooth transform animation for zoom/pan (but keep snappy while dragging)
+   we use a short transition which is overridden by inline style when panning */
+.image-zoomable .main-evidence,
+.uv-container > div,
+.uv-container canvas.forensic-canvas {
+  transition: transform 200ms cubic-bezier(.2,.9,.2,1), filter 120ms linear;
+  will-change: transform;
+}
+
+/* Cursor states for better affordance */
+.image-zoomable { cursor: default; }
+.image-zoomable[data-image-zoom]:not([data-image-zoom="1"]) { cursor: grab; }
+.image-zoomable[data-image-zoom]:not([data-image-zoom="1"]).panning { cursor: grabbing; }
+
+/* Controls overlay near the image (used in modal non-fullscreen) */
+.image-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 120;
+  align-items: center;
+  pointer-events: auto; /* ensure buttons are clickable */
+}
+
+.img-zoom-btn {
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+
+/* Wrapper used as a stable transform target for zoom/pan.
+   Wrapping the raw <img> lets us apply pixel translations without
+   fighting object-fit centering or UV overlay layout. */
+.image-zoom-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* let pointer events pass through so HUD buttons remain clickable */
+  pointer-events: none;
+  z-index: 10; /* keep image wrapper under HUD panels */
+  touch-action: none; /* avoid browser gestures interfering while panning */
+}
+
+.image-zoom-wrapper .large-evidence-img,
+.image-zoom-wrapper img,
+.image-zoom-wrapper canvas.forensic-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  /* ensure transforms are applied around element center */
+  transform-origin: center center;
+}
+
+.img-zoom-btn:hover { transform: translateY(-2px); }
+
+/* Small compact controls for fullscreen (use HUD styling) */
+.fullscreen-stage .image-controls { right: 28px; bottom: 80px; }
+.fullscreen-stage .img-zoom-btn { background: rgba(0,243,255,0.08); border:1px solid rgba(0,243,255,0.12); color:#00f3ff; }
+
+/* Optional small zoom level indicator */
+.zoom-level-indicator {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 120;
+  pointer-events: none;
+}
+
+/* Mobile: make sliders and HUD easier to hit when zoomed */
+@media (max-width: 900px) {
+  .fullscreen-hud-bottom { padding: 12px; gap: 8px; }
+  .btn-hud { padding: 10px 14px; font-size: 13px; }
+}
 
 /* HUD Flutuante (Controles Superiores) */
 .fullscreen-hud-top {

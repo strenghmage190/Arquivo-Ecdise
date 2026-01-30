@@ -285,3 +285,55 @@ body.performance-mode
   max-width: 100% !important;
   max-height: 100% !important;
 }
+
+/* ------------------------------------------------------------------
+   Additional performance reductions: aggressively disable GPU-heavy
+   properties, will-change, and long-running transitions/animations.
+   These are conservative but important on low-end devices.
+------------------------------------------------------------------ */
+body.performance-mode * {
+  will-change: auto !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  animation-play-state: paused !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  transform: none !important; /* avoid creating new layers */
+  perspective: none !important;
+}
+
+/* Reduce heavy image processing and prefer simple rendering */
+body.performance-mode img,
+body.performance-mode picture,
+body.performance-mode video,
+body.performance-mode canvas {
+  image-rendering: auto !important;
+  backface-visibility: visible !important;
+  object-fit: contain !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+/* Honor user's reduced-motion but also allow forcing it in performance mode */
+@media (prefers-reduced-motion: reduce) {
+  body.performance-mode * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+
+/* Disable will-change on pseudo elements too */
+body.performance-mode *::before,
+body.performance-mode *::after {
+  will-change: auto !important;
+}
+
+/* Prevent heavy compositing hints from libraries */
+body.performance-mode [style*="will-change"],
+body.performance-mode [style*="transform: translate3d"],
+body.performance-mode [style*="transform: translate("],
+body.performance-mode [style*="transform:"] {
+  will-change: auto !important;
+  transform: none !important;
+}

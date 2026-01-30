@@ -3,6 +3,7 @@ import { createInvestigationCard, fetchCardsForInvestigation } from '../../../ap
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../../utils/storage';
 import { supabase } from '../../../supabaseClient';
 import './MegaClueForm.css';
+import { validateCreateClue } from '../../../utils/validateClue';
 
 async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
   const path = `${investigationId}/audio_${Date.now()}_${file.name}`;
@@ -210,18 +211,22 @@ export default function MegaClueForm({
   };
 
   const handleSave = async () => {
-    if (!config.title.trim()) {
-      alert('Defina um título para a mega-pista');
-      return;
-    }
+    const errors = validateCreateClue({
+      title: config.title,
+      isHidden: false,
+      discoveryCode: '',
+      securityLayerEnabled: false,
+      evidenceType: 'mega_clue',
+      megaFinalTruthText: config.finalTruthText,
+      megaRequiredPuzzleIds: config.selectedPuzzleIds,
+      imgFile: config.imageFile,
+      videoFile: config.videoFile,
+      videoUrlInput: config.videoUrlInput || null,
+      audioBase: config.audioBase,
+    });
 
-    if (!config.finalTruthText.trim()) {
-      alert('Defina o texto da verdade final');
-      return;
-    }
-
-    if (config.selectedPuzzleIds.length === 0) {
-      alert('Você precisa vincular pelo menos um quebra-cabeça!\n\nSelecione os puzzles que o jogador deve resolver para desbloquear esta mega-pista.');
+    if (errors.length > 0) {
+      alert('Erros de validação:\n' + errors.map((e, i) => `${i + 1}. ${e}`).join('\n'));
       return;
     }
 

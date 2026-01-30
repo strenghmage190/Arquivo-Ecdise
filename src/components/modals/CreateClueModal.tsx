@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { createInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
@@ -28,6 +26,7 @@ import AudioForge from '../tools/AudioForge';
 import ForensicChannelEditor, { ForensicConfig } from '../tools/ForensicChannelEditor';
 import { supabase } from '../../supabaseClient';
 import { FieldVisibilityConfig, defaultFieldVisibility, fieldVisibilityPresets } from '../../config/fieldVisibilityConfig';
+import { validateCreateClue } from '../../utils/validateClue';
 const LOCKED_PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/xcAAwEB/aurbZkAAAAASUVORK5CYII=';
 
 // Presets de Visibilidade de Campos (importado de config)
@@ -168,7 +167,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [chatUploadProgress, setChatUploadProgress] = useState<Record<number, number>>({});
    const [quickChatText, setQuickChatText] = useState('');
    const [quickChatSender, setQuickChatSender] = useState<ChatSender>('them');
-   const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega' | 'campos' | 'display' | 'forense'>('geral');
+   const [activeTab, setActiveTab] = useState<'geral' | 'visual' | 'audio' | 'cifra' | 'glitch' | 'mega' | 'campos' | 'display'>('geral');
    const [glitchStartShift, setGlitchStartShift] = useState(20);
    const [glitchStartChromatic, setGlitchStartChromatic] = useState(8);
 
@@ -1294,27 +1293,30 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
 
    const handleSave = async () => {
-    if (!title) return alert("A pista precisa de um Título/Código.");
+       // Centralized validation
+       const validationErrors = validateCreateClue({
+         title,
+         isHidden,
+         discoveryCode,
+         securityLayerEnabled,
+         evidenceType,
+         megaFinalTruthText,
+         megaRequiredPuzzleIds,
+         imgFile,
+         videoFile,
+         videoUrlInput: videoUrlInput || videoUrl,
+         audioBase,
+       });
 
-    const wantsSecurityLayer = securityLayerEnabled || evidenceType === 'glitch_puzzle';
+       if (validationErrors.length > 0) {
+         alert('Erros de validação:\n' + validationErrors.map((e, i) => `${i + 1}. ${e}`).join('\n'));
+         return;
+       }
+      
+          // Determine whether security layer behavior applies
+          const wantsSecurityLayer = Boolean(securityLayerEnabled) || evidenceType === 'glitch_puzzle';
 
-    // Validate based on evidence type
-    if (wantsSecurityLayer) {
-       const hasAnyMedia = imgFile || videoFile || videoUrlInput || videoUrl || audioBase;
-       if (!hasAnyMedia) {
-          return alert('Envie uma imagem, vídeo ou áudio na aba Visual/Áudio para aplicar a camada de segurança.');
-       }
-    }
-    if (evidenceType === 'mega_clue') {
-       if (!megaFinalTruthText.trim()) {
-          return alert('Defina o texto da verdade final para a mega-pista');
-       }
-       if (megaRequiredPuzzleIds.length === 0) {
-          return alert('Selecione pelo menos um quebra-cabeça de glitch necessário para desbloquear esta mega-pista');
-       }
-    }
-
-    setLoading(true);
+          setLoading(true);
     const errors: string[] = [];
 
     try {
@@ -1943,7 +1945,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL</button>
             <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO</button>
             <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS</button>
-            <button className={`tab-btn ${activeTab==='forense'?'active':''}`} onClick={()=>setActiveTab('forense')}>🔬 FORENSE</button>
             <button className={`tab-btn ${activeTab==='campos'?'active':''}`} onClick={()=>setActiveTab('campos')}>👁️ CAMPOS</button>
             <button className={`tab-btn ${activeTab==='display'?'active':''}`} onClick={()=>setActiveTab('display')}>⚙️ CONFIG</button>
                   {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🎮 GLITCH</button>}
@@ -2407,7 +2408,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                              }}
                                           >
                                              <div style={{position:'absolute', right:6, top:6, zIndex:40, display:'flex', gap:6}}>
-                                                <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); }}>Remover</button>
+                                                 <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); }}>Remover</button>
                                              </div>
                                              <div
                                                 onMouseDown={onHandleMouseDown}
@@ -2575,8 +2576,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                      <div className="field-block" style={{flex:1, borderColor:'#b366ff'}}>
                         <span className="field-title" style={{color:'#b366ff'}}>2. LUZ NEGRA (UV)</span>
                         <p style={{fontSize:10, color:'#aaa'}}>Desenhe segredos visíveis apenas com lanterna.</p>
-                        <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                           <div style={{display:'flex', flexDirection:'column', gap:10}}>
                            <button onClick={()=>setEditorMode('uv')} className="upload-btn">🖌️ DESENHAR EFEITO</button>
+                           <button
+                              onClick={() => {
+                                 // Open UVEditor and mark its output for forensic flow
+                                 try { setUvEditorBaseUrl(previewUrl); } catch (e) {}
+                                 setUvEditorPurpose('forensic');
+                                 setEditorMode('uv');
+                              }}
+                              className="upload-btn"
+                              title="Abrir UV Editor e salvar saída como camada forense"
+                           >
+                              🧪 ABRIR EDITOR (FORENSE)
+                           </button>
                            <label className="upload-btn">📂 UPLOAD PNG<input type="file" accept="image/png" hidden onChange={e => setUvFile(e.target.files?.[0] || null)} /></label>
                         </div>
                      </div>
@@ -2874,7 +2887,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                    </div>
 
                                    {/* Spectrogram Creator */}
-                                   <div style={{marginTop:12, padding:'12px', background:'rgba(0,0,0,0.3)', borderRadius:'6px', border:'1px solid rgba(0,243,255,0.1)'}}>
+                                   <div style={{marginTop:12, padding:'12px', background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(0,243,255,0.1)'}}>
                                       <SpectrogramCreator onGenerated={async (wavBlob, buffer) => {
                                           try {
                                              // Revoke and create new URL
@@ -2894,7 +2907,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                                       revokeUrl(localUrl);
                                                       setAudioHiddenPreview(publicUrl);
                                                    } else {
-                                                      console.warn('Upload returned no publicUrl');
+                                                      console.warn('Upload retornou URL vazia');
                                                    }
                                                 } catch (uploadErr) {
                                                    console.error('Upload failed', uploadErr);
@@ -3293,215 +3306,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               </div>
             )}
 
-            {activeTab === 'forense' && (
-              <div className="field-block">
-                <span className="field-title">🔬 EDITOR RGB (Steganografia em Canal)</span>
-                <p style={{ fontSize: 12, color: '#aaa', marginBottom: 15 }}>
-                  Esconda informações secretas (texto ou imagens) dentro de canais de cor específicos (R, G ou B).
-                  Use o editor interativo para maior controle ou o modo clássico de upload.
-                </p>
-
-                {/* Botão do Editor Interativo */}
-                <div style={{ marginBottom: 20 }}>
-                  <button
-                    onClick={() => {
-                      if (!imgFile && !forensicBaseImage) {
-                        alert('Por favor, primeiro selecione uma imagem base na aba GERAL ou na seção abaixo.');
-                        return;
-                      }
-                      setShowForensicEditor(true);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '14px 20px',
-                      background: 'linear-gradient(135deg, #00ff9d 0%, #00cc7a 100%)',
-                      color: '#0a0a0a',
-                      border: '2px solid #00ff9d',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      boxShadow: '0 0 20px rgba(0, 255, 157, 0.4)',
-                      transition: 'all 0.3s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #00ffaa 0%, #00dd88 100%)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 255, 157, 0.6)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(135deg, #00ff9d 0%, #00cc7a 100%)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 157, 0.4)';
-                    }}
-                  >
-                    🎨 ABRIR EDITOR INTERATIVO (RECOMENDADO)
-                  </button>
-                  <p style={{ fontSize: 11, color: '#888', marginTop: 8, textAlign: 'center' }}>
-                    Editor visual com controle total sobre posição, intensidade e overlay
-                  </p>
-                </div>
-
-                {/* Separador */}
-                <div style={{ 
-                  borderTop: '1px solid rgba(255,255,255,0.1)', 
-                  margin: '20px 0', 
-                  position: 'relative',
-                  textAlign: 'center'
-                }}>
-                  <span style={{
-                    position: 'absolute',
-                    top: '-10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#0b0b0b',
-                    padding: '0 10px',
-                    fontSize: 11,
-                    color: '#666'
-                  }}>
-                    ou use o modo clássico
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: 20 }}>
-                  {/* Coluna esquerda: Uploads e Configuração */}
-                  <div style={{ flex: 1 }}>
-                    {/* Upload Imagem Base */}
-                              <div className="field-block" style={{ marginBottom: 12 }}>
-                                 <label>📷 IMAGEM BASE (opcional)</label>
-                      <label className="upload-btn">
-                        SELECIONAR
-                        <input type="file" accept="image/*" hidden onChange={handleForensicBaseImageSelect} />
-                      </label>
-                      {forensicBasePreview && (
-                        <div style={{ marginTop: 8, maxWidth: '100%' }}>
-                          <img src={forensicBasePreview} alt="base" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6 }} />
-                                       <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Base (dimensão será usada como referência)</div>
-                                       <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Se já selecionou a imagem principal na aba Visual, não precisa reenviar aqui.</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Upload Imagem Oculta */}
-                    <div className="field-block" style={{ marginBottom: 12 }}>
-                      <label>🔍 IMAGEM OCULTA / SEGREDO</label>
-                      <label className="upload-btn">
-                        SELECIONAR
-                        <input type="file" accept="image/*" hidden onChange={handleForensicHiddenImageSelect} />
-                      </label>
-                      {forensicHiddenPreview && (
-                        <div style={{ marginTop: 8, maxWidth: '100%' }}>
-                          <img src={forensicHiddenPreview} alt="hidden" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6 }} />
-                          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Imagem Oculta (será redimensionada se necessário)</div>
-                        </div>
-                      )}
-                                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                                    <button className="upload-btn" onClick={() => {
-                                       if (!forensicBasePreview && !previewUrl) { alert('Por favor, selecione a imagem base primeiro.'); return; }
-                                       setUvEditorBaseUrl(forensicBasePreview || previewUrl);
-                                       setUvEditorPurpose('forensic');
-                                       setEditorMode('uv');
-                                    }}>🖌️ EDITAR (UV Editor)</button>
-                                    <div style={{ fontSize: 11, color: '#888', alignSelf: 'center' }}>Abra o editor para gerar saída RGB do conteúdo oculto.</div>
-                                 </div>
-                    </div>
-
-                    {/* Seletor de Canal */}
-                    <div className="field-block" style={{ marginBottom: 12 }}>
-                      <label>🎨 CANAL ALVO</label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          className={`btn-stamp ${forensicTargetChannel === 'R' ? 'active' : ''}`}
-                          onClick={() => setForensicTargetChannel('R')}
-                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'R' ? '#c0392b' : '#333' }}
-                        >
-                          🔴 VERMELHO (R)
-                        </button>
-                        <button
-                          className={`btn-stamp ${forensicTargetChannel === 'G' ? 'active' : ''}`}
-                          onClick={() => setForensicTargetChannel('G')}
-                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'G' ? '#27ae60' : '#333' }}
-                        >
-                          🟢 VERDE (G)
-                        </button>
-                        <button
-                          className={`btn-stamp ${forensicTargetChannel === 'B' ? 'active' : ''}`}
-                          onClick={() => setForensicTargetChannel('B')}
-                          style={{ flex: 1, padding: '8px 12px', background: forensicTargetChannel === 'B' ? '#2980b9' : '#333' }}
-                        >
-                          🔵 AZUL (B)
-                        </button>
-                      </div>
-                    </div>
-
-                              <div className="field-block" style={{ marginBottom: 12 }}>
-                                 <label>🔁 MODO DE SAÍDA</label>
-                                 <div style={{ fontSize: 13, color: '#ccc' }}>
-                                    <label style={{ fontSize: 12 }}>
-                                       <input type="checkbox" checked={forensicAlwaysOverlay} onChange={(e) => setForensicAlwaysOverlay(e.target.checked)} />&nbsp;Forçar sobreposição visível (gera imagem RGB)
-                                    </label>
-                                 </div>
-                              </div>
-
-                    {/* Botão de Processamento */}
-                    <button
-                      onClick={handleProcessForensicMerge}
-                      disabled={forensicProcessing || !forensicBaseImage || !forensicHiddenImage}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: forensicProcessing ? '#555' : '#27ae60',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 6,
-                        cursor: forensicProcessing ? 'wait' : 'pointer',
-                        fontSize: 14,
-                        fontWeight: 'bold',
-                        marginTop: 12,
-                      }}
-                    >
-                      {forensicProcessing ? '⏳ PROCESSANDO...' : '⚙️ PROCESSAR MERGE'}
-                    </button>
-                  </div>
-
-                  {/* Coluna direita: Preview de Resultado */}
-                  <div style={{ flex: 1 }}>
-                    <div className="field-block" style={{ background: '#0a0a0a', padding: 12, borderRadius: 6 }}>
-                      <label>📊 RESULTADO DA MESCLAGEM</label>
-                      {forensicResultPreview ? (
-                        <>
-                          <img src={forensicResultPreview} alt="result" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 6, marginTop: 8, border: '2px solid #27ae60' }} />
-                          <div style={{ fontSize: 12, color: '#aaa', marginTop: 8 }}>
-                            ✅ Imagem processada com sucesso
-                          </div>
-                          <button
-                            onClick={handleUseForensicImage}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              marginTop: 12,
-                              background: '#f39c12',
-                              color: '#000',
-                              border: 'none',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              fontWeight: 'bold',
-                            }}
-                          >
-                            ✨ USAR COMO IMAGEM PRINCIPAL
-                          </button>
-                        </>
-                      ) : (
-                        <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: 13 }}>
-                          Clique em "PROCESSAR MERGE" para gerar o resultado
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTab === 'campos' && (
               <div className="field-block config-visibility-tab">
                 <span className="field-title">👁️ CONFIGURAÇÃO DE PRIVACIDADE DA EVIDÊNCIA</span>
@@ -3739,7 +3543,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       {[
                         { id: 'showFileType', label: '📄 Tipo de arquivo' },
                         { id: 'showSize', label: '📊 Tamanho' },
-                        { id: 'showCameraModel', label: '📷 Câmera' },
+                        { id: 'showCameraModel', label: '📷 Modelo da Câmera' },
                         { id: 'showDate', label: '📅 Data' },
                         { id: 'showGPS', label: '🗺️ GPS' },
                         { id: 'showOwner', label: '👤 Dono' },
@@ -3892,11 +3696,34 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  baseImageUrl={uvEditorBaseUrl || previewUrl}
                  mode={editorMode || 'uv'}
                  initialImageFile={editorMode === 'filter' ? filterInitialImage : undefined}
-                 onSave={(file) => { 
-                    if (editorMode === 'uv') setUvFile(file);
-                    if (editorMode === 'filter') setFilterFile(file);
+                 showForensicControls={uvEditorPurpose === 'forensic'}
+                 onSave={(file, meta) => { 
+                    // LÓGICA CORRIGIDA: aplicar diretamente na imagem principal quando for forense
+                    if (uvEditorPurpose === 'forensic') {
+                       setImgFile(file);
+
+                       // Atualiza o preview para o usuário
+                       const newUrl = createAndRegisterBlobUrl(file);
+                       if (newUrl) {
+                          try { revokeUrl(previewUrl); } catch (e) {}
+                          setPreviewUrl(newUrl);
+                       }
+
+                       if (meta && (meta as any).targetChannel) {
+                          setForensicTargetChannel((meta as any).targetChannel);
+                       }
+
+                       alert('✅ Camada forense aplicada na imagem principal!');
+                    } else if (editorMode === 'uv') {
+                       setUvFile(file);
+                    } else if (editorMode === 'filter') {
+                       setFilterFile(file);
+                    }
+
+                    // Limpeza de estados do editor
                     setEditorMode(null);
                     setFilterInitialImage(null);
+                    setUvEditorPurpose(null);
                  }}
                  onClose={() => { setEditorMode(null); setFilterInitialImage(null); setUvEditorBaseUrl(null); setUvEditorPurpose(null); }}
               />
@@ -3910,7 +3737,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  <UVEditor
                             baseImageUrl={previewUrl}
                    mode="uv"
-                   onSave={(file) => {
+                   showForensicControls={false}
+                   onSave={(file, meta) => {
                      // Revoke previous URL
                      revokeUrl(glitchFocusedImagePreview);
                      
@@ -3920,7 +3748,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         setGlitchFocusedImageFile(file);
                         setGlitchFocusedImagePreview(newUrl);
                      }
-                     setShowGlitchDesigner(false);
+                               setShowGlitchDesigner(false);
                    }}
                    onClose={() => setShowGlitchDesigner(false)}
                  />

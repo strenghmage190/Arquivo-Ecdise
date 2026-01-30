@@ -52,6 +52,8 @@ export function MysteryImage({
   );
 
   const hasSecret = Boolean(hiddenSrc);
+  // ADDED: flag if forensic inspection is active
+  const isForensicActive = forensicChannel !== 'all';
 
   // compute reveal radius dynamically based on element size so large images get a larger UV lens
   const [RADIUS, setRADIUS] = useState<number>(120);
@@ -78,10 +80,30 @@ export function MysteryImage({
   useEffect(() => {
     const preloadImage = (src: string | undefined) => {
       if (!src) return;
-      const img = new Image();
-      img.src = src;
-      img.onload = () => console.debug(`Image preloaded: ${src}`);
-      img.onerror = () => console.warn(`Failed to preload image: ${src}`);
+      const run = async () => {
+        try {
+          if ((window as any).createImageBitmap) {
+            const resp = await fetch(src, { mode: 'cors' });
+            const blob = await resp.blob();
+            const bitmap = await (window as any).createImageBitmap(blob);
+            try { bitmap.close?.(); } catch (e) {}
+            // console.debug(`ImageBitmap preloaded: ${src}`);
+          } else {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {/*noop*/};
+          }
+        } catch (e) {
+          // ignore preload errors
+        }
+      };
+
+      if ('requestIdleCallback' in window) {
+        try { (window as any).requestIdleCallback(() => { run(); }); }
+        catch (e) { setTimeout(run, 200); }
+      } else {
+        setTimeout(run, 200);
+      }
     };
 
     preloadImage(baseSrc);
@@ -96,7 +118,8 @@ export function MysteryImage({
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
     transition: 'filter 0.1s linear',
-  }), [fit]);
+    backgroundImage: (baseSrc && !isForensicActive) ? `url(${baseSrc})` : 'none',
+  }), [fit, baseSrc, isForensicActive]);
 
   const bgImage = baseSrc ? `url(${baseSrc})` : 'none';
   const hiddenImage = hiddenSrc ? `url(${hiddenSrc})` : 'none';
@@ -134,8 +157,9 @@ export function MysteryImage({
       inset: 0,
       zIndex: 5,
       filter: baseFilter,
+      backgroundImage: (baseSrc && !isForensicActive) ? `url(${baseSrc})` : 'none',
     };
-  }, [isUVMode, channelFilter, filters, fit]);
+  }, [isUVMode, channelFilter, filters, fit, baseSrc, isForensicActive]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
   // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas quando o jogador se aproximar
@@ -187,6 +211,45 @@ export function MysteryImage({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
+  // Lazy-mount heavy decorative FX (noise / lens flare) to avoid creating DOM
+  // elements on every tiny hover change. Mount shortly after hover starts and
+  // unmount with a small delay when hover ends to avoid thrash.
+  const [fxMounted, setFxMounted] = useState(false);
+  const fxMountTimer = useRef<number | null>(null);
+  const fxUnmountTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isUVMode) {
+      if (fxMountTimer.current) { clearTimeout(fxMountTimer.current); fxMountTimer.current = null; }
+      if (fxUnmountTimer.current) { clearTimeout(fxUnmountTimer.current); fxUnmountTimer.current = null; }
+      setFxMounted(false);
+      return;
+    }
+
+    if (isHovering) {
+      if (fxUnmountTimer.current) { clearTimeout(fxUnmountTimer.current); fxUnmountTimer.current = null; }
+      if (!fxMounted && fxMountTimer.current == null) {
+        fxMountTimer.current = window.setTimeout(() => {
+          fxMountTimer.current = null;
+          setFxMounted(true);
+        }, 80); // small delay to avoid quick mouse passes
+      }
+    } else {
+      if (fxMountTimer.current) { clearTimeout(fxMountTimer.current); fxMountTimer.current = null; }
+      if (fxMounted && fxUnmountTimer.current == null) {
+        fxUnmountTimer.current = window.setTimeout(() => {
+          fxUnmountTimer.current = null;
+          setFxMounted(false);
+        }, 220); // allow fade-out to complete before removing from DOM
+      }
+    }
+
+    return () => {
+      if (fxMountTimer.current) { clearTimeout(fxMountTimer.current); fxMountTimer.current = null; }
+      if (fxUnmountTimer.current) { clearTimeout(fxUnmountTimer.current); fxUnmountTimer.current = null; }
+    };
+  }, [isHovering, isUVMode, fxMounted]);
+
   // If OffscreenCanvas + Worker are available, offload pixel work to a dedicated worker.
   // Fallback to main-thread processing if not supported.
   useEffect(() => {
@@ -195,6 +258,12 @@ export function MysteryImage({
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Limpa o canvas imediatamente ao mudar o canal para evitar 'fantasmas'
+    try {
+      const _ctx = canvas.getContext('2d');
+      if (_ctx) _ctx.clearRect(0, 0, canvas.width || 0, canvas.height || 0);
+    } catch (e) {}
 
     const MAX_DIM = 800; // keep reduced size to limit pixel work
 
@@ -218,22 +287,72 @@ export function MysteryImage({
       await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); });
       if (cancelled) return;
       try {
+        // Determine container size so canvas drawing matches background positioning
+        const container = containerRef.current;
+        const containerW = container ? Math.max(1, container.clientWidth) : (img.naturalWidth || img.width || 1024);
+        const containerH = container ? Math.max(1, container.clientHeight) : (img.naturalHeight || img.height || 768);
+
         const naturalW = img.naturalWidth || img.width || 1024;
         const naturalH = img.naturalHeight || img.height || 768;
-        const scale = Math.min(1, MAX_DIM / Math.max(naturalW, naturalH));
-        const targetW = Math.max(1, Math.round(naturalW * scale));
-        const targetH = Math.max(1, Math.round(naturalH * scale));
-        canvas.width = targetW; canvas.height = targetH;
+
+        // Compute draw box according to 'fit' (contain / cover)
+        let drawW = containerW;
+        let drawH = containerH;
+        let offsetX = 0;
+        let offsetY = 0;
+        const imgAspect = naturalW / naturalH;
+        const containerAspect = containerW / containerH;
+        if (fit === 'contain') {
+          if (imgAspect > containerAspect) {
+            // image fills width
+            drawW = containerW;
+            drawH = Math.round(containerW / imgAspect);
+            offsetX = 0;
+            offsetY = Math.round((containerH - drawH) / 2);
+          } else {
+            // fills height
+            drawH = containerH;
+            drawW = Math.round(containerH * imgAspect);
+            offsetY = 0;
+            offsetX = Math.round((containerW - drawW) / 2);
+          }
+        } else {
+          // cover
+          if (imgAspect > containerAspect) {
+            // image taller -> fill height
+            drawH = containerH;
+            drawW = Math.round(containerH * imgAspect);
+            offsetX = Math.round((containerW - drawW) / 2);
+            offsetY = 0;
+          } else {
+            drawW = containerW;
+            drawH = Math.round(containerW / imgAspect);
+            offsetX = 0;
+            offsetY = Math.round((containerH - drawH) / 2);
+          }
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        // size backing store to container size (not limited to MAX_DIM to preserve alignment)
+        canvas.width = Math.max(1, Math.round(containerW * dpr));
+        canvas.height = Math.max(1, Math.round(containerH * dpr));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // draw image into the computed box scaled by dpr so visual placement matches background
+        const sx = Math.round(offsetX * dpr);
+        const sy = Math.round(offsetY * dpr);
+        const sW = Math.max(1, Math.round(drawW * dpr));
+        const sH = Math.max(1, Math.round(drawH * dpr));
+
         if ((window as any).createImageBitmap) {
           try {
             const bitmap = await (window as any).createImageBitmap(img);
-            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bitmap, sx, sy, sW, sH);
             try { bitmap.close?.(); } catch (e) {}
           } catch (e) {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, sx, sy, sW, sH);
           }
-        } else ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        } else ctx.drawImage(img, sx, sy, sW, sH);
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
@@ -260,6 +379,8 @@ export function MysteryImage({
         const offscreen = (canvas as any).transferControlToOffscreen();
         const msg = { canvas: offscreen, src: baseSrc, channel: forensicChannel, maxDim: MAX_DIM } as any;
         w.postMessage(msg, [offscreen]);
+        // politely ask worker to warm/cache the source as well
+        try { w.postMessage({ type: 'warm', src: baseSrc }); } catch (e) {}
       } catch (e) {
         // if worker path fails for any reason, fallback to main thread
         doMainThreadProcessing();
@@ -328,42 +449,80 @@ export function MysteryImage({
       style={{
         ...style,
         cursor: isUVMode ? 'none' : 'default',
+        // MUDANÇA 1: Fundo preto no forense para contraste correto
+        backgroundColor: isForensicActive ? '#000' : 'transparent',
+        // ADICIONADO: evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
+        touchAction: 'none' as React.CSSProperties['touchAction'],
+        isolation: 'isolate' as React.CSSProperties['isolation'],
         // expose CSS vars for radius and pointer to enable CSS-only masks
         ['--uv-radius' as any]: `${RADIUS}px`,
         ['--mouse-x' as any]: `${xy.x}px`,
         ['--mouse-y' as any]: `${xy.y}px`
       }}
     >
-      {/* Background decorative blur (fills sides with color from the image) - optional */}
-      {baseSrc && !isUVMode && ambientBlur && (
-        <img src={baseSrc} className="bg-blur" alt="" loading="lazy" draggable={false} style={{ pointerEvents: 'none' }} />
-      )}
-      {/* Base image always rendered as background layer (keeps layout stable) */}
-      <div style={{ ...filterStyle, backgroundImage: bgImage, position: 'absolute', inset: 0 }} />
-
-      {/* Render a pixel-precise overlay canvas when forensicChannel is requested (not 'all') */}
-      {forensicChannel !== 'all' && (
-        <canvas ref={canvasRef} className="forensic-canvas" />
-      )}
-
-      {/* 2. CAMADA DO PUZZLE DE TRATAMENTO */}
-      {(filterLayerSrc || hiddenSrc) && !isUVMode && (
-        <div style={overlayStyle} />
-      )}
-
-      {isUVMode && hasSecret && (
-        <div className="secret-ink" style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: hiddenImage }} />
-      )}
-
-      {isUVMode && isHovering && (
+      {/* MUDANÇA 2: Esconder camadas normais se forense estiver ativo */}
+      {!isForensicActive && (
         <>
-          <div className="static-noise" />
-          <div className="uv-lens-flare" style={{ position: 'absolute', inset: 0, opacity: 0.55 }} />
+          {/* Background decorative blur (fills sides with color from the image) - optional */}
+          {baseSrc && !isUVMode && ambientBlur && (
+            <img src={baseSrc} className="bg-blur" alt="" loading="lazy" draggable={false} style={{ pointerEvents: 'none' }} />
+          )}
+
+          {/* Base image always rendered as background layer (keeps layout stable) */}
+          <div style={{ ...filterStyle }} />
+
+          {/* 2. CAMADA DO PUZZLE DE TRATAMENTO */}
+          {(filterLayerSrc || hiddenSrc) && !isUVMode && (
+            <div style={overlayStyle} />
+          )}
+
+          {isUVMode && hasSecret && (
+            <div className="secret-ink" style={{ ...bgStyle, position: 'absolute', inset: 0, backgroundImage: hiddenImage }} />
+          )}
         </>
       )}
 
-      {/* Main visible image (on top) - hidden when performing canvas forensic channel work */}
-      {baseSrc && forensicChannel === 'all' && !isUVMode && (
+      {/* Canvas Forense (já estava correto com o pointerEvents: none do fix anterior) */}
+      {isForensicActive && (
+        <canvas
+          ref={canvasRef}
+          className="forensic-canvas"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            // z-index reduzido e seguro dentro do contexto isolado do container
+            zIndex: 10,
+            pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
+            objectFit: fit,
+          }}
+        />
+      )}
+
+      {isUVMode && fxMounted && (
+        <>
+          <div
+            className="static-noise"
+            style={{
+              opacity: isHovering ? 0.06 : 0,
+              transition: 'opacity 220ms linear',
+            }}
+          />
+          <div
+            className="uv-lens-flare"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: isHovering ? 0.55 : 0,
+              transition: 'opacity 220ms linear'
+            }}
+          />
+        </>
+      )}
+
+      {/* Imagem Principal: Esconder no forense */}
+      {baseSrc && !isForensicActive && !isUVMode && (
         <img
           src={baseSrc}
           className="main-evidence"

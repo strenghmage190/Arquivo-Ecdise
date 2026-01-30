@@ -107,7 +107,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [moreToolsPos, setMoreToolsPos] = useState<{ left: number; top: number; width: number } | null>(null);
   const moreToolsDropdownRef = useRef<HTMLDivElement | null>(null);
   const [menuView, setMenuView] = useState<'tools' | 'media'>('tools');
-  const DROPDOWN_VERTICAL_OFFSET = 12; // smaller nudge so dropdown sits closer to header buttons
+  const DROPDOWN_VERTICAL_OFFSET = 55; // increased offset so dropdown doesn't overlap the trigger
 
   useEffect(() => {
     if (!showMoreTools) return;
@@ -662,8 +662,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // O elemento que será transformado (Escalado/Movido)
       // Tenta achar o container interno do MysteryImage (.uv-container ou .large-evidence-img)
       // Se não achar, usa o próprio container.
-      const transformTarget = (container.querySelector('.uv-container, .large-evidence-img') as HTMLElement | null) || 
-                              (container.querySelector('img') as HTMLElement | null);
+      const transformTarget = (container.querySelector('.image-zoom-wrapper, .uv-container, .large-evidence-img') as HTMLElement | null) || 
+              (container.querySelector('img') as HTMLElement | null);
 
       if (!transformTarget) return;
 
@@ -1052,21 +1052,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 reveal = m?.image_filter_reveal ?? null;
               } catch (e) { reveal = null; }
               return (
-                <>
-                  <MysteryImage
-                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                    hiddenSrc={currentCard.image_uv_url}
-                    filterLayerSrc={currentCard.image_filter_layer}
-                    filters={{ brightness, contrast, saturate: saturation }}
-                    revealSettings={fullscreenOnlyTreatment ? null : reveal}
-                    isUVMode={localUV}
-                    fit="contain"
-                    className="large-evidence-img"
-                    style={{ height: '100%', width: '100%' }}
-                    forensicChannel={forensicChannel}
-                  />
-                </>
-              );
+                        <>
+                          <div className="image-zoom-wrapper">
+                            <MysteryImage
+                              baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                              hiddenSrc={currentCard.image_uv_url}
+                              filterLayerSrc={currentCard.image_filter_layer}
+                              filters={{ brightness, contrast, saturate: saturation }}
+                              revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                              isUVMode={localUV}
+                              fit="contain"
+                              className="large-evidence-img"
+                              style={{ height: '100%', width: '100%' }}
+                              forensicChannel={forensicChannel}
+                            />
+                          </div>
+                        </>
+                      );
             })()}
 
             {localThermal && !fullscreenOpen && (
@@ -1272,13 +1274,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       {showMoreTools && moreToolsPos && (
         <div
           ref={moreToolsDropdownRef}
+          className="more-tools-dropdown"
             style={{
             position: 'absolute',
             left: `${moreToolsPos.left}px`,
-              top: `${moreToolsPos.top - 12}px`,
+              top: `${moreToolsPos.top}px`,
             background: '#111',
             border: '1px solid #222',
-            padding: 8,
+
+            /* --- adjusted: remove inner padding and gap, hide overflow */
+            padding: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            overflow: 'hidden',
+
             zIndex: 400,
             minWidth: 200,
             borderRadius: 6,
@@ -1286,60 +1296,63 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           }}
           onClick={e => e.stopPropagation()}
         >
-          {menuView === 'media' ? (
-            <>
-              <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}>⬅ VOLTAR</button>
-              <hr className="divider" />
-              {hasImage && (
-                <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}>📸 FOTO</button>
-              )}
-              {hasVideo && (
-                <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
-              )}
-              {hasAudio && (
-                <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>🎵 ÁUDIO</button>
-              )}
-              {hasChat && (
-                <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
-              )}
-            </>
-          ) : (
-            <>
-              <button type="button" className="btn-tool-tab btn-highlight" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('media')}>
-                📂 MÍDIA ({mediaCount}) ▸
-              </button>
-              <hr className="divider" />
-              {(() => {
-                const meta = currentCard?.metadata;
-                const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
-                const thermalKeyword = meta?.thermal_keyword;
-                const thermalUnlocked = meta?.thermal_unlocked === true;
-                const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
-                const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
+          {(() => {
+            const isMobile = (typeof window !== 'undefined' && window.innerWidth <= 768);
+            return (menuView === 'media' && isMobile) ? (
+              <>
+                <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}>⬅ VOLTAR</button>
+                <hr className="divider" />
+                {hasImage && (
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}>📸 FOTO</button>
+                )}
+                {hasVideo && (
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
+                )}
+                {hasAudio && (
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>🎵 ÁUDIO</button>
+                )}
+                {hasChat && (
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
+                )}
+              </>
+            ) : (
+              <>
+                <button type="button" className="btn-tool-tab btn-highlight" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('media')}>
+                  📂 MÍDIA ({mediaCount}) ▸
+                </button>
+                <hr className="divider" />
+                {(() => {
+                  const meta = currentCard?.metadata;
+                  const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
+                  const thermalKeyword = meta?.thermal_keyword;
+                  const thermalUnlocked = meta?.thermal_unlocked === true;
+                  const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
+                  const isLocked = hasThermal && thermalKeyword && !thermalUnlocked;
 
-                return (
-                  <button
-                    type="button"
-                    className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', opacity: isLocked ? 0.5 : 1, cursor: isLocked ? 'not-allowed' : 'pointer' }}
-                    onClick={() => {
-                      if (isLocked) { alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`); return; }
-                      setLocalThermal(!localThermal);
-                      setShowMoreTools(false);
-                    }}
-                    title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
-                  >
-                    🌡️ TERMAL {isLocked ? '🔒' : ''}
-                  </button>
-                );
-              })()}
+                  return (
+                    <button
+                      type="button"
+                      className={`btn-tool-tab ${localThermal ? 'active-blue' : ''}`}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', opacity: isLocked ? 0.5 : 1, cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                      onClick={() => {
+                        if (isLocked) { alert(`🔒 Modo Termal bloqueado. Use o Terminal de Busca para encontrar a palavra-chave.`); return; }
+                        setLocalThermal(!localThermal);
+                        setShowMoreTools(false);
+                      }}
+                      title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
+                    >
+                      🌡️ TERMAL {isLocked ? '🔒' : ''}
+                    </button>
+                  );
+                })()}
 
-              <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
-              <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
-              <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
-              <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
-            </>
-          )}
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+              </>
+            )
+          })()}
         </div>
       )}
       <div
@@ -1368,9 +1381,44 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   <span className="chat-contact">{contactNameInferred}</span>
                 )}
 
-                {/* Toggle buttons for available media types */}
-                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  {/* Mídias movidas para o menu "MAIS" — mantém o cabeçalho limpo */}
+                {/* Toggle buttons for available media types (desktop only) */}
+                <div className="media-toggle" style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  {hasImage && (
+                    <button
+                      type="button"
+                      className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setVisualMode('image'); }}
+                    >
+                      📸 FOTO
+                    </button>
+                  )}
+                  {hasVideo && (
+                    <button
+                      type="button"
+                      className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setVisualMode('video'); }}
+                    >
+                      🎥 VÍDEO
+                    </button>
+                  )}
+                  {hasAudio && (
+                    <button
+                      type="button"
+                      className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setVisualMode('audio'); }}
+                    >
+                      🎵 ÁUDIO
+                    </button>
+                  )}
+                  {hasChat && (
+                    <button
+                      type="button"
+                      className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setVisualMode('phone'); }}
+                    >
+                      💬 CHATS
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="actions">
@@ -1623,7 +1671,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       )}
                       {megaClueMeta.image_url && (
                         <div style={{ marginTop: 8 }}>
-                          <img src={megaClueMeta.image_url} alt="Verdade final" style={{ maxWidth: '100%', borderRadius: 6 }} />
+                          <img src={megaClueMeta.image_url} alt="Verdade final" loading="lazy" style={{ maxWidth: '100%', borderRadius: 6 }} />
                         </div>
                       )}
                     </div>
@@ -1866,20 +1914,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             ) : (
               <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {/* MysteryImage Renderizado aqui dentro */}
-                  <MysteryImage
-                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                    hiddenSrc={currentCard.image_uv_url}
-                    filterLayerSrc={currentCard.image_filter_layer}
-                    filters={{ brightness, contrast, saturate: saturation }}
-                    revealSettings={fullscreenOnlyTreatment ? null : (() => {
-                       try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
-                    })()}
-                    isUVMode={localUV}
-                    fit="contain"
-                    className="large-evidence-img"
-                    style={{ maxHeight: '100%', maxWidth: '100%' }} 
-                    forensicChannel={forensicChannel}
-                  />
+                  <div className="image-zoom-wrapper">
+                    <MysteryImage
+                      baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                      hiddenSrc={currentCard.image_uv_url}
+                      filterLayerSrc={currentCard.image_filter_layer}
+                      filters={{ brightness, contrast, saturate: saturation }}
+                      revealSettings={fullscreenOnlyTreatment ? null : (() => {
+                         try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
+                      })()}
+                      isUVMode={localUV}
+                      fit="contain"
+                      className="large-evidence-img"
+                      style={{ maxHeight: '100%', maxWidth: '100%' }} 
+                      forensicChannel={forensicChannel}
+                    />
+                  </div>
                   
                   {/* Camada Termal sobreposta (se ativa) */}
                   {localThermal && (

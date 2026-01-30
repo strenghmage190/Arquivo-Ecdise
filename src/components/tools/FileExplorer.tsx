@@ -83,7 +83,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
                   }
                   navigate(`/case/${String(c.id).split(':')[0]}`);
                 }}>
-                  {status === 'open' && <img className="file-thumb" src={`https://picsum.photos/seed/${String(c.id)}/320/160`} alt="thumb" />}
+                  {status === 'open' && <img className="file-thumb" src={`https://picsum.photos/seed/${String(c.id)}/320/160`} alt="thumb" loading="lazy" />}
                   {status === 'locked' && <div className="lock-icon">🔒</div>}
                   {status === 'corrupted' && <div className="glitch-overlay" />}
                   <div className="file-info">
