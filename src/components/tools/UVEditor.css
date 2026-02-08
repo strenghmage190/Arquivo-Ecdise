@@ -722,13 +722,7 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   border-radius: 6px;
 }
 
-.layers-list .layer-item.layer--selected {
-  background: var(--bg-elevated);
-  border-left: 3px solid var(--accent-cyan);
-  padding-left: 8px; /* compensate for left border */
-}
-
-/* Also support the `active` class used by LayerItem component */
+.layers-list .layer-item.layer--selected,
 .layers-list .layer-item.active,
 .layer-item.active {
   background: var(--bg-elevated);
@@ -776,87 +770,6 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
 /* Inputs: thin sliders and inputs */
 .properties-panel input[type="range"],
 .uv-range {
-  appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  background: rgb(255 255 255 / 4%);
-  border-radius: 6px;
-  outline: none;
-}
-
-.properties-panel input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--nexus-blue);
-  box-shadow: 0 0 8px rgb(0 215 255 / 28%);
-  border: 2px solid rgb(255 255 255 / 6%);
-}
-
-.properties-panel label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: #9fb3c8;
-}
-
-/* Utility: compact footer for layers if needed */
-.layers-panel .layers-footer {
-  padding: 6px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  gap: 8px;
-.layers-list .layer-item.layer--selected {
-  background: var(--bg-elevated);
-  border-left: 3px solid var(--accent-cyan);
-  padding-left: 8px; /* compensate for left border */
-}
-
-  justify-content: space-between;
-}
-
-/* Also support the `active` class used by LayerItem component */
-.layers-list .layer-item.active,
-.layer-item.active {
-  background: var(--bg-elevated);
-  border-left: 3px solid var(--accent-cyan);
-  padding-left: 8px;
-}
-
-.layers-list .layer-children {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.group-toggle-btn {
-  background: transparent;
-  border: none;
-  color: inherit;
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-/* Compact controls in right panel */
-.properties-panel {
-  flex: 1 1 auto;
-  overflow: auto;
-  padding: 8px;
-  border-radius: 6px;
-}
-
-/* Inputs: thin sliders and inputs */
-.properties-panel input[type="range"],
-.uv-range {
-  appearance: none;
   appearance: none;
   width: 100%;
   height: 6px;
@@ -1099,14 +1012,7 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   background: rgb(255 255 255 / 2%);
 }
 
-/* Selected indicator */
-.layers-list .layer-item.layer--selected,
-.layers-list .layer-item.active,
-.layer-item.active {
-  background: var(--bg-elevated);
-  border-left: 3px solid var(--accent-cyan);
-  padding-left: 8px; /* compensate for left border */
-}
+/* Selected indicator (handled below with consolidated selector) */
 
 /* Thumbnail / preview */
 .layers-list .layer-item .layer-preview,
@@ -1231,15 +1137,6 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   background: rgb(255 255 255 / 2%);
 }
 
-/* ensure scrollbar inside right panel looks okay */
-.uv-right-panel .layers-list::-webkit-scrollbar {
-  width: 8px;
-}
-.uv-right-panel .layers-list::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 4%);
-  border-radius: 6px;
-}
-
 /* End overrides */
 
 /* ===== Layer selection: fill entire row and checkbox square ===== */
@@ -1256,7 +1153,7 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
 .layer-item.layer--selected {
   background: var(--layer-selected-bg) !important;
   color: var(--layer-selected-fg) !important;
-  border-left: none !important;
+  border-left: 3px solid var(--accent-cyan) !important;
   padding-left: 8px !important;
 }
 
@@ -1274,7 +1171,6 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   width: var(--layer-checkbox-size);
   height: var(--layer-checkbox-size);
   appearance: none;
-  appearance: none;
   border-radius: 4px;
   border: 1px solid rgb(255 255 255 / 6%);
   background: rgb(255 255 255 / 2%);
@@ -1283,9 +1179,9 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   vertical-align: middle;
   position: relative;
   transition:
-    background 0.12s ease,
-    box-shadow 0.12s ease,
-    border-color 0.12s ease;
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .layers-list .layer-item .layer-controls input[type="checkbox"]:checked {

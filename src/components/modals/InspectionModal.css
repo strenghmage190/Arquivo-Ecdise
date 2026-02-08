@@ -1,5 +1,14 @@
 /* =========================================
    INSPECTION MODAL - NEXUS THEME
+   
+   Z-INDEX HIERARCHY:
+   - 40000: Glitch Solver Backdrop (highest overlay)
+   - 30000-30010: Fullscreen viewer and HUDs
+   - 25000: Inspect backdrop (modal background)
+   - 520: Tools HUD panel
+   - 200: Dropdowns and floating panels
+   - 120: Headers and controls
+   - 10-90: UI layers and overlays
    ========================================= */
 
 /* Custom scrollbar for the modal to match app visual (dark theme) */
@@ -38,23 +47,7 @@
 }
 
 /* Visual area: center content and prevent sliders/images from overflowing */
-.inspect-visual-area {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #000 0%, #05080a 100%);
-  position: relative;
-  min-height: 520px;
-  max-height: calc(88vh - 160px);
-  overflow: auto;
-
-  /* Sutil efeito grid Nexus */
-
-  background-image:
-    linear-gradient(rgb(0 243 255 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(0 243 255 / 2%) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
+/* Main styling for .inspect-visual-area is defined in the main layout section below */
 
 /* Filtro para aumentar imersão durante resolução de Glitch Puzzle */
 .inspect-visual-area.is-glitching {
@@ -329,8 +322,8 @@
   box-shadow:
     0 0 80px rgb(0 0 0 / 95%),
     0 0 40px rgb(0 243 255 / 8%);
-  display: grid;
-  grid-template-rows: auto 1fr auto; /* header / content / footer */
+  display: flex;
+  flex-direction: column;
   border-radius: 8px;
   overflow: hidden; /* nothing may escape the modal bounds */
   -webkit-overflow-scrolling: touch;
@@ -358,28 +351,29 @@
   border-bottom: 1px solid rgb(0 243 255 / 12%);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 12px 20px;
   flex-shrink: 0;
   gap: 14px;
-  flex-wrap: wrap; /* allow actions to wrap onto additional lines when needed */
+  flex-wrap: nowrap; /* prevent wrapping to keep layout clean */
   box-shadow: 0 2px 12px rgb(0 0 0 / 40%);
-}
-
-/* Ensure header items lay out in a single row and do not overflow into the visual area */
-.inspect-header {
   position: relative;
   z-index: 120;
 }
 
+/* Ensure header items lay out in a single row and do not overflow into the visual area */
+/* z-index and positioning handled in main .inspect-header rule above */
+
 .inspect-header .meta-info {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   flex: 1 1 auto; /* allow meta to take remaining space but shrink if needed */
   min-width: 0; /* enable text truncation */
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 .inspect-header .meta-info .case-stamp {
   flex: 0 0 auto;
@@ -407,12 +401,13 @@
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
-  flex-wrap: nowrap; /* prevent actions from wrapping to multiple lines */
-  max-width: 60%; /* allow more space for actions on wide screens */
+  flex-wrap: wrap; /* allow wrapping when buttons overflow */
+  max-width: 65%; /* allow more space for actions on wide screens */
   box-sizing: border-box;
-  overflow-x: auto; /* allow horizontal scroll instead of wrapping */
-  overflow-y: visible; /* allow dropdowns to extend vertically */
+  overflow: visible; /* allow dropdowns to extend beyond */
   -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 5;
 }
 
 /* Menu de Botões */
@@ -470,6 +465,7 @@
   flex-direction: column !important;
   gap: 0 !important;
   overflow: hidden !important;
+  z-index: 200 !important; /* ensure dropdown appears above all other content */
 }
 
 .more-tools-dropdown .btn-tool-tab {
@@ -538,32 +534,27 @@
 /* Media toggle shown in header (desktop). Hidden on small screens where 'MAIS' menu is preferred. */
 .media-toggle {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin-top: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  max-width: 100%;
 }
 .media-toggle .btn-tool-tab {
-  padding: 6px 10px;
-  font-size: 11px;
+  padding: 5px 9px;
+  font-size: 10px;
   min-width: auto;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 @media (max-width: 768px) {
   .media-toggle { display: none !important; }
 }
 
-/* Make sure the visual area sits below the header and doesn't overlap */
-.inspect-visual-area {
-  margin-top: 0;
-  z-index: 10;
-  position: relative;
-}
-
-/* Ensure the visual/content area is a rigid compartment that cannot overflow the modal */
+/* Ensure the visual/content area is a rigid compartment that scrolls internally when needed */
 .inspect-file > .inspect-visual-area,
 .inspect-file > .evidence-display-area {
-  overflow: hidden;
+  overflow: auto; /* allow scrolling when content is larger than container */
   position: relative;
   display: flex;
   align-items: stretch;
@@ -591,19 +582,9 @@
   box-sizing: border-box;
 }
 
-/* Ensure header appears above any floating HUDs and that its buttons don't wrap */
-.inspect-header {
-  position: relative;
-  z-index: 80;
-  font-family: "Share Tech Mono", "Roboto Mono", monospace;
-  color: #d8d8d8;
-}
-.actions {
-  align-items: center;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: visible;
-}
+/* Ensure header appears above any floating HUDs */
+/* z-index, font-family, and color handled in main .inspect-header rule above */
+
 .btn-tool-tab {
   white-space: nowrap;
   line-height: 1.1;
@@ -641,6 +622,7 @@
 }
 
 .btn-close-modal {
+  /* This class is only used in mobile media queries */
   background: rgb(255 0 60 / 8%);
   border: 1px solid rgb(255 0 60 / 20%);
   color: var(--nexus-glitch, #ff003c);
@@ -667,16 +649,19 @@
 }
 
 /* --- ÁREA VISUAL PRINCIPAL --- */
+/* Main content area that holds images, videos, phone mockups, etc. */
 .inspect-visual-area {
-  flex: 1; /* Ocupa todo o espaço sobrando */
+  flex: 1 1 auto; /* Ocupa todo o espaço sobrando */
   position: relative; /* Para os HUDs flutuarem aqui dentro */
   background: linear-gradient(180deg, #000 0%, #05080a 100%);
-  overflow: hidden;
+  overflow: auto; /* Allow scrolling for large content */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0; /* importante para o flex funcionar e permitir scroll interno quando necessário */
+  min-height: 400px; /* altura mínima para garantir visualização */
+  max-height: calc(100% - 160px); /* limitar para não empurrar o footer */
   transition: all 0.28s ease; /* animação suave ao expandir/contrair */
+  z-index: 10;
 
   /* Sutil efeito grid Nexus */
 
@@ -1462,7 +1447,7 @@ input[type="number"].filter-number {
      area gets more space. Details remain scrollable when content is large. */
 
   height: auto;
-  min-height: 100px;
+  min-height: 80px;
   max-height: 24vh; /* smaller than before to prioritize the video */
   background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(10 15 20 / 98%));
   border-top: 2px solid rgb(0 243 255 / 15%);
@@ -1471,6 +1456,7 @@ input[type="number"].filter-number {
   gap: 16px;
   overflow: auto; /* allow details to scroll internally */
   box-shadow: 0 -4px 20px rgb(0 0 0 / 50%);
+  flex-shrink: 0;
 }
 
 /* Left column inside the details that holds description and metadata. It scrolls */
@@ -1576,30 +1562,27 @@ input[type="number"].filter-number {
   transform: translateY(-2px);
 }
 
-/* --- HEADER FLEX FIXES (override earlier fixed header/rows) --- */
+/* --- HEADER FLEX FIXES --- */
+/* Prevent layout conflicts between older grid and newer flex approach */
 
-/* 1. Allow header to grow when toolbar wraps into multiple lines */
+/* 1. Ensure modal uses flex layout properly */
 .inspect-file {
-  grid-template-rows: auto 1fr auto !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-/* 2. Let header size itself and wrap tools onto next line when needed */
+/* 2. Header should not grow beyond content */
 .inspect-header {
   height: auto !important;
   min-height: 55px;
   padding: 10px 15px;
   flex-wrap: wrap;
   gap: 10px;
+  max-height: 25vh; /* prevent header from taking too much space */
+  overflow: visible;
 }
 
-/* 3. Ensure visual area stays below the header and doesn't overlap */
-.inspect-visual-area {
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-}
-
-/* 4. If tools hud is fixed, avoid it sitting under the header on small screens */
+/* 3. Tools hud positioning on small screens */
 .tools-hud-panel {
   top: auto !important;
   margin-top: 10px;
@@ -1682,12 +1665,20 @@ input[type="number"].filter-number {
   background: rgb(255 0 60 / 8%);
   border: 1px solid rgb(255 0 60 / 20%);
   color: var(--nexus-glitch, #ff003c);
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
   transition: all 0.2s ease;
   font-weight: bold;
+  flex-shrink: 0;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 10; /* ensure it stays on top */
 }
 
 .btn-close:hover {

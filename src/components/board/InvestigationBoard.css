@@ -1,47 +1,204 @@
-/* filepath: src/components/board/InvestigationBoard.css */
+/* ===== MOBILE HUD E CONTROLES COMPLETOS ===== */
+
+/* Desktop: Oculta HUD mobile */
 .mobile-hud {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: none;
+}
+
+.main-fab-trigger {
+  display: none;
+}
+
+/* Bottom Sheet (Menu Mobile) */
+.bottom-sheet-overlay {
   position: fixed;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.8);
-  border-radius: 12px;
-  padding: 8px;
-  gap: 12px;
+  inset: 0;
+  background: rgb(0 0 0 / 60%);
+  z-index: 20000;
+  opacity: 0;
+  animation: fadeIn 0.2s forwards;
 }
 
-.mobile-hud button {
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 50%;
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgb(15 15 17 / 98%);
+  backdrop-filter: blur(10px);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border: 1px solid #333;
+  border-bottom: none;
+  padding: 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 20002;
+  box-shadow: 0 -4px 40px rgb(0 0 0 / 80%);
+  transform: translateY(100%);
+  animation: slideUpSheet 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideUpSheet {
+  to {
+    transform: translateY(0);
+  }
+}
+
+.bottom-sheet h3 {
+  color: #c6a45f;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 16px 0 8px 0;
+  text-transform: uppercase;
+}
+
+.bottom-sheet h3:first-child {
+  margin-top: 0;
+}
+
+.bottom-sheet button,
+.fab-item {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #444;
+  color: #ddd;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-family: "Roboto Mono", monospace;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-size: 18px;
+  gap: 12px;
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition: all 0.2s;
 }
 
-.mobile-hud button:hover {
-  transform: scale(1.1);
-}
-
-.mobile-hud .red-button {
-  background-color: #e63946;
+.bottom-sheet button:active,
+.fab-item:active {
+  background: rgb(255 255 255 / 10%);
+  border-color: #666;
   color: #fff;
 }
 
-.mobile-hud .red-button:hover {
-  background-color: #d62828;
+.bottom-sheet button.primary,
+.fab-item.primary {
+  background: linear-gradient(135deg, #c6a45f 0%, #a88747 100%);
+  color: #000;
+  border: none;
+  font-weight: 700;
 }
 
-.mobile-hud .inactive-button {
-  background-color: #6c757d;
-  color: #fff;
-  opacity: 0.6;
-  cursor: not-allowed;
+.bottom-sheet button.active,
+.fab-item.active {
+  background: rgb(198 164 95 / 20%);
+  border-color: #c6a45f;
+  color: #c6a45f;
+}
+
+.bottom-sheet button.uv-active,
+.fab-item.uv-active {
+  background: rgb(100 0 255 / 10%);
+  border-color: #b366ff;
+  color: #b366ff;
+}
+
+/* Mobile: Exibe HUD Mobile */
+@media (max-width: 768px) {
+  .mobile-hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid #333;
+    padding: 8px;
+    gap: 12px;
+    z-index: 20001;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 70%);
+  }
+
+  .mobile-hud button {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    background-color: #2a2a2e;
+    color: #fff;
+  }
+
+  .mobile-hud button:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-hud .red-button {
+    background-color: #e63946;
+    color: #fff;
+  }
+
+  .mobile-hud .red-button:active {
+    background-color: #d62828;
+  }
+
+  .mobile-hud .inactive-button {
+    background-color: #6c757d;
+    color: #fff;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .mobile-fab-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    z-index: 20003;
+  }
+
+  .main-fab-trigger {
+    display: flex;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b33, #800);
+    color: #fff;
+    font-size: 24px;
+    border: none;
+    box-shadow: 0 6px 20px rgb(180 20 20 / 50%);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    z-index: 20004;
+  }
+
+  .main-fab-trigger:active {
+    transform: scale(0.9);
+  }
+
+  .main-fab-trigger.open {
+    background: #333;
+  }
 }

@@ -2,6 +2,18 @@
    EVIDENCE CARD CONTENT - PLAYER VS GM VIEW
    ========================================= */
 
+/* === Z-Index Hierarchy === */
+:root {
+  --z-content-base: 1;
+  --z-content-overlay: 10;
+  --z-content-glitch: 50;
+  --z-content-corruption: 60;
+  --z-content-text: 70;
+  --z-content-scan: 80;
+  --z-content-lock: 100;
+  --z-content-lock-text: 101;
+}
+
 .card-content-container {
   position: relative;
   width: 100%;
@@ -116,8 +128,9 @@
 .encryption-text-wrapper .lock-icon {
   font-size: 48px;
   color: #ff003c;
-  animation: lock-pulse 2s infinite;
+  animation: lock-pulse 2s ease-in-out infinite;
   filter: drop-shadow(0 0 20px rgb(255 0 60 / 80%));
+  will-change: transform;
 }
 
 @keyframes lock-pulse {
@@ -138,7 +151,8 @@
   text-transform: uppercase;
   font-weight: bold;
   text-shadow: 0 0 15px rgb(255 0 60 / 80%);
-  animation: access-blink 1s infinite;
+  animation: access-blink 1s ease-in-out infinite;
+  will-change: opacity;
 }
 
 @keyframes access-blink {
@@ -172,7 +186,7 @@
 .glitch-corruption {
   position: absolute;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-content-glitch);
 }
 
 .glitch-layer-1,
@@ -180,20 +194,11 @@
 .glitch-layer-3 {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    rgb(255 0 255 / 15%) 0,
-    rgb(255 0 255 / 15%) 2px,
-    rgb(0 255 255 / 10%) 2px,
-    rgb(0 255 255 / 10%) 4px,
-    transparent 4px,
-    transparent 8px
-  );
-  animation: glitch-shift 0.3s infinite;
+  will-change: transform;
 }
 
 .glitch-layer-1 {
-  animation: glitch-shift 0.3s infinite;
+  animation: glitch-shift 0.3s ease-in-out infinite;
   background: repeating-linear-gradient(
     90deg,
     rgb(255 0 60 / 20%) 0,
@@ -204,7 +209,7 @@
 }
 
 .glitch-layer-2 {
-  animation: glitch-shift 0.3s infinite;
+  animation: glitch-shift 0.35s ease-in-out infinite reverse;
   background: repeating-linear-gradient(
     90deg,
     rgb(0 255 255 / 20%) 0,
@@ -215,7 +220,7 @@
 }
 
 .glitch-layer-3 {
-  animation: glitch-shift 0.3s infinite;
+  animation: glitch-shift 0.4s ease-in-out infinite;
   background: repeating-linear-gradient(
     90deg,
     rgb(255 255 0 / 15%) 0,
@@ -245,30 +250,11 @@
   }
 }
 
-@keyframes glitch-shift-reverse {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(2px);
-  }
-  40% {
-    transform: translateX(-2px);
-  }
-  60% {
-    transform: translateX(1px);
-  }
-  80% {
-    transform: translateX(-1px);
-  }
-}
-
 /* Data corruption overlay */
 .data-corruption-overlay {
   position: absolute;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-content-corruption);
   pointer-events: none;
   opacity: 0.6;
 }
@@ -276,7 +262,8 @@
 .corruption-pattern {
   width: 100%;
   height: 100%;
-  animation: corruption-float 2s infinite ease-in-out;
+  animation: corruption-float 2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes corruption-float {
@@ -295,7 +282,7 @@
 .glitch-text-overlay {
   position: absolute;
   inset: 0;
-  z-index: 70;
+  z-index: var(--z-content-text);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -315,28 +302,31 @@
 
 .glitch-1 {
   color: #ff003c;
-  animation: glitch-char 0.4s infinite;
+  animation: glitch-char 0.4s ease-in-out infinite;
   text-shadow:
     -2px 0 #00f3ff,
     2px 0 #f0f,
     0 0 15px rgb(255 0 60 / 80%);
+  will-change: transform, opacity;
 }
 
 .glitch-2 {
   color: #ff0;
   font-size: 13px;
-  animation: glitch-char-reverse 0.35s infinite;
+  animation: glitch-char-reverse 0.35s ease-in-out infinite;
   text-shadow: 0 0 10px rgb(255 255 0 / 60%);
   opacity: 0.7;
+  will-change: transform, opacity;
 }
 
 .glitch-3 {
   color: #00f3ff;
-  animation: glitch-char 0.45s infinite;
+  animation: glitch-char 0.45s ease-in-out infinite;
   text-shadow:
     -1px 0 #ff003c,
     1px 0 #ff0,
     0 0 15px rgb(0 243 255 / 80%);
+  will-change: transform, opacity;
 }
 
 @keyframes glitch-char {
@@ -391,7 +381,7 @@
 .scanlines {
   position: absolute;
   inset: 0;
-  z-index: 80;
+  z-index: var(--z-content-scan);
   pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
@@ -401,6 +391,7 @@
     rgb(0 255 255 / 3%) 4px
   );
   animation: scanline-drift 8s linear infinite;
+  will-change: transform;
 }
 
 @keyframes scanline-drift {
@@ -453,17 +444,41 @@
   );
   pointer-events: none;
   opacity: 0.3;
-  z-index: 10;
+  z-index: var(--z-content-overlay);
 }
 
 /* =========================================
    RESPONSIVE
    ========================================= */
 
-@media (width <= 480px) {
+@media (max-width: 768px) {
   .glitch-chars {
     font-size: 10px;
     letter-spacing: 3px;
+  }
+
+  .glitch-2 {
+    font-size: 12px;
+  }
+
+  .access-denied {
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+  
+  .encryption-text-wrapper .lock-icon {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .glitch-chars {
+    font-size: 9px;
+    letter-spacing: 2px;
+  }
+  
+  .glitch-2 {
+    font-size: 11px;
   }
 
   .glitch-1,
@@ -473,7 +488,16 @@
   }
 
   .access-denied {
-    font-size: 14px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+  }
+  
+  .encryption-code {
+    font-size: 9px;
+  }
+  
+  .encryption-text-wrapper .lock-icon {
+    font-size: 36px;
   }
 }
 
@@ -483,7 +507,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .glitch-view,
-  .glitch-view * {
+  .glitch-view *,
+  .lock-overlay,
+  .encryption-grid,
+  .overlay-scan {
     animation: none !important;
     transition: none !important;
   }
@@ -493,17 +520,20 @@
   .glitch-layer-3,
   .corruption-pattern,
   .scanlines,
-  .glitch-chars {
-    animation: none;
+  .glitch-chars,
+  .glitch-1,
+  .glitch-2,
+  .glitch-3 {
+    animation: none !important;
     opacity: 0.4;
   }
 
   .encryption-grid {
-    animation: none;
     opacity: 0.2;
   }
-
-  .overlay-scan {
-    animation: none;
+  
+  .encryption-text-wrapper .lock-icon,
+  .access-denied {
+    animation: none !important;
   }
 }

@@ -38,7 +38,7 @@
     "react-tooltip": "^5.30.0",
     "sass": "^1.97.2",
     "wavesurfer.js": "^7.12.1",
-    "zod": "^4.3.4"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

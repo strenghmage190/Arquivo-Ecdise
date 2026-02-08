@@ -15,6 +15,13 @@
   --color-text: #e0e0e0;
   --font-family-mono: "Share Tech Mono", "Courier New", monospace;
   --transition-default: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  /* Z-index hierarchy */
+  --z-base: 1;
+  --z-badges: 110;
+  --z-scanner: 100;
+  --z-lock-overlay: 105;
+  --z-toolbar: 200;
 }
 
 /* === CARD BASE === */
@@ -33,8 +40,9 @@
     0 0 0 1px var(--color-border),
     inset 0 1px 0 rgb(255 255 255 / 2%);
   position: relative;
-  overflow: visible !important;
+  overflow: visible;
   transition: var(--transition-default);
+  will-change: transform, box-shadow;
   font-family: var(--font-family-mono);
   backdrop-filter: blur(12px);
   color: var(--color-text);
@@ -92,9 +100,10 @@
   background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
   box-shadow: 0 0 15px var(--color-primary);
   animation: none;
-  z-index: 100;
+  z-index: var(--z-scanner);
   pointer-events: none;
   opacity: 0.6;
+  will-change: top, opacity;
 }
 
 @keyframes scan {
@@ -131,6 +140,8 @@
   position: relative;
   background: #000;
   overflow: hidden;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
   border-bottom: 1px solid rgb(0 243 255 / 20%);
   flex-shrink: 0;
 }
@@ -180,7 +191,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 110;
+  z-index: var(--z-badges);
 }
 
 .type-badge {
@@ -230,10 +241,11 @@
   box-shadow: 0 0 12px rgb(255 255 255 / 40%);
 }
 .type-badge.locked {
-  border-color: #ff003c;
-  color: #ff003c;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
   box-shadow: 0 0 18px rgb(255 0 60 / 70%);
-  animation: pulse-red 2s infinite;
+  animation: pulse-red 2s ease-in-out infinite;
+  will-change: box-shadow, opacity;
 }
 
 .type-badge.uv {
@@ -267,10 +279,11 @@
   box-shadow: 0 0 10px rgb(241 196 15 / 40%);
 }
 .type-badge.hidden {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
   box-shadow: 0 0 12px rgb(139 92 246 / 60%);
-  animation: pulse-purple 2s infinite;
+  animation: pulse-purple 2s ease-in-out infinite;
+  will-change: box-shadow, opacity;
 }
 
 @keyframes pulse-red {
@@ -317,7 +330,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 105;
+  z-index: var(--z-lock-overlay);
   border-bottom: 1px solid rgb(255 0 60 / 30%);
 }
 
@@ -347,10 +360,11 @@
 
 .lock-icon {
   font-size: 40px;
-  color: #ff003c;
+  color: var(--color-danger);
   margin-bottom: 10px;
-  animation: pulse-lock 2s infinite;
+  animation: pulse-lock 2s ease-in-out infinite;
   filter: drop-shadow(0 0 15px rgb(255 0 60 / 80%));
+  will-change: transform, opacity;
 }
 
 .lock-text {
@@ -389,11 +403,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center; /* Centraliza o conteúdo horizontalmente */
-  z-index: auto; /* Evita que interfira na barra de decisão */
+  align-items: center;
+  z-index: auto;
   color: #e0e0e0;
-  min-height: 0; /* Garantir que a seção possa encolher dentro do flex container */
-  overflow: hidden; /* impede crescimento descontrolado que empurra a barra */
+  min-height: 0;
+  overflow: visible;
 }
 
 .clue-info h3 {
@@ -405,6 +419,9 @@
   font-weight: 600;
   letter-spacing: 1.5px;
   text-shadow: 0 0 8px rgb(0 243 255 / 10%);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .clue-uuid {
@@ -421,14 +438,15 @@
 .decision-bar {
   background: rgb(0 0 0 / 60%);
   border-top: 1px solid rgb(0 243 255 / 15%);
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
   padding: 10px 12px;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 99999 !important; /* Eleva a barra acima de qualquer elemento */
-  position: relative; /* Garante que ela respeite o contexto de empilhamento */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  z-index: var(--z-toolbar);
+  position: relative;
   backdrop-filter: blur(4px);
   flex-shrink: 0;
 }
@@ -470,60 +488,64 @@
 .btn-decision i {
   font-size: 22px;
   pointer-events: none;
-  transition: transform 0.2s;
-  fill: currentColor; /* garante que ícones herdem a cor do botão */
-  stroke: currentColor; /* cobre svgs que usam stroke em vez de fill */
+  transition: transform 0.2s ease;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .btn-decision:hover svg {
   transform: scale(1.1);
 }
 
-.btn-decision:hover {
-  background: rgb(255 255 255 / 5%);
-  color: #fff;
-  border-color: rgb(255 255 255 / 20%);
-}
-
 .btn-decision.true:hover {
-  color: #00ff41;
-  text-shadow: 0 0 12px #00ff41;
+  color: var(--color-success);
+  text-shadow: 0 0 12px var(--color-success);
   border-color: rgb(0 255 65 / 50%);
   box-shadow: 0 0 15px rgb(0 255 65 / 20%);
 }
 
 .btn-decision.theory:hover {
-  color: #fc0;
-  text-shadow: 0 0 12px #fc0;
+  color: var(--color-warning);
+  text-shadow: 0 0 12px var(--color-warning);
   border-color: rgb(255 204 0 / 50%);
   box-shadow: 0 0 15px rgb(255 204 0 / 20%);
 }
 
 .btn-decision.false:hover {
-  color: #ff003c;
-  text-shadow: 0 0 12px #ff003c;
+  color: var(--color-danger);
+  text-shadow: 0 0 12px var(--color-danger);
   border-color: rgb(255 0 60 / 50%);
   box-shadow: 0 0 15px rgb(255 0 60 / 20%);
 }
 
 .btn-decision.open:hover {
-  color: #00f3ff;
-  text-shadow: 0 0 12px #00f3ff;
+  color: var(--color-primary);
+  text-shadow: 0 0 12px var(--color-primary);
   border-color: rgb(0 243 255 / 50%);
   box-shadow: 0 0 15px rgb(0 243 255 / 20%);
 }
 
+.btn-decision.edit:hover {
+  color: var(--color-secondary);
+  text-shadow: 0 0 12px var(--color-secondary);
+  border-color: rgb(139 92 246 / 50%);
+  box-shadow: 0 0 15px rgb(139 92 246 / 20%);
+}
+
 /* === ACTIVE STATES (BOTÕES) === */
 .btn-decision.true.active {
-  color: #00ff41; /* Verde para "Confirmado" */
+  color: var(--color-success);
+  background: rgb(0 255 65 / 10%);
 }
 
 .btn-decision.theory.active {
-  color: #fc0; /* Amarelo para "Hipótese" */
+  color: var(--color-warning);
+  background: rgb(255 204 0 / 10%);
 }
 
 .btn-decision.false.active {
-  color: #ff003c; /* Vermelho para "Descartado" */
+  color: var(--color-danger);
+  background: rgb(255 0 60 / 10%);
 }
 
 /* Mantém efeito de hover mesmo em botões ativos */
@@ -612,21 +634,22 @@
 
 .clue-card.type-glitch:hover {
   animation: glitch-shake 0.3s infinite;
+  transform: none; /* Prevents conflict with hover transform */
 }
 
 @keyframes glitch-shake {
   0%,
   100% {
-    transform: translateY(-6px) translateX(0) scale(1.02);
+    transform: translateX(0);
   }
   25% {
-    transform: translateY(-6px) translateX(-2px) scale(1.02);
+    transform: translateX(-2px);
   }
   50% {
-    transform: translateY(-6px) translateX(2px) scale(1.02);
+    transform: translateX(2px);
   }
   75% {
-    transform: translateY(-6px) translateX(-1px) scale(1.02);
+    transform: translateX(-1px);
   }
 }
 
@@ -787,47 +810,25 @@
   color-scheme: light dark; /* Support for light/dark mode */
 }
 
-/* === ADDITIONAL IMPROVEMENTS === */
-
-/* === Consolidated Button Styles === */
-.btn-decision {
-  background: transparent;
-  border: 1px solid transparent;
-  color: #bdbdbd;
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: var(--transition-default);
-  position: relative;
-}
-
-.btn-decision:hover {
-  background: rgb(255 255 255 / 5%);
-  color: #fff;
-  border-color: rgb(255 255 255 / 20%);
-}
-
-.btn-decision svg,
-.btn-decision i {
-  font-size: 22px;
-  pointer-events: none;
-  transition: transform 0.2s;
-  fill: currentColor;
-  stroke: currentColor;
-}
-
-.btn-decision:hover svg {
-  transform: scale(1.1);
-}
-
 /* === Accessibility Enhancements === */
-.btn-decision:focus {
+.btn-decision:focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 4px;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clue-card,
+  .btn-decision,
+  .type-badge,
+  .scanner-line,
+  .lock-icon {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .clue-card:hover {
+    transform: none;
+  }
 }
 
 /* === Improved Responsiveness === */
@@ -842,10 +843,18 @@
     height: 40px;
   }
 
+  .btn-decision svg {
+    font-size: 18px;
+  }
+
   .type-badge {
     width: 36px;
     height: 36px;
     font-size: 16px;
+  }
+  
+  .clue-info h3 {
+    font-size: 12px;
   }
 }
 
@@ -856,12 +865,17 @@
   }
 
   .clue-info h3 {
-    font-size: 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
   }
 
   .btn-decision {
     width: 36px;
     height: 36px;
+  }
+  
+  .btn-decision svg {
+    font-size: 16px;
   }
 
   .type-badge {
@@ -869,27 +883,10 @@
     height: 32px;
     font-size: 14px;
   }
-}
-
-/* === Optimized Animations === */
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
+  
+  .decision-bar {
+    padding: 8px;
   }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-}
-
-.type-badge.locked {
-  animation: pulse 2s infinite;
-}
-
-.type-badge.hidden {
-  animation: pulse 2s infinite;
 }
 
 /* === Utility Classes === */
@@ -911,28 +908,11 @@
   display: block !important;
 }
 
-/* === Cleaned Up Scrollbar Styles === */
-.clue-card {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-primary) rgba(0, 0, 0, 0.15);
-}
-
-.clue-card ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.clue-card ::-webkit-scrollbar-track {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
-  border-radius: 10px;
-}
-
-.clue-card ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--color-primary), #008fb0);
-  border-radius: 10px;
-  border: 2px solid rgba(0, 0, 0, 0.45);
-}
-
-.clue-card ::-webkit-scrollbar-thumb:hover {
-  filter: brightness(0.95);
+/* === Performance Optimizations === */
+@media (prefers-reduced-motion: no-preference) {
+  .clue-card {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                border-color 0.3s ease;
+  }
 }

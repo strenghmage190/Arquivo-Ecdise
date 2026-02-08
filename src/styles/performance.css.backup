@@ -30,12 +30,8 @@ body.performance-mode .glitch-solver-backdrop,
 body.performance-mode .glitch-solver-backdrop *,
 body.performance-mode .glitch-solver-modal,
 body.performance-mode .glitch-solver-modal * {
-  animation-duration: initial !important;
-  animation-delay: initial !important;
-  transition-duration: initial !important;
-  transition-delay: initial !important;
-  pointer-events: auto !important;
-  transform: none !important;
+  animation: revert !important;
+  transition: revert !important;
 }
 
 /* 2. EFEITOS PESADOS (Glow, Blur, Neon) - direcionado apenas a elementos decorativos */
@@ -400,25 +396,18 @@ body.performance-mode .inspect-backdrop,
 body.performance-mode .inspect-file,
 body.performance-mode .modal-backdrop,
 body.performance-mode .glitch-solver-backdrop,
-body.performance-mode .glitch-solver-modal,
-body.performance-mode .code-prompt-overlay,
-body.performance-mode .code-prompt-modal {
-  animation-duration: initial !important;
-  transition-duration: initial !important;
+body.performance-mode .glitch-solver-modal {
+  animation: initial !important;
+  transition: initial !important;
   backdrop-filter: blur(4px) !important;
-  pointer-events: auto !important;
+  transform: initial !important;
 }
 
-/* CRÍTICO: Elementos interativos dentro de modais - NÃO forçar display ou transform */
+/* CRÍTICO: Elementos interativos dentro de modais */
 body.performance-mode .inspect-backdrop *,
-body.performance-mode .inspect-file *,
-body.performance-mode .glitch-solver-backdrop *,
-body.performance-mode .glitch-solver-modal *,
-body.performance-mode .code-prompt-overlay *,
-body.performance-mode .code-prompt-modal * {
-  pointer-events: auto !important;
-  animation-duration: initial !important;
-  transition-duration: initial !important;
+body.performance-mode .glitch-solver-backdrop * {
+  pointer-events: initial !important;
+  display: initial !important;
 }
 
 /* CRÍTICO: Overlays UV e forense precisam de mix-blend-mode e filter */

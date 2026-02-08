@@ -1,0 +1,423 @@
+/* ============================================================================
+   SHREDDER PUZZLE - NEXUS THEME
+   Document reconstruction puzzle component
+   ========================================================================== */
+
+.shredder-puzzle-wrapper {
+  padding: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================================================
+   PROGRESS BAR
+   ========================================================================== */
+
+.shredder-progress {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.shredder-progress-bar {
+  width: 100%;
+  max-width: 800px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.shredder-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f3ff, #ff003c);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.5);
+}
+
+.shredder-progress-fill.complete {
+  background: linear-gradient(90deg, #2d2, #4f4);
+}
+
+.shredder-progress-text {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* ============================================================================
+   CONTROLS (Toolbar)
+   ========================================================================== */
+
+.shredder-controls {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.shredder-btn {
+  padding: 6px 12px;
+  background: rgba(0, 243, 255, 0.06);
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  border-radius: 4px;
+  color: #bbb;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+}
+
+.shredder-btn:hover {
+  background: rgba(0, 243, 255, 0.12);
+  border-color: rgba(0, 243, 255, 0.3);
+  color: var(--nexus-blue);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+}
+
+.shredder-btn.btn-solve {
+  background: rgba(40, 220, 40, 0.08);
+  border-color: rgba(40, 220, 40, 0.2);
+}
+
+.shredder-btn.btn-solve:hover {
+  background: rgba(40, 220, 40, 0.15);
+  border-color: rgba(40, 220, 40, 0.4);
+  color: #4f4;
+}
+
+.shredder-btn.btn-toggle {
+  background: rgba(100, 150, 255, 0.08);
+  border-color: rgba(100, 150, 255, 0.2);
+}
+
+.shredder-btn.btn-toggle:hover {
+  background: rgba(100, 150, 255, 0.15);
+  border-color: rgba(100, 150, 255, 0.4);
+  color: #aaf;
+}
+
+.shredder-btn.btn-toggle.active {
+  background: rgba(100, 150, 255, 0.2);
+  border-color: rgba(100, 150, 255, 0.5);
+  color: #aaf;
+  box-shadow: 0 0 16px rgba(100, 150, 255, 0.3);
+}
+
+.shredder-btn.btn-view-mode {
+  background: rgba(255, 150, 0, 0.08);
+  border-color: rgba(255, 150, 0, 0.2);
+}
+
+.shredder-btn.btn-view-mode:hover {
+  background: rgba(255, 150, 0, 0.15);
+  border-color: rgba(255, 150, 0, 0.4);
+  color: #fa0;
+}
+
+/* ============================================================================
+   GM REVEAL CONTROLS
+   ========================================================================== */
+
+.shredder-gm-controls {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(100, 150, 255, 0.15);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.shredder-gm-title {
+  color: #aaf;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.shredder-gm-hint {
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.shredder-gm-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.shredder-gm-buttons button {
+  padding: 4px 10px;
+  font-size: 10px;
+  background: rgba(100, 150, 255, 0.08);
+  border: 1px solid rgba(100, 150, 255, 0.2);
+  border-radius: 3px;
+  color: #99b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.shredder-gm-buttons button:hover {
+  background: rgba(100, 150, 255, 0.15);
+  border-color: rgba(100, 150, 255, 0.4);
+  color: #aaf;
+}
+
+/* ============================================================================
+   PREVIEW OVERLAY (GM)
+   ========================================================================== */
+
+.shredder-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(4px);
+  z-index: 60000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.shredder-preview-title {
+  color: #4f4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.shredder-preview-img {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.shredder-preview-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ============================================================================
+   PUZZLE GRID
+   ========================================================================== */
+
+.shredder-grid {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border: 1px solid rgba(0, 243, 255, 0.08);
+  border-radius: 4px;
+  display: grid;
+  gap: 6px;
+}
+
+/* Adaptação para tiras horizontais (1 linha) */
+.shredder-grid.layout-horizontal {
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  max-width: 100%;
+  gap: 6px;
+}
+
+/* Adaptação para tiras verticais (1 coluna) */
+.shredder-grid.layout-vertical {
+  grid-template-columns: 1fr;
+  max-width: 350px;
+}
+
+/* Grid normal (2x2 ou maior) */
+.shredder-grid.layout-grid {
+  /* grid-template-columns definido inline */
+  gap: 6px;
+}
+
+/* ============================================================================
+   PUZZLE PIECES
+   ========================================================================== */
+
+.shredder-piece {
+  position: relative;
+  background-repeat: no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
+.shredder-piece:hover {
+  transform: scale(1.02);
+  z-index: 5;
+}
+
+.shredder-piece.selected {
+  border: 2px solid #f44;
+  box-shadow: 0 0 16px rgba(255, 68, 68, 0.4);
+  transform: scale(0.98);
+}
+
+.shredder-piece.correct {
+  border-color: rgba(40, 220, 40, 0.5);
+  box-shadow: 0 0 10px rgba(40, 220, 40, 0.2);
+}
+
+.shredder-piece.locked {
+  cursor: not-allowed;
+  filter: brightness(0.3);
+}
+
+.shredder-piece.locked:hover {
+  transform: none;
+}
+
+/* ============================================================================
+   PIECE OVERLAYS
+   ========================================================================== */
+
+.shredder-piece-locked-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(20, 20, 25, 0.95), rgba(10, 10, 15, 0.95));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shredder-piece-lock-icon {
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.shredder-piece-lock-text {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.shredder-piece-gm-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 2px 4px;
+  font-size: 9px;
+  color: #fff;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 3px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.shredder-piece-gm-badge.revealed {
+  color: #4f4;
+}
+
+.shredder-piece-gm-badge.hidden {
+  color: #f44;
+}
+
+.shredder-piece-correct-mark {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 12px;
+  color: #2d2;
+  font-weight: 700;
+  filter: drop-shadow(0 0 4px rgba(40, 220, 40, 0.6));
+  pointer-events: none;
+}
+
+/* ============================================================================
+   INSTRUCTIONS
+   ========================================================================== */
+
+.shredder-instructions {
+  max-width: 800px;
+  margin: 12px auto 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 243, 255, 0.08);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.shredder-instructions strong {
+  color: #aef6ff;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .shredder-puzzle-wrapper {
+    padding: 12px;
+  }
+
+  .shredder-grid {
+    max-width: 100%;
+  }
+
+  .shredder-grid.layout-horizontal {
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    gap: 4px;
+  }
+
+  .shredder-grid.layout-vertical {
+    max-width: 90vw;
+  }
+
+  .shredder-controls {
+    gap: 4px;
+  }
+
+  .shredder-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  .shredder-piece-lock-icon {
+    font-size: 18px;
+  }
+
+  .shredder-piece-lock-text {
+    font-size: 8px;
+  }
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

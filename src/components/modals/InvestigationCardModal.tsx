@@ -47,8 +47,15 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
   const [layerUploading, setLayerUploading] = useState<'uv' | 'thermal' | null>(null);
   const [uvUrl, setUvUrl] = useState<string | null>((existing as any)?.metadata?.uv_layer?.url || null);
   const [thermalUrl, setThermalUrl] = useState<string | null>((existing as any)?.metadata?.thermal_layer?.url || null);
-
   useEscapeClose(open, onClose);
+
+  // Ensure swipe handlers hook is always called (avoid conditional hook ordering)
+  const swipeHandlers = useSwipeable({
+    onSwipedDown: () => {
+      if (isMobile) onClose();
+    },
+    trackMouse: false,
+  });
   
   // ✅ Registra modal no ModalManager
   useEffect(() => {
@@ -391,12 +398,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     );
   }
 
-  const swipeHandlers = useSwipeable({
-    onSwipedDown: () => {
-      if (isMobile) onClose();
-    },
-    trackMouse: false,
-  });
+ 
 
   const modal = (
     <div className="modal-backdrop" onClick={onClose}>

@@ -449,17 +449,50 @@ input[type="range"]::-moz-range-thumb:hover {
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--muted);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-stamp::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgb(100 150 255 / 20%);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
 }
 
 .btn-stamp:hover {
-  border-color: rgb(255 255 255 / 15%);
+  border-color: rgb(100 150 255 / 20%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+}
+
+.btn-stamp:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-stamp.active {
-  border-color: var(--nexus-glitch);
-  color: var(--nexus-glitch);
-  box-shadow: 0 8px 18px rgb(255 0 60 / 6%);
-  background: rgb(255 0 60 / 5%);
+  border-color: rgb(100 150 255 / 60%);
+  color: rgb(100 150 255);
+  box-shadow: 
+    0 0 20px rgb(100 150 255 / 20%),
+    0 4px 16px rgb(100 150 255 / 10%),
+    inset 0 0 20px rgb(100 150 255 / 5%);
+  background: rgb(100 150 255 / 8%);
+  font-weight: 700;
+  transform: scale(1.02);
+}
+
+.btn-stamp.active::before {
+  width: 300px;
+  height: 300px;
+  background: rgb(100 150 255 / 10%);
 }
 
 .dossier-footer {
@@ -563,6 +596,51 @@ input[type="checkbox"]:checked {
   background: var(--nexus-blue);
   border-color: var(--nexus-blue);
   box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+}
+
+/* Checkbox especial para Shredder Puzzle */
+#shred-check:checked {
+  animation: checkbox-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes checkbox-glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+  }
+  50% {
+    box-shadow: 0 0 20px rgb(0 243 255 / 60%), 0 0 30px rgb(100 150 255 / 20%);
+  }
+}
+
+/* Label para checkbox do Shredder */
+label[for="shred-check"] {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+label[for="shred-check"]:hover {
+  color: var(--nexus-blue);
+  text-shadow: 0 0 8px rgb(0 243 255 / 30%);
+}
+
+/* Aviso de imagem necessária */
+.shredder-warning {
+  color: #f88;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: rgb(255 50 50 / 10%);
+  border-radius: 4px;
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 input[type="radio"]:checked {
@@ -894,6 +972,173 @@ label.inline {
 .dossier-body::-webkit-scrollbar-thumb:hover {
   background: rgb(0 243 255 / 90%);
   box-shadow: 0 0 15px var(--nexus-blue-glow);
+}
+
+/* SHREDDER PUZZLE CONFIGURATION STYLES */
+.shredder-config-active {
+  animation: shredder-pulse 2s ease-in-out infinite;
+}
+
+@keyframes shredder-pulse {
+  0%, 100% {
+    border-color: rgb(100 150 255 / 30%);
+    box-shadow: 0 0 0 rgb(100 150 255 / 0%);
+  }
+  50% {
+    border-color: rgb(100 150 255 / 50%);
+    box-shadow: 0 0 20px rgb(100 150 255 / 20%);
+  }
+}
+
+.shredder-confirmation {
+  background: linear-gradient(135deg, rgb(50 200 100 / 8%), rgb(50 200 100 / 3%));
+  border: 1px solid rgb(50 200 100 / 30%);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-top: 10px;
+  animation: slideInFromTop 0.4s ease-out;
+}
+
+.shredder-confirmation strong {
+  color: #8f8;
+  font-weight: 700;
+}
+
+.shredder-hint {
+  background: linear-gradient(135deg, rgb(150 150 150 / 6%), transparent);
+  border: 1px dashed rgb(150 150 150 / 30%);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-top: 10px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.shredder-hint strong {
+  color: #aaa;
+}
+
+.shredder-format-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.shredder-format-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgb(100 150 255 / 20%), transparent);
+  transition: left 0.5s ease;
+}
+
+.shredder-format-btn:hover::before {
+  left: 100%;
+}
+
+/* Configuração personalizada do Shredder */
+.shredder-custom-config {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 10px;
+  background: rgba(0, 243, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.15);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.shredder-custom-config:hover {
+  background: rgba(0, 243, 255, 0.08);
+  border-color: rgba(0, 243, 255, 0.25);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+}
+
+.shredder-input-group {
+  flex: 1;
+}
+
+.shredder-input-group label {
+  font-size: 11px;
+  color: #8fa;
+  margin-bottom: 4px;
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shredder-input-group input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  color: var(--nexus-blue);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.shredder-input-group input[type="number"]:hover {
+  border-color: rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+}
+
+.shredder-input-group input[type="number"]:focus {
+  outline: none;
+  border-color: var(--nexus-blue);
+  box-shadow: 
+    0 0 15px rgba(0, 243, 255, 0.3),
+    inset 0 0 10px rgba(0, 243, 255, 0.1);
+  background: rgba(0, 243, 255, 0.05);
+}
+
+.shredder-pieces-counter {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  border-radius: 4px;
+  text-align: center;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.shredder-pieces-counter-label {
+  font-size: 10px;
+  color: #8fa;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shredder-pieces-counter-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--nexus-blue);
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* CHAT EDITOR STYLES */

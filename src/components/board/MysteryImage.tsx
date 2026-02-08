@@ -144,12 +144,12 @@ export function MysteryImage({
   }
 
   const baseFilter = isUVMode
-    ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)'
+    ? 'brightness(0.25) contrast(1.5) saturate(0.2) hue-rotate(260deg)'
     : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
 
   const filterStyle: React.CSSProperties = useMemo(() => {
     const baseFilter = isUVMode
-      ? 'brightness(0.2) contrast(1.1) hue-rotate(260deg)'
+      ? 'brightness(0.25) contrast(1.5) saturate(0.2) hue-rotate(260deg)'
       : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
 
     return {
@@ -197,12 +197,12 @@ export function MysteryImage({
     inset: 0,
     zIndex: 30,
     pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
-    backgroundImage: filterLayerSrc ? filterImage : hiddenImage,
+    backgroundImage: filterImage,
     // render the overlay normally (avoid 'screen' making it faint)
     mixBlendMode: 'normal' as any,
-    opacity: Math.min(1, hiddenLayerOpacity * 1.8),
+    opacity: Math.min(1, hiddenLayerOpacity * 3.0),
     // increase contrast/saturation to make secret content pop
-    filter: 'contrast(1.6) saturate(1.15)'
+    filter: 'brightness(2.0) contrast(2.2) saturate(2.0)'
   }), [fit, hiddenLayerOpacity, filterLayerSrc, filterImage, hiddenImage]);
 
   // Debug temporário: ajuda a identificar por que a camada pode permanecer invisível
@@ -518,7 +518,7 @@ export function MysteryImage({
       }}
       style={{
         ...style,
-        cursor: hasSecret ? (isUVMode ? 'none' : 'pointer') : 'default',
+        cursor: isUVMode ? 'none' : (hasSecret ? 'pointer' : 'default'),
         // MUDANÇA 1: Fundo preto no forense para contraste correto
         backgroundColor: isForensicActive ? '#000' : 'transparent',
         // ADICIONADO: evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
@@ -541,8 +541,8 @@ export function MysteryImage({
           {/* Base image always rendered as background layer (keeps layout stable) */}
           <div style={{ ...filterStyle }} />
 
-          {/* 2. CAMADA DO PUZZLE DE TRATAMENTO */}
-          {(filterLayerSrc || hiddenSrc) && !isUVMode && (
+          {/* 2. CAMADA DO PUZZLE DE TRATAMENTO (só filterLayerSrc, não hiddenSrc) */}
+          {filterLayerSrc && !isUVMode && (
             <div style={overlayStyle} />
           )}
 

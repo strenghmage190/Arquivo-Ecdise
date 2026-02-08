@@ -2189,8 +2189,24 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
     redrawAll();
     canvas.toBlob((blob) => {
       if (!blob) return;
-      const file = new File([blob], `uv_layer_${Date.now()}.png`, { type: 'image/png' });
-      try { onSave(file, { targetChannel }); } catch (e) { try { onSave(file); } catch (e) {} }
+      const timestamp = Date.now();
+      const prefix = mode === 'rgb' ? 'forensic_rgb' : mode === 'filter' ? 'filter' : 'uv';
+      const suffix = mode === 'rgb' ? `_${targetChannel}` : '';
+      const filename = `${prefix}_layer${suffix}_${timestamp}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+      
+      const meta: { targetChannel?: 'R' | 'G' | 'B' } = {};
+      if (mode === 'rgb') {
+        meta.targetChannel = targetChannel;
+      }
+      
+      console.log('📤 Exportando:', { filename, mode, channel: mode === 'rgb' ? targetChannel : 'N/A' });
+      try { 
+        onSave(file, meta); 
+      } catch (e) { 
+        console.error('Erro ao salvar arquivo:', e);
+        try { onSave(file); } catch (e) {} 
+      }
     });
   };
 
@@ -2817,9 +2833,15 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
 
   const handleSaveClick = () => {
     try {
-      // Export current canvas and deliver via onSave
+      // Export current canvas and deliver via onSave with proper metadata
+      const meta: { targetChannel?: 'R' | 'G' | 'B' } = {};
+      if (mode === 'rgb') {
+        meta.targetChannel = targetChannel;
+        console.log('💾 Salvando com canal RGB:', targetChannel);
+      }
       handleFinish();
     } catch (e) {
+      console.error('Erro ao salvar:', e);
       try { onSave(new File([], 'uv-export.png'), { targetChannel }); } catch (e) { try { onSave(new File([], 'uv-export.png')); } catch (e) {} }
     }
   };
@@ -2846,7 +2868,9 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
   return (
     <div className="uv-editor-panel" ref={rootRef}>
       <div className="uv-editor-header">
-        <div style={{fontWeight:600}}>UV Editor</div>
+        <div style={{fontWeight:600}}>
+          {mode === 'rgb' ? '🔬 Editor RGB Forense' : mode === 'filter' ? '🎨 Editor de Filtros' : '💡 Editor UV'}
+        </div>
         <div style={{marginLeft:'auto', display:'flex', gap:8}}>
           <button onClick={handleSaveClick} className="btn-save">Salvar</button>
           <button onClick={onClose} className="btn-close">Fechar</button>
@@ -2951,38 +2975,76 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
             </div>
           )}
 
-          {expandedSections.properties && (
-            <div>
-              <label>Tamanho do pincel</label>
-              <input className="uv-range" type="range" min={1} max={200} value={brushSize} onChange={e => setBrushSize(Number((e.target as HTMLInputElement).value))} />
-            </div>
-          )}
-          {expandedSections.properties && showForensicControls && (
-            <div style={{marginTop:12}}>
-              <label>Canal Alvo</label>
-              <div style={{display:'flex',gap:8,marginTop:8}}>
+          {/* Canal RGB - Sempre visível em modo RGB */}
+          {expandedSections.properties && mode === 'rgb' && (
+            <div style={{marginTop:12, padding:12, background:'rgba(0,215,255,0.03)', border:'1px solid rgba(0,215,255,0.12)', borderRadius:8}}>
+              <label style={{fontSize:14, fontWeight:600, color:'#00d7ff', display:'block', marginBottom:8}}>🎯 Canal Alvo RGB</label>
+              <div style={{fontSize:12, opacity:0.85, marginBottom:12, lineHeight:1.4}}>
+                Escolha qual canal de cor receberá os dados forenses:
+              </div>
+              <div style={{display:'flex',gap:8}}>
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('R')}
-                  style={{padding:'8px 10px', background: targetChannel === 'R' ? '#f44' : 'transparent', color: targetChannel === 'R' ? '#100' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                  style={{
+                    flex:1,
+                    padding:'12px 10px',
+                    background: targetChannel === 'R' ? '#ff4444' : 'rgba(255,68,68,0.1)',
+                    color: targetChannel === 'R' ? '#fff' : '#ff8888',
+                    borderRadius:6,
+                    border: targetChannel === 'R' ? '2px solid #ff4444' : '1px solid rgba(255,68,68,0.2)',
+                    fontWeight: targetChannel === 'R' ? 600 : 400,
+                    cursor:'pointer',
+                    transition:'all 0.2s ease'
+                  }}
                 >
-                  🔴 R
+                  🔴 Red
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('G')}
-                  style={{padding:'8px 10px', background: targetChannel === 'G' ? '#4f4' : 'transparent', color: targetChannel === 'G' ? '#020' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                  style={{
+                    flex:1,
+                    padding:'12px 10px',
+                    background: targetChannel === 'G' ? '#44ff44' : 'rgba(68,255,68,0.1)',
+                    color: targetChannel === 'G' ? '#002200' : '#88ff88',
+                    borderRadius:6,
+                    border: targetChannel === 'G' ? '2px solid #44ff44' : '1px solid rgba(68,255,68,0.2)',
+                    fontWeight: targetChannel === 'G' ? 600 : 400,
+                    cursor:'pointer',
+                    transition:'all 0.2s ease'
+                  }}
                 >
-                  🟢 G
+                  🟢 Green
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('B')}
-                  style={{padding:'8px 10px', background: targetChannel === 'B' ? '#44f' : 'transparent', color: targetChannel === 'B' ? '#001' : '#fff', borderRadius:6, border: '1px solid rgba(255,255,255,0.08)'}}
+                  style={{
+                    flex:1,
+                    padding:'12px 10px',
+                    background: targetChannel === 'B' ? '#4444ff' : 'rgba(68,68,255,0.1)',
+                    color: targetChannel === 'B' ? '#fff' : '#8888ff',
+                    borderRadius:6,
+                    border: targetChannel === 'B' ? '2px solid #4444ff' : '1px solid rgba(68,68,255,0.2)',
+                    fontWeight: targetChannel === 'B' ? 600 : 400,
+                    cursor:'pointer',
+                    transition:'all 0.2s ease'
+                  }}
                 >
-                  🔵 B
+                  🔵 Blue
                 </button>
               </div>
+              <div style={{fontSize:11, opacity:0.7, marginTop:8, fontStyle:'italic'}}>
+                Canal selecionado: <strong style={{color: targetChannel === 'R' ? '#ff4444' : targetChannel === 'G' ? '#44ff44' : '#4444ff'}}>{targetChannel}</strong>
+              </div>
+            </div>
+          )}
+          
+          {expandedSections.properties && (
+            <div style={{marginTop:12}}>
+              <label>Tamanho do pincel</label>
+              <input className="uv-range" type="range" min={1} max={200} value={brushSize} onChange={e => setBrushSize(Number((e.target as HTMLInputElement).value))} />
             </div>
           )}
           {expandedSections.properties && (

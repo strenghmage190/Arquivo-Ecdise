@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createInvestigationCard } from '../../api/investigations';
+import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import UVEditor from '../tools/UVEditor';
 import ThermalEditor from '../tools/ThermalEditor';
@@ -57,6 +57,7 @@ interface Props {
    initialX?: number;
    initialY?: number;
    onSaved: (card: Record<string, any>) => void;
+   existingCard?: any;
 }
 
 type ChatSender = 'me' | 'them' | 'system' | string;
@@ -68,7 +69,7 @@ interface EditingChatMessage {
    media?: any;
 }
 
-export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved }: Props) {
+export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved, existingCard }: Props) {
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
 
   // ✅ MOUNTED FLAG: prevent setState calls after unmount
@@ -93,10 +94,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
   const [uvFile, setUvFile] = useState<File | null>(null);
    const [filterFile, setFilterFile] = useState<File | null>(null);
       const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+   const [uvPreviewUrl, setUvPreviewUrl] = useState<string | null>(null);
+   const [replaceUv, setReplaceUv] = useState(false);
       const [filterPreviewUrl, setFilterPreviewUrl] = useState<string | null>(null);
       const [filterTransform, setFilterTransform] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
       const [filterInitialImage, setFilterInitialImage] = useState<File | null>(null);
-   const [editorMode, setEditorMode] = useState<'uv' | 'filter' | null>(null);
+   const [editorMode, setEditorMode] = useState<'uv' | 'filter' | 'rgb' | null>(null);
    const [uvEditorBaseUrl, setUvEditorBaseUrl] = useState<string | null>(null);
    const [uvEditorPurpose, setUvEditorPurpose] = useState<'forensic' | null>(null);
 
@@ -309,10 +312,87 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    }, [isOpen, evidenceType]);
 
    useEffect(() => {
-      if (isOpen) {
+      if (!isOpen) return;
+      // If an existing card is provided, prefill fields for editing
+      if (existingCard) {
+         console.debug('CreateClueModal: Loading existing card for edit', existingCard);
+         setTitle(existingCard.title || '');
+         setDescPublic(existingCard.description_public || '');
+         setDescHidden(existingCard.description_hidden || '');
+         setTags(existingCard.tags || '');
+         setDiscoveryCode(existingCard.discovery_code || '');
+         setIsHidden(existingCard.is_hidden || false);
+         setIsLocked(existingCard.is_locked || false);
+         setLockPass(existingCard.lock_password || '');
+         try { setEvidenceType((existingCard.type as any) || 'document'); } catch (e) {}
+
+         // Parse metadata safely
+         let parsedMeta: any = {};
+         try {
+            parsedMeta = typeof existingCard.metadata === 'object' 
+               ? existingCard.metadata 
+               : (typeof existingCard.metadata === 'string' ? JSON.parse(existingCard.metadata) : {});
+         } catch (e) {
+            parsedMeta = {};
+         }
+
+         // Load security layer settings if glitch puzzle
+         if (parsedMeta.glitch_puzzle || parsedMeta.security_layer) {
+            setSecurityLayerEnabled(true);
+            const glitch = parsedMeta.glitch_puzzle || {};
+            if (glitch.unlock_keyword) {
+               setGlitchKeyword(glitch.unlock_keyword);
+            }
+         }
+
+         // Load audio settings from metadata
+         if (parsedMeta.audio_target_freq) {
+            setFreq(parsedMeta.audio_target_freq);
+         }
+
+         // Load shredder configuration from metadata (com fallback robusto)
+         const cardIsShredded = existingCard.is_shredded || 
+                               parsedMeta?.is_shredded || 
+                               (parsedMeta?.shred_rows && parsedMeta?.shred_cols);
+         if (cardIsShredded) {
+            setIsShredded(true);
+            setShredRows(parsedMeta?.shred_rows || 1);
+            setShredCols(parsedMeta?.shred_cols || 8);
+            console.log('🧩 [Shredder] Carregando configuração:', { 
+              is_shredded: true, 
+              shred_rows: parsedMeta?.shred_rows || 1, 
+              shred_cols: parsedMeta?.shred_cols || 8,
+              source: existingCard.is_shredded ? 'column' : 'metadata'
+            });
+         }
+
+         // previews (we keep URLs, not Files) — register them so revokeUrl won't remove remote URLs
+         const imgUrl = existingCard.image_url || (parsedMeta && (parsedMeta.original_image_url || parsedMeta.base_media_url));
+         if (imgUrl && imgUrl !== LOCKED_PLACEHOLDER_IMG) {
+            setPreviewUrl(imgUrl);
+            registerUrl(imgUrl);
+         }
+         const uvUrl = existingCard.image_uv_url || (parsedMeta && (parsedMeta.uv_layer_url || parsedMeta.hidden_uv_url));
+         if (uvUrl) {
+            // use forensicHiddenPreview as a place to show existing UV thumbnail in the UI
+            setForensicHiddenPreview(uvUrl);
+            registerUrl(uvUrl);
+         }
+         const vidUrl = existingCard.video_url;
+         if (vidUrl) {
+            setVideoUrl(vidUrl);
+            setVideoPreviewUrl(vidUrl);
+            registerUrl(vidUrl);
+         }
+         const audUrl = existingCard.audio_url;
+         if (audUrl) {
+            setAudioBasePreview(audUrl);
+            registerUrl(audUrl);
+         }
+      } else {
          resetForm();
       }
-   }, [isOpen]);
+   }, [isOpen, existingCard]);
 
    // ✅ CLEANUP AND URL MANAGEMENT
    const urlsRef = React.useRef<Set<string>>(new Set());
@@ -363,9 +443,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    useEffect(() => {
       if (glitchFocusedImagePreview) registerUrl(glitchFocusedImagePreview);
       if (megaImagePreview) registerUrl(megaImagePreview);
-      if (filterPreviewUrl) registerUrl(filterPreviewUrl);
-      return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); };
-   }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl]);
+         if (filterPreviewUrl) registerUrl(filterPreviewUrl);
+         if (uvPreviewUrl) registerUrl(uvPreviewUrl);
+         if (forensicHiddenPreview) registerUrl(forensicHiddenPreview);
+         return () => { revokeUrl(glitchFocusedImagePreview); revokeUrl(megaImagePreview); revokeUrl(filterPreviewUrl); revokeUrl(uvPreviewUrl); revokeUrl(forensicHiddenPreview); };
+   }, [glitchFocusedImagePreview, megaImagePreview, filterPreviewUrl, uvPreviewUrl, forensicHiddenPreview]);
    
    useEffect(() => {
       mountedRef.current = true;
@@ -1304,19 +1386,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
    const handleSave = async () => {
        // Centralized validation
-       const validationErrors = validateCreateClue({
-         title,
-         isHidden,
-         discoveryCode,
-         securityLayerEnabled,
-         evidenceType,
-         megaFinalTruthText,
-         megaRequiredPuzzleIds,
-         imgFile,
-         videoFile,
-         videoUrlInput: videoUrlInput || videoUrl,
-         audioBase,
-       });
+          const validationErrors = validateCreateClue({
+             title,
+             isHidden,
+             discoveryCode,
+             securityLayerEnabled,
+             evidenceType,
+             megaFinalTruthText,
+             megaRequiredPuzzleIds,
+             imgFile,
+             previewUrl,
+             videoFile,
+             videoUrlInput: videoUrlInput || videoUrl,
+             audioBase,
+          });
 
        if (validationErrors.length > 0) {
          alert('Erros de validação:\n' + validationErrors.map((e, i) => `${i + 1}. ${e}`).join('\n'));
@@ -1353,6 +1436,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          }
       } catch (e) {
          errors.push(`Imagem principal: ${e instanceof Error ? e.message : 'Falha no upload'}`);
+      }
+
+      // Preserve existing image URL when editing and no new imgFile was uploaded
+      if (!imgUrl && existingCard) {
+         imgUrl = existingCard.image_url || existingCard.metadata?.original_image_url || existingCard.metadata?.base_media_url || null;
       }
       
       try {
@@ -1430,17 +1518,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             : revealLogicMode === 'always_visible'
                ? 'media'
                : glitchUnlockMode;
-         const resolvedCardType = (() => {
+          const resolvedCardType = (() => {
            if (evidenceType === 'mega_clue') return 'mega_clue';
+           if (evidenceType === 'glitch_puzzle') return 'glitch_puzzle';
            if (wantsSecurityLayer) {
               if (finalVideoUrl) return 'encrypted_video';
               if (audUrl || audioBase) return 'locked_audio';
+              // consider existing image URL as valid base media for glitch puzzles
               if (imgUrl) return 'glitch_puzzle';
            }
            return evidenceType === 'document' ? null : evidenceType;
          })();
 
-         const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) ? LOCKED_PLACEHOLDER_IMG : (imgUrl || null);
+         // ✅ FIX: Glitch puzzles need the real image URL, not a placeholder
+         // The glitch effect is applied in the frontend when viewing, not when saving
+         const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) && evidenceType !== 'glitch_puzzle' 
+           ? LOCKED_PLACEHOLDER_IMG 
+           : (imgUrl || (existingCard ? (existingCard.image_url || existingCard.metadata?.original_image_url || null) : null));
 
          const metadata: Record<string, any> = {};
          metadata.image_filter_reveal = {
@@ -1500,6 +1594,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               },
            };
 
+           // determine final UV url: prefer newly uploaded, otherwise preserve existingCard UV when editing
+           const finalUvUrl = uvUrl ?? (existingCard ? (existingCard.image_uv_url || existingCard.hidden_uv_url || existingCard.metadata?.uv_layer_url || existingCard.metadata?.hidden_uv_url) : null);
+
            const glitchPuzzleMeta = {
               original_image_url: baseMediaUrl || imgUrl || null,
               corrupted_image_url: imgUrl || null,
@@ -1521,11 +1618,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               unlock_mode: resolvedUnlockMode,
               variant: revealRequiresKeyword ? 'advanced_glitch' : 'standard_glitch',
               manual_unlock_required: revealRequiresKeyword,
-              hidden_uv_url: uvUrl || null,
+              hidden_uv_url: finalUvUrl || null,
               hidden_audio_url: glitchHiddenAudioUrl || null,
               hidden_video_url: glitchHiddenVideoUrl || null,
               focused_image_url: glitchFocusedUrl || null,
-              image_uv_url: uvUrl || null,
+              image_uv_url: finalUvUrl || null,
               media_visibility: mediaVisibilityConfig,
               audio_static_sync: audioStaticSync,
               narrative_hints: {
@@ -1540,7 +1637,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            metadata.unified_media = {
               base_media_type: baseMediaType,
               base_media_url: baseMediaUrl,
-              uv_layer_url: uvUrl || null,
+              uv_layer_url: finalUvUrl || null,
               filter_layer_url: filterUrl || null,
               hidden_layer_url: glitchFocusedUrl || null,
               video_url: finalVideoUrl || null,
@@ -1599,30 +1696,43 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         };
         metadata.field_values = fieldValues;
 
-         // sanitize metadata to avoid sending unserializable objects
-         const cleanMetadata = sanitizeForMetadata(metadata);
+         // Add filter transform to metadata (not a DB column)
+         if (filterTransform) {
+            metadata.image_filter_layer_transform = filterTransform;
+         }
 
-         const payload: Record<string, any> = {
+         // Add audio metadata (fields that don't exist as DB columns)
+         if (audHidUrl) {
+            metadata.audio_hidden_url = audHidUrl;
+         }
+         if (freq && freq !== 50) {
+            metadata.audio_target_freq = freq;
+         }
+
+         // sanitize metadata to avoid sending unserializable objects
+          const cleanMetadata = sanitizeForMetadata(metadata);
+
+          // Preserve existing UV URL when editing if no new uvFile was provided
+          const finalUvUrl = uvUrl ?? (existingCard ? (existingCard.image_uv_url || existingCard.hidden_uv_url || existingCard.metadata?.uv_layer_url || existingCard.metadata?.hidden_uv_url) : null);
+
+          const payload: Record<string, any> = {
         investigation_id: investigationId,
         title,
             type: resolvedCardType,
         description_public: descPublic || null,
         description_hidden: descHidden || null,
-        x: initialX ?? 100,
-        y: initialY ?? 100,
-                  image_url: boardImageUrl,
-        image_uv_url: uvUrl,
+        x: existingCard ? existingCard.x : (initialX ?? 100),
+        y: existingCard ? existingCard.y : (initialY ?? 100),
+                 image_url: boardImageUrl,
+         image_uv_url: finalUvUrl,
             image_filter_layer: filterUrl,
-            image_filter_layer_transform: filterTransform || null,
             is_locked: isLocked,
             lock_password: (isLocked && evidenceType !== 'mega_clue') ? lockPass : null,
             is_hidden: isHidden,
             discovery_code: isHidden ? discoveryCode.trim().toUpperCase() : null,
             metadata: cleanMetadata,
         audio_url: audUrl,
-        audio_hidden_url: audHidUrl,
-            video_url: finalVideoUrl,
-        audio_target_freq: freq
+            video_url: finalVideoUrl
       };
 
                // attach chat data if present. If user edited messages but didn't click "Salvar Chat",
@@ -1669,9 +1779,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
          // shredded document fields only apply to document evidence
          if (evidenceType === 'document' && isShredded) {
+            // Salva tanto na coluna direta quanto no metadata (backup)
             payload.is_shredded = true;
-            payload.shred_rows = shredRows;
-            payload.shred_cols = shredCols;
+            payload.metadata = payload.metadata || {};
+            payload.metadata.is_shredded = true;  // 🔥 BACKUP no metadata
+            payload.metadata.shred_rows = shredRows;
+            payload.metadata.shred_cols = shredCols;
+            console.log('🧩 [Shredder] ✅ Salvando configuração:', { 
+              is_shredded: true, 
+              shred_rows: shredRows, 
+              shred_cols: shredCols,
+              payload_preview: {
+                is_shredded: payload.is_shredded,
+                metadata: payload.metadata
+              }
+            });
+         } else if (isShredded) {
+            console.warn('⚠️ [Shredder] Puzzle marcado mas evidenceType não é "document":', evidenceType);
          }
 
          if (evidenceType === 'document') {
@@ -1681,13 +1805,61 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          // optional stamp text column (if DB has column 'stamp_text')
          if (stamp) payload.stamp_text = stamp;
 
-         // debug: log payload to help diagnose missing chat_data in DB
+         // debug: log payload to help diagnose missing chat_data or missing image URLs
          try {
-            // eslint-disable-next-line no-console
-            console.debug('CreateClueModal: sending payload', { chat_data: payload.chat_data, chat_contact_name: payload.chat_contact_name, metadata_sample: payload.metadata ? Object.keys(payload.metadata).slice(0,6) : null });
+            console.log('📦 [CreateClueModal] Criando/atualizando card:', {
+               title: payload.title,
+               type: payload.type,
+               evidenceType,
+               image_url: payload.image_url,
+               image_uv_url: payload.image_uv_url,
+               image_filter_layer: payload.image_filter_layer,
+               hasGlitchPuzzle: !!payload.metadata?.glitch_puzzle,
+               glitchPuzzle: payload.metadata?.glitch_puzzle ? {
+                  original_image_url: payload.metadata.glitch_puzzle.original_image_url,
+                  reward_code: payload.metadata.glitch_puzzle.reward_code,
+                  correct_frequency: payload.metadata.glitch_puzzle.correct_frequency
+               } : null
+            });
          } catch (e) {}
-         const newCard = await createInvestigationCard(payload as any);
-      onSaved(newCard);
+         let resultCard: any = null;
+         if (existingCard && existingCard.id) {
+            // If turning off security layer, explicitly clear glitch metadata to avoid server-side merge keeping old state
+            if (!wantsSecurityLayer) {
+               payload.metadata = payload.metadata || {};
+               payload.metadata.glitch_puzzle = null;
+               payload.metadata.security_layer = null;
+            }
+            resultCard = await updateInvestigationCard(existingCard.id, payload as any);
+            console.log('✅ [CreateClueModal] Card atualizado:', {
+              id: resultCard?.id,
+              is_shredded: resultCard?.is_shredded,
+              metadata: resultCard?.metadata
+            });
+         } else {
+            resultCard = await createInvestigationCard(payload as any);
+            console.log('✅ [CreateClueModal] Card criado:', {
+               id: resultCard?.id,
+               title: resultCard?.title,
+               type: resultCard?.type,
+               is_shredded: resultCard?.is_shredded,
+               metadata: resultCard?.metadata
+            });
+         }
+      onSaved(resultCard);
+      
+      // 🎉 Confirmação visual para puzzles triturados
+      if (resultCard?.is_shredded) {
+        console.log('%c🎉 PUZZLE TRITURADO CRIADO COM SUCESSO! 🎉', 'background: #4a4; color: #fff; font-size: 14px; padding: 8px; border-radius: 4px;');
+        console.log('%c📋 Próximos Passos:', 'color: #aaf; font-weight: bold; font-size: 12px;');
+        console.log('  1️⃣ Feche este modal');
+        console.log('  2️⃣ Clique na evidência no tabuleiro para abrir o InspectionModal');
+        console.log('  3️⃣ Você verá a imagem QUEBRADA em tiras/grade');
+        console.log('  4️⃣ Use o botão "🔓 Controle de Revelação" para revelar peças');
+        console.log('  5️⃣ Ctrl+Click em peças individuais para revelar/ocultar');
+        console.log(`%c🎮 Formato: ${shredRows}x${shredCols} (${shredRows * shredCols} peças)`, 'color: #8f8; font-weight: bold;');
+      }
+      
       onClose();
     } catch (error) {
       console.error(error);
@@ -1846,11 +2018,29 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
    return (
     <div className="modal-overlay">
-      <DiegeticWindow 
-        title="REGISTRO DE EVIDÊNCIA" 
+         <DiegeticWindow 
+            title={existingCard ? `✏️ EDITAR EVIDÊNCIA` : `REGISTRO DE EVIDÊNCIA`} 
         onClose={onClose}
         extraHeaderContent={
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {existingCard && (
+              <div style={{
+                background: 'rgba(139, 92, 246, 0.2)',
+                border: '1px solid rgba(139, 92, 246, 0.5)',
+                color: '#a78bfa',
+                padding: '4px 10px',
+                fontSize: '10px',
+                borderRadius: '4px',
+                fontWeight: 'bold',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>✏️</span> Modo Edição
+              </div>
+            )}
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
@@ -2581,7 +2771,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   </div>
                 )}
 
-                {imgFile && (
+                {(imgFile || previewUrl) && (
                   <div style={{display:'flex', gap:15}}>
                      <div className="field-block" style={{flex:1, borderColor:'#b366ff'}}>
                         <span className="field-title" style={{color:'#b366ff'}}>2. LUZ NEGRA (UV)</span>
@@ -2590,16 +2780,33 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                            <button onClick={()=>setEditorMode('uv')} className="upload-btn">🖌️ DESENHAR EFEITO</button>
                            <button
                               onClick={() => {
-                                 // Open UVEditor and mark its output for forensic flow
+                                 // Open UVEditor in RGB forensic mode
                                  try { setUvEditorBaseUrl(previewUrl); } catch (e) {}
                                  setUvEditorPurpose('forensic');
-                                 setEditorMode('uv');
+                                 setEditorMode('rgb');
                               }}
                               className="upload-btn"
                               title="Abrir UV Editor e salvar saída como camada forense"
                            >
                               🧪 ABRIR EDITOR (FORENSE)
                            </button>
+                             {(forensicHiddenPreview || uvPreviewUrl) && (
+                                <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                   <img src={uvPreviewUrl || forensicHiddenPreview || ''} alt="UV preview" style={{width:88, height:64, objectFit:'cover', borderRadius:4, border:'1px solid rgba(255,255,255,0.06)'}} />
+                                   <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                                      <button className="upload-btn" onClick={() => { 
+                                        try { setUvEditorBaseUrl(uvPreviewUrl || forensicHiddenPreview || previewUrl); } catch(e){}; 
+                                        if (forensicHiddenPreview) {
+                                          setUvEditorPurpose('forensic');
+                                          setEditorMode('rgb');
+                                        } else {
+                                          setEditorMode('uv');
+                                        }
+                                      }}>✏️ EDITAR {forensicHiddenPreview ? 'FORENSE (RGB)' : 'UV'}</button>
+                                      <button className="upload-btn" onClick={() => { try { revokeUrl(uvPreviewUrl || forensicHiddenPreview); } catch(e){}; setUvPreviewUrl(null); setForensicHiddenPreview(null); setUvFile(null); setReplaceUv(true); }}>🗑️ REMOVER {forensicHiddenPreview ? 'FORENSE' : 'UV'}</button>
+                                   </div>
+                                </div>
+                             )}
                            <label className="upload-btn">📂 UPLOAD PNG<input type="file" accept="image/png" hidden onChange={e => setUvFile(e.target.files?.[0] || null)} /></label>
                         </div>
                      </div>
@@ -2743,7 +2950,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     />
                                     <p style={{fontSize:9, color:'#666', marginTop:2}}>0% = Topo | 50% = Meio | 100% = Fundo</p>
                                  </div>
-                                 {imgFile && (
+                                 {(imgFile || previewUrl) && (
                                     <div style={{marginBottom:8}}>
                                        <button 
                                           onClick={() => setShowThermalEditor(true)}
@@ -2961,21 +3168,211 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             {activeTab === 'cifra' && (
               <div className="field-block">
                  <span className="field-title">DOCUMENTO / TRADUÇÃO</span>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <input type="checkbox" id="shred-check" checked={isShredded} onChange={e => setIsShredded(e.target.checked)} />
-                    <label htmlFor="shred-check" style={{ margin: 0, cursor: 'pointer' }}>Documento Triturado (Puzzle)</label>
+                 
+                 {/* Shredder Puzzle Configuration */}
+                 
+                 {/* ⚠️ Aviso se evidenceType não for 'document' */}
+                 {isShredded && evidenceType !== 'document' && (
+                   <div style={{
+                     padding: '10px 14px',
+                     background: 'rgba(255, 100, 50, 0.15)',
+                     border: '2px solid rgba(255, 100, 50, 0.5)',
+                     borderRadius: 6,
+                     marginBottom: 12,
+                     fontSize: 12,
+                     color: '#faa',
+                     fontWeight: 'bold'
+                   }}>
+                     ⚠️ <strong>ATENÇÃO:</strong> O puzzle triturado só funciona com evidências do tipo "document". 
+                     Atualmente o tipo está como "{evidenceType}". 
+                     <button 
+                       onClick={() => setEvidenceType('document')}
+                       style={{
+                         marginLeft: 10,
+                         padding: '4px 8px',
+                         background: '#252',
+                         color: '#8f8',
+                         border: '1px solid #373',
+                         borderRadius: 4,
+                         cursor: 'pointer',
+                         fontSize: 11
+                       }}
+                     >
+                       ✓ Corrigir para "document"
+                     </button>
+                   </div>
+                 )}
+                 
+                 <div 
+                   className={isShredded ? 'shredder-config-active' : ''}
+                   style={{ 
+                     display: 'flex', 
+                     alignItems: 'center', 
+                     gap: 10, 
+                     marginBottom: 10,
+                     padding: isShredded ? '10px' : '0',
+                     background: isShredded ? 'rgba(100, 150, 255, 0.1)' : 'transparent',
+                     border: isShredded ? '2px solid rgba(100, 150, 255, 0.3)' : 'none',
+                     borderRadius: 6,
+                     transition: 'all 0.2s ease',
+                     opacity: (!previewUrl && !imgFile && !existingCard?.image_url) ? 0.5 : 1
+                   }}
+                 >
+                    <input 
+                      type="checkbox" 
+                      id="shred-check" 
+                      checked={isShredded} 
+                      onChange={e => {
+                        if (!previewUrl && !imgFile && !existingCard?.image_url) {
+                          alert('❌ Por favor, envie uma imagem na aba 👁️ VISUAL antes de ativar o puzzle triturado.');
+                          return;
+                        }
+                        setIsShredded(e.target.checked);
+                      }}
+                      disabled={!previewUrl && !imgFile && !existingCard?.image_url}
+                    />
+                    <label 
+                      htmlFor="shred-check" 
+                      style={{ 
+                        margin: 0, 
+                        cursor: (!previewUrl && !imgFile && !existingCard?.image_url) ? 'not-allowed' : 'pointer', 
+                        fontWeight: isShredded ? 'bold' : 'normal' 
+                      }}
+                    >
+                      📄 Documento Triturado (Puzzle)
+                    </label>
+                    {(!previewUrl && !imgFile && !existingCard?.image_url) && (
+                      <span className="shredder-warning">
+                        ⚠️ Envie uma imagem primeiro
+                      </span>
+                    )}
                  </div>
                  {isShredded && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                       <div style={{ flex: 1 }}>
-                          <label>Formato</label>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                             <button className={shredRows === 1 && shredCols === 8 ? 'btn-stamp active' : 'btn-stamp'} onClick={() => { setShredRows(1); setShredCols(8); }}>Tiras</button>
-                             <button className={shredRows === 4 && shredCols === 4 ? 'btn-stamp active' : 'btn-stamp'} onClick={() => { setShredRows(4); setShredCols(4); }}>Grid 4x4</button>
-                          </div>
-                       </div>
-                    </div>
+                    <>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10, flexDirection: 'column' }}>
+                         <div style={{ width: '100%' }}>
+                            <label style={{ marginBottom: 6, display: 'block' }}>Formato do Puzzle</label>
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                               <button 
+                                 className={`btn-stamp shredder-format-btn ${shredRows === 1 && shredCols === 8 ? 'active' : ''}`} 
+                                 onClick={() => { setShredRows(1); setShredCols(8); }}
+                               >
+                                 📋 Tiras (1x8)
+                               </button>
+                               <button 
+                                 className={`btn-stamp shredder-format-btn ${shredRows === 4 && shredCols === 4 ? 'active' : ''}`} 
+                                 onClick={() => { setShredRows(4); setShredCols(4); }}
+                               >
+                                 🔲 Grade (4x4)
+                               </button>
+                               <button 
+                                 className={`btn-stamp shredder-format-btn ${shredRows === 8 && shredCols === 1 ? 'active' : ''}`} 
+                                 onClick={() => { setShredRows(8); setShredCols(1); }}
+                               >
+                                 📑 Tiras Verticais (8x1)
+                               </button>
+                            </div>
+                            
+                            {/* Configuração personalizada */}
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: 12, 
+                              alignItems: 'flex-end',
+                              padding: '10px',
+                              background: 'rgba(0, 243, 255, 0.05)',
+                              border: '1px solid rgba(0, 243, 255, 0.15)',
+                              borderRadius: 6
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 11, color: '#8fa', marginBottom: 4, display: 'block' }}>
+                                  📏 Linhas (Rows)
+                                </label>
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  max="10"
+                                  value={shredRows} 
+                                  onChange={e => setShredRows(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 8px',
+                                    fontSize: 14,
+                                    fontWeight: 'bold',
+                                    textAlign: 'center'
+                                  }}
+                                />
+                              </div>
+                              
+                              <div style={{ 
+                                fontSize: 20, 
+                                color: 'var(--nexus-blue)', 
+                                fontWeight: 'bold',
+                                paddingBottom: 6
+                              }}>×</div>
+                              
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 11, color: '#8fa', marginBottom: 4, display: 'block' }}>
+                                  📐 Colunas (Cols)
+                                </label>
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  max="10"
+                                  value={shredCols} 
+                                  onChange={e => setShredCols(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                                  style={{
+                                    width: '100%',
+                                    padding: '6px 8px',
+                                    fontSize: 14,
+                                    fontWeight: 'bold',
+                                    textAlign: 'center'
+                                  }}
+                                />
+                              </div>
+                              
+                              <div style={{ 
+                                flex: 1,
+                                padding: '8px 12px',
+                                background: 'rgba(0, 243, 255, 0.1)',
+                                border: '1px solid rgba(0, 243, 255, 0.25)',
+                                borderRadius: 4,
+                                textAlign: 'center'
+                              }}>
+                                <div style={{ fontSize: 10, color: '#8fa', marginBottom: 2 }}>Total de Peças</div>
+                                <div style={{ fontSize: 18, fontWeight: 'bold', color: 'var(--nexus-blue)' }}>
+                                  {shredRows * shredCols}
+                                </div>
+                              </div>
+                            </div>
+                         </div>
+                      </div>
+                      <div className="shredder-confirmation">
+                        ✓ <strong>Configurado!</strong> Quando você abrir esta evidência como Game Master, 
+                        aparecerão os controles de revelação de peças no modal de inspeção.
+                        <div style={{ 
+                          marginTop: 8, 
+                          padding: '6px 10px', 
+                          background: 'rgba(100, 150, 255, 0.1)', 
+                          borderRadius: 4,
+                          fontSize: 10,
+                          color: '#aaf',
+                          borderLeft: '2px solid rgba(100, 150, 255, 0.4)'
+                        }}>
+                          <strong>📋 Formato:</strong> {shredRows === 1 ? `Tiras horizontais (${shredCols} peças)` : shredCols === 1 ? `Tiras verticais (${shredRows} peças)` : `Grade ${shredRows}x${shredCols} (${shredRows * shredCols} peças)`}<br />
+                          <strong>🎮 GM Controles:</strong> Revelar gradualmente, Ctrl+Click individual, Preview da imagem<br />
+                          <strong>👥 Jogadores:</strong> Só veem e manipulam peças reveladas pelo GM
+                        </div>
+                      </div>
+                    </>
                  )}
+                 
+                 {!isShredded && (previewUrl || imgFile || existingCard?.image_url) && (
+                   <div className="shredder-hint">
+                     💡 <strong>Dica:</strong> Marque a opção acima para transformar a imagem em um puzzle triturado. 
+                     Os jogadores precisarão reconstruir o documento conforme você revela as peças.
+                   </div>
+                 )}
+                 
                  <div style={{ marginTop: 8 }}>
                     <label>TEXTO REAL (opcional)</label>
                     <textarea rows={2} value={realText} onChange={e => setRealText(e.target.value)} placeholder="Texto em Português que aparecerá com a lente." />
@@ -3664,8 +4061,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       <div className="dossier-footer" style={{ pointerEvents: overlayActive ? 'none' : 'auto' }}>
            <button className="btn-cancel" onClick={onClose}>CANCELAR</button>
-           <button className="btn-save" onClick={handleSave} disabled={loading || videoUploading || audioHiddenUploading}>
-              {videoUploading ? '⏳ Aguardando upload de vídeo...' : loading ? '💾 Salvando...' : 'REGISTRAR EVIDÊNCIA'}
+           <button 
+              className="btn-save" 
+              onClick={handleSave} 
+              disabled={loading || videoUploading || audioHiddenUploading}
+              style={existingCard ? {
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(167, 139, 250, 0.2))',
+                borderColor: 'rgba(139, 92, 246, 0.5)',
+                boxShadow: '0 0 15px rgba(139, 92, 246, 0.3)'
+              } : undefined}
+           >
+              {videoUploading ? '⏳ Aguardando upload de vídeo...' : loading ? '💾 Salvando...' : (existingCard ? '✏️ Salvar Alterações' : '📝 REGISTRAR EVIDÊNCIA')}
            </button>
         </div>
         
@@ -3726,6 +4132,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                        alert('✅ Camada forense aplicada na imagem principal!');
                     } else if (editorMode === 'uv') {
                        setUvFile(file);
+                       // create preview blob url for the new UV and mark replacement
+                       try {
+                          const newUvUrl = createAndRegisterBlobUrl(file);
+                          if (newUvUrl) {
+                             // revoke previous uv preview if any
+                             try { revokeUrl(uvPreviewUrl || forensicHiddenPreview); } catch (e) {}
+                             setUvPreviewUrl(newUvUrl);
+                             setForensicHiddenPreview(newUvUrl);
+                             setReplaceUv(true);
+                          }
+                       } catch (e) {}
                     } else if (editorMode === 'filter') {
                        setFilterFile(file);
                     }

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchInvestigationById, fetchCardsForInvestigation, updateInvestigationCard } from '../../api/investigations';
 import { fetchConnectionsForInvestigation } from '../../api/connections';
-import { CreateClueModal_Refactored as CreateClueModal, InvestigationCardModal } from '../modals';
+import { CreateClueModal, InvestigationCardModal } from '../modals';
 
 type Card = any;
 type Connection = any;
@@ -167,7 +167,7 @@ export default function InvestigationBoard() {
     <div ref={boardRef} style={{ position: 'relative', width: '100%', height: '80vh', background: '#0b1220', overflow: 'auto' }}>
       <h2 style={{ color: '#e6eef8', padding: 12 }}>{investigation?.title || 'Quadro de Investigação'}</h2>
 
-      <div style={{ padding: 12, display: 'flex', gap: 8 }}>
+        <div style={{ padding: 12, display: 'flex', gap: 8 }}>
         <button onClick={() => {
           console.debug('Board: + Novo Caso / Pista clicked');
           if (!boardRef.current) { setOpenCreateModal(true); return; }
@@ -181,7 +181,13 @@ export default function InvestigationBoard() {
           setCreateModalPos({ x, y });
           setOpenCreateModal(true);
         }}>+ Novo Caso / Pista</button>
-        <button onClick={() => { if (selectedCard) setOpenEditModal(true); else alert('Selecione um card primeiro'); }}>Editar Card Selecionado</button>
+        <button onClick={() => {
+            if (!selectedCard) { alert('Selecione um card primeiro'); return; }
+            const cx = (selectedCard.x ?? 0) + 100;
+            const cy = (selectedCard.y ?? 0) + 30;
+            setCreateModalPos({ x: Math.round(cx - 110), y: Math.round(cy - 80) });
+            setOpenCreateModal(true);
+        }}>Editar Card Selecionado</button>
       </div>
 
       <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', gap: 8 }}>
@@ -328,7 +334,7 @@ export default function InvestigationBoard() {
       {/* Modals integration */}
       {id && (
         <>
-          <CreateClueModal isOpen={openCreateModal} onClose={() => { setOpenCreateModal(false); refreshCards(); setCreateModalPos(null); }} investigationId={id} onSaved={() => { refreshCards(); setCreateModalPos(null); }} />
+          <CreateClueModal isOpen={openCreateModal} existingCard={openCreateModal ? selectedCard : undefined} onClose={() => { setOpenCreateModal(false); refreshCards(); setCreateModalPos(null); }} investigationId={id} onSaved={() => { refreshCards(); setCreateModalPos(null); }} />
           <InvestigationCardModal open={openEditModal} onClose={() => setOpenEditModal(false)} investigationId={id} existing={selectedCard || undefined} onSaved={(c) => { setOpenEditModal(false); refreshCards(); }} />
         </>
       )}

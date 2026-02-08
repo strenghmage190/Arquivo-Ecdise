@@ -10,6 +10,7 @@ export interface CreateClueState {
   videoFile?: File | null;
   videoUrlInput?: string | null;
   audioBase?: File | null;
+  previewUrl?: string | null;
 }
 
 export function validateCreateClue(state: CreateClueState): string[] {
@@ -27,7 +28,7 @@ export function validateCreateClue(state: CreateClueState): string[] {
 
   const wantsSecurityLayer = Boolean(state.securityLayerEnabled) || state.evidenceType === 'glitch_puzzle';
   if (wantsSecurityLayer) {
-    const hasAnyMedia = Boolean(state.imgFile || state.videoFile || state.videoUrlInput || state.audioBase);
+    const hasAnyMedia = Boolean(state.imgFile || state.previewUrl || state.videoFile || state.videoUrlInput || state.audioBase);
     if (!hasAnyMedia) {
       errors.push('Camada de segurança ativa: envie ao menos uma mídia (imagem, vídeo ou áudio) na aba Visual/Áudio.');
     }

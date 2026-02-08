@@ -2,22 +2,28 @@ const performanceCSS = `/* =====================================================
    PERFORMANCE MODE v3.0 (Funcional + Otimizado)
    ========================================================================== */
 
-/* 1. ANIMAÇÕES (Remove apenas animações pesadas) */
+/* 1. ANIMAÇÕES (Reduz drasticamente, mas não remove completamente) */
 body.performance-mode *,
 body.performance-mode *::before,
 body.performance-mode *::after {
-  animation-duration: 0.01s !important; /* Torna animações instantâneas */
+  animation-duration: 0.05s !important; /* Quase instantâneo mas não 0 para evitar bugs */
   animation-delay: 0s !important;
-  transition-duration: 0.01s !important; /* Torna transições instantâneas */
+  transition-duration: 0.05s !important; /* Quase instantâneo mas não 0 para evitar bugs */
   transition-delay: 0s !important;
 }
 
-/* 2. EFEITOS PESADOS (Glow, Blur, Neon) */
-body.performance-mode * {
+/* 2. EFEITOS PESADOS (Glow, Blur, Neon) - APENAS em elementos decorativos */
+/* NÃO remover box-shadow/text-shadow/backdrop-filter globalmente */
+body.performance-mode .decorative,
+body.performance-mode .background-effect,
+body.performance-mode .particle-effect,
+body.performance-mode .scanline {
   box-shadow: none !important;
   text-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  opacity: 0.3 !important; /* Reduz mas não remove completamente */
 }
 
 /* 3. PROTEÇÃO DE FILTROS ESSENCIAIS */
@@ -29,31 +35,30 @@ body.performance-mode video {
   /* Filtros são PERMITIDOS aqui - essenciais para funcionalidade */
 }
 
-/* Desabilitar apenas filtros decorativos */
+/* Desabilitar apenas filtros decorativos - NÃO o .grid-overlay pois ele é usado para referência */
 body.performance-mode .decorative,
 body.performance-mode .background-effect,
 body.performance-mode .particle-effect,
-body.performance-mode .scanline,
-body.performance-mode .grid-overlay {
-  filter: none !important;
-  opacity: 0 !important; /* Esconde elementos puramente decorativos */
+body.performance-mode .scanline {
+  /* filter já desabilitado acima */
+  /* NÃO usar display:none - pode afetar layouts */
 }
 
-/* 4. SUBSTITUIÇÃO VISUAL (Fundos sólidos) */
+/* 4. SUBSTITUIÇÃO VISUAL (Fundos sólidos) - apenas para painéis de fundo */
 body.performance-mode .investigation-toolbar,
-body.performance-mode .modal-content,
-body.performance-mode .glass-panel,
-body.performance-mode .toolbar,
-body.performance-mode .clue-card {
+body.performance-mode .glass-panel {
   background-color: #05080a !important;
   border: 1px solid #1e40af !important;
   backdrop-filter: none !important;
 }
 
-/* 5. PERFORMANCE GRÁFICA */
-body.performance-mode * {
+/* NÃO force background em modais - eles precisam de seus estilos origin  ais */
+
+/* 5. PERFORMANCE GRÁFICA - NÃO remover background-image globalmente */
+body.performance-mode .decorative,
+body.performance-mode .background-effect {
   background-image: none !important;
-  border-radius: 0 !important;
+  border-radius: 2px !important; /* Reduzir mas não remover completamente */
 }
 
 /* EXCEÇÃO: Preservar backgrounds de imagens */
@@ -86,12 +91,13 @@ body.performance-mode .nav-item {
   user-select: none !important;
 }
 
-/* 9. ELEMENTOS DECORATIVOS */
+/* 9. ELEMENTOS DECORATIVOS - NÃO usar display:none ou pointer-events:none globalmente */
 body.performance-mode .decorative,
 body.performance-mode .background-effect,
 body.performance-mode .particle-effect {
-  pointer-events: none !important;
-  display: none !important; /* Remove completamente do DOM visível */
+  opacity: 0.2 !important; /* Reduz visibilidade mas mantém no DOM */
+  /* NÃO usar pointer-events: none - pode afetar elementos interativos dentro */
+  /* NÃO usar display: none - pode quebrar layouts */
 }
 
 /* 10. RENDERIZAÇÃO DE TEXTO */
@@ -130,11 +136,11 @@ body.performance-mode * {
   column-rule: none !important;
 }
 
-/* 15. 3D TRANSFORMS (Desabilitar apenas os pesados) */
+/* 15. 3D TRANSFORMS - Manter básico mas desabilitar apenas os pesados */
 body.performance-mode * {
   perspective: none !important;
-  backface-visibility: visible !important;
-  transform-style: flat !important;
+  /* NÃO desabilitar backface-visibility ou transform-style globalmente */
+  /* Modais e elementos interativos dependem de transforms */
 }
 
 /* ============================================================================
@@ -255,6 +261,72 @@ body.performance-mode .large-evidence-img[style*="filter"],
 body.performance-mode .mystery-image img[style*="filter"],
 body.performance-mode .thermal-canvas[style*="filter"] {
   filter: initial !important;
+}
+
+/* ============================================================================
+   EXCEÇÕES CRÍTICAS ADICIONAIS - MODAIS E ELEMENTOS INTERATIVOS
+   ========================================================================== */
+
+/* CRÍTICO: Modais precisam de backdrop-filter, animation e transform */
+body.performance-mode .inspect-backdrop,
+body.performance-mode .inspect-file,
+body.performance-mode .modal-backdrop,
+body.performance-mode .glitch-solver-backdrop,
+body.performance-mode .glitch-solver-modal,
+body.performance-mode .code-prompt-overlay,
+body.performance-mode .code-prompt-modal {
+  animation: initial !important;
+  transition: initial !important;
+  backdrop-filter: blur(4px) !important;
+  transform: initial !important;
+  pointer-events: auto !important;
+  display: initial !important;
+}
+
+/* CRÍTICO: Todos os elementos dentro de modais devem ter pointer-events e display normais */
+body.performance-mode .inspect-backdrop *,
+body.performance-mode .glitch-solver-backdrop *,
+body.performance-mode .code-prompt-overlay * {
+  pointer-events: initial !important;
+  display: initial !important;
+  animation: initial !important;
+  transition: initial !important;
+}
+
+/* CRÍTICO: Botões, inputs e elementos clicáveis precisam funcionar */
+body.performance-mode button,
+body.performance-mode .btn,
+body.performance-mode .hud-btn,
+body.performance-mode .clickable,
+body.performance-mode input,
+body.performance-mode select,
+body.performance-mode textarea,
+body.performance-mode a,
+body.performance-mode [role="button"],
+body.performance-mode [onclick] {
+  pointer-events: auto !important;
+  animation: initial !important;
+  transition: initial !important;
+}
+
+/* CRÍTICO: UV overlay precisa de mix-blend-mode e filter */
+body.performance-mode .global-uv-overlay,
+body.performance-mode .global-uv-overlay-lite,
+body.performance-mode .global-uv-overlay *,
+body.performance-mode .global-uv-overlay-lite * {
+  filter: initial !important;
+  mix-blend-mode: initial !important;
+  transform: initial !important;
+  pointer-events: none !important; /* UV overlay não deve bloquear cliques */
+}
+
+/* CRÍTICO: Análise forense não pode ter filtros removidos */
+body.performance-mode .mystery-image[data-forensic-channel],
+body.performance-mode .mystery-image[data-forensic-channel] *,
+body.performance-mode [data-forensic="true"],
+body.performance-mode [data-forensic="true"] * {
+  filter: initial !important;
+  mix-blend-mode: initial !important;
 }
 
 /* ============================================================================

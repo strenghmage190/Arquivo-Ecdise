@@ -8,6 +8,7 @@ import PhoneViewer from '../tools/PhoneViewer';
 import CCTVPlayer from '../tools/CCTVPlayer';
 import DecipherLens from '../tools/DecipherLens';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
+import ShredderPuzzleModal from './ShredderPuzzleModal';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import NumericKeypad from '../tools/NumericKeypad';
 import AudioViewerModal from './AudioViewerModal';
@@ -48,7 +49,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
     setShowGlitchSolver(false);
-    setPuzzleSolved(false);
+    
+    // Carregar estado de puzzle resolvido do localStorage
+    if (card?.investigation_id && card?.id) {
+      const solvedKey = `shredder_solved_${card.investigation_id}_${card.id}`;
+      const saved = localStorage.getItem(solvedKey);
+      setPuzzleSolved(saved === 'true');
+    } else {
+      setPuzzleSolved(false);
+    }
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
@@ -84,6 +93,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   };
   const [puzzleSolved, setPuzzleSolved] = useState(false);
+  const [shredderModalOpen, setShredderModalOpen] = useState(false);
+  
+  // Salvar estado de puzzle resolvido no localStorage
+  useEffect(() => {
+    if (card?.investigation_id && card?.id) {
+      const solvedKey = `shredder_solved_${card.investigation_id}_${card.id}`;
+      localStorage.setItem(solvedKey, String(puzzleSolved));
+    }
+  }, [puzzleSolved, card?.investigation_id, card?.id]);
   const fileRef = React.useRef<HTMLDivElement | null>(null);
   const backdropRef = React.useRef<HTMLDivElement | null>(null);
   const thermalCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -480,7 +498,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ? currentCard.metadata
         : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
     } catch { parsedMetadata = {}; }
-    const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
+    const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || parsedMetadata?.card_type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
     const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
     // Mega-clue metadata (compat: mega_clue or megaClue)
     const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
@@ -838,6 +856,18 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       const metadataObj = parsedMetadata;
       const isGlitchPuzzle = isGlitchPuzzleGlobal;
 
+      // 🔍 DEBUG: Log completo da evidência para diagnóstico
+      console.log('🔍 [InspectionModal] Card Debug:', {
+        id: currentCard.id,
+        title: currentCard.title,
+        is_shredded: currentCard.is_shredded,
+        type: currentCard.type,
+        metadata: metadataObj,
+        shred_rows: metadataObj?.shred_rows,
+        shred_cols: metadataObj?.shred_cols,
+        all_keys: Object.keys(currentCard)
+      });
+
       if (visualMode === 'phone') {
         return (
           <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
@@ -853,15 +883,114 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       }
 
       // If shredded, show puzzle
-      if (currentCard.is_shredded) {
+      // 🔍 Verificação robusta de is_shredded (aceita boolean, number, string)
+      // 🔥 FALLBACK: Se não existir a coluna is_shredded, usa metadata.is_shredded
+      const isShredded = Boolean(
+        currentCard.is_shredded === true || 
+        currentCard.is_shredded === 1 || 
+        currentCard.is_shredded === '1' || 
+        currentCard.is_shredded === 'true' ||
+        metadataObj?.is_shredded === true ||
+        // 🔥 Se tem shred_rows/cols no metadata, assume que é triturado
+        (metadataObj?.shred_rows && metadataObj?.shred_cols)
+      );
+      
+      console.log('🧩 [Shredder] Check:', { 
+        raw_value: currentCard.is_shredded, 
+        type: typeof currentCard.is_shredded,
+        metadata_is_shredded: metadataObj?.is_shredded,
+        has_shred_config: !!(metadataObj?.shred_rows && metadataObj?.shred_cols),
+        isShredded,
+        rows: metadataObj?.shred_rows || 1,
+        cols: metadataObj?.shred_cols || 8
+      });
+
+      // Se o puzzle foi resolvido, mostra a imagem normal
+      if (isShredded && !puzzleSolved) {
+        console.log('%c🧩 SHREDDER PUZZLE ATIVADO!', 'background: #4a4; color: #fff; font-size: 14px; padding: 8px; border-radius: 4px;');
+        console.log(`📐 Configuração: ${parsedMetadata?.shred_rows || 1}x${parsedMetadata?.shred_cols || 8} = ${(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças`);
+        console.log(`🎮 isGameMaster: ${isGameMaster}`);
+        console.log(`🖼️ imgSrc: ${unifiedMedia.imageUrl || currentCard.image_url}`);
+        
         return (
-          <ShredderPuzzle
-            imgSrc={unifiedMedia.imageUrl || currentCard.image_url}
-            rows={currentCard.metadata?.shred_rows || 1}
-            cols={currentCard.metadata?.shred_cols || 8}
-            onSolved={() => setPuzzleSolved(true)}
-            isGameMaster={isGameMaster}
-          />
+          <div style={{ 
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px 20px',
+            gap: '20px'
+          }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              background: 'linear-gradient(160deg, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0.02))',
+              border: '1px solid rgba(0, 243, 255, 0.25)',
+              borderRadius: '12px',
+              maxWidth: '500px'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
+              <h3 style={{ 
+                margin: '0 0 8px',
+                color: '#e9fcff',
+                fontSize: '20px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                textTransform: 'uppercase'
+              }}>DOCUMENTO TRITURADO DETECTADO</h3>
+              <p style={{ 
+                margin: '0 0 16px',
+                color: '#9fc7d0',
+                fontSize: '14px',
+                lineHeight: '1.6'
+              }}>
+                Este documento foi fragmentado em <strong style={{ color: '#aef6ff' }}>{(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças</strong>.<br />
+                Configure: <strong style={{ color: '#aef6ff' }}>{parsedMetadata?.shred_rows || 1}×{parsedMetadata?.shred_cols || 8}</strong> {parsedMetadata?.shred_rows === 1 ? 'tiras horizontais' : parsedMetadata?.shred_cols === 1 ? 'tiras verticais' : 'grade'}
+              </p>
+              {isGameMaster && (
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(100, 150, 255, 0.12)',
+                  border: '1px solid rgba(100, 150, 255, 0.3)',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  fontSize: '12px',
+                  color: '#aaf'
+                }}>
+                  🎮 <strong>MODO GM ATIVO</strong><br />
+                  Você terá controle total sobre as peças reveladas
+                </div>
+              )}
+              <button
+                onClick={() => setShredderModalOpen(true)}
+                style={{
+                  padding: '14px 28px',
+                  background: 'linear-gradient(90deg, #00f3ff, #ff003c)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#051018',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 16px rgba(0, 243, 255, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 243, 255, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 243, 255, 0.3)';
+                }}
+              >
+                🧩 ABRIR RECONSTRUTOR
+              </button>
+            </div>
+          </div>
         );
       }
 
@@ -1037,9 +1166,16 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       // At click time we may or may not have a glitch config available.
                       // If none, surface a useful message instead of doing nothing.
                       if (!glitchSolverConfig) {
-                        alert('Nenhum puzzle configurado para este cartão. Peça ao Mestre para configurar a camada de segurança.');
+                        console.error('[InspectionModal] Glitch puzzle sem configuração válida. Card:', {
+                          id: currentCard?.id,
+                          type: currentCard?.type,
+                          hasMetadata: !!currentCard?.metadata,
+                          metadataGlitchPuzzle: !!parsedMetadata?.glitch_puzzle
+                        });
+                        alert('❌ Este quebra-cabeça não tem configuração válida.\n\nVerifique:\n• Se a pista foi criada como "Quebra-cabeça de Glitch"\n• Se a imagem foi enviada corretamente\n• Se os metadados foram salvos');
                         return;
                       }
+                      console.log('[InspectionModal] Abrindo GlitchPuzzleSolver com config:', glitchSolverConfig);
                       setShowGlitchSolver(true);
                     }}
                     style={{marginTop:6}}
@@ -1073,7 +1209,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                               baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                               hiddenSrc={currentCard.image_uv_url}
                               filterLayerSrc={currentCard.image_filter_layer}
-                              filters={{ brightness, contrast, saturate: saturation }}
+                              filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
                               revealSettings={fullscreenOnlyTreatment ? null : reveal}
                               isUVMode={localUV}
                               fit="contain"
@@ -1875,10 +2011,28 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   );
 
   const glitchSolverConfig = React.useMemo(() => {
-    if (!parsedMetadata?.glitch_puzzle) return null;
+    if (!parsedMetadata?.glitch_puzzle) {
+      console.debug('[InspectionModal] No glitchSolverConfig - parsedMetadata.glitch_puzzle is missing', {
+        hasMetadata: !!parsedMetadata,
+        type: currentCard?.type,
+        cardType: parsedMetadata?.card_type,
+        metadataKeys: parsedMetadata ? Object.keys(parsedMetadata) : []
+      });
+      return null;
+    }
+    
     const security = parsedMetadata.glitch_puzzle.security_layer || parsedMetadata.security_layer;
-    return security ? { ...parsedMetadata.glitch_puzzle, security_layer: security } : parsedMetadata.glitch_puzzle;
-  }, [parsedMetadata]);
+    const config = security ? { ...parsedMetadata.glitch_puzzle, security_layer: security } : parsedMetadata.glitch_puzzle;
+    
+    console.debug('[InspectionModal] glitchSolverConfig created:', {
+      hasOriginalImage: !!config.original_image_url,
+      hasRewardCode: !!config.reward_code,
+      hasSecurity: !!security,
+      solved: config.solved
+    });
+    
+    return config;
+  }, [parsedMetadata, currentCard]);
 
   const glitchPortal = showGlitchSolver && glitchSolverConfig && !glitchSolverConfig.solved
     ? createPortal(
@@ -1948,7 +2102,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                       hiddenSrc={currentCard.image_uv_url}
                       filterLayerSrc={currentCard.image_filter_layer}
-                      filters={{ brightness, contrast, saturate: saturation }}
+                      filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
                       revealSettings={fullscreenOnlyTreatment ? null : (() => {
                          try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
                       })()}
@@ -2028,6 +2182,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         onClose={() => setAudioExpanderOpen(false)}
         audioSrc={expanderAudioSrc}
         title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'}
+      />
+
+      <ShredderPuzzleModal
+        isOpen={shredderModalOpen}
+        onClose={() => setShredderModalOpen(false)}
+        imgSrc={unifiedMedia.imageUrl || currentCard.image_url}
+        rows={parsedMetadata?.shred_rows || 1}
+        cols={parsedMetadata?.shred_cols || 8}
+        isGameMaster={isGameMaster}
+        investigationId={currentCard.investigation_id}
+        cardId={currentCard.id}
+        evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'}
+        onPuzzleSolved={() => setPuzzleSolved(true)}
       />
     </>
   );

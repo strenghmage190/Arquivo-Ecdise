@@ -4,8 +4,8 @@ import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
 import InvestigationCardModal from '../modals/InvestigationCardModal';
 import InviteModal from '../modals/InviteModal';
-// Lazy load do modal pesado (2214 linhas) para reduzir bundle inicial
-const CreateClueModal = React.lazy(() => import('../modals/CreateClueModal_Refactored'));
+// CreateClueModal é pesado — import estático para evitar falhas de carregamento dinâmico em produção
+import CreateClueModal from '../modals/CreateClueModal_Refactored';
 const CreateClueModalLegacy = React.lazy(() => import('../modals/CreateClueModal'));
 import Sketchpad from '../tools/Sketchpad';
 import TerminalSearch from './TerminalSearch';
@@ -169,8 +169,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const selectedIdsRef = useRef<string[]>([]);
 
+  // LÓGICA DE PERMISSÕES CONSOLIDADA
+  // canEdit: usuário é GM E não está em modo player view
   const canEdit = isGameMaster && !playerView;
-  const viewerMode = isGameMaster ? playerView : true;
+  // viewerMode: modo visualização (jogadores sempre veem assim, GMs veem quando ativam playerView)
+  const viewerMode = !isGameMaster || playerView;
+
   const [inspectCard, setInspectCard] = useState<any | null>(null);
   const [unlockingCard, setUnlockingCard] = useState<any | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
@@ -1370,6 +1374,35 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     };
   }, []);
 
+  // Keyboard shortcut: E to edit selected card
+  useEffect(() => {
+    const handleEditShortcut = (e: KeyboardEvent) => {
+      // Only trigger if GM, not in player view, not typing in an input, and "E" key pressed
+      if (!isGameMaster || playerView || !canEdit) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        const selectedIds = selectedIdsRef.current;
+        if (selectedIds.length === 1) {
+          const cardId = selectedIds[0];
+          const cardToEdit = cards.find(c => c.id === cardId);
+          if (cardToEdit) {
+            e.preventDefault();
+            setEditingCard(cardToEdit);
+            setShowLegacyModal(true);
+          }
+        } else if (inspectCard) {
+          // If inspection modal is open, edit that card
+          e.preventDefault();
+          setEditingCard(inspectCard);
+          setInspectCard(null);
+          setShowLegacyModal(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEditShortcut);
+    return () => window.removeEventListener('keydown', handleEditShortcut);
+  }, [isGameMaster, playerView, canEdit, cards, inspectCard]);
+
   const [toast, setToast] = useState<{ id: string; message: string; connectionId?: string } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1905,16 +1938,20 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       )}
 
       {!isMobileDevice && (
-        <div className="investigation-toolbar" data-game-master={isGameMaster ? 'true' : 'false'} data-player-view={viewerMode ? 'true' : 'false'}>
+        <div 
+          className="investigation-toolbar" 
+          data-game-master={isGameMaster ? 'true' : 'false'} 
+          data-player-view={playerView ? 'true' : 'false'}
+        >
         {/* Grupo 1: Ações Principais */}
         <div className="toolbar-group">
-          {/* Criar Nova Evidência - Único portal para criar pistas, puzzles e mega-pistas */}
-          {isGameMaster && !playerView && (
+          {/* Criar Nova Evidência - Apenas para GM e quando NÃO está em playerView */}
+          {canEdit && (
             <button 
               className="hud-btn primary" 
-              onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView }); setCreateModalOpen(true); }}
+              onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
               data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
-              style={{ background: 'linear-gradient(135deg, #c6a45f 0%, #a88747 100%)', color: '#000' }}
+              data-gm-only="true"
             >
               ⚙️ HUB DE CRIAÇÃO
             </button>
@@ -1934,25 +1971,28 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                    alert('Falha ao gerar link de convite');
                  }
                  setInviteOpen(true);
-              }} data-tooltip="Convidar jogadores">✉️</button>
+              }} data-tooltip="Convidar jogadores" data-gm-only="true">✉️</button>
               <button 
                  className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
                  onClick={() => setPlayerView(!playerView)}
-                 data-tooltip={playerView ? "Visão Mestre" : "Visão Jogador"}
+                 data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
+                 data-gm-only="true"
               >
-                 {playerView ? '🕶️' : '👁️'}
+                 {playerView ? '👁️' : '🕶️'}
               </button>
               <button 
                  className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
                  onClick={() => setShowHiddenClues(!showHiddenClues)}
-                 data-tooltip={showHiddenClues ? "Ocultar pistas ocultas" : "Mostrar pistas ocultas"}
+                 data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
+                 data-gm-only="true"
               >
                  👁️‍🗨️
               </button>
               <button 
                  className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
                  onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
-                 data-tooltip="GM Overwatch"
+                 data-tooltip="GM Overwatch - Painel de Controle"
+                 data-gm-only="true"
               >
                  👑
               </button>
@@ -2099,9 +2139,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           isGameMaster={isGameMaster}
           onClose={() => setInspectCard(null)}
           onEdit={() => {
+            // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
             setEditingCard(inspectCard);
             setInspectCard(null);
-            setModalOpen(true);
+            setShowLegacyModal(true);
           }}
           externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
           externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
@@ -2445,6 +2486,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                       } catch (e) { console.error('toggle from EvidenceCard failed', e); }
                     }}
                     onOpen={() => handleCardOpen(card)}
+                    onEdit={() => {
+                      setEditingCard(card);
+                      setShowLegacyModal(true);
+                    }}
                     performanceMode={performanceMode}
                   />
                 </div>
@@ -2658,7 +2703,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         <Suspense fallback={<div>Carregando...</div>}>
           <CreateClueModalLegacy
             isOpen={showLegacyModal}
-            onClose={() => setShowLegacyModal(false)}
+            existingCard={editingCard}
+            onClose={() => { setShowLegacyModal(false); setEditingCard(null); }}
             investigationId={investigationId}
             onSaved={(created?: any) => {
               loadBoard();
