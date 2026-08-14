@@ -1240,3 +1240,356 @@ label.inline {
   letter-spacing: 1px;
   margin-top: 10px;
 }
+
+
+/* Generated Utility Classes */
+.auto-style-1 { display: flex; }
+.auto-style-2 { gap: 10px; }
+.auto-style-3 { margin-bottom: 15px; }
+.auto-style-4 { display: flex; }
+.auto-style-5 { gap: 15px; }
+.auto-style-6 { margin-bottom: 10px; }
+.auto-style-7 { flex: 2; }
+.auto-style-8 { flex: 1; }
+.auto-style-9 { display: flex; }
+.auto-style-10 { gap: 15px; }
+.auto-style-11 { margin-bottom: 10px; }
+.auto-style-12 { align-items: center; }
+.auto-style-13 { display: flex; }
+.auto-style-14 { align-items: center; }
+.auto-style-15 { gap: 8px; }
+.auto-style-16 { cursor: pointer; }
+.auto-style-17 { flex: 1; }
+.auto-style-18 { margin-top: 15px; }
+.auto-style-19 { display: block; }
+.auto-style-20 { margin-bottom: 6px; }
+.auto-style-21 { display: flex; }
+.auto-style-22 { flex-wrap: wrap; }
+.auto-style-23 { gap: 12px; }
+.auto-style-24 { display: flex; }
+.auto-style-25 { align-items: center; }
+.auto-style-26 { gap: 8px; }
+.auto-style-27 { cursor: pointer; }
+.auto-style-28 { display: flex; }
+.auto-style-29 { align-items: center; }
+.auto-style-30 { gap: 8px; }
+.auto-style-31 { cursor: pointer; }
+.auto-style-32 { display: flex; }
+.auto-style-33 { flex-direction: column; }
+.auto-style-34 { gap: 6px; }
+.auto-style-35 { display: flex; }
+.auto-style-36 { flex-direction: column; }
+.auto-style-37 { gap: 6px; }
+.auto-style-38 { display: flex; }
+.auto-style-39 { gap: 10px; }
+.auto-style-40 { flex-wrap: wrap; }
+.auto-style-41 { display: flex; }
+.auto-style-42 { align-items: center; }
+.auto-style-43 { gap: 6px; }
+.auto-style-44 { cursor: pointer; }
+.auto-style-45 { font-size: 12px; }
+.auto-style-46 { display: flex; }
+.auto-style-47 { align-items: center; }
+.auto-style-48 { gap: 6px; }
+.auto-style-49 { cursor: pointer; }
+.auto-style-50 { font-size: 12px; }
+.auto-style-51 { display: flex; }
+.auto-style-52 { flex-direction: column; }
+.auto-style-53 { gap: 6px; }
+.auto-style-54 { display: flex; }
+.auto-style-55 { gap: 15px; }
+.auto-style-56 { flex: 1; }
+.auto-style-57 { display: flex; }
+.auto-style-58 { align-items: center; }
+.auto-style-59 { gap: 10px; }
+.auto-style-60 { margin-bottom: 10px; }
+.auto-style-61 { display: flex; }
+.auto-style-62 { flex-direction: column; }
+.auto-style-63 { gap: 8px; }
+.auto-style-64 { margin-top: 12px; }
+.auto-style-65 { display: flex; }
+.auto-style-66 { gap: 10px; }
+.auto-style-67 { align-items: center; }
+.auto-style-68 { flex-wrap: wrap; }
+.auto-style-69 { display: flex; }
+.auto-style-70 { align-items: center; }
+.auto-style-71 { gap: 8px; }
+.auto-style-72 { display: flex; }
+.auto-style-73 { flex-direction: column; }
+.auto-style-74 { gap: 6px; }
+.auto-style-75 { max-width: 160px; }
+.auto-style-76 { border-radius: 6px; }
+.auto-style-77 { display: flex; }
+.auto-style-78 { gap: 6px; }
+.auto-style-79 { align-items: center; }
+.auto-style-80 { display: none; }
+.auto-style-81 { display: flex; }
+.auto-style-82 { gap: 8px; }
+.auto-style-83 { margin-top: 10px; }
+.auto-style-84 { margin-top: 10px; }
+.auto-style-85 { display: flex; }
+.auto-style-86 { gap: 8px; }
+.auto-style-87 { flex: 1; }
+.auto-style-88 { padding: 6px 10px; }
+.auto-style-89 { font-size: 11px; }
+.auto-style-90 { display: flex; }
+.auto-style-91 { gap: 8px; }
+.auto-style-92 { align-items: stretch; }
+.auto-style-93 { flex-wrap: wrap; }
+.auto-style-94 { min-width: 120px; }
+.auto-style-95 { flex: 1; }
+.auto-style-96 { min-width: 180px; }
+.auto-style-97 { display: flex; }
+.auto-style-98 { align-items: center; }
+.auto-style-99 { gap: 10px; }
+.auto-style-100 { margin-bottom: 10px; }
+.auto-style-101 { font-size: 12px; }
+.auto-style-102 { display: flex; }
+.auto-style-103 { gap: 8px; }
+.auto-style-104 { align-items: center; }
+.auto-style-105 { margin-bottom: 10px; }
+.auto-style-106 { display: flex; }
+.auto-style-107 { gap: 8px; }
+.auto-style-108 { align-items: center; }
+.auto-style-109 { height: 34px; }
+.auto-style-110 { margin-top: 8px; }
+.auto-style-111 { display: flex; }
+.auto-style-112 { gap: 8px; }
+.auto-style-113 { margin-top: 12px; }
+.auto-style-114 { display: grid; }
+.auto-style-115 { grid-template-columns: 1fr 1fr; }
+.auto-style-116 { gap: 8px; }
+.auto-style-117 { flex: 1; }
+.auto-style-118 { display: grid; }
+.auto-style-119 { grid-template-columns: 1fr 1fr; }
+.auto-style-120 { gap: 5px; }
+.auto-style-121 { grid-column: span 2; }
+.auto-style-122 { margin-top: 8px; }
+.auto-style-123 { display: block; }
+.auto-style-124 { margin-bottom: 6px; }
+.auto-style-125 { display: flex; }
+.auto-style-126 { gap: 8px; }
+.auto-style-127 { align-items: center; }
+.auto-style-128 { margin-top: 8px; }
+.auto-style-129 { font-size: 10px; }
+.auto-style-130 { opacity: 0.3; }
+.auto-style-131 { position: absolute; }
+.auto-style-132 { right: 6px; }
+.auto-style-133 { top: 6px; }
+.auto-style-134 { z-index: 40; }
+.auto-style-135 { display: flex; }
+.auto-style-136 { gap: 6px; }
+.auto-style-137 { margin-top: 8px; }
+.auto-style-138 { margin-top: 6px; }
+.auto-style-139 { display: flex; }
+.auto-style-140 { gap: 10px; }
+.auto-style-141 { align-items: center; }
+.auto-style-142 { flex-wrap: wrap; }
+.auto-style-143 { margin-bottom: 10px; }
+.auto-style-144 { margin-bottom: 12px; }
+.auto-style-145 { margin-bottom: 12px; }
+.auto-style-146 { margin-bottom: 12px; }
+.auto-style-147 { display: flex; }
+.auto-style-148 { gap: 8px; }
+.auto-style-149 { align-items: center; }
+.auto-style-150 { margin-bottom: 8px; }
+.auto-style-151 { flex-wrap: wrap; }
+.auto-style-152 { min-width: 90px; }
+.auto-style-153 { min-width: 90px; }
+.auto-style-154 { min-width: 90px; }
+.auto-style-155 { margin-top: 12px; }
+.auto-style-156 { display: flex; }
+.auto-style-157 { gap: 15px; }
+.auto-style-158 { display: flex; }
+.auto-style-159 { flex-direction: column; }
+.auto-style-160 { gap: 10px; }
+.auto-style-161 { display: flex; }
+.auto-style-162 { align-items: center; }
+.auto-style-163 { gap: 8px; }
+.auto-style-164 { display: flex; }
+.auto-style-165 { flex-direction: column; }
+.auto-style-166 { gap: 6px; }
+.auto-style-167 { display: flex; }
+.auto-style-168 { align-items: center; }
+.auto-style-169 { justify-content: space-between; }
+.auto-style-170 { margin-bottom: 8px; }
+.auto-style-171 { font-size: 11px; }
+.auto-style-172 { padding: 8px 12px; }
+.auto-style-173 { margin-top: 8px; }
+.auto-style-174 { font-size: 12px; }
+.auto-style-175 { display: flex; }
+.auto-style-176 { gap: 5px; }
+.auto-style-177 { margin-bottom: 8px; }
+.auto-style-178 { flex: 1; }
+.auto-style-179 { flex: 1; }
+.auto-style-180 { flex: 1; }
+.auto-style-181 { display: flex; }
+.auto-style-182 { align-items: center; }
+.auto-style-183 { justify-content: space-between; }
+.auto-style-184 { margin-bottom: 8px; }
+.auto-style-185 { cursor: pointer; }
+.auto-style-186 { margin-bottom: 8px; }
+.auto-style-187 { margin-bottom: 8px; }
+.auto-style-188 { margin-bottom: 8px; }
+.auto-style-189 { margin-bottom: 8px; }
+.auto-style-190 { display: flex; }
+.auto-style-191 { gap: 10px; }
+.auto-style-192 { margin-bottom: 12px; }
+.auto-style-193 { flex-wrap: wrap; }
+.auto-style-194 { flex: 1; }
+.auto-style-195 { min-width: 180px; }
+.auto-style-196 { min-width: 180px; }
+.auto-style-197 { display: flex; }
+.auto-style-198 { align-items: center; }
+.auto-style-199 { gap: 8px; }
+.auto-style-200 { font-size: 18px; }
+.auto-style-201 { margin: 0px; }
+.auto-style-202 { display: flex; }
+.auto-style-203 { gap: 10px; }
+.auto-style-204 { flex-wrap: wrap; }
+.auto-style-205 { margin-bottom: 12px; }
+.auto-style-206 { display: flex; }
+.auto-style-207 { align-items: center; }
+.auto-style-208 { gap: 8px; }
+.auto-style-209 { flex-wrap: wrap; }
+.auto-style-210 { font-size: 18px; }
+.auto-style-211 { font-size: 48px; }
+.auto-style-212 { margin-bottom: 16px; }
+.auto-style-213 { opacity: 0.3; }
+.auto-style-214 { font-size: 11px; }
+.auto-style-215 { gap: 8px; }
+.auto-style-216 { margin-bottom: 10px; }
+.auto-style-217 { margin-bottom: 6px; }
+.auto-style-218 { display: block; }
+.auto-style-219 { gap: 6px; }
+.auto-style-220 { margin-bottom: 10px; }
+.auto-style-221 { margin-top: 8px; }
+.auto-style-222 { margin-top: 8px; }
+.auto-style-223 { gap: 8px; }
+.auto-style-224 { font-size: 14px; }
+.auto-style-225 { gap: 8px; }
+.auto-style-226 { margin-top: 8px; }
+.auto-style-227 { margin-right: 6px; }
+.auto-style-228 { margin-left: 8px; }
+.auto-style-229 { display: flex; }
+.auto-style-230 { align-items: center; }
+.auto-style-231 { gap: 8px; }
+.auto-style-232 { flex-wrap: wrap; }
+.auto-style-233 { font-size: 18px; }
+.auto-style-234 { margin-bottom: 20px; }
+.auto-style-235 { display: block; }
+.auto-style-236 { margin-top: 12px; }
+.auto-style-237 { display: flex; }
+.auto-style-238 { flex-direction: column; }
+.auto-style-239 { gap: 10px; }
+.auto-style-240 { display: flex; }
+.auto-style-241 { align-items: center; }
+.auto-style-242 { gap: 8px; }
+.auto-style-243 { cursor: pointer; }
+.auto-style-244 { margin-bottom: 20px; }
+.auto-style-245 { margin-bottom: 20px; }
+.auto-style-246 { display: flex; }
+.auto-style-247 { gap: 8px; }
+.auto-style-248 { align-items: center; }
+.auto-style-249 { margin-top: 8px; }
+.auto-style-250 { flex: 1; }
+.auto-style-251 { display: flex; }
+.auto-style-252 { align-items: center; }
+.auto-style-253 { gap: 8px; }
+.auto-style-254 { font-size: 18px; }
+.auto-style-255 { display: flex; }
+.auto-style-256 { gap: 8px; }
+.auto-style-257 { align-items: center; }
+.auto-style-258 { margin-bottom: 12px; }
+.auto-style-259 { min-width: 160px; }
+.auto-style-260 { display: flex; }
+.auto-style-261 { flex-direction: column; }
+.auto-style-262 { gap: 8px; }
+.auto-style-263 { cursor: pointer; }
+.auto-style-264 { display: grid; }
+.auto-style-265 { grid-template-columns: 1fr 1fr; }
+.auto-style-266 { gap: 20px; }
+.auto-style-267 { gap: 6px; }
+.auto-style-268 { gap: 8px; }
+.auto-style-269 { font-size: 11px; }
+.auto-style-270 { gap: 6px; }
+.auto-style-271 { margin-bottom: 15px; }
+.auto-style-272 { gap: 6px; }
+.auto-style-273 { gap: 4px; }
+.auto-style-274 { max-height: 280px; }
+.auto-style-275 { overflow-y: auto; }
+.auto-style-276 { padding-right: 8px; }
+.auto-style-277 { gap: 8px; }
+.auto-style-278 { font-size: 10px; }
+.auto-style-279 { display: grid; }
+.auto-style-280 { grid-template-columns: 1fr 1fr 1fr; }
+.auto-style-281 { gap: 15px; }
+.auto-style-282 { gap: 6px; }
+.auto-style-283 { gap: 6px; }
+.auto-style-284 { gap: 8px; }
+.auto-style-285 { font-size: 11px; }
+.auto-style-286 { gap: 6px; }
+.auto-style-287 { gap: 8px; }
+.auto-style-288 { font-size: 11px; }
+.auto-style-289 { gap: 6px; }
+.auto-style-290 { gap: 6px; }
+.auto-style-291 { margin-bottom: 8px; }
+.auto-style-292 { position: fixed; }
+.auto-style-293 { inset: 0px; }
+.auto-style-294 { z-index: 16000; }
+.auto-style-295 { padding: 24px; }
+.auto-style-296 { margin-bottom: 8px; }
+.auto-style-297 { position: fixed; }
+.auto-style-298 { inset: 0px; }
+.auto-style-299 { z-index: 16000; }
+.auto-style-300 { display: flex; }
+.auto-style-301 { align-items: center; }
+.auto-style-302 { justify-content: center; }
+.auto-style-303 { padding: 24px; }
+.auto-style-304 { position: fixed; }
+.auto-style-305 { inset: 0px; }
+.auto-style-306 { z-index: 16000; }
+.auto-style-307 { display: flex; }
+.auto-style-308 { align-items: center; }
+.auto-style-309 { justify-content: center; }
+.auto-style-310 { padding: 24px; }
+
+/* Micro-interactions & Polish */
+
+/* 1. Scroll on tabs-header */
+.tabs-header {
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nexus-blue) var(--nexus-dark);
+}
+.tabs-header::-webkit-scrollbar {
+  height: 4px;
+}
+.tabs-header::-webkit-scrollbar-track {
+  background: var(--nexus-dark);
+}
+.tabs-header::-webkit-scrollbar-thumb {
+  background: var(--nexus-blue);
+  border-radius: 4px;
+}
+
+/* 2. Neon glow on buttons/inputs */
+.nexus-button, button, input, select, textarea {
+  transition: all 0.2s ease-in-out;
+}
+.nexus-button:hover, button:hover, input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 8px var(--nexus-blue);
+  border-color: var(--nexus-blue);
+  outline: none;
+}
+
+/* 3. Fade-in on tab-content */
+.tab-content {
+  animation: tabFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

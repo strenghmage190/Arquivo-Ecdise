@@ -2022,7 +2022,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             title={existingCard ? `✏️ EDITAR EVIDÊNCIA` : `REGISTRO DE EVIDÊNCIA`} 
         onClose={onClose}
         extraHeaderContent={
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <div className="flex gap-2 items-center">
             {existingCard && (
               <div style={{
                 background: 'rgba(139, 92, 246, 0.2)',
@@ -2041,7 +2041,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 <span>✏️</span> Modo Edição
               </div>
             )}
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <button
                 onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
                 style={{
@@ -2088,7 +2088,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         alignItems: 'center',
                         gap: '6px'
                       }}>
-                        <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleLoadTemplate(template)}>
+                        <div className="flex-1 cursor-pointer" onClick={() => handleLoadTemplate(template)}>
                           <div style={{ color: '#00f3ff', fontSize: '11px', fontWeight: 500 }}>
                             {template.name}
                           </div>
@@ -2157,7 +2157,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               <>
                 <div className="field-block">
                    <span className="field-title">📋 SUBTIPO DE EVIDÊNCIA</span>
-                   <div style={{display:'flex', gap:10, marginBottom:15}}>
+                   <div className="auto-style-1 auto-style-2 auto-style-3">
                       <button 
                          className={`upload-btn ${evidenceType === 'document' ? 'active' : ''}`}
                          onClick={() => {
@@ -2221,23 +2221,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                 <div className="field-block">
                    <span className="field-title">IDENTIFICAÇÃO</span>
-                   <div style={{display:'flex', gap:15, marginBottom:10}}>
-                      <div style={{flex:2}}>
+                   <div className="auto-style-4 auto-style-5 auto-style-6">
+                      <div className="auto-style-7">
                          <label>TÍTULO DO ARQUIVO</label>
                          <input autoFocus value={title} onChange={e=>setTitle(e.target.value)} />
                       </div>
-                      <div style={{flex:1}}>
+                      <div className="auto-style-8">
                          <label>TAGS</label>
                          <input value={tags} onChange={e=>setTags(e.target.value)} placeholder="Sangue, Oculto..." />
                       </div>
                    </div>
-                   <div style={{display:'flex', gap:15, marginBottom:10, alignItems:'center'}}>
-                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                   <div className="auto-style-9 auto-style-10 auto-style-11 auto-style-12">
+                      <label className="auto-style-13 auto-style-14 auto-style-15 auto-style-16">
                          <input type="checkbox" checked={isHidden} onChange={e => setIsHidden(e.target.checked)} />
                          <span>Pista oculta (descoberta por código)</span>
                       </label>
                       {isHidden && (
-                         <div style={{flex:1}}>
+                         <div className="auto-style-17">
                             <label>CÓDIGO DE DESCOBERTA</label>
                             <input value={discoveryCode} onChange={e=>setDiscoveryCode(e.target.value.toUpperCase())} placeholder="EX: ALPHA-01" />
                          </div>
@@ -2245,8 +2245,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    </div>
                    <label>DESCRIÇÃO PÚBLICA</label>
                    <textarea rows={3} value={descPublic} onChange={e=>setDescPublic(e.target.value)} />
-                   <div style={{marginTop:15}}>
-                      <label className="field-title" style={{display:'block', marginBottom:6}}>OBSERVAÇÕES DO MESTRE (Oculto)</label>
+                   <div className="auto-style-18">
+                      <label className="field-title auto-style-19 auto-style-20">OBSERVAÇÕES DO MESTRE (Oculto)</label>
                       <textarea rows={2} value={descHidden} onChange={e=>setDescHidden(e.target.value)} style={{borderColor:'#c6a45f', background:'#1a1710'}} />
                    </div>
                 </div>
@@ -2256,19 +2256,19 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    <p style={{fontSize:11, color:'#888', marginBottom:10}}>
                       Transforme qualquer mídia (imagem, vídeo ou áudio) em um artefato com camada de sinal/glitch e senha. Use os sliders na aba Glitch para calibrar quando ativado.
                    </p>
-                   <div style={{display:'flex', flexWrap:'wrap', gap:12}}>
-                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                   <div className="auto-style-21 auto-style-22 auto-style-23">
+                      <label className="auto-style-24 auto-style-25 auto-style-26 auto-style-27">
                          <input type="checkbox" checked={securityLayerEnabled || evidenceType === 'glitch_puzzle'} onChange={e => setSecurityLayerEnabled(e.target.checked)} disabled={evidenceType === 'glitch_puzzle'} />
                          <span style={{fontWeight:700, color:'#c6a45f'}}>Ativar criptografia de sinal</span>
                       </label>
-                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                      <label className="auto-style-28 auto-style-29 auto-style-30 auto-style-31">
                          <input type="checkbox" checked={hidePreviewOnBoard} onChange={e => setHidePreviewOnBoard(e.target.checked)} />
                          <span style={{color:'#bbb'}}>Ocultar prévia no tabuleiro (mostrar ícone bloqueado)</span>
                       </label>
                    </div>
 
                    <div style={{marginTop:12, display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10}}>
-                      <label style={{display:'flex', flexDirection:'column', gap:6}}>
+                      <label className="auto-style-32 auto-style-33 auto-style-34">
                          Lógica de revelação
                          <select value={revealLogicMode} onChange={e => setRevealLogicMode(e.target.value as any)}>
                             <option value="always_visible">Sempre visível (pista de percepção)</option>
@@ -2276,20 +2276,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             <option value="aligned_keyword">Sliders + senha manual</option>
                          </select>
                       </label>
-                      <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                      <div className="auto-style-35 auto-style-36 auto-style-37">
                          <span style={{fontSize:11, color:'#ccc'}}>Sliders controlam</span>
-                         <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
-                            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
+                         <div className="auto-style-38 auto-style-39 auto-style-40">
+                            <label className="auto-style-41 auto-style-42 auto-style-43 auto-style-44">
                                <input type="checkbox" checked={signalTargets.visual} onChange={e => setSignalTargets(v => ({ ...v, visual: e.target.checked }))} />
-                               <span style={{fontSize:12}}>Imagem/Vídeo</span>
+                               <span className="auto-style-45">Imagem/Vídeo</span>
                             </label>
-                            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
+                            <label className="auto-style-46 auto-style-47 auto-style-48 auto-style-49">
                                <input type="checkbox" checked={signalTargets.audio} onChange={e => setSignalTargets(v => ({ ...v, audio: e.target.checked }))} />
-                               <span style={{fontSize:12}}>Áudio</span>
+                               <span className="auto-style-50">Áudio</span>
                             </label>
                          </div>
                       </div>
-                      <label style={{display:'flex', flexDirection:'column', gap:6}}>
+                      <label className="auto-style-51 auto-style-52 auto-style-53">
                          Código final / cofre
                          <input value={glitchRewardCode} onChange={e => setGlitchRewardCode(e.target.value.toUpperCase())} placeholder="ALPHA-01" />
                       </label>
@@ -2307,19 +2307,19 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    </div>
                 </div>
 
-                <div style={{display:'flex', gap:15}}>
-                   <div className="field-block" style={{flex:1}}>
+                <div className="auto-style-54 auto-style-55">
+                   <div className="field-block auto-style-56">
                       <span className="field-title">🔐 CRIPTOGRAFIA / BLOQUEIO</span>
                       
                       {/* SENHA DA PISTA */}
                       <div style={{marginBottom: 15, paddingBottom: 15, borderBottom: '1px solid #333'}}>
-                         <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
+                         <div className="auto-style-57 auto-style-58 auto-style-59 auto-style-60">
                             <input type="checkbox" checked={isLocked} onChange={e=>setIsLocked(e.target.checked)} />
-                            <label style={{fontWeight: 'bold'}}>🔒 ATIVAR SENHA DE ACESSO (Pista)</label>
+                            <label className="font-bold">🔒 ATIVAR SENHA DE ACESSO (Pista)</label>
                          </div>
                          {isLocked && (
                             evidenceType === 'mega_clue' ? (
-                              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                              <div className="auto-style-61 auto-style-62 auto-style-63">
                                  {megaRequiredPuzzleIds.length === 0 ? (
                                     <div style={{fontSize:12, color:'#f2b775'}}>Selecione os quebra-cabeças necessários na aba "MEGA" para definir quantas senhas serão solicitadas.</div>
                                  ) : (
@@ -2350,8 +2350,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       </div>
                       
                       {/* OUTROS CONTROLES */}
-                      <div style={{marginTop:12, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap'}}>
-                         <label style={{display:'flex', alignItems:'center', gap:8}}>
+                      <div className="auto-style-64 auto-style-65 auto-style-66 auto-style-67 auto-style-68">
+                         <label className="auto-style-69 auto-style-70 auto-style-71">
                             <input type="checkbox" checked={isPerson} onChange={e=>setIsPerson(e.target.checked)} />
                             <span>Tipo: Dossiê de Pessoa</span>
                          </label>
@@ -2381,16 +2381,16 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                            <option value="system">Sistema</option>
                                         </select>
                                         <textarea rows={2} value={m.text} onChange={e => { const copy = [...editingChatList]; copy[idx] = { ...copy[idx], text: e.target.value }; setEditingChatList(copy); }} />
-                                        <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                                           {m.image_url && <img src={m.image_url} alt="preview" style={{maxWidth:160, borderRadius:6}} />}
+                                        <div className="auto-style-72 auto-style-73 auto-style-74">
+                                           {m.image_url && <img src={m.image_url} alt="preview" className="auto-style-75 auto-style-76" />}
                                            {chatUploadProgress[idx] ? (
                                               <div style={{fontSize:12, color:'#9cc'}}>{`Enviando imagem: ${chatUploadProgress[idx]}%`}</div>
                                            ) : null}
                                         </div>
-                                        <div className="chat-buttons" style={{display:'flex', gap:6, alignItems:'center'}}>
+                                        <div className="chat-buttons auto-style-77 auto-style-78 auto-style-79">
                                            <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx,1); setEditingChatList(copy); }}>✖</button>
                                            <button className="upload-btn" onClick={() => { const copy = [...editingChatList]; copy.splice(idx+1,0,{ sender:'me', type:'text', text:'' }); setEditingChatList(copy); }}>+</button>
-                                           <input ref={el => fileInputsRef.current[idx] = el} type="file" accept="image/*" style={{display:'none'}} onChange={(e) => handleChatImageSelected(idx, e)} />
+                                           <input ref={el => fileInputsRef.current[idx] = el} type="file" accept="image/*" className="auto-style-80" onChange={(e) => handleChatImageSelected(idx, e)} />
                                            <button className="upload-btn" onClick={() => { fileInputsRef.current[idx]?.click(); }}>📎 Anexar Imagem</button>
                                         </div>
                                      </div>
@@ -2399,15 +2399,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                
                                <button className="upload-btn" onClick={() => { setEditingChatList([...editingChatList, { sender:'me', type:'text', text:'' }]); }} style={{marginTop:10, width:'100%', background:'rgba(100,150,255,0.2)', border:'1px solid rgba(100,150,255,0.5)'}}>➕ Adicionar Mensagem</button>
 
-                               <div style={{display:'flex', gap:8, marginTop:10}}>
+                               <div className="auto-style-81 auto-style-82 auto-style-83">
                                   <button className="btn-save" onClick={() => { setChatData(editingChatList); setShowChatEditor(false); }}>✅ Salvar</button>
                                   <button className="btn-cancel" onClick={() => { setChatJson(''); setShowChatEditor(false); }}>Cancelar</button>
                                </div>
 
-                               <div style={{marginTop:10}}>
+                               <div className="auto-style-84">
                                   <label>Importar JSON</label>
-                                  <div style={{display:'flex', gap:8}}>
-                                     <input placeholder='Colar JSON aqui' value={chatJson} onChange={e=>setChatJson(e.target.value)} style={{flex:1}} />
+                                  <div className="auto-style-85 auto-style-86">
+                                     <input placeholder='Colar JSON aqui' value={chatJson} onChange={e=>setChatJson(e.target.value)} className="auto-style-87" />
                                      <button className="upload-btn" onClick={() => {
                                         try {
                                            const parsed = JSON.parse(chatJson || '[]');
@@ -2436,10 +2436,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                <div style={{marginTop:10, width:'100%', display:'flex', flexDirection:'column', gap:8, background:'rgba(0,0,0,0.25)', border:'1px solid rgba(100,150,255,0.25)', borderRadius:8, padding:10}}>
                                   <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', color:'#9ac4ff', fontSize:11, textTransform:'uppercase', letterSpacing:0.5}}>
                                      <span>Adicionar mensagem pelo preview</span>
-                                     <button className="btn-save" style={{padding:'6px 10px', fontSize:11}} onClick={handleQuickAddMessage}>Adicionar</button>
+                                     <button className="btn-save auto-style-88 auto-style-89" onClick={handleQuickAddMessage}>Adicionar</button>
                                   </div>
-                                  <div style={{display:'flex', gap:8, alignItems:'stretch', flexWrap:'wrap'}}>
-                                     <select value={quickChatSender} onChange={e => setQuickChatSender(e.target.value as ChatSender)} style={{minWidth:120}}>
+                                  <div className="auto-style-90 auto-style-91 auto-style-92 auto-style-93">
+                                     <select value={quickChatSender} onChange={e => setQuickChatSender(e.target.value as ChatSender)} className="auto-style-94">
                                         <option value="them">Contato</option>
                                         <option value="me">Eu</option>
                                         <option value="system">Sistema</option>
@@ -2450,25 +2450,25 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                         onChange={e => setQuickChatText(e.target.value)}
                                         onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleQuickAddMessage(); } }}
                                         placeholder="Digite a mensagem e clique em Adicionar"
-                                        style={{flex:1, minWidth:180}}
+                                        className="auto-style-95 auto-style-96"
                                      />
                                   </div>
                                </div>
                                
                                {/* CONTROLE DO KEYPAD DO TELEFONE (SEPARADO DA SENHA DA PISTA) */}
                                <div style={{marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(100,100,100,0.3)', width: '100%'}}>
-                                  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
+                                  <div className="auto-style-97 auto-style-98 auto-style-99 auto-style-100">
                                      <input 
                                         type="checkbox" 
                                         checked={phoneHasKeypad} 
                                         onChange={e=>setPhoneHasKeypad(e.target.checked)} 
                                      />
-                                     <label style={{fontWeight: 'bold', fontSize: 12}}>📱 Telefone com Keypad</label>
+                                     <label className="font-bold auto-style-101">📱 Telefone com Keypad</label>
                                   </div>
                                   
                                   {phoneHasKeypad && (
                                      <div>
-                                        <div style={{display:'flex', gap:8, alignItems:'center', marginBottom: 10}}>
+                                        <div className="auto-style-102 auto-style-103 auto-style-104 auto-style-105">
                                            <input 
                                               placeholder="Senha do telefone (apenas números)" 
                                               value={phonePassword} 
@@ -2476,8 +2476,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                               maxLength={6}
                                               style={{flex: 1, borderColor:'#00b894', color:'#00b894', fontWeight:'bold', padding:'6px 10px'}} 
                                            />
-                                           <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                                              <select value={phoneLockType} onChange={e => setPhoneLockType(e.target.value as any)} style={{height:34}}>
+                                           <div className="auto-style-106 auto-style-107 auto-style-108">
+                                              <select value={phoneLockType} onChange={e => setPhoneLockType(e.target.value as any)} className="auto-style-109">
                                                  <option value="pin">PIN (numérico)</option>
                                                  <option value="pattern">Padrão (3×3)</option>
                                               </select>
@@ -2504,7 +2504,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                                        onInput={(value) => setPhonePassword(String(value || ''))}
                                                        onUnlock={() => { setShowKeypadEditor(false); }}
                                                     />
-                                                    <div style={{marginTop:8, display:'flex', gap:8}}>
+                                                    <div className="auto-style-110 auto-style-111 auto-style-112">
                                                        <button className="upload-btn" onClick={() => setPhonePassword('')}>Limpar Padrão</button>
                                                        <button className="btn-save" onClick={() => setShowKeypadEditor(false)}>Salvar</button>
                                                     </div>
@@ -2528,7 +2528,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       )}
 
                       {isPerson && (
-                         <div style={{marginTop:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+                         <div className="auto-style-113 auto-style-114 auto-style-115 auto-style-116">
                             <div>
                                <label>Nome Completo</label>
                                <input value={personName} onChange={e=>setPersonName(e.target.value)} />
@@ -2554,15 +2554,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       )}
                    </div>
 
-                      <div className="field-block" style={{flex:1}}>
+                      <div className="field-block auto-style-117">
                       <span className="field-title">🗃️ METADADOS FALSOS (HACKING)</span>
-                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:5}}>
+                      <div className="auto-style-118 auto-style-119 auto-style-120">
                          <input placeholder="Data Fake" value={fakeMeta.date} onChange={e=>setFakeMeta({...fakeMeta, date:e.target.value})} />
                          <input placeholder="GPS Coords" value={fakeMeta.gps} onChange={e=>setFakeMeta({...fakeMeta, gps:e.target.value})} />
-                         <input placeholder="Device Owner" value={fakeMeta.owner} onChange={e=>setFakeMeta({...fakeMeta, owner:e.target.value})} style={{gridColumn:'span 2'}} />
+                         <input placeholder="Device Owner" value={fakeMeta.owner} onChange={e=>setFakeMeta({...fakeMeta, owner:e.target.value})} className="auto-style-121" />
                       </div>
-                      <div style={{ marginTop: 8 }}>
-                         <label style={{ display: 'block', marginBottom: 6 }}>Nota Técnica / Comentário HEX (visível em INSPECIONAR CÓDIGO)</label>
+                      <div className="auto-style-122">
+                         <label className="auto-style-123 auto-style-124">Nota Técnica / Comentário HEX (visível em INSPECIONAR CÓDIGO)</label>
                          <textarea rows={3} value={technicalNote} onChange={e => setTechnicalNote(e.target.value)} placeholder="Ex: 00 4F 52 44 4F 00 00 ou anotações técnicas" style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, padding: 8 }} />
                       </div>
                    </div>
@@ -2574,17 +2574,17 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               <>
                 <div className="field-block">
                    <span className="field-title">1. IMAGEM PRINCIPAL</span>
-                      <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                      <div className="auto-style-125 auto-style-126 auto-style-127">
                          <label className="upload-btn">📷 SELECIONAR FOTO<input type="file" accept="image/*" hidden onChange={handleImgSelect} /></label>
                          <label className="upload-btn">🎬 SELECIONAR VÍDEO<input type="file" accept="video/*" hidden onChange={handleVideoSelect} /></label>
                          {videoUploading && <span style={{color:'#c6a45f', fontSize:12}}>Enviando vídeo...</span>}
                       </div>
-                      <div style={{marginTop:8}}>
+                      <div className="auto-style-128">
                          <label>OU URL DO VÍDEO (YouTube, Vimeo, etc.)</label>
                          <input value={videoUrlInput} onChange={e=>setVideoUrlInput(e.target.value)} placeholder="https://..." />
                       </div>
                             <div className="image-preview-box" style={{backgroundImage: previewUrl ? `url(${previewUrl})` : 'none'}}>
-                                 {!previewUrl && <span style={{fontSize:10, opacity:0.3}}>SEM IMAGEM</span>}
+                                 {!previewUrl && <span className="auto-style-129 auto-style-130">SEM IMAGEM</span>}
                                  {previewUrl && (
                                     <div className="image-edit-canvas" style={{position:'relative', width:'100%', height:'100%', backgroundImage: `url(${previewUrl})`, backgroundSize:'contain', backgroundPosition:'center', backgroundRepeat:'no-repeat'}}>
                                        {filterPreviewUrl && filterTransform && (
@@ -2607,7 +2607,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                                 pointerEvents: 'auto'
                                              }}
                                           >
-                                             <div style={{position:'absolute', right:6, top:6, zIndex:40, display:'flex', gap:6}}>
+                                             <div className="auto-style-131 auto-style-132 auto-style-133 auto-style-134 auto-style-135 auto-style-136">
                                                  <button className="upload-btn" onClick={(e)=>{ e.stopPropagation(); try { URL.revokeObjectURL(filterPreviewUrl); } catch(e){} setFilterPreviewUrl(null); setFilterFile(null); setFilterTransform(null); }}>Remover</button>
                                              </div>
                                              <div
@@ -2620,9 +2620,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                  )}
                             </div>
                       {videoPreviewUrl && (
-                         <div style={{marginTop:8}}>
+                         <div className="auto-style-137">
                             <small style={{color:'#c6a45f'}}>Pré-visualização de vídeo:</small>
-                            <div style={{marginTop:6}}>
+                            <div className="auto-style-138">
                               <video src={videoPreviewUrl} controls style={{maxWidth:'100%', maxHeight:160, display:'block', background:'#000'}} />
                             </div>
                          </div>
@@ -2635,7 +2635,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                      <p style={{fontSize:11, color:'#9fb9ff', marginBottom:10}}>
                         Use a imagem base para desenhar pistas que só aparecem quando o glitch é resolvido. O preview abaixo já aplica os sliders atuais.
                      </p>
-                     <div style={{display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', marginBottom:10}}>
+                     <div className="auto-style-139 auto-style-140 auto-style-141 auto-style-142 auto-style-143">
                         <button className="upload-btn" onClick={() => setShowGlitchDesigner(true)}>
                            🎨 DESIGNER DA CAMADA FOCO
                         </button>
@@ -2668,7 +2668,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                     <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:14, alignItems:'start'}}>
                       <div>
-                        <div style={{marginBottom:12}}>
+                        <div className="auto-style-144">
                            <label>Frequência de Fatias: <strong style={{color:'#64b5ff'}}>{glitchCorrectFrequency}</strong></label>
                            <input
                               type="range"
@@ -2681,7 +2681,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                            />
                         </div>
 
-                        <div style={{marginBottom:12}}>
+                        <div className="auto-style-145">
                            <label>Intensidade de Deslocamento: <strong style={{color:'#64b5ff'}}>{glitchCorrectShift}%</strong></label>
                            <input
                               type="range"
@@ -2694,7 +2694,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                            />
                         </div>
 
-                        <div style={{marginBottom:12}}>
+                        <div className="auto-style-146">
                            <label>Corrupção Cromática: <strong style={{color:'#64b5ff'}}>{glitchCorrectChromatic}%</strong></label>
                            <input
                               type="range"
@@ -2715,22 +2715,19 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                         <div style={{marginTop:12, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
                            <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Tolerância de acerto (sliders)</h5>
-                           <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:8, flexWrap:'wrap'}}>
+                           <div className="auto-style-147 auto-style-148 auto-style-149 auto-style-150 auto-style-151">
                               <span style={{fontSize:12, color:'#9fb9ff'}}>Dificuldade:</span>
                               <button
-                                 className={`upload-btn ${glitchDifficulty === 'easy' ? 'active' : ''}`}
+                                 className={`upload-btn auto-style-152 ${glitchDifficulty === 'easy' ? 'active' : ''}`}
                                  onClick={() => applyGlitchDifficulty('easy')}
-                                 style={{minWidth:90}}
                               >Fácil</button>
                               <button
-                                 className={`upload-btn ${glitchDifficulty === 'normal' ? 'active' : ''}`}
+                                 className={`upload-btn auto-style-153 ${glitchDifficulty === 'normal' ? 'active' : ''}`}
                                  onClick={() => applyGlitchDifficulty('normal')}
-                                 style={{minWidth:90}}
                               >Normal</button>
                               <button
-                                 className={`upload-btn ${glitchDifficulty === 'hard' ? 'active' : ''}`}
+                                 className={`upload-btn auto-style-154 ${glitchDifficulty === 'hard' ? 'active' : ''}`}
                                  onClick={() => applyGlitchDifficulty('hard')}
-                                 style={{minWidth:90}}
                               >Difícil</button>
                               {glitchDifficulty === 'custom' && <span style={{fontSize:11, color:'#c6a45f'}}>Personalizado</span>}
                            </div>
@@ -2748,7 +2745,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                            <small style={{display:'block', marginTop:6, color:'#777'}}>Valores menores deixam o puzzle mais preciso; maiores permitem folga ao alinhar.</small>
                         </div>
 
-                        <div style={{marginTop:12}}>
+                        <div className="auto-style-155">
                            <h5 style={{margin:'0 0 8px 0', color:'#64b5ff'}}>Pontos de partida para o jogador</h5>
                            <p style={{fontSize:11, color:'#888', marginBottom:8}}>Defina de onde os controles começam para não entregar a resposta de imediato.</p>
                            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:10}}>
@@ -2772,11 +2769,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 )}
 
                 {(imgFile || previewUrl) && (
-                  <div style={{display:'flex', gap:15}}>
+                  <div className="auto-style-156 auto-style-157">
                      <div className="field-block" style={{flex:1, borderColor:'#b366ff'}}>
                         <span className="field-title" style={{color:'#b366ff'}}>2. LUZ NEGRA (UV)</span>
                         <p style={{fontSize:10, color:'#aaa'}}>Desenhe segredos visíveis apenas com lanterna.</p>
-                           <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                           <div className="auto-style-158 auto-style-159 auto-style-160">
                            <button onClick={()=>setEditorMode('uv')} className="upload-btn">🖌️ DESENHAR EFEITO</button>
                            <button
                               onClick={() => {
@@ -2791,9 +2788,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               🧪 ABRIR EDITOR (FORENSE)
                            </button>
                              {(forensicHiddenPreview || uvPreviewUrl) && (
-                                <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                <div className="auto-style-161 auto-style-162 auto-style-163">
                                    <img src={uvPreviewUrl || forensicHiddenPreview || ''} alt="UV preview" style={{width:88, height:64, objectFit:'cover', borderRadius:4, border:'1px solid rgba(255,255,255,0.06)'}} />
-                                   <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                                   <div className="auto-style-164 auto-style-165 auto-style-166">
                                       <button className="upload-btn" onClick={() => { 
                                         try { setUvEditorBaseUrl(uvPreviewUrl || forensicHiddenPreview || previewUrl); } catch(e){}; 
                                         if (forensicHiddenPreview) {
@@ -2816,16 +2813,16 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         
                         {/* FILTRO DE REVELAÇÃO */}
                         <div style={{marginBottom:15, padding:12, background:'rgba(52,152,219,0.05)', borderRadius:6, border:'1px solid rgba(52,152,219,0.2)'}}>
-                           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                           <div className="auto-style-167 auto-style-168 auto-style-169 auto-style-170">
                               <span style={{fontSize:11, fontWeight:'bold', color:'#3498db'}}>🔍 FILTRO DE REVELAÇÃO</span>
                            </div>
                            <p style={{fontSize:9, color:'#777', marginBottom:8}}>Desenhe segredos que aparecem ao ajustar brilho/contraste</p>
-                           <button onClick={()=>setEditorMode('filter')} className="upload-btn" style={{fontSize:11, padding:'8px 12px'}}>
+                           <button onClick={()=>setEditorMode('filter')} className="upload-btn auto-style-171 auto-style-172">
                               🖌️ DESENHAR CAMADA OCULTA
                            </button>
                            
                            {/* Advanced settings */}
-                           <div style={{marginTop:8}}>
+                           <div className="auto-style-173">
                               <button 
                                  onClick={() => setShowAdvancedFilterSettings(!showAdvancedFilterSettings)}
                                  style={{
@@ -2844,7 +2841,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                  }}
                               >
                                  <span>⚙️ Configurações Avançadas</span>
-                                 <span style={{fontSize:'12px'}}>{showAdvancedFilterSettings ? '▼' : '▶'}</span>
+                                 <span className="auto-style-174">{showAdvancedFilterSettings ? '▼' : '▶'}</span>
                               </button>
                               
                               {showAdvancedFilterSettings && (
@@ -2858,8 +2855,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     <label style={{fontSize:9, color:'#888', display:'block', marginBottom:6}}>
                                        GATILHOS DE REVELAÇÃO (BRILHO / CONTRASTE / SATURAÇÃO)
                                     </label>
-                                    <div style={{display:'flex', gap:5, marginBottom:8}}>
-                                       <div style={{flex:1}}>
+                                    <div className="auto-style-175 auto-style-176 auto-style-177">
+                                       <div className="auto-style-178">
                                           <label style={{fontSize:8, color:'#666', display:'block'}}>BRILHO</label>
                                           <input 
                                              type="number" 
@@ -2869,7 +2866,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                              style={{width:'100%', fontSize:'11px'}}
                                           />
                                        </div>
-                                       <div style={{flex:1}}>
+                                       <div className="auto-style-179">
                                           <label style={{fontSize:8, color:'#666', display:'block'}}>CONTRASTE</label>
                                           <input 
                                              type="number" 
@@ -2879,7 +2876,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                              style={{width:'100%', fontSize:'11px'}}
                                           />
                                        </div>
-                                       <div style={{flex:1}}>
+                                       <div className="auto-style-180">
                                           <label style={{fontSize:8, color:'#666', display:'block'}}>SAT</label>
                                           <input 
                                              type="number" 
@@ -2900,7 +2897,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         
                         {/* TERMAL */}
                         <div style={{marginBottom:0, padding:12, background:'rgba(255,100,0,0.05)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)'}}>
-                           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                           <div className="auto-style-181 auto-style-182 auto-style-183 auto-style-184">
                               <span style={{fontSize:11, fontWeight:'bold', color:'#ff6400'}}>🌡️ VISÃO TÉRMICA</span>
                            </div>
                            <p style={{fontSize:9, color:'#777', marginBottom:8}}>Simula câmera termográfica ao inspecionar</p>
@@ -2909,14 +2906,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                  type="checkbox" 
                                  checked={thermalEnabled} 
                                  onChange={e => setThermalEnabled(e.target.checked)}
-                                 style={{cursor:'pointer'}}
+                                 className="auto-style-185"
                               />
                               <span style={{fontSize:11, color:'#ccc'}}>Ativar modo termal na inspeção</span>
                            </label>
                            
                            {thermalEnabled && (
                               <div style={{marginTop:12, padding:10, background:'rgba(0,0,0,0.4)', borderRadius:4, border:'1px solid rgba(255,100,0,0.3)'}}>
-                                 <div style={{marginBottom:8}}>
+                                 <div className="auto-style-186">
                                     <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>TEXTO SECRETO (visível apenas no modo termal)</label>
                                     <textarea 
                                        value={thermalSecretText}
@@ -2926,7 +2923,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                        style={{width:'100%', background:'#111', border:'1px solid #444', color:'#ff6400', padding:8, fontSize:11, borderRadius:4, fontFamily:'monospace'}}
                                     />
                                  </div>
-                                 <div style={{marginBottom:8}}>
+                                 <div className="auto-style-187">
                                     <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>TAMANHO DA FONTE: {thermalFontSize}%</label>
                                     <input 
                                        type="range"
@@ -2938,7 +2935,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     />
                                     <p style={{fontSize:9, color:'#666', marginTop:2}}>50% = Pequeno | 100% = Normal | 200% = Gigante</p>
                                  </div>
-                                 <div style={{marginBottom:8}}>
+                                 <div className="auto-style-188">
                                     <label style={{fontSize:10, color:'#ff9', display:'block', marginBottom:4}}>POSIÇÃO VERTICAL: {thermalPositionY}%</label>
                                     <input 
                                        type="range"
@@ -2951,7 +2948,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     <p style={{fontSize:9, color:'#666', marginTop:2}}>0% = Topo | 50% = Meio | 100% = Fundo</p>
                                  </div>
                                  {(imgFile || previewUrl) && (
-                                    <div style={{marginBottom:8}}>
+                                    <div className="auto-style-189">
                                        <button 
                                           onClick={() => setShowThermalEditor(true)}
                                           style={{width:'100%', padding:'10px', background:'linear-gradient(135deg, #ff6400, #ff9500)', color:'#fff', border:'none', borderRadius:4, cursor:'pointer', fontSize:11, fontWeight:'bold', transition:'all 0.2s'}}
@@ -2991,20 +2988,20 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
                                  Som principal que o jogador ouve ao reproduzir a evidência (ex: música, conversa, ruído branco).
                               </p>
-                              <div style={{display:'flex', gap:10, marginBottom:12, flexWrap:'wrap'}}>
-                                 <label className="upload-btn" style={{flex:1, minWidth:'180px'}}>
+                              <div className="auto-style-190 auto-style-191 auto-style-192 auto-style-193">
+                                 <label className="upload-btn auto-style-194 auto-style-195">
                                     📂 Selecionar Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} />
                                  </label>
-                                 <button className="upload-btn" onClick={() => setShowMixer(true)} style={{minWidth:'180px'}}>
+                                 <button className="upload-btn auto-style-196" onClick={() => setShowMixer(true)}>
                                     🎛️ Estação de Mixagem
                                  </button>
                               </div>
                               {audioBase && (
                                  <div style={{padding:'10px', background:'rgba(0,243,255,0.05)', borderRadius:'6px', border:'1px solid rgba(0,243,255,0.15)'}}>
-                                    <div style={{display:'flex', alignItems:'center', gap:8}}>
-                                       <span style={{fontSize:18}}>✓</span>
-                                       <span className="file-status" style={{margin:0}}>{audioBase.name}</span>
+                                    <div className="auto-style-197 auto-style-198 auto-style-199">
+                                       <span className="auto-style-200">✓</span>
+                                       <span className="file-status auto-style-201">{audioBase.name}</span>
                                     </div>
                                  </div>
                               )}
@@ -3016,7 +3013,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
                                  Informação secreta escondida no áudio. Pode ser voz reversa, espectrograma com imagem, ou sinal codificado.
                               </p>
-                              <div style={{display:'flex', gap:10, flexWrap:'wrap', marginBottom:12}}>
+                              <div className="auto-style-202 auto-style-203 auto-style-204 auto-style-205">
                                  <label className="upload-btn" style={{flex:1, minWidth:'180px', borderColor:'rgba(198,164,95,0.3)', color:'#c6a45f'}}>
                                     📂 Upload de Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} />
@@ -3031,8 +3028,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               </div>
                               {audioHidden && (
                                  <div style={{padding:'10px', background:'rgba(198,164,95,0.08)', borderRadius:'6px', border:'1px solid rgba(198,164,95,0.2)'}}>
-                                    <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
-                                       <span style={{fontSize:18}}>✓</span>
+                                    <div className="auto-style-206 auto-style-207 auto-style-208 auto-style-209">
+                                       <span className="auto-style-210">✓</span>
                                        <span className="file-status" style={{margin:0, background:'rgba(198,164,95,0.15)', color:'#c6a45f'}}>{audioHidden.name}</span>
                                        {audioHiddenUploading && (
                                           <span style={{fontSize:11, color:'#c6a45f', padding:'4px 8px', background:'rgba(198,164,95,0.1)', borderRadius:'4px'}}>
@@ -3152,10 +3149,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     border:'1px dashed rgba(255,255,255,0.05)'
                                  }}>
                                     <div>
-                                       <div style={{fontSize:48, marginBottom:16, opacity:0.3}}>🎵</div>
+                                       <div className="auto-style-211 auto-style-212 auto-style-213">🎵</div>
                                        <p style={{fontSize:13, color:'#666', lineHeight:1.6}}>
                                           Selecione um áudio ambiente<br/>
-                                          <span style={{fontSize:11}}>(Camada A) para iniciar o teste</span>
+                                          <span className="auto-style-214">(Camada A) para iniciar o teste</span>
                                        </p>
                                     </div>
                                  </div>
@@ -3249,10 +3246,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  </div>
                  {isShredded && (
                     <>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10, flexDirection: 'column' }}>
+                      <div className="flex auto-style-215 items-start auto-style-216 flex-col">
                          <div style={{ width: '100%' }}>
-                            <label style={{ marginBottom: 6, display: 'block' }}>Formato do Puzzle</label>
-                            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                            <label className="auto-style-217 auto-style-218">Formato do Puzzle</label>
+                            <div className="flex auto-style-219 auto-style-220">
                                <button 
                                  className={`btn-stamp shredder-format-btn ${shredRows === 1 && shredCols === 8 ? 'active' : ''}`} 
                                  onClick={() => { setShredRows(1); setShredCols(8); }}
@@ -3283,7 +3280,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               border: '1px solid rgba(0, 243, 255, 0.15)',
                               borderRadius: 6
                             }}>
-                              <div style={{ flex: 1 }}>
+                              <div className="flex-1">
                                 <label style={{ fontSize: 11, color: '#8fa', marginBottom: 4, display: 'block' }}>
                                   📏 Linhas (Rows)
                                 </label>
@@ -3310,7 +3307,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                 paddingBottom: 6
                               }}>×</div>
                               
-                              <div style={{ flex: 1 }}>
+                              <div className="flex-1">
                                 <label style={{ fontSize: 11, color: '#8fa', marginBottom: 4, display: 'block' }}>
                                   📐 Colunas (Cols)
                                 </label>
@@ -3373,18 +3370,18 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    </div>
                  )}
                  
-                 <div style={{ marginTop: 8 }}>
+                 <div className="auto-style-221">
                     <label>TEXTO REAL (opcional)</label>
                     <textarea rows={2} value={realText} onChange={e => setRealText(e.target.value)} placeholder="Texto em Português que aparecerá com a lente." />
                  </div>
-                 <div style={{ marginTop: 8 }}>
+                 <div className="auto-style-222">
                     <label>TEXTO CIFRADO (opcional)</label>
                     <input value={cipherText} onChange={e => setCipherText(e.target.value)} placeholder="Deixe vazio para gerar símbolos automáticos" />
                  </div>
 
                  <div style={{ marginTop: 16, padding: '10px', background: 'rgba(100,100,255,0.08)', border: '1px solid rgba(100,100,255,0.2)', borderRadius: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                       <span style={{ fontSize: 14 }}>⌨️ CÓDIGO HEXADECIMAL</span>
+                    <label className="flex items-center auto-style-223">
+                       <span className="auto-style-224">⌨️ CÓDIGO HEXADECIMAL</span>
                     </label>
                     <small style={{ display: 'block', marginTop: 6, color: '#888' }}>Mensagem que aparecerá no Inspetor Hexadecimal dentro do código aleatório.</small>
                     <textarea 
@@ -3394,8 +3391,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                        placeholder="Ex: SAFE_ROOM_LEVEL_7 ou CLASSIFIED_DATA_2025"
                        style={{ width: '100%', marginTop: 6, background: '#0a0a1a', border: '1px solid rgba(100,100,255,0.3)', color: '#8fb', fontFamily: 'monospace', fontSize: 11 }}
                     />
-                   <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-                      <label style={{ marginRight: 6 }}>Método:</label>
+                   <div className="flex auto-style-225 auto-style-226 items-center">
+                      <label className="auto-style-227">Método:</label>
                       <select value={hexEncodingMethod} onChange={e => setHexEncodingMethod(e.target.value as any)}>
                          <option value="plain">Texto (padrão)</option>
                          <option value="utf8hex">Hex (UTF-8)</option>
@@ -3403,7 +3400,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                          <option value="enigma">Enigma-simples + Hex</option>
                       </select>
                       {(hexEncodingMethod === 'xor' || hexEncodingMethod === 'enigma') && (
-                        <input placeholder="Chave" value={hexEncodingKey} onChange={e => setHexEncodingKey(e.target.value)} style={{ marginLeft: 8 }} />
+                        <input placeholder="Chave" value={hexEncodingKey} onChange={e => setHexEncodingKey(e.target.value)} className="auto-style-228" />
                       )}
                    </div>
                  </div>
@@ -3427,8 +3424,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       <div style={{padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(100,150,255,0.2)', display:'flex', flexDirection:'column', gap:8}}>
                                     <span style={{fontSize:11, color:'#9fb9ff'}}>Mídia conectada. Ajuste os sliders na aba Visual para definir o quebra-cabeça.</span>
                         {glitchFocusedImagePreview && (
-                          <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
-                             <span style={{fontSize:18}}>✓</span>
+                          <div className="auto-style-229 auto-style-230 auto-style-231 auto-style-232">
+                             <span className="auto-style-233">✓</span>
                              <span style={{fontSize:11, color:'#7bd7ff'}}>Camada de foco pronta — criada no Designer da aba Visual.</span>
                           </div>
                         )}
@@ -3437,7 +3434,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  </div>
 
                 {/* Briefing e dica rápida */}
-                <div style={{marginBottom:20}}>
+                <div className="auto-style-234">
                    <h4 style={{color:'#64b5ff', marginTop:0}}>🧭 BRIEFING DO PUZZLE</h4>
                    <label>Como o jogador encontra/ativa este puzzle?</label>
                    <textarea
@@ -3448,7 +3445,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       style={{width:'100%', marginTop:4}}
                    />
 
-                   <label style={{display:'block', marginTop:12}}>Dica curta (opcional)</label>
+                   <label className="auto-style-235 auto-style-236">Dica curta (opcional)</label>
                    <textarea
                       value={glitchHint}
                       onChange={e => setGlitchHint(e.target.value)}
@@ -3504,7 +3501,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                 <div style={{marginBottom:20, padding:'12px', background:'rgba(12,12,18,0.7)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:8}}>
                    <h4 style={{color:'#64b5ff', marginTop:0}}>🧠 CONEXÕES NARRATIVAS</h4>
-                   <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                   <div className="auto-style-237 auto-style-238 auto-style-239">
                       <label style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#ccc'}}>
                          <input type="checkbox" checked={narrativeLinks.audioHintsVisual} onChange={e => setNarrativeLinks(v => ({ ...v, audioHintsVisual: e.target.checked }))} />
                          O áudio contém a dica para o ajuste visual
@@ -3547,7 +3544,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    </select>
 
                    <div style={{marginBottom:12, padding:'10px', background:'rgba(100,150,255,0.08)', border:'1px solid rgba(100,150,255,0.2)', borderRadius:6}}>
-                      <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}}>
+                      <label className="auto-style-240 auto-style-241 auto-style-242 auto-style-243">
                         <input type="checkbox" checked={glitchRequireKeyword} onChange={e => setGlitchRequireKeyword(e.target.checked)} disabled={loading} />
                         <span>Exigir digitação pós-ajuste (assinatura digital)</span>
                       </label>
@@ -3611,7 +3608,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  <span className="field-title">🔐 CONFIGURAÇÃO DA MEGA-PISTA (VERDADE FINAL)</span>
                  
                  {/* Seção: Verdade Final */}
-                 <div style={{marginBottom:20}}>
+                 <div className="auto-style-244">
                     <h4 style={{color:'#ff6400', marginTop:0}}>🌟 A VERDADE FINAL</h4>
                     <label>Texto da Verdade (será revelado ao desbloquear):</label>
                     <textarea
@@ -3627,16 +3624,16 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  </div>
 
                  {/* Seção: Imagem */}
-                 <div style={{marginBottom:20}}>
+                 <div className="auto-style-245">
                     <h4 style={{color:'#ff6400', marginTop:0}}>🖼 IMAGEM DA VERDADE (opcional)</h4>
                     <label>Upload da imagem final:</label>
-                    <div style={{display:'flex', gap:8, alignItems:'center', marginTop:8}}>
-                       <label className="upload-btn" style={{flex:1}}>📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleMegaImageSelect} disabled={loading} /></label>
+                    <div className="auto-style-246 auto-style-247 auto-style-248 auto-style-249">
+                       <label className="upload-btn auto-style-250">📂 SELECIONAR<input type="file" accept="image/*" hidden onChange={handleMegaImageSelect} disabled={loading} /></label>
                     </div>
                     {megaImagePreview && (
                        <div style={{marginTop:8, padding:10, background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)'}}>
-                          <div style={{display:'flex', alignItems:'center', gap:8}}>
-                             <span style={{fontSize:18}}>✓</span>
+                          <div className="auto-style-251 auto-style-252 auto-style-253">
+                             <span className="auto-style-254">✓</span>
                              <span style={{color:'#888', fontSize:11}}>{megaImageFile?.name}</span>
                           </div>
                           <img src={megaImagePreview} alt="Imagem Final" style={{maxWidth:'100%', maxHeight:150, marginTop:8, borderRadius:4}} />
@@ -3650,7 +3647,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     <p style={{fontSize:11, color:'#888', marginBottom:12}}>Selecione quais Glitch Puzzles são necessários para desbloquear esta mega-pista.</p>
 
                     {availablePuzzles.length > 0 && (
-                       <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:12}}>
+                       <div className="auto-style-255 auto-style-256 auto-style-257 auto-style-258">
                           <select
                             value={megaSelectedPuzzle}
                             onChange={e => setMegaSelectedPuzzle(e.target.value)}
@@ -3662,7 +3659,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             ))}
                           </select>
                           <button
-                            className="upload-btn"
+                            className="upload-btn auto-style-259"
                             onClick={() => {
                               if (megaSelectedPuzzle && !megaRequiredPuzzleIds.includes(megaSelectedPuzzle)) {
                                 setMegaRequiredPuzzleIds([...megaRequiredPuzzleIds, megaSelectedPuzzle]);
@@ -3670,7 +3667,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                               }
                             }}
                             disabled={!megaSelectedPuzzle}
-                            style={{minWidth:160}}
                           >
                             Adicionar
                           </button>
@@ -3682,7 +3678,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           Nenhum quebra-cabeça de glitch encontrado nesta investigação. Crie pelo menos um para criar uma mega-pista.
                        </div>
                     ) : (
-                       <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                       <div className="auto-style-260 auto-style-261 auto-style-262">
                           {availablePuzzles.map(puzzle => (
                              <label key={puzzle.id} style={{display:'flex', alignItems:'center', gap:8, padding:8, background:'rgba(0,0,0,0.2)', borderRadius:4, cursor:'pointer'}}>
                                 <input
@@ -3696,7 +3692,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                       }
                                    }}
                                    disabled={loading}
-                                   style={{cursor:'pointer'}}
+                                   className="auto-style-263"
                                 />
                                 <span style={{color:'#ccc', fontSize:12}}>{puzzle.title}</span>
                              </label>
@@ -3729,12 +3725,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 </div>
 
                 {/* GRID DE CONFIGURAÇÕES */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="auto-style-264 auto-style-265 auto-style-266">
                   
                   {/* COLUNA 1: PROPRIEDADES DO ARQUIVO */}
                   <div className="config-group">
                     <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 PROPRIEDADES DO ARQUIVO</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col auto-style-267">
                       {[
                         { id: 'fileType', label: '📄 Tipo de Arquivo' },
                         { id: 'size', label: '📊 Tamanho (Bytes)' },
@@ -3755,7 +3751,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         { id: 'personStatus', label: '💓 Status Vital' },
                         { id: 'personOccupation', label: '💼 Ocupação' },
                       ].map(f => (
-                        <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                        <label key={f.id} className="checkbox-label flex items-center auto-style-268 auto-style-269 cursor-pointer">
                           <input 
                             type="checkbox" 
                             checked={fieldVisibilityConfig.fileProperties.visibleFields.includes(f.id as any)}
@@ -3776,7 +3772,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     {evidenceType === 'glitch_puzzle' && (
                       <>
                         <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 ELEMENTOS DO PUZZLE</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 15 }}>
+                        <div className="flex flex-col auto-style-270 auto-style-271">
                           {[
                             { id: 'accessInstructions', label: '▶️ Instruções de Acesso' },
                             { id: 'hint', label: '💡 Dica do Enigma' },
@@ -3814,7 +3810,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     {evidenceType === 'mega_clue' && (
                       <>
                         <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 SEÇÕES DA MEGA-PISTA</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div className="flex flex-col auto-style-272">
                           {[
                             { id: 'hints', label: 'Lista de Dicas' },
                             { id: 'progress', label: 'Barra de Progresso' },
@@ -3853,7 +3849,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     </label>
 
                     {fieldVisibilityConfig.customMetadata.enableCustomFields && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflowY: 'auto', paddingRight: 8 }}>
+                      <div className="flex flex-col auto-style-273 auto-style-274 auto-style-275 auto-style-276">
                         {[
                           { id: 'audio_config', label: '🔊 Config de Áudio' },
                           { id: 'thermal_keyword', label: '🔥 Palavra-chave Térmica' },
@@ -3882,7 +3878,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           { id: 'hide_preview_board', label: '🙈 Ocultar Preview' },
                           { id: 'trigger_time', label: '⏱️ Tempo de Gatilho' },
                         ].map(f => (
-                          <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, cursor: 'pointer' }}>
+                          <label key={f.id} className="checkbox-label flex items-center auto-style-277 auto-style-278 cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={fieldVisibilityConfig.customMetadata.defaultVisibleCustomFields.includes(f.id)}
@@ -3913,13 +3909,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 </p>
 
                 {/* GRID 3 COLUNAS */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 15 }}>
+                <div className="auto-style-279 auto-style-280 auto-style-281">
                   
                   {/* COLUNA 1: PUZZLE */}
                   {evidenceType === 'glitch_puzzle' && (
                     <div className="config-group">
                       <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 GLITCH PUZZLE</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="flex flex-col auto-style-282">
                         {[
                           { id: 'showAccessInstructions', label: '▶️ Como Acessar' },
                           { id: 'showHint', label: '💡 Dica' },
@@ -3946,7 +3942,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {/* COLUNA 1/2: FILE PROPERTIES */}
                   <div className="config-group">
                     <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 METADADOS DE ARQUIVO</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col auto-style-283">
                       {[
                         { id: 'showFileType', label: '📄 Tipo de arquivo' },
                         { id: 'showSize', label: '📊 Tamanho' },
@@ -3960,7 +3956,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         { id: 'showLockStatus', label: '🔒 Status de Bloqueio' },
                         { id: 'showPersonInfo', label: '👤 Info de Pessoa' },
                       ].map(f => (
-                        <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                        <label key={f.id} className="flex items-center auto-style-284 auto-style-285 cursor-pointer">
                           <input 
                             type="checkbox" 
                             checked={displayConfig.fileProperties[f.id as keyof typeof displayConfig.fileProperties]}
@@ -3978,7 +3974,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {/* COLUNA 2: VISUAL & MÍDIA */}
                   <div className="config-group">
                     <h4 style={{ fontSize: 12, color: '#ff6db3', marginBottom: 10, borderBottom: '1px solid #333' }}>🎨 VISUAL & MÍDIA</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col auto-style-286">
                       {[
                         { id: 'showThermalData', label: '🔥 Dados Térmicos' },
                         { id: 'showUVLayer', label: '💡 Camada UV' },
@@ -3988,7 +3984,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         { id: 'showHiddenAudio', label: '🎵 Áudio Oculto' },
                         { id: 'showChatData', label: '💬 Conversas de Chat' },
                       ].map(f => (
-                        <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer' }}>
+                        <label key={f.id} className="flex items-center auto-style-287 auto-style-288 cursor-pointer">
                           <input 
                             type="checkbox" 
                             checked={displayConfig.media[f.id as keyof typeof displayConfig.media]}
@@ -4004,7 +4000,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                     {/* CIFRAS & FRAGMENTOS */}
                     <h4 style={{ fontSize: 12, color: '#a366ff', marginTop: 15, marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 CIFRAS & FRAGMENTOS</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="flex flex-col auto-style-289">
                       {[
                         { id: 'showShredded', label: '📃 Documentos Fragmentados' },
                         { id: 'showCipherText', label: '🔐 Texto Cifrado' },
@@ -4030,7 +4026,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {evidenceType === 'mega_clue' && (
                     <div className="config-group">
                       <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔮 MEGA-PISTA</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="flex flex-col auto-style-290">
                         {[
                           { id: 'showHints', label: '💡 Dicas' },
                           { id: 'showAnswer', label: '⚠️ Resposta', warn: true },
@@ -4079,7 +4075,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         {(loading || videoUploading) && Object.keys(uploadProgress).length > 0 && (
            <div style={{padding: '12px 20px', background: 'rgba(0,0,0,0.5)', borderTop: '1px solid rgba(100,150,255,0.2)'}}>
               {Object.entries(uploadProgress).map(([key, value]) => (
-                 <div key={key} style={{marginBottom: 8}}>
+                 <div key={key} className="auto-style-291">
                     <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginBottom: 4}}>
                        <span>{key === 'image' ? 'Imagem' : key === 'video' ? 'Vídeo' : key === 'uv' ? 'UV' : key === 'filter' ? 'Filtro' : key}</span>
                        <span>{value}%</span>
@@ -4093,9 +4089,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
         )}
 
       {showMixer && (
-         <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+         <div className="auto-style-292 auto-style-293 auto-style-294 flex items-center justify-center auto-style-295">
             <div style={{ width: 'min(1000px,96%)', background: '#0b0b0b', borderRadius: 8, padding: 12 }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+               <div className="flex justify-between items-center auto-style-296">
                   <strong style={{ color: '#fff' }}>Estação de Mixagem — Visualizador de Espectrograma</strong>
                   <button className="btn-cancel" onClick={() => setShowMixer(false)}>Fechar</button>
                </div>
@@ -4106,7 +4102,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          </div>
       )}
       {editorMode && (previewUrl || uvEditorBaseUrl) && (
-         <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
+         <div className="auto-style-297 auto-style-298 auto-style-299 auto-style-300 auto-style-301 auto-style-302 auto-style-303">
             <div style={{width:'min(1200px,96%)'}}>
               <UVEditor 
                  baseImageUrl={uvEditorBaseUrl || previewUrl}
@@ -4184,7 +4180,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          )}
       
       {showAudioForgeFor && (
-         <div style={{ position: 'fixed', inset: 0, zIndex: 16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+         <div className="auto-style-304 auto-style-305 auto-style-306 auto-style-307 auto-style-308 auto-style-309 auto-style-310">
             <div style={{ width: 'min(940px,96%)' }}>
                <AudioForge
                   spectrogramUrl={audioHiddenPreview}

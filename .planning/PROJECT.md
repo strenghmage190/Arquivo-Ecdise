@@ -33,6 +33,14 @@ Clean, maintainable component code (no inline styles) without losing any of the 
 - Altering the backend or database interactions — scope is strictly UI/UX structural refactoring.
 - Removing existing High-tech effects (glitch-anim, scanline, pulse) — strictly prohibited by design rules.
 
+## Current State
+
+**v1.0 (Shipped)**: Refatoração concluída, estilos inline movidos para CSS, Cyberpunk preservado.
+
+## Next Milestone Goals
+
+*(TBD - pending /gsd-new-milestone)*
+
 ## Context
 
 - The system is functionally complete and stable.
