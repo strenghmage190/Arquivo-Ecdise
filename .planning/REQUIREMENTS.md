@@ -54,19 +54,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UV-01 | — | Pending |
-| UV-02 | — | Pending |
-| UV-03 | — | Pending |
-| UV-04 | — | Pending |
-| UV-05 | — | Pending |
-| UV-06 | — | Pending |
-| UV-07 | — | Pending |
+| UV-01 | Phase 4 | Pending |
+| UV-02 | Phase 6 | Pending |
+| UV-03 | Phase 4 | Pending |
+| UV-04 | Phase 3 | Pending |
+| UV-05 | Phase 5 | Pending |
+| UV-06 | Phase 5 | Pending |
+| UV-07 | Phase 7 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 7 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 7 ⚠️
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-14*
-*Last updated: 2026-08-14 after milestone v1.2 definition*
+*Last updated: 2026-08-14 after v1.2 roadmap creation*
