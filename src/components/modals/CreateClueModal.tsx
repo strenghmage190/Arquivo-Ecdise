@@ -27,6 +27,7 @@ import './CreateClueModal.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
 import GlitchImageEngine from '../tools/GlitchImageEngine';
 import AudioForge from '../tools/AudioForge';
+import AudioLab from '../tools/audiolab/AudioLab';
 import ForensicChannelEditor, { ForensicConfig } from '../tools/ForensicChannelEditor';
 import { supabase } from '../../supabaseClient';
 import { FieldVisibilityConfig, defaultFieldVisibility, fieldVisibilityPresets } from '../../config/fieldVisibilityConfig';
@@ -3105,51 +3106,28 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                       Use as ferramentas abaixo para testar como o áudio ficará no jogo.
                                    </p>
                                    
-                                   {/* Advanced Audio Lab */}
-                                   <div className="flex-1">
-                                      <AdvancedAudioLab 
-                                        baseSrc={audioBasePreview} 
-                                        hiddenSrc={audioHiddenPreview} 
-                                        targetFreq={freq} 
-                                        triggerTime={triggerTime} 
-                                        onTriggerChange={setTriggerTime} 
-                                      />
-                                   </div>
-
-                                   {/* Spectrogram Creator */}
-                                   <div style={{marginTop:12, padding:'12px', background:'rgba(0,0,0,0.3)', borderRadius:6, border:'1px solid rgba(0,243,255,0.1)'}}>
-                                      <SpectrogramCreator onGenerated={async (wavBlob, buffer) => {
-                                          try {
-                                             // Revoke and create new URL
-                                             revokeUrl(audioHiddenPreview);
-                                             const file = new File([wavBlob], `spectrogram_${Date.now()}.wav`, { type: 'audio/wav' });
-                                             setAudioHidden(file);
-                                             const localUrl = createAndRegisterBlobUrl(file);
-                                             if (localUrl) {
-                                                setAudioHiddenPreview(localUrl);
-                                                setAudioHiddenUploadedUrl(null);
-
-                                                setAudioHiddenUploading(true);
-                                                try {
-                                                   const publicUrl = await uploadAudio(file, investigationId);
-                                                   if (publicUrl) {
-                                                      setAudioHiddenUploadedUrl(publicUrl);
-                                                      revokeUrl(localUrl);
-                                                      setAudioHiddenPreview(publicUrl);
-                                                   } else {
-                                                      console.warn('Upload retornou URL vazia');
-                                                   }
-                                                } catch (uploadErr) {
-                                                   console.error('Upload failed', uploadErr);
-                                                   alert('Falha ao enviar áudio gerado.');
-                                                } finally {
-                                                   setAudioHiddenUploading(false);
-                                                }
-                                             }
-                                          } catch (e) {
-                                             console.error('Failed to process generated audio', e);
-                                          }
-                                      }} />
+                                   {/* AudioLab — unified steganography studio */}
+                                   <div style={{marginTop:12}}>
+                                      <button
+                                        style={{
+                                          display:'flex', alignItems:'center', gap:8,
+                                          padding:'10px 18px', borderRadius:6, cursor:'pointer',
+                                          background:'linear-gradient(135deg,#00c3cc,#0066ff)',
+                                          border:'none', color:'#fff', fontWeight:700, fontSize:13,
+                                          letterSpacing:'0.5px', boxShadow:'0 0 16px #00f3ff44'
+                                        }}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          setShowAudioForgeFor('hidden');
+                                        }}
+                                      >
+                                        🎛 Abrir AudioLab
+                                      </button>
+                                      {audioHidden && (
+                                        <span style={{display:'block',marginTop:6,fontSize:11,color:'#00f3ffaa'}}>
+                                          ✓ {audioHidden.name} carregado
+                                        </span>
+                                      )}
                                    </div>
                                  </div>
                               ) : (
@@ -4196,39 +4174,32 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          )}
       
       {showAudioForgeFor && (
-         <div className="auto-style-304 auto-style-305 auto-style-306 auto-style-307 auto-style-308 auto-style-309 auto-style-310">
-            <div style={{ width: 'min(940px,96%)' }}>
-               <AudioForge
-                  spectrogramUrl={audioHiddenPreview}
-                  triggerTime={triggerTime}
-                  onClose={() => setShowAudioForgeFor(null)}
-                  onSave={(file) => {
-                     if (showAudioForgeFor === 'hidden') {
-                        // Revoke previous URL
-                        revokeUrl(audioHiddenPreview);
-                        
-                        // Create and register new URL
-                        const newUrl = createAndRegisterBlobUrl(file);
-                        if (newUrl) {
-                           setAudioHidden(file);
-                           setAudioHiddenPreview(newUrl);
-                        }
-                     } else {
-                        // Revoke previous URL
-                        revokeUrl(audioBasePreview);
-                        
-                        // Create and register new URL
-                        const newUrl = createAndRegisterBlobUrl(file);
-                        if (newUrl) {
-                           setAudioBase(file);
-                           setAudioBasePreview(newUrl);
-                        }
-                     }
-                     setShowAudioForgeFor(null);
-                  }}
-               />
-            </div>
-         </div>
+         <AudioLab
+            isOpen={!!showAudioForgeFor}
+            onClose={() => setShowAudioForgeFor(null)}
+            onSave={async (file) => {
+               if (showAudioForgeFor === 'hidden') {
+                  revokeUrl(audioHiddenPreview);
+                  const newUrl = createAndRegisterBlobUrl(file);
+                  if (newUrl) {
+                     setAudioHidden(file);
+                     setAudioHiddenPreview(newUrl);
+                     setAudioHiddenUploadedUrl(null);
+                     setAudioHiddenUploading(true);
+                     try {
+                        const publicUrl = await uploadAudio(file, investigationId);
+                        if (publicUrl) { setAudioHiddenUploadedUrl(publicUrl); revokeUrl(newUrl); setAudioHiddenPreview(publicUrl); }
+                     } catch (e) { console.error('AudioLab upload failed', e); }
+                     finally { setAudioHiddenUploading(false); }
+                  }
+               } else {
+                  revokeUrl(audioBasePreview);
+                  const newUrl = createAndRegisterBlobUrl(file);
+                  if (newUrl) { setAudioBase(file); setAudioBasePreview(newUrl); }
+               }
+               setShowAudioForgeFor(null);
+            }}
+         />
       )}
 
       {showThermalEditor && imgFile && (
