@@ -1,7 +1,8 @@
 ---
 phase: 3
 slug: semantic-class-foundation-uv-04
-status: draft
+status: approved
+reviewed_at: 2026-08-15
 shadcn_initialized: false
 preset: none
 created: 2026-08-15
@@ -61,10 +62,10 @@ All values below replicate current inline rendering **exactly** (pixel-identical
 | `.uv-flex-row` | `display: flex; gap: 8px;` | :2874, :2985, :3065, :3086, :3127, :3129, :3134 |
 | `.uv-flex-row--push` | `margin-left: auto;` (standalone — no display:flex) | :2874 (header actions), :3129 (Inverter/Limpar), :3154 (mask hint div — pushes flex *child* right; element is NOT a flex container, do not add display) |
 | `.uv-hidden` | `display: none;` | :2893 (dock hidden file input) |
-| `.uv-helper-text` | `font-size: 12px; opacity: 0.85; line-height: 1.4;` | :2982, :3154 |
-| `.uv-helper-text--hint` | `font-size: 11px; opacity: 0.7; font-style: italic; margin-top: 8px;` | :3038 (RGB hint) |
-| `.uv-helper-text--faint` | `opacity: 0.8;` | :3080 ("Pré-visualização") |
-| `.uv-helper-text--note` | `font-size: 13px; opacity: 0.9; margin-top: 8px;` | :3084 (loading note) |
+| `.uv-helper-text` | `font-size: 12px; opacity: 0.85;` — **no `line-height`** (only :2982's inline had `lineHeight: 1.4`; it lives in the contextual `.uv-info-box .uv-helper-text` rule below — a base `line-height: 1.4` would grow :3038/:3080/:3084/:3154 boxes ~1–2px, breaking SC#2) | :2982 (description — gains 1.4 via contextual rule), :3154 (mask hint — no line-height, inherits default) |
+| `.uv-helper-text--hint` | `font-size: 11px; opacity: 0.7; font-style: italic; margin-top: 8px;` | :3038 (RGB hint — **standalone** `className="uv-helper-text--hint"`, do NOT compose with the base: :3038 sits inside `.uv-info-box` (:2980–:3041) and would otherwise match `.uv-info-box .uv-helper-text`, gaining `line-height: 1.4` + `margin-bottom: 12px` it does not have today → SC#2 violation) |
+| `.uv-helper-text--faint` | `opacity: 0.8;` | :3080 ("Pré-visualização" — compose `uv-helper-text uv-helper-text--faint` to supply the 12px size; outside `.uv-info-box`, so no line-height applies) |
+| `.uv-helper-text--note` | `font-size: 13px; opacity: 0.9; margin-top: 8px;` | :3084 (loading note — compose `uv-helper-text uv-helper-text--note`; no line-height) |
 
 ### Header (D-12 example)
 
@@ -93,12 +94,12 @@ All values below replicate current inline rendering **exactly** (pixel-identical
 | Class | CSS | JSX site |
 |-------|-----|----------|
 | `.uv-property-group` | `margin-top: 12px;` | :3045, :3051, :3060, :3073 |
-| `.uv-property-group--palette` | `margin-top: 0; margin-bottom: 12px;` | :2969 (Paleta — first child, inline was `marginBottom:12`) |
+| `.uv-property-group--palette` | `margin-top: 0; margin-bottom: 12px;` | :2969 (Paleta — first child, inline was `marginBottom:12`; **`className="uv-property-group uv-property-group--palette"` — base + variant BOTH required**: the base makes `.uv-property-group .uv-flex-row` fire for the color row below; the variant zeroes the base's `margin-top: 12px` so the group itself stays flush) |
 | `.uv-property-group label + label` | `margin-top: 8px;` | :3054 (Opacidade label) |
 | `.uv-property-group input + label` | `margin-top: 8px;` | :3063, :3076 |
 | `.uv-property-group .uv-flex-row` | `margin-top: 8px;` | :3065, :3086 (Pronto/Cancelar rows) |
 | `.uv-property-group .uv-image-preview` | `margin-top: 8px;` | :3079 |
-| `.uv-color-row` | `align-items: center;` (gap/flex from `.uv-flex-row`; the 8px top margin comes from `.uv-property-group .uv-flex-row`) | :2971 |
+| `.uv-color-row` | `align-items: center;` (gap/flex from `.uv-flex-row`; the 8px top margin comes from `.uv-property-group .uv-flex-row`, which fires because the :2969 palette div carries `uv-property-group uv-property-group--palette`) | :2971 |
 
 **Guardrail:** do NOT switch `.uv-property-group` to `display:flex; gap:...` — existing `.properties-panel label { margin-bottom: 6px }` (:791-796) adds to flex gaps and would change every label→control distance. Contextual margin rules above reproduce today's pixel spacing exactly.
 
@@ -118,7 +119,7 @@ All values below replicate current inline rendering **exactly** (pixel-identical
 |-------|-----|----------|
 | `.uv-info-box` | `margin-top: 12px; padding: 12px; background: rgb(var(--nexus-blue-rgb) / 3%); border: 1px solid rgb(var(--nexus-blue-rgb) / 12%); border-radius: 8px;` | :2980 |
 | `.uv-info-box-title` | `font-size: 14px; font-weight: 600; color: var(--nexus-blue); display: block; margin-bottom: 8px;` | :2981 ("🎯 Canal Alvo RGB") |
-| `.uv-info-box .uv-helper-text` | `margin-bottom: 12px;` (contextual — description spacing) | :2982 |
+| `.uv-info-box .uv-helper-text` | `margin-bottom: 12px; line-height: 1.4;` (contextual — description spacing + the ONLY `line-height: 1.4` in the refactor; by the mapping above, only :2982 carries `.uv-helper-text` inside the box) | :2982 (description) |
 
 ### Channel buttons (D-08 — colors 100% in CSS, className swap is the only edit)
 
@@ -209,7 +210,7 @@ Declared sizes/weights for ALL new rules (existing rules untouched):
 
 | Role | Size | Weight | Line Height | Notes |
 |------|------|--------|-------------|-------|
-| Helper text (base) | 12px | 400 | 1.4 | `.uv-helper-text` |
+| Helper text (base) | 12px | 400 | inherit — 1.4 ONLY via `.uv-info-box .uv-helper-text` contextual rule (description :2982) | `.uv-helper-text` |
 | Helper hint | 11px | 400 | inherit | `.uv-helper-text--hint` (italic) |
 | Mask labels | 13px | 400 | inherit | `.uv-mask-paint-row label` |
 | Info-box title | 14px | 600 | inherit | `.uv-info-box-title` (cyan) |
@@ -293,4 +294,4 @@ No third-party registries declared. No component imports introduced. Styling is 
 - [ ] Dimension 5 Spacing: PASS (8-point scale + documented 6px/10px exceptions)
 - [ ] Dimension 6 Registry Safety: PASS (not applicable — no registries)
 
-**Approval:** pending
+**Approval:** approved — 2026-08-15 (checker non-blocking FLAGs resolved: `.uv-helper-text` line-height scoped to `.uv-info-box`; :2969 palette mapping made explicit with base + variant)
