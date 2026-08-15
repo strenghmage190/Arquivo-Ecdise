@@ -6,8 +6,8 @@
 
 ## Current Position
 
-- **Active Phase:** None
-- **Next Step:** Plan and execute Phase 4 (`/gsd-discuss-phase 4` or `/gsd-plan-phase 4`)
+- **Active Phase:** Phase 4 — Modularization, Subcomponent Extraction & Final Cleanup
+- **Next Step:** Plan Phase 4 (`/gsd-plan-phase 4`)
 - **Total Phases:** 4
 
 ## Current Phase
@@ -27,6 +27,7 @@
 | Phase 2 | LayersPanel & Layer Operations Refactor | Completed |
 | Phase 3 | Canvas Cursor, Pointer Feedback & Interactions | Completed |
 | Phase 4 | Modularization, Subcomponent Extraction & Cleanup | Pending |
+| Phase 5 | Photoshop/GIMP-Style Layers Panel Overhaul | Pending |
 
 ## Key Decisions
 
