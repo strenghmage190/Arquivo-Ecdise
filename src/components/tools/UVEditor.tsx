@@ -1022,7 +1022,16 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
         ctx.restore();
       }
 
-      // 3.5 Draw mask outside base image to visually indicate non-interactive area
+      // 3.5 Apply RGB Mode Forensic Multiply Mask
+      if (mode === 'rgb') {
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = targetChannel === 'R' ? '#ff0000' : targetChannel === 'G' ? '#00ff00' : '#0000ff';
+        ctx.fillRect(0, 0, clearW, clearH);
+        ctx.restore();
+      }
+
+      // 3.6 Draw mask outside base image to visually indicate non-interactive area
       try {
         const ib = getImageBounds();
         if (ib) {
@@ -2204,6 +2213,26 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
     if (!canvas) return;
     // ensure latest drawing + layers are rendered
     redrawAll();
+    
+    // Apply hard forensic pixel isolation before export
+    if (mode === 'rgb') {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        try {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            if (targetChannel === 'R') { data[i + 1] = 0; data[i + 2] = 0; }
+            else if (targetChannel === 'G') { data[i] = 0; data[i + 2] = 0; }
+            else if (targetChannel === 'B') { data[i] = 0; data[i + 1] = 0; }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        } catch (e) {
+          console.error("Error applying forensic RGB isolation", e);
+        }
+      }
+    }
+
     canvas.toBlob((blob) => {
       if (!blob) return;
       const timestamp = Date.now();
@@ -3024,12 +3053,46 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
               }}
             />
           ) : null}
-          {maskCursor.visible ? (
+          {maskCursor.visible && (tool === 'draw' || tool === 'erase' || tool === 'placeText' || tool === 'placeImage') ? (
             <div
               className="mask-cursor"
               style={{ left: maskCursor.x + 'px', top: maskCursor.y + 'px', width: brushSize + 'px', height: brushSize + 'px' }}
             />
           ) : null}
+          {tool === 'select' && selectedLayer ? (() => {
+            const l = layers.find(l => l.id === selectedLayer);
+            if (!l) return null;
+            const s = scaleRef.current || 1;
+            const p = panRef.current || { x: 0, y: 0 };
+            const left = (l.x || 0) * s + p.x;
+            const top = (l.y || 0) * s + p.y;
+            let width = 0;
+            let height = 0;
+            if (l.type === 'image' && l.img) {
+              width = (l.img.naturalWidth || l.width || 0) * (l.scale || 1) * s;
+              height = (l.img.naturalHeight || l.height || 0) * (l.scale || 1) * s;
+            } else if (l.type === 'text') {
+              width = ((l.text?.length || 0) * (l.size || 16) * 0.6) * s;
+              height = (l.size || 16) * 1.2 * s;
+            }
+            if (width === 0) return null;
+            return (
+              <div 
+                className="transform-bounding-box"
+                style={{
+                  left: left - width/2,
+                  top: top - height/2,
+                  width,
+                  height
+                }}
+              >
+                <div className="transform-handle" style={{ left: 0, top: 0, cursor: 'nwse-resize' }} />
+                <div className="transform-handle" style={{ left: '100%', top: 0, cursor: 'nesw-resize' }} />
+                <div className="transform-handle" style={{ left: 0, top: '100%', cursor: 'nesw-resize' }} />
+                <div className="transform-handle" style={{ left: '100%', top: '100%', cursor: 'nwse-resize' }} />
+              </div>
+            );
+          })() : null}
         </div>
       </div>
 

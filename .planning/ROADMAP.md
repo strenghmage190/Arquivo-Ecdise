@@ -69,7 +69,7 @@ Modernize, reorganize, and refactor the `UVEditor` and `LayersPanel` forensic ed
 
 - [x] **Phase 1: Design System & Iconography Modernization**
 - [x] **Phase 2: LayersPanel & Layer Operations Refactor**
-- [ ] **Phase 3: Canvas Cursor, Pointer Feedback & Interactions (including RGB Channel Isolation)**
+- [x] **Phase 3: Canvas Cursor, Pointer Feedback & Interactions (including RGB Channel Isolation)**
 - [ ] **Phase 4: Modularization, Subcomponent Extraction & Final Cleanup**
 
 ---

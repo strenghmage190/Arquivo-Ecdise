@@ -412,11 +412,62 @@
   pointer-events: none;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid rgb(255 255 255 / 90%);
-  background: rgb(255 255 255 / 6%);
-  mix-blend-mode: overlay;
-  box-shadow: 0 0 6px rgb(0 0 0 / 60%);
-  z-index: 30;
+  border: 1px solid rgba(0, 255, 255, 0.8);
+  background: transparent;
+  mix-blend-mode: difference;
+  z-index: 1200; /* Above canvas */
+}
+
+/* Central crosshair for anti-glare tracking */
+.viewport-canvas .mask-cursor::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border-top: 1px solid rgba(0, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.8);
+}
+
+.viewport-canvas .mask-cursor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border-left: 1px solid rgba(0, 255, 255, 0.8);
+  border-right: 1px solid rgba(0, 255, 255, 0.8);
+}
+
+/* Transform Bounding Box for Selected Layers */
+.transform-bounding-box {
+  position: absolute;
+  border: 1px dashed var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(57, 240, 255, 0.2), inset 0 0 8px rgba(57, 240, 255, 0.1);
+  pointer-events: none; /* Let canvas handle drag inside box if needed, handles catch pointer */
+  z-index: 1150; /* Above canvas but below cursor */
+  transform-origin: center center;
+}
+
+.transform-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--nexus-dark);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto; /* Catch mouse events */
+}
+.transform-handle:hover {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
 }
 
 /* Ensure canvas scales responsively within viewport */
