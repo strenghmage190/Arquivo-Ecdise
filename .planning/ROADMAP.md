@@ -27,7 +27,15 @@ Phase numbering continues from v1.0 (Phase 1) and v1.1 (Phase 2, scoped but skip
   2. The editor renders pixel-identical before/after the migration: 3-column grid (`display: grid` on `.uv-editor-panel`), panel backgrounds, header title text, and Save/Close pseudo-icon buttons all survive; semantic classes are ADDITIVE aliases (`.uv-workspace`, `.uv-sidebar`), never substitutions for load-bearing names (`.uv-editor-panel`, `.uv-right-panel`).
   3. Canvas interaction invariants survive: drawing works with mouse AND touch (`touch-action: none` re-homed to `.uv-canvas`), brush cursor hides over the canvas (`tool-draw`/`tool-erase` class-toggle intact), pan/zoom unaffected, and both hidden file inputs still open their pickers and insert images (`fileInputRef` mount order preserved — no deduplication).
   4. Performance-mode walkthrough: editor layout and colors survive `body.performance-mode` (explicit restoration block present — no black-on-transparent editor); no `!important` in any new rule; new button classes added to the focus-visible selector list.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0 guard test (fs-based, RED until gate) + deviation checkpoint (dead `label + label` → `input + label`) + "Semantic classes" block appended to UVEditor.css
+- [ ] 03-02-PLAN.md — Header + hidden input + canvas (steps 1-3; 42→38): `.uv-panel-title`, `.uv-flex-row--push`, `.uv-hidden`, `.uv-canvas`, cursor/touch-action re-homing
+- [ ] 03-03-PLAN.md — Sidebar aliases + palette + info box (steps 4-6; 38→33): `.uv-workspace`/`.uv-sidebar`/`.uv-property-group`/`.uv-color-row`/`.uv-info-box`
+- [ ] 03-04-PLAN.md — Channel buttons + hint + channel name (step 7; 33→27) + human visual verification of active states
+- [ ] 03-05-PLAN.md — Property groups I + II (steps 8-9; 27→11): brush/softness/text/image groups, slider aliases, `.uv-image-preview`
+- [ ] 03-06-PLAN.md — Mask controls (step 10; 11→3) + FINAL GATE (42→3 proven, jest GREEN) + human walkthrough (Hooks 3/4/6)
 
 ### Phase 4: Canvas-area Upgrades (UV-01, UV-03)
 **Goal**: Users can identify the active tool at a glance and distinguish image content from empty space via a dark two-tone transparency checkerboard
