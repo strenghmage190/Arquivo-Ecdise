@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Info } from 'lucide-react';
+import { Tooltip } from 'react-tooltip';
+import 'react-tooltip/dist/react-tooltip.css';
 import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import UVEditor from '../tools/UVEditor';
@@ -81,6 +84,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
   const [tags, setTags] = useState('');
   const [discoveryCode, setDiscoveryCode] = useState('');
   const [isHidden, setIsHidden] = useState(false);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
 
   const [imgFile, setImgFile] = useState<File | null>(null);
    const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -1402,9 +1406,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
           });
 
        if (validationErrors.length > 0) {
-         alert('Erros de validação:\n' + validationErrors.map((e, i) => `${i + 1}. ${e}`).join('\n'));
+         setFormErrors(validationErrors);
          return;
        }
+       setFormErrors([]);
       
           // Determine whether security layer behavior applies
           const wantsSecurityLayer = Boolean(securityLayerEnabled) || evidenceType === 'glitch_puzzle';
@@ -2223,8 +2228,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    <span className="field-title">IDENTIFICAÇÃO</span>
                    <div className="auto-style-4 auto-style-5 auto-style-6">
                       <div className="auto-style-7">
-                         <label>TÍTULO DO ARQUIVO</label>
-                         <input autoFocus value={title} onChange={e=>setTitle(e.target.value)} />
+                         <label>IDENTIFICADOR DA EVIDÊNCIA</label>
+                         <input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Aguardando input..." />
+                         {formErrors.some(e => e.startsWith('Título')) && (
+                           <span style={{ color: '#ff003c', fontSize: '11px', textShadow: '0 0 5px #ff003c', marginTop: '4px', display: 'block' }}>ALERTA: Input Necessário</span>
+                         )}
                       </div>
                       <div className="auto-style-8">
                          <label>TAGS</label>
@@ -2238,16 +2246,23 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                       </label>
                       {isHidden && (
                          <div className="auto-style-17">
-                            <label>CÓDIGO DE DESCOBERTA</label>
-                            <input value={discoveryCode} onChange={e=>setDiscoveryCode(e.target.value.toUpperCase())} placeholder="EX: ALPHA-01" />
+                             <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                               CHAVE DE DESCRIPTOGRAFIA
+                               <Info size={16} data-tooltip-id="tt-discovery-code" data-tooltip-content="Código necessário para os jogadores desbloquearem esta pista" style={{ cursor: 'help', opacity: 0.7 }} />
+                             </label>
+                             <Tooltip id="tt-discovery-code" />
+                             <input value={discoveryCode} onChange={e=>setDiscoveryCode(e.target.value.toUpperCase())} placeholder="EX: ALPHA-01" />
+                             {formErrors.some(e => e.includes('código de descoberta')) && (
+                               <span style={{ color: '#ff003c', fontSize: '11px', textShadow: '0 0 5px #ff003c', marginTop: '4px', display: 'block' }}>ALERTA: Input Necessário</span>
+                             )}
                          </div>
                       )}
                    </div>
-                   <label>DESCRIÇÃO PÚBLICA</label>
-                   <textarea rows={3} value={descPublic} onChange={e=>setDescPublic(e.target.value)} />
+                   <label>RELATÓRIO OFICIAL (VISÍVEL)</label>
+                   <textarea rows={3} value={descPublic} onChange={e=>setDescPublic(e.target.value)} placeholder="Aguardando input..." />
                    <div className="auto-style-18">
-                      <label className="field-title auto-style-19 auto-style-20">OBSERVAÇÕES DO MESTRE (Oculto)</label>
-                      <textarea rows={2} value={descHidden} onChange={e=>setDescHidden(e.target.value)} style={{borderColor:'#c6a45f', background:'#1a1710'}} />
+                      <label className="field-title auto-style-19 auto-style-20">ARQUIVO CONFIDENCIAL (APENAS GM)</label>
+                      <textarea rows={2} value={descHidden} onChange={e=>setDescHidden(e.target.value)} placeholder="Aguardando input..." style={{borderColor:'#c6a45f', background:'#1a1710'}} />
                    </div>
                 </div>
 
