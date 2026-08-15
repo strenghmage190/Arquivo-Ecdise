@@ -4,6 +4,20 @@ import { Layer } from './tools/UVEditor';
 import { Tooltip } from './ui/Tooltip';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { LayerPreview } from './LayerPreview';
+import {
+  FolderPlus,
+  Pencil,
+  Type,
+  Layers,
+  Settings,
+  Trash2,
+  Copy,
+  Lock,
+  Unlock,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+} from './LayerIcons';
 
 interface LayersPanelProps {
   layers: Layer[];
@@ -42,32 +56,26 @@ export function LayersPanel(props: LayersPanelProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id?: string } | null>(null);
 
   const handleLayerItemContextMenu = (id: string, e: React.MouseEvent) => {
-    console.debug('[LayersPanel] handleLayerItemContextMenu', { id, x: e.clientX, y: e.clientY, target: (e.target as HTMLElement)?.tagName });
-    e.preventDefault(); // impede o menu padrão do navegador
-    e.stopPropagation(); // evita propagação ao contêiner pai
+    e.preventDefault();
+    e.stopPropagation();
     const x = e.clientX;
     const y = e.clientY;
-    console.debug('[LayersPanel] setContextMenu from item', { id, x, y });
     setContextMenu({ x, y, id });
     props.onSelectLayer(id, false);
   };
 
   useEffect(() => {
-    // Close context menu on left-button clicks, but ignore right-button (contextmenu) clicks
     const onDocMouseDown = (ev: MouseEvent) => {
       try {
-        if (ev.button === 2) return; // right button - ignore
+        if (ev.button === 2) return;
       } catch (e) {}
       setContextMenu(null);
     };
     document.addEventListener('mousedown', onDocMouseDown);
 
-    // Capture 'contextmenu' at the document level in the capture phase to ensure
-    // we intercept right-clicks inside the layers panel before other handlers
     const onDocContext = (ev: MouseEvent) => {
       try {
         const target = ev.target as HTMLElement | null;
-        console.debug('[LayersPanel] onDocContext capture', { x: ev.clientX, y: ev.clientY, targetTag: target?.tagName });
         if (!target) return;
         const sidebar = document.querySelector('.uv-sidebar-section.layers-section') as HTMLElement | null;
         if (!sidebar) return;
@@ -76,7 +84,6 @@ export function LayersPanel(props: LayersPanelProps) {
         ev.stopPropagation();
         const layerEl = target.closest('[data-layer-id]') as HTMLElement | null;
         const id = layerEl ? layerEl.getAttribute('data-layer-id') || undefined : undefined;
-        console.debug('[LayersPanel] onDocContext will setContextMenu', { id });
         setContextMenu({ x: ev.clientX, y: ev.clientY, id });
       } catch (e) {
         console.error('[LayersPanel] onDocContext error', e);
@@ -98,82 +105,80 @@ export function LayersPanel(props: LayersPanelProps) {
     const fromDroppable = result.source.droppableId;
     const toDroppable = result.destination.droppableId;
 
-    // If parent provided a generic reorder handler, use it for all moves
     if (props.onReorder) {
-      props.onReorder({ droppableId: fromDroppable, index: fromIndex }, { droppableId: toDroppable, index: toIndex });
+      props.onReorder(
+        { droppableId: fromDroppable, index: fromIndex },
+        { droppableId: toDroppable, index: toIndex }
+      );
       return;
     }
 
-    // Backwards-compatible: only handle top-level reorders via onMoveLayer
-    if (fromDroppable === 'layers-list' && toDroppable === 'layers-list') {
-      if (fromIndex !== toIndex) onMoveLayer(fromIndex, toIndex);
+    if (fromIndex !== toIndex) {
+      onMoveLayer(fromIndex, toIndex);
     }
   };
 
-  const handleSelectLayer = (id: string, multi?: boolean) => {
+  const handleSelectLayer = (id: string, multi = false) => {
     if (multi) {
-      setSelectedLayers((prev) => (prev.includes(id) ? prev.filter((layerId) => layerId !== id) : [...prev, id]));
+      setSelectedLayers(prev =>
+        prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+      );
     } else {
       setSelectedLayers([id]);
     }
   };
 
-  const selectedLayerObj = selectedLayer ? (layers.find(l => l.id === selectedLayer) || layers.flatMap(l => l.type === 'group' && l.childrenData ? l.childrenData : []).find(c => c.id === selectedLayer)) : null;
-
   const handleBatchDelete = () => {
-    props.onBatchDelete(selectedLayers);
-    setSelectedLayers([]);
-    setContextMenu(null);
+    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
+    const toDelete = checked.length > 0 ? checked : selectedLayers;
+    if (toDelete.length > 0) {
+      props.onBatchDelete(toDelete);
+      setSelectedLayers([]);
+    }
   };
 
   const handleBatchLock = () => {
-    props.onBatchLock(selectedLayers);
-    setContextMenu(null);
+    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
+    const toLock = checked.length > 0 ? checked : selectedLayers;
+    if (toLock.length > 0) {
+      props.onBatchLock(toLock);
+    }
   };
 
   const handleBatchUnlock = () => {
-    props.onBatchUnlock(selectedLayers);
-    setContextMenu(null);
+    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
+    const toUnlock = checked.length > 0 ? checked : selectedLayers;
+    if (toUnlock.length > 0) {
+      props.onBatchUnlock(toUnlock);
+    }
   };
 
-  const toggleGroupExpand = (id: string) => {
+  const toggleGroupExpand = (groupId: string) => {
     setExpandedGroups(prev => {
-      const updated = { ...prev, [id]: !prev[id] };
-      localStorage.setItem('expandedGroups', JSON.stringify(updated));
-      return updated;
+      const next = { ...prev, [groupId]: !prev[groupId] };
+      localStorage.setItem('uv_expanded_groups', JSON.stringify(next));
+      return next;
     });
   };
 
   useEffect(() => {
-    const savedGroups = localStorage.getItem('expandedGroups');
+    const savedGroups = localStorage.getItem('uv_expanded_groups');
     if (savedGroups) {
-      setExpandedGroups(JSON.parse(savedGroups));
+      try {
+        setExpandedGroups(JSON.parse(savedGroups));
+      } catch (e) {}
     }
   }, []);
 
   const closeContextMenu = () => setContextMenu(null);
 
-  const handleContextAction = (action: string) => {
-    const id = contextMenu?.id;
-    if (!id) return;
-    switch(action) {
-      case 'delete': props.onBatchDelete ? props.onBatchDelete([id]) : props.onDeleteLayer(id); break;
-      case 'duplicate': props.onDuplicateLayer(id); break;
-      case 'lock': props.onToggleLock(id); break;
-      case 'rename': props.onSetEditingLayerName && props.onSetEditingLayerName(id); break;
-      case 'blend': break; // Placeholder for blending logic
-    }
-    closeContextMenu();
-  };
-
   const renderContextMenu = () => {
     if (!contextMenu) return null;
-    // batch actions when no specific id provided
-      if (!contextMenu.id) {
+    if (!contextMenu.id) {
       return (
-        <div className="layers-context-menu" style={{position:'fixed', left:contextMenu.x, top:contextMenu.y, zIndex:2147483646}} onMouseLeave={closeContextMenu}>
-          <div style={{display:'flex', flexDirection:'column', gap:8, minWidth:180}}>
-            <div style={{fontSize:13, fontWeight:600}}>Ações para {selectedLayers.length} camada(s)</div>
+        <div className="layers-context-menu" style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 2147483646 }} onMouseLeave={closeContextMenu}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Ações para {selectedLayers.length} camada(s)</div>
             <button onClick={() => { handleBatchDelete(); }}>Excluir Selecionados</button>
             <button onClick={() => { handleBatchLock(); }}>Bloquear Selecionados</button>
             <button onClick={() => { handleBatchUnlock(); }}>Desbloquear Selecionados</button>
@@ -185,15 +190,15 @@ export function LayersPanel(props: LayersPanelProps) {
     const layer = layers.find(l => l.id === contextMenu.id) || layers.flatMap(l => l.type === 'group' && l.childrenData ? l.childrenData : []).find(c => c.id === contextMenu.id);
     if (!layer) return null;
     return (
-      <div className="layers-context-menu" style={{position:'fixed',left:contextMenu.x,top:contextMenu.y,zIndex:2147483646, background:'var(--panel-bg, #222)', color:'var(--text-color, #fff)', padding:8, borderRadius:6, boxShadow:'0 8px 24px rgba(0,0,0,0.5)'}} onMouseLeave={closeContextMenu}>
-        <div style={{display:'flex', flexDirection:'column', gap:8, minWidth:180}}>
-          <div style={{fontSize:13, fontWeight:600}}>{layer.name}</div>
-          <label style={{fontSize:12, opacity:0.85}}>Opacidade</label>
+      <div className="layers-context-menu" style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 2147483646, background: 'var(--panel-bg, #1a1a2e)', color: 'var(--text-color, #fff)', padding: 10, borderRadius: 8, border: '1px solid rgba(0, 243, 255, 0.2)', boxShadow: '0 8px 24px rgba(0,0,0,0.7)' }} onMouseLeave={closeContextMenu}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--nexus-cyan, #00f3ff)' }}>{layer.name}</div>
+          <label style={{ fontSize: 12, opacity: 0.85 }}>Opacidade</label>
           <input type="range" min={0} max={100} defaultValue={layer.opacity || 100} onChange={e => props.onUpdateLayerOpacity && props.onUpdateLayerOpacity(layer.id, Number((e.target as HTMLInputElement).value))} />
-          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
             <button onClick={() => { props.onDuplicateLayer(layer.id); setContextMenu(null); }}>Duplicar</button>
             <button onClick={() => { props.onToggleLock(layer.id); setContextMenu(null); }}>{layer.locked ? 'Desbloquear' : 'Bloquear'}</button>
-            <button onClick={() => { props.onDeleteLayer(layer.id); setContextMenu(null); }} style={{color:'var(--danger, #f66)'}}>Excluir</button>
+            <button onClick={() => { props.onDeleteLayer(layer.id); setContextMenu(null); }} style={{ color: 'var(--danger, #ff0055)' }}>Excluir</button>
           </div>
         </div>
       </div>
@@ -207,7 +212,7 @@ export function LayersPanel(props: LayersPanelProps) {
   }, [layers, searchQuery]);
 
   return (
-    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{display:'flex', flexDirection:'column', minWidth:360, maxWidth:900, height:'100%', minHeight:0, resize:'horizontal', overflow:'hidden'}}>
+    <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{ display: 'flex', flexDirection: 'column', minWidth: 360, maxWidth: 900, height: '100%', minHeight: 0, resize: 'horizontal', overflow: 'hidden' }}>
       <div className="layers-header">
         <h4>Camadas ({layers.length})</h4>
         <input
@@ -220,18 +225,18 @@ export function LayersPanel(props: LayersPanelProps) {
         />
         <div className="layers-header-buttons">
           <Tooltip id="create-group" text="Criar Grupo">
-            <button aria-label="Criar Grupo" onClick={props.onCreateGroup} tabIndex={0}>
-              <i className="icon-group"></i>
+            <button aria-label="Criar Grupo" onClick={props.onCreateGroup} tabIndex={0} className="icon-btn">
+              <FolderPlus size={16} />
             </button>
           </Tooltip>
           <Tooltip id="add-drawing-layer" text="Adicionar Camada de Desenho">
-            <button aria-label="Adicionar Camada de Desenho" onClick={props.onAddDrawingLayer} tabIndex={0}>
-              <i className="icon-draw"></i>
+            <button aria-label="Adicionar Camada de Desenho" onClick={props.onAddDrawingLayer} tabIndex={0} className="icon-btn">
+              <Pencil size={16} />
             </button>
           </Tooltip>
           <Tooltip id="add-text-layer" text="Adicionar Camada de Texto">
-            <button aria-label="Adicionar Camada de Texto" onClick={props.onAddTextLayer} tabIndex={0}>
-              <i className="icon-text"></i>
+            <button aria-label="Adicionar Camada de Texto" onClick={props.onAddTextLayer} tabIndex={0} className="icon-btn">
+              <Type size={16} />
             </button>
           </Tooltip>
           <Tooltip id="add-mask" text="Adicionar Máscara">
@@ -253,48 +258,55 @@ export function LayersPanel(props: LayersPanelProps) {
                 if (props.onAddMaskToLayer) {
                   props.onAddMaskToLayer(selectedLayer, maskCanvas);
                 } else {
-                  // fallback for existing handlers
                   props.onAddDrawingLayer();
                 }
               }}
               tabIndex={0}
+              className="icon-btn"
             >
-              <i className="icon-mask"></i>
+              <Layers size={16} />
             </button>
           </Tooltip>
-          <Tooltip id="actions-toggle" text="Mostrar ações de camada">
-            <button aria-label="Mostrar ações" onClick={() => setShowActionsBar(s => !s)} tabIndex={0} className="layers-actions-toggle">
-              ⚙️
+          <Tooltip id="actions-toggle" text="Mostrar ações em lote">
+            <button
+              aria-label="Mostrar ações em lote"
+              onClick={() => setShowActionsBar(s => !s)}
+              tabIndex={0}
+              className={`layers-actions-toggle icon-btn ${showActionsBar ? 'active' : ''}`}
+            >
+              <Settings size={16} />
             </button>
           </Tooltip>
         </div>
       </div>
 
-      {/* Actions bar: visible when toggled and there is a selection */}
       {showActionsBar && selectedLayers.length > 0 ? (
         <div className="layers-action-bar" role="toolbar" aria-label="Ações de Camada">
-          <button onClick={() => {
-            // duplicate first selected if single, otherwise duplicate each
-            if (selectedLayers.length === 1) props.onDuplicateLayer(selectedLayers[0]);
-            else selectedLayers.forEach(id => props.onDuplicateLayer(id));
-          }}>Duplicar</button>
+          <button
+            onClick={() => {
+              if (selectedLayers.length === 1) props.onDuplicateLayer(selectedLayers[0]);
+              else selectedLayers.forEach(id => props.onDuplicateLayer(id));
+            }}
+            className="action-btn"
+          >
+            <Copy size={13} style={{ marginRight: 4 }} /> Duplicar
+          </button>
 
-          <button onClick={() => {
-            props.onBatchLock(selectedLayers);
-          }}>Bloquear</button>
+          <button onClick={() => { props.onBatchLock(selectedLayers); }} className="action-btn">
+            <Lock size={13} style={{ marginRight: 4 }} /> Bloquear
+          </button>
 
-          <button onClick={() => {
-            props.onBatchUnlock(selectedLayers);
-          }}>Desbloquear</button>
+          <button onClick={() => { props.onBatchUnlock(selectedLayers); }} className="action-btn">
+            <Unlock size={13} style={{ marginRight: 4 }} /> Desbloquear
+          </button>
 
-          <button onClick={() => { handleBatchDelete(); }}>Excluir</button>
+          <button onClick={() => { handleBatchDelete(); }} className="action-btn action-btn--danger">
+            <Trash2 size={13} style={{ marginRight: 4 }} /> Excluir
+          </button>
         </div>
       ) : null}
 
-      {/* Opacidade agora acessível via o menu de contexto/engrenagem; removido do layout principal para economizar espaço */}
-      {/* Selected-layer properties handled in right properties panel; context menu used for quick actions */}
-
-      <div className="layers-list-container" style={{flex:1, minHeight:0, overflow:'auto'}}>
+      <div className="layers-list-container" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="layers-list">
             {(provided) => (
@@ -304,22 +316,16 @@ export function LayersPanel(props: LayersPanelProps) {
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 onContextMenu={(e: React.MouseEvent) => {
-                  // Always prevent the browser context menu inside the layers list
-                  console.debug('[LayersPanel] layers-list onContextMenu', { x: e.clientX, y: e.clientY, target: (e.target as HTMLElement)?.tagName });
                   e.preventDefault();
                   const target = e.target as HTMLElement;
-                  // Try to find the closest element that holds the layer id
                   const layerEl = target.closest('[data-layer-id]') as HTMLElement | null;
                   if (layerEl) {
                     const id = layerEl.getAttribute('data-layer-id');
-                    console.debug('[LayersPanel] layers-list found data-layer-id', { id });
                     if (id) {
                       setContextMenu({ x: e.clientX, y: e.clientY, id });
                       return;
                     }
                   }
-                  // Fallback: show batch menu when selection exists
-                  console.debug('[LayersPanel] layers-list no layerEl, selectedLayers.length=', selectedLayers.length);
                   if (selectedLayers.length > 0) {
                     setContextMenu({ x: e.clientX, y: e.clientY });
                   } else {
@@ -327,141 +333,143 @@ export function LayersPanel(props: LayersPanelProps) {
                   }
                 }}
               >
-              {filteredLayers.length === 0 ? (
-                <div className="no-layers" role="alert">Nenhuma camada encontrada.</div>
-              ) : (
-                [...filteredLayers].reverse().map((layer, reverseIndex) => {
-                  const actualIndex = filteredLayers.length - 1 - reverseIndex;
-                  return (
-                    <React.Fragment key={layer.id}>
-                      <Draggable key={layer.id} draggableId={layer.id} index={actualIndex}>
-                        {(provided) => (
-                          <div
-                            className="layer-item-wrapper"
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <div style={{display:'flex', alignItems:'center', gap:12}}
-                              onContextMenu={(e: React.MouseEvent) => handleLayerItemContextMenu(layer.id, e)}
+                {filteredLayers.length === 0 ? (
+                  <div className="no-layers" role="alert">Nenhuma camada encontrada.</div>
+                ) : (
+                  [...filteredLayers].reverse().map((layer, reverseIndex) => {
+                    const actualIndex = filteredLayers.length - 1 - reverseIndex;
+                    return (
+                      <React.Fragment key={layer.id}>
+                        <Draggable key={layer.id} draggableId={layer.id} index={actualIndex}>
+                          {(provided) => (
+                            <div
+                              className="layer-item-wrapper"
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
                             >
-                              {layer.type === 'group' ? (
-                                <button
-                                  aria-label={expandedGroups[layer.id] ? 'Colapsar grupo' : 'Expandir grupo'}
-                                  onClick={(e) => { e.stopPropagation(); toggleGroupExpand(layer.id); }}
-                                  className="group-toggle-btn"
-                                >
-                                  {expandedGroups[layer.id] ? '▾' : '▸'}
-                                </button>
-                              ) : <div style={{width:18}} />}
-                              <LayerItem
-                                layer={layer}
-                                isSelected={selectedLayer === layer.id}
-                                isEditing={props.editingLayerName === layer.id}
-                                isLocked={layer.locked}
-                                groupCheck={!!props.groupChecks[layer.id]}
-                                onSelect={(id, multi) => {
-                                  props.onSelectLayer(id, multi);
-                                  handleSelectLayer(id, multi);
-                                }}
-                                onDelete={props.onDeleteLayer}
-                                onDuplicate={props.onDuplicateLayer}
-                                onToggleVisibility={props.onToggleVisibility}
-                                onToggleLock={props.onToggleLock}
-                                onRename={(id, name) => props.onRenameLayer(id, name)}
-                                onStartEditing={(id) => props.onSetEditingLayerName(id)}
-                                onStopEditing={() => props.onSetEditingLayerName(null)}
-                                onToggleGroupCheck={props.onToggleGroupCheck}
-                                onSetBlendMode={props.onSetLayerBlendMode}
-                                onToggleMaskEdit={props.onToggleMaskEdit}
-                                tabIndex={0}
-                              />
-                              <LayerPreview layer={layer} />
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-
-                      {layer.type === 'group' && expandedGroups[layer.id] && (layer.childrenData || []).length > 0 ? (
-                        <Droppable droppableId={`group-${layer.id}`} key={`droppable-${layer.id}`}>
-                          {(providedGroup) => (
-                            <div className="layer-children" style={{paddingLeft: 28}} ref={providedGroup.innerRef} {...providedGroup.droppableProps}>
-                              {(layer.childrenData || []).map((child, childIndex) => (
-                                <Draggable key={child.id} draggableId={child.id} index={childIndex}>
-                                  {(providedChild) => (
-                                    <div
-                                      className="layer-item-wrapper"
-                                      ref={providedChild.innerRef}
-                                      {...providedChild.draggableProps}
-                                      {...providedChild.dragHandleProps}
-                                      style={{...((providedChild as any).draggableProps.style || {})}}
-                                    >
-                                      <div style={{display:'flex', alignItems:'center', gap:12}}
-                                           onContextMenu={(e: React.MouseEvent) => handleLayerItemContextMenu(child.id, e)}>
-                                        <div style={{width:18}} />
-                                        <LayerItem
-                                          layer={child}
-                                          isSelected={selectedLayer === child.id}
-                                          isEditing={props.editingLayerName === child.id}
-                                          isLocked={child.locked}
-                                          groupCheck={!!props.groupChecks[child.id]}
-                                          onSelect={(id, multi) => { props.onSelectLayer(id, multi); handleSelectLayer(id, multi); }}
-                                          onDelete={props.onDeleteLayer}
-                                          onDuplicate={props.onDuplicateLayer}
-                                          onToggleVisibility={props.onToggleVisibility}
-                                          onToggleLock={props.onToggleLock}
-                                          onRename={(id, name) => props.onRenameLayer(id, name)}
-                                          onStartEditing={(id) => props.onSetEditingLayerName(id)}
-                                          onStopEditing={() => props.onSetEditingLayerName(null)}
-                                          onToggleGroupCheck={props.onToggleGroupCheck}
-                                          onSetBlendMode={props.onSetLayerBlendMode}
-                                          onToggleMaskEdit={props.onToggleMaskEdit}
-                                          tabIndex={0}
-                                        />
-                                        <LayerPreview layer={child} />
-                                      </div>
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                              {providedGroup.placeholder}
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                                onContextMenu={(e: React.MouseEvent) => handleLayerItemContextMenu(layer.id, e)}
+                              >
+                                {layer.type === 'group' ? (
+                                  <button
+                                    aria-label={expandedGroups[layer.id] ? 'Colapsar grupo' : 'Expandir grupo'}
+                                    onClick={(e) => { e.stopPropagation(); toggleGroupExpand(layer.id); }}
+                                    className="group-toggle-btn icon-btn"
+                                  >
+                                    {expandedGroups[layer.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                  </button>
+                                ) : <div style={{ width: 18 }} />}
+                                <LayerItem
+                                  layer={layer}
+                                  isSelected={selectedLayer === layer.id}
+                                  isEditing={props.editingLayerName === layer.id}
+                                  isLocked={layer.locked}
+                                  groupCheck={!!props.groupChecks[layer.id]}
+                                  onSelect={(id, multi) => {
+                                    props.onSelectLayer(id, multi);
+                                    handleSelectLayer(id, multi);
+                                  }}
+                                  onDelete={props.onDeleteLayer}
+                                  onDuplicate={props.onDuplicateLayer}
+                                  onToggleVisibility={props.onToggleVisibility}
+                                  onToggleLock={props.onToggleLock}
+                                  onRename={(id, name) => props.onRenameLayer(id, name)}
+                                  onStartEditing={(id) => props.onSetEditingLayerName(id)}
+                                  onStopEditing={() => props.onSetEditingLayerName(null)}
+                                  onToggleGroupCheck={props.onToggleGroupCheck}
+                                  onSetBlendMode={props.onSetLayerBlendMode}
+                                  onToggleMaskEdit={props.onToggleMaskEdit}
+                                  tabIndex={0}
+                                />
+                                <LayerPreview layer={layer} />
+                              </div>
                             </div>
                           )}
-                        </Droppable>
-                      ) : null}
-                    </React.Fragment>
-                  );
-                })
-              )}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+                        </Draggable>
+
+                        {layer.type === 'group' && expandedGroups[layer.id] && (layer.childrenData || []).length > 0 ? (
+                          <Droppable droppableId={`group-${layer.id}`} key={`droppable-${layer.id}`}>
+                            {(providedGroup) => (
+                              <div className="layer-children" style={{ paddingLeft: 28 }} ref={providedGroup.innerRef} {...providedGroup.droppableProps}>
+                                {(layer.childrenData || []).map((child, childIndex) => (
+                                  <Draggable key={child.id} draggableId={child.id} index={childIndex}>
+                                    {(providedChild) => (
+                                      <div
+                                        className="layer-item-wrapper"
+                                        ref={providedChild.innerRef}
+                                        {...providedChild.draggableProps}
+                                        {...providedChild.dragHandleProps}
+                                        style={{ ...((providedChild as any).draggableProps.style || {}) }}
+                                      >
+                                        <div
+                                          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                                          onContextMenu={(e: React.MouseEvent) => handleLayerItemContextMenu(child.id, e)}
+                                        >
+                                          <div style={{ width: 18 }} />
+                                          <LayerItem
+                                            layer={child}
+                                            isSelected={selectedLayer === child.id}
+                                            isEditing={props.editingLayerName === child.id}
+                                            isLocked={child.locked}
+                                            groupCheck={!!props.groupChecks[child.id]}
+                                            onSelect={(id, multi) => { props.onSelectLayer(id, multi); handleSelectLayer(id, multi); }}
+                                            onDelete={props.onDeleteLayer}
+                                            onDuplicate={props.onDuplicateLayer}
+                                            onToggleVisibility={props.onToggleVisibility}
+                                            onToggleLock={props.onToggleLock}
+                                            onRename={(id, name) => props.onRenameLayer(id, name)}
+                                            onStartEditing={(id) => props.onSetEditingLayerName(id)}
+                                            onStopEditing={() => props.onSetEditingLayerName(null)}
+                                            onToggleGroupCheck={props.onToggleGroupCheck}
+                                            onSetBlendMode={props.onSetLayerBlendMode}
+                                            onToggleMaskEdit={props.onToggleMaskEdit}
+                                            tabIndex={0}
+                                          />
+                                          <LayerPreview layer={child} />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {providedGroup.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        ) : null}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
         </DragDropContext>
       </div>
 
-      {/* Rodapé com botões de ação */}
       <div className="layers-footer">
         <div className="layers-footer-left">
           <Tooltip id="add-drawing-footer" text="Criar nova camada">
             <button className="icon-btn" aria-label="Criar nova camada" onClick={props.onAddDrawingLayer}>
-              <i className="icon-add" />
+              <Plus size={16} />
             </button>
           </Tooltip>
 
           <Tooltip id="create-group-footer" text="Criar novo grupo">
             <button className="icon-btn" aria-label="Criar novo grupo" onClick={props.onCreateGroup}>
-              <i className="icon-folder" />
+              <FolderPlus size={16} />
             </button>
           </Tooltip>
         </div>
 
-        <div style={{flex:1}} />
+        <div style={{ flex: 1 }} />
 
         <div className="layers-footer-right">
           <Tooltip id="delete-selected-footer" text="Excluir camadas selecionadas">
-            <button className="icon-btn danger" aria-label="Excluir camadas selecionadas" onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>
-              <i className="icon-trash" />
+            <button className="icon-btn icon-btn--danger" aria-label="Excluir camadas selecionadas" onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>
+              <Trash2 size={16} />
             </button>
           </Tooltip>
         </div>

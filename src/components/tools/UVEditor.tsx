@@ -2,6 +2,21 @@ import React, { useRef, useState, useEffect } from 'react';
 import './UVEditor.css';
 import { LayersPanel } from '../LayersPanel';
 import { markPerfKeep } from '../../utils/perf_helpers';
+import {
+  Radio,
+  Palette,
+  Eye,
+  Save,
+  X,
+  MousePointer,
+  Pencil,
+  Eraser,
+  Image as ImageIcon,
+  Type,
+  Target,
+  Sparkles,
+  Layers,
+} from 'lucide-react';
 
 export interface Layer {
   id: string;
@@ -2868,21 +2883,27 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
   return (
     <div className="uv-editor-panel" ref={rootRef}>
       <div className="uv-editor-header">
-        <div style={{fontWeight:600}}>
-          {mode === 'rgb' ? '🔬 Editor RGB Forense' : mode === 'filter' ? '🎨 Editor de Filtros' : '💡 Editor UV'}
+        <div className="uv-header-title">
+          {mode === 'rgb' ? (
+            <><Radio size={18} className="header-icon icon-rgb" /> <span>Editor RGB Forense</span></>
+          ) : mode === 'filter' ? (
+            <><Palette size={18} className="header-icon icon-filter" /> <span>Editor de Filtros</span></>
+          ) : (
+            <><Eye size={18} className="header-icon icon-uv" /> <span>Editor UV</span></>
+          )}
         </div>
-        <div style={{marginLeft:'auto', display:'flex', gap:8}}>
-          <button onClick={handleSaveClick} className="btn-save">Salvar</button>
-          <button onClick={onClose} className="btn-close">Fechar</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button onClick={handleSaveClick} className="btn-save" title="Salvar imagem"><Save size={14} style={{ marginRight: 4 }} /> Salvar</button>
+          <button onClick={onClose} className="btn-close" title="Fechar editor"><X size={14} style={{ marginRight: 4 }} /> Fechar</button>
         </div>
       </div>
 
-      <div className="uv-tools-dock">
-        <button className={`tool-button ${tool === 'select' ? 'active' : ''}`} onClick={() => setTool('select')} title="Selecionar"><span className="icon">🖱️</span></button>
-        <button className={`tool-button ${tool === 'draw' ? 'active' : ''}`} onClick={() => setTool('draw')} title="Desenhar"><span className="icon">✏️</span></button>
-        <button className={`tool-button ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} title="Borracha"><span className="icon">🩹</span></button>
-        <button className={`tool-button ${tool === 'placeImage' ? 'active' : ''}`} onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }} title="Inserir Imagem (picker)"><span className="icon">🖼️</span></button>
-        <button className={`tool-button ${tool === 'placeText' ? 'active' : ''}`} onClick={() => setTool('placeText')} title="Texto"><span className="icon">🅰️</span></button>
+      <div className="uv-tools-dock" role="toolbar" aria-label="Ferramentas de Edição">
+        <button className={`tool-button ${tool === 'select' ? 'active' : ''}`} onClick={() => setTool('select')} title="Selecionar" aria-label="Selecionar"><MousePointer size={18} /></button>
+        <button className={`tool-button ${tool === 'draw' ? 'active' : ''}`} onClick={() => setTool('draw')} title="Desenhar" aria-label="Desenhar"><Pencil size={18} /></button>
+        <button className={`tool-button ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} title="Borracha" aria-label="Borracha"><Eraser size={18} /></button>
+        <button className={`tool-button ${tool === 'placeImage' ? 'active' : ''}`} onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }} title="Inserir Imagem" aria-label="Inserir Imagem"><ImageIcon size={18} /></button>
+        <button className={`tool-button ${tool === 'placeText' ? 'active' : ''}`} onClick={() => setTool('placeText')} title="Texto" aria-label="Texto"><Type size={18} /></button>
       </div>
 
       {/* Hidden file input for quick image insertion via toolbar */}
@@ -2977,66 +2998,41 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
 
           {/* Canal RGB - Sempre visível em modo RGB */}
           {expandedSections.properties && mode === 'rgb' && (
-            <div style={{marginTop:12, padding:12, background:'rgba(0,215,255,0.03)', border:'1px solid rgba(0,215,255,0.12)', borderRadius:8}}>
-              <label style={{fontSize:14, fontWeight:600, color:'#00d7ff', display:'block', marginBottom:8}}>🎯 Canal Alvo RGB</label>
-              <div style={{fontSize:12, opacity:0.85, marginBottom:12, lineHeight:1.4}}>
+            <div className="rgb-channel-container">
+              <label className="rgb-channel-title">
+                <Target size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Canal Alvo RGB
+              </label>
+              <div className="rgb-channel-desc">
                 Escolha qual canal de cor receberá os dados forenses:
               </div>
-              <div style={{display:'flex',gap:8}}>
+              <div className="rgb-channel-group">
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('R')}
-                  style={{
-                    flex:1,
-                    padding:'12px 10px',
-                    background: targetChannel === 'R' ? '#ff4444' : 'rgba(255,68,68,0.1)',
-                    color: targetChannel === 'R' ? '#fff' : '#ff8888',
-                    borderRadius:6,
-                    border: targetChannel === 'R' ? '2px solid #ff4444' : '1px solid rgba(255,68,68,0.2)',
-                    fontWeight: targetChannel === 'R' ? 600 : 400,
-                    cursor:'pointer',
-                    transition:'all 0.2s ease'
-                  }}
+                  className={`rgb-channel-btn rgb-channel-btn--r ${targetChannel === 'R' ? 'active' : ''}`}
+                  aria-pressed={targetChannel === 'R'}
                 >
-                  🔴 Red
+                  <span className="channel-dot channel-dot--r" /> R (Red)
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('G')}
-                  style={{
-                    flex:1,
-                    padding:'12px 10px',
-                    background: targetChannel === 'G' ? '#44ff44' : 'rgba(68,255,68,0.1)',
-                    color: targetChannel === 'G' ? '#002200' : '#88ff88',
-                    borderRadius:6,
-                    border: targetChannel === 'G' ? '2px solid #44ff44' : '1px solid rgba(68,255,68,0.2)',
-                    fontWeight: targetChannel === 'G' ? 600 : 400,
-                    cursor:'pointer',
-                    transition:'all 0.2s ease'
-                  }}
+                  className={`rgb-channel-btn rgb-channel-btn--g ${targetChannel === 'G' ? 'active' : ''}`}
+                  aria-pressed={targetChannel === 'G'}
                 >
-                  🟢 Green
+                  <span className="channel-dot channel-dot--g" /> G (Green)
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChannelChange('B')}
-                  style={{
-                    flex:1,
-                    padding:'12px 10px',
-                    background: targetChannel === 'B' ? '#4444ff' : 'rgba(68,68,255,0.1)',
-                    color: targetChannel === 'B' ? '#fff' : '#8888ff',
-                    borderRadius:6,
-                    border: targetChannel === 'B' ? '2px solid #4444ff' : '1px solid rgba(68,68,255,0.2)',
-                    fontWeight: targetChannel === 'B' ? 600 : 400,
-                    cursor:'pointer',
-                    transition:'all 0.2s ease'
-                  }}
+                  className={`rgb-channel-btn rgb-channel-btn--b ${targetChannel === 'B' ? 'active' : ''}`}
+                  aria-pressed={targetChannel === 'B'}
                 >
-                  🔵 Blue
+                  <span className="channel-dot channel-dot--b" /> B (Blue)
                 </button>
               </div>
-              <div style={{fontSize:11, opacity:0.7, marginTop:8, fontStyle:'italic'}}>
-                Canal selecionado: <strong style={{color: targetChannel === 'R' ? '#ff4444' : targetChannel === 'G' ? '#44ff44' : '#4444ff'}}>{targetChannel}</strong>
+              <div className="rgb-channel-status">
+                Canal selecionado: <strong className={`channel-tag channel-tag--${targetChannel.toLowerCase()}`}>{targetChannel}</strong>
               </div>
             </div>
           )}

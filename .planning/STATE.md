@@ -6,16 +6,16 @@
 
 ## Current Position
 
-- **Active Phase:** Phase 1 — Design System & Iconography Modernization
-- **Next Step:** Plan and execute Phase 1 (`/gsd-plan-phase 1` or `/gsd-execute-phase 1`)
+- **Active Phase:** Phase 2 — LayersPanel & Layer Operations Refactor
+- **Next Step:** Plan and execute Phase 2 (`/gsd-plan-phase 2` or `/gsd-execute-phase 2`)
 - **Total Phases:** 4
 
 ## Phase Overview
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 1 | Design System & Iconography Modernization | Ready |
-| Phase 2 | LayersPanel & Layer Operations Refactor | Pending |
+| Phase 1 | Design System & Iconography Modernization | Completed |
+| Phase 2 | LayersPanel & Layer Operations Refactor | Active |
 | Phase 3 | Canvas Cursor, Pointer Feedback & Interactions | Pending |
 | Phase 4 | Modularization, Subcomponent Extraction & Cleanup | Pending |
 

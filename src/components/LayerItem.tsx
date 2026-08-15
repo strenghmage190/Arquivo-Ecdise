@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layer } from './tools/UVEditor';
-import LayerIcon, { MaskIcon } from './LayerIcons';
+import LayerIcon, { MaskIcon, Eye, EyeOff, Lock, Unlock, Copy, Trash2, Pencil, Layers } from './LayerIcons';
 
 interface LayerItemProps {
   layer: Layer;
@@ -20,27 +20,12 @@ interface LayerItemProps {
   onContextMenu?: (id: string, e: React.MouseEvent) => void;
   onSetBlendMode?: (id: string, mode: string) => void;
   onToggleMaskEdit?: (id: string) => void;
-  tabIndex?: number; // Optional tabIndex for accessibility
+  tabIndex?: number;
 }
 
 export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     props.onRename(layer.id, e.target.value);
-  };
-
-  const getLayerIcon = (layer: Layer) => {
-    switch (layer.type) {
-      case 'text':
-        return '🅰️';
-      case 'image':
-        return '🖼️';
-      case 'drawing':
-        return '✏️';
-      case 'group':
-        return '📁';
-      default:
-        return '📄';
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -58,7 +43,7 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
         const target = e.target as HTMLElement;
-        if (target.closest('button, a, input, textarea, .layer-item-actions, .group-toggle-btn')) return;
+        if (target.closest('button, a, input, textarea, select, .layer-item-actions, .group-toggle-btn')) return;
         const multi = (e.ctrlKey || e.metaKey || e.shiftKey);
         props.onSelect(layer.id, multi);
       }}
@@ -70,8 +55,6 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         }
       }}
       onContextMenu={(e) => {
-        // Only intercept the context menu if a handler was provided by the parent.
-        // Otherwise allow the event to bubble so container wrappers can handle it.
         if (props.onContextMenu) {
           e.preventDefault();
           e.stopPropagation();
@@ -85,20 +68,50 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
           checked={props.groupCheck}
           onChange={() => props.onToggleGroupCheck(layer.id)}
           onClick={e => e.stopPropagation()}
-          title="Selecionar grupo"
+          title="Selecionar para grupo/lote"
+          aria-label="Selecionar camada para grupo ou lote"
         />
-        <button className="layer-btn layer-btn--icon layer-visibility" onClick={() => props.onToggleVisibility(layer.id)} title="Alternar visibilidade">
-          {layer.visible ? '👁️' : '🚫'}
+        <button
+          className={`layer-btn layer-btn--icon layer-visibility ${!layer.visible ? 'layer-btn--inactive' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onToggleVisibility(layer.id);
+          }}
+          title={layer.visible ? 'Ocultar camada' : 'Exibir camada'}
+          aria-label={layer.visible ? 'Ocultar camada' : 'Exibir camada'}
+        >
+          {layer.visible ? <Eye size={14} /> : <EyeOff size={14} className="icon-muted" />}
+        </button>
+        <button
+          className={`layer-btn layer-btn--icon layer-lock ${layer.locked ? 'layer-btn--active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onToggleLock(layer.id);
+          }}
+          title={layer.locked ? 'Desbloquear camada' : 'Bloquear camada'}
+          aria-label={layer.locked ? 'Desbloquear camada' : 'Bloquear camada'}
+        >
+          {layer.locked ? <Lock size={14} className="icon-locked" /> : <Unlock size={14} className="icon-unlocked" />}
         </button>
       </div>
 
-      <div className="layer-item-thumbnail" onClick={(e) => { e.stopPropagation(); if (!layer.locked) props.onSelect(layer.id); }} style={{cursor: 'pointer'}}>
+      <div
+        className="layer-item-thumbnail"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!layer.locked) props.onSelect(layer.id);
+        }}
+        style={{ cursor: 'pointer' }}
+        title="Visualização da camada"
+      >
         {layer.img ? (
-          <img src={(layer.img as any)?.src || String(layer.img)} alt="Layer Thumbnail" className="layer-img-thumbnail" loading="lazy" />
+          <img src={(layer.img as any)?.src || String(layer.img)} alt={layer.name} className="layer-img-thumbnail" loading="lazy" />
         ) : layer.mask ? (
-          <img src={layer.mask.toDataURL()} alt="Mask Thumbnail" className="mask-thumbnail" loading="lazy" />
+          <img src={layer.mask.toDataURL()} alt="Máscara" className="mask-thumbnail" loading="lazy" />
         ) : (
-          <div className="placeholder-thumbnail" />
+          <div className="placeholder-thumbnail">
+            <LayerIcon type={layer.type} size={14} className="icon-placeholder" />
+          </div>
         )}
       </div>
 
@@ -126,35 +139,47 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         ) : (
           <div
             className="layer-item-title"
-            onDoubleClick={(e: React.MouseEvent) => { e.stopPropagation(); if (!layer.locked) props.onStartEditing(layer.id); }}
+            onDoubleClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (!layer.locked) props.onStartEditing(layer.id);
+            }}
           >
-            {layer.name}
+            <span className="layer-name-text">{layer.name}</span>
             <button
               className="layer-edit-btn"
-              onClick={(e) => { e.stopPropagation(); if (!layer.locked) props.onStartEditing(layer.id); }}
-              title="Editar camada"
-              aria-label="Editar camada"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!layer.locked) props.onStartEditing(layer.id);
+              }}
+              title="Renomear camada"
+              aria-label="Renomear camada"
               tabIndex={0}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="currentColor" strokeWidth="0" fill="currentColor" />
-                <path d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" stroke="currentColor" strokeWidth="0" fill="currentColor" />
-              </svg>
+              <Pencil size={12} />
             </button>
           </div>
         )}
-        <div className="layer-item-type" aria-hidden>
-          <span className="layer-type-icon" title={layer.type}><LayerIcon type={layer.type} className="icon-svg" /></span>
-          {layer.mask ? <span className="layer-mask-icon" title="Mask"><MaskIcon className="icon-svg" /></span> : null}
+        <div className="layer-item-type" aria-hidden="true">
+          <span className="layer-type-icon" title={layer.type}>
+            <LayerIcon type={layer.type} size={12} className="icon-svg" />
+          </span>
+          {layer.mask ? (
+            <span className="layer-mask-icon" title="Possui Máscara">
+              <MaskIcon size={12} className="icon-svg" />
+            </span>
+          ) : null}
         </div>
       </div>
 
       <div className="layer-item-actions">
         <select
           value={layer.blendMode || 'normal'}
-          onChange={e => { e.stopPropagation(); props.onSetBlendMode && props.onSetBlendMode(layer.id, e.target.value); }}
+          onChange={e => {
+            e.stopPropagation();
+            props.onSetBlendMode && props.onSetBlendMode(layer.id, e.target.value);
+          }}
           title="Modo de Mesclagem"
-          style={{marginRight:8}}
+          className="layer-blend-select"
         >
           <option value="normal">Normal</option>
           <option value="multiply">Multiply</option>
@@ -164,9 +189,43 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
           <option value="darken">Darken</option>
           <option value="lighten">Lighten</option>
         </select>
-        <button className="layer-btn" onClick={() => props.onToggleMaskEdit && props.onToggleMaskEdit(layer.id)} title="Editar Máscara">🎯</button>
-        <button className="layer-btn" onClick={() => props.onDuplicate(layer.id)} disabled={layer.locked} title="Duplicar">📑</button>
-        <button className="layer-btn layer-btn--danger" onClick={() => props.onDelete(layer.id)} disabled={layer.locked} title="Excluir">🗑️</button>
+        {props.onToggleMaskEdit && (
+          <button
+            className={`layer-btn layer-btn--icon ${layer.isEditingMask ? 'layer-btn--active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onToggleMaskEdit && props.onToggleMaskEdit(layer.id);
+            }}
+            title={layer.isEditingMask ? 'Concluir Edição de Máscara' : 'Editar Máscara'}
+            aria-label="Editar Máscara"
+          >
+            <Layers size={14} />
+          </button>
+        )}
+        <button
+          className="layer-btn layer-btn--icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onDuplicate(layer.id);
+          }}
+          disabled={layer.locked}
+          title="Duplicar camada"
+          aria-label="Duplicar camada"
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          className="layer-btn layer-btn--icon layer-btn--danger"
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onDelete(layer.id);
+          }}
+          disabled={layer.locked}
+          title="Excluir camada"
+          aria-label="Excluir camada"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );
