@@ -35,16 +35,18 @@ Modernize, reorganize, and refactor the `UVEditor` and `LayersPanel` forensic ed
 
 ---
 
-### Phase 3: Canvas Cursor, Pointer Feedback & Interactions
-- **Goal:** Fix and enhance cursor visibility, brush size circles, and mouse tracking across canvas drawing, text placement, and code cipher modes.
+### Phase 3: Canvas Cursor, Pointer Feedback & Interactions (including RGB Channel Isolation)
+- **Goal:** Fix and enhance cursor visibility, brush size circles, mouse tracking across canvas/code modes, and implement proper RGB channel pixel isolation.
 - **Scope:**
   - Implement active brush/eraser circular cursor follower that scales dynamically with brush size.
   - Fix mouse cursor styles for selection mode, transform handles, and code/text editing areas.
+  - Fix RGB forensic channel isolation so drawings/text are encoded into and only appear in the specific targeted RGB channel (Red, Green, or Blue).
   - Ensure cursor is visible across dark/bright canvas backgrounds and multi-spectrum layers.
 - **Deliverables:**
   - Canvas cursor overlay and dynamic crosshair components
+  - Fixed RGB channel pixel encoder and preview shader
   - Refined mouse event listeners and pointer coordinate transforms
-- **Success Criteria:** Mouse pointer and brush preview are clearly visible at all times across all editor modes.
+- **Success Criteria:** Mouse pointer and brush preview are clearly visible at all times; RGB channel drawings properly isolate into their selected channel (R, G, or B).
 
 ---
 
