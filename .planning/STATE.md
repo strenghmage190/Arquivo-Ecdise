@@ -1,15 +1,20 @@
 # Project State
 
 **Project:** Arquivo Ecdise
+**Milestone:** v1.1 — Audio Lab & Spectrogram Steganography Suite
+**Status:** In Planning / Roadmapping
 **Date:** 2026-08-15
-**Status:** Milestone Complete (v1.0 Shipped)
 
-- **Active Milestone:** None
-- **Next Step:** Run `/gsd-new-milestone` to start the next milestone.
+## Current Position
 
-## Milestones
+Phase: Initializing v1.1 Roadmap
+Status: Defining requirements & roadmap
+Last Activity: Milestone v1.1 started
+
+## Milestones Overview
 
 - ✅ **v1.0 UVEditor UI/UX Refactor & Layers Modernization** (Shipped 2026-08-15)
+- 🚧 **v1.1 Audio Lab & Spectrogram Steganography Suite** (In Progress)
 
 ---
-*State updated: 2026-08-15 after v1.0 completion*
+*State updated: 2026-08-15*
