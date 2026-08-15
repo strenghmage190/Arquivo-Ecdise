@@ -15,45 +15,56 @@ Clean, maintainable component code (no inline styles) without losing any of the 
 - ✓ Complex evidence creation panel functionality — existing
 - ✓ High-tech/Cyberpunk visual base (Nexus variables, scanlines, glitch) — existing
 - ✓ Decorative corners (::before/::after) and modal-overlay vignette — existing
+- ✓ CreateClueModal.tsx without inline styles — Phase 1 (v1.0)
+- ✓ Reusable CSS classes for layout (nexus-row, nexus-grid, panel-header) — Phase 1 (v1.0)
+- ✓ Hardcoded colors extracted to CSS classes/variables — Phase 1 (v1.0)
+- ✓ Internal panel classes with backdrop-filter and neon borders — Phase 1 (v1.0)
+- ✓ Interactive states with neon glow (hover/focus/disabled) — Phase 1 (v1.0)
+- ✓ Tabs-header smooth horizontal scrolling — Phase 1 (v1.0)
+- ✓ Tab-content fade-in animation — Phase 1 (v1.0)
 
 ### Active
 
-- [ ] Remove all inline styles (`style={{...}}`) from `CreateClueModal.tsx`.
-- [ ] Create reusable CSS classes for layout (e.g., `.nexus-row`, `.nexus-grid`, `.panel-header`).
-- [ ] Extract hardcoded colors in TSX to CSS classes or CSS variables in `:root`.
-- [ ] Create specific CSS classes for internal panels (warning boxes, config grids) with `backdrop-filter` and subtle neon borders.
-- [ ] Enhance interactive states (`:hover`, `:focus`, `:disabled`) for buttons and inputs with neon glow (`box-shadow`).
-- [ ] Implement smooth horizontal scrolling for `.tabs-header` if content overflows.
-- [ ] Add fade-in animation when switching `.tab-content` contents.
-- [ ] Leave all logic, hooks, file handling, and database functions completely untouched.
+- [ ] **UV-01**: Tools dock shows obvious pressed/active state for the selected tool (strong neon glow + colored border)
+- [ ] **UV-02**: Insertion mode shows a large blinking banner "[ MODO DE INSERÇÃO ATIVO - CLIQUE NO CANVAS PARA POSICIONAR ]" with a big red cancel button
+- [ ] **UV-03**: Canvas container shows a dark checkerboard (transparency) background so empty space is distinguishable from content
+- [ ] **UV-04**: UVEditor.tsx contains no inline styles — all moved to semantic CSS classes (.uv-workspace, .uv-sidebar, .uv-property-group, .uv-range-slider)
+- [ ] **UV-05**: Range sliders use Nexus/C.R.I.S styling (dark translucent track, neon glowing thumb on :hover)
+- [ ] **UV-06**: Action buttons (Salvar, Fechar, Inverter Máscara) have satisfying :active transitions
+- [ ] **UV-07**: Layers panel styling (purple glow, drag-and-drop animations) is integrated and preserved
 
 ### Out of Scope
 
 - Modifying component logic or hooks — to prevent breaking the existing evidence creation system.
 - Altering the backend or database interactions — scope is strictly UI/UX structural refactoring.
 - Removing existing High-tech effects (glitch-anim, scanline, pulse) — strictly prohibited by design rules.
+- CreateClueModal UX & Copy Overhaul (tooltips, copy imersiva, empty states) — v1.1 escopado e pulado por decisão do usuário; pode voltar em milestone futuro.
 
 ## Current State
 
 **v1.0 (Shipped)**: Refatoração concluída, estilos inline movidos para CSS, Cyberpunk preservado.
 
-## Current Milestone: v1.1 CreateClueModal UX & Copy Overhaul
+**v1.1 (Skipped)**: CreateClueModal UX & Copy Overhaul foi escopado mas não executado — substituído pelo v1.2 (decisão do usuário).
 
-**Goal:** Transform the CreateClueModal into a true 'Investigative Terminal' by rewriting copy with Cyberpunk terminology, adding tooltips, and improving empty states without changing underlying logic.
+## Current Milestone: v1.2 UVEditor "Mini-Photoshop" UX/UI Refactor
+
+**Goal:** Transform the UVEditor into a professional Cyberpunk design tool — obvious tool states, guided insertion flow, zero inline styles, Nexus-styled controls.
 
 **Target features:**
-- Immersive Texts & Quotes (Diegetic/Cyberpunk terminology, system quotes)
-- Tooltip Implementation (lucide-react Info/HelpCircle for GM guidance)
-- Helper Text Refinement (Clear impact explanations)
-- Alerts & Error Prevention (Visual warnings for empty fields/passwords)
-
-*(TBD - pending /gsd-new-milestone)*
+- Tools dock com estado "pressionado" óbvio (neon forte + borda colorida) para Pincel/Borracha/Seleção/Texto/Imagem
+- Banner gigante e piscante em modo de inserção + botão cancelar vermelho
+- Background quadriculado escuro (dark checkerboard) no canvas
+- Remover todos os `style={{...}}` do TSX → classes semânticas (integra estilos de Camadas)
+- Controles Nexus/C.R.I.S: sliders com track escuro e thumb neon; `:active` satisfatório em botões
 
 ## Context
 
 - The system is functionally complete and stable.
 - The visual identity is Cyberpunk/High-tech, relying on specific CSS variables (e.g., `--nexus-blue`, `--nexus-glass`).
 - The user is extremely strict about not losing any existing visual effects.
+- The UVEditor (`src/components/tools/UVEditor.tsx`, 3163 lines) is a complex image editor: pincel, máscaras, camadas, texto/imagem, pan/zoom.
+- User reported the UVEditor is "horrível de mexer" and that placing texts/images is confusing.
+- Layers styling (purple glow, drag-and-drop animations) already exists in `UVEditor.css` — must be integrated, not recreated.
 
 ## Constraints
 
@@ -65,7 +76,9 @@ Clean, maintainable component code (no inline styles) without losing any of the 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Transfer all inline styles to CSS | Improves maintainability and code readability | — Pending |
+| Transfer all inline styles to CSS | Improves maintainability and code readability | ✓ Good (v1.0) |
+| Skip v1.1 (CreateClueModal copy overhaul) | Priority on UVEditor UX — user reported "horrível de mexer" | — Pending |
+| UVEditor refactor is skeleton + CSS only | Protect canvas math, render loops and hooks | — Pending |
 
 ## Evolution
 
@@ -85,5 +98,5 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-14 after initialization*
+*Last updated: 2026-08-14 after v1.2 milestone start*
 
