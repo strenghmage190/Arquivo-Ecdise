@@ -412,9 +412,9 @@
   pointer-events: none;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 1px solid rgba(0, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(0, 0, 0, 0.8);
   background: transparent;
-  mix-blend-mode: difference;
   z-index: 1200; /* Above canvas */
 }
 
@@ -425,11 +425,12 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   background: transparent;
-  border-top: 1px solid rgba(0, 255, 255, 0.8);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.8);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.8)) drop-shadow(0 -1px 0 rgba(0,0,0,0.8));
 }
 
 .viewport-canvas .mask-cursor::before {
@@ -438,11 +439,12 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   background: transparent;
-  border-left: 1px solid rgba(0, 255, 255, 0.8);
-  border-right: 1px solid rgba(0, 255, 255, 0.8);
+  border-left: 1px solid rgba(255, 255, 255, 0.9);
+  border-right: 1px solid rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(1px 0 0 rgba(0,0,0,0.8)) drop-shadow(-1px 0 0 rgba(0,0,0,0.8));
 }
 
 /* Transform Bounding Box for Selected Layers */

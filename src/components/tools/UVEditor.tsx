@@ -480,17 +480,11 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
           redrawAll();
           return;
         }
-        // update mask cursor overlay when editing a mask
+        // update cursor overlay position
         try {
-          const activeLayer = selectedLayer ? layers.find(l => l.id === selectedLayer) : null;
-          if (activeLayer && activeLayer.isEditingMask) {
-            // convert client coords to CSS coords relative to canvas container
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (rect) {
-              setMaskCursor({ x: m.clientX - rect.left, y: m.clientY - rect.top, visible: true });
-            }
-          } else {
-            if (maskCursor.visible) setMaskCursor(prev => ({ ...prev, visible: false }));
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (rect) {
+            setMaskCursor({ x: m.clientX - rect.left, y: m.clientY - rect.top, visible: true });
           }
         } catch (e) {}
 
