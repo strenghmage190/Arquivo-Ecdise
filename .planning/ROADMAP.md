@@ -65,12 +65,26 @@ Modernize, reorganize, and refactor the `UVEditor` and `LayersPanel` forensic ed
 
 ---
 
+### Phase 5: Photoshop/GIMP-Style Layers Panel Overhaul
+- **Goal:** Redesign the Layers Panel UI to closely match professional graphics editors.
+- **Scope:**
+  - Consolidate Opacity and Blend Mode selectors to the top of the panel, affecting only the active selection.
+  - Simplify `LayerItem` rows to display only visibility (Eye), lock state, a square thumbnail, and layer name.
+  - Introduce a dedicated bottom action bar for `[Group]`, `[New Drawing]`, `[New Text]`, `[New Image]`, and `[Delete]`.
+- **Deliverables:**
+  - Redesigned `LayersPanel.tsx` and `LayerItem.tsx`.
+  - Professional, clean CSS layout minimizing visual clutter in rows.
+- **Success Criteria:** The layers panel feels instantly familiar to Photoshop/GIMP users, eliminating nested dropdowns in rows.
+
+---
+
 ## Progress Tracking
 
 - [x] **Phase 1: Design System & Iconography Modernization**
 - [x] **Phase 2: LayersPanel & Layer Operations Refactor**
 - [x] **Phase 3: Canvas Cursor, Pointer Feedback & Interactions (including RGB Channel Isolation)**
 - [ ] **Phase 4: Modularization, Subcomponent Extraction & Final Cleanup**
+- [ ] **Phase 5: Photoshop/GIMP-Style Layers Panel Overhaul**
 
 ---
 *Roadmap initialized: 2026-08-15*
