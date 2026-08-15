@@ -6,8 +6,8 @@
 
 ## Current Position
 
-- **Active Phase:** Phase 2 — LayersPanel & Layer Operations Refactor
-- **Next Step:** Plan and execute Phase 2 (`/gsd-plan-phase 2` or `/gsd-execute-phase 2`)
+- **Active Phase:** Phase 3 — Canvas Cursor, Pointer Feedback & Interactions (including RGB Channel Isolation)
+- **Next Step:** Plan and execute Phase 3 (`/gsd-discuss-phase 3` or `/gsd-plan-phase 3`)
 - **Total Phases:** 4
 
 ## Phase Overview
@@ -15,8 +15,8 @@
 | Phase | Description | Status |
 |-------|-------------|--------|
 | Phase 1 | Design System & Iconography Modernization | Completed |
-| Phase 2 | LayersPanel & Layer Operations Refactor | Active |
-| Phase 3 | Canvas Cursor, Pointer Feedback & Interactions | Pending |
+| Phase 2 | LayersPanel & Layer Operations Refactor | Completed |
+| Phase 3 | Canvas Cursor, Pointer Feedback & Interactions | Active |
 | Phase 4 | Modularization, Subcomponent Extraction & Cleanup | Pending |
 
 ## Key Decisions

@@ -34,6 +34,8 @@ export interface Layer {
   color?: string;
   img?: HTMLImageElement;
   scale?: number;
+  width?: number;
+  height?: number;
   drawingCanvas?: HTMLCanvasElement; // For drawing layers
   children?: string[]; // IDs of child layers if type is 'group'
   childrenData?: Layer[]; // Inlined child layer objects when grouped
@@ -2339,6 +2341,58 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
     try { setTimeout(() => pushHistory(), 0); } catch (e) {}
   };
 
+  const addImageLayerFromFile = (file: File) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const url = URL.createObjectURL(file);
+    objectUrlsRef.current.push(url);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
+      const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
+
+      const maxW = cssW * 0.8;
+      const maxH = cssH * 0.8;
+      let w = img.naturalWidth || img.width || 300;
+      let h = img.naturalHeight || img.height || 300;
+
+      if (w > maxW || h > maxH) {
+        const ratio = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+
+      const x = Math.round(cssW / 2);
+      const y = Math.round(cssH / 2);
+      const id = `layer-${Date.now()}`;
+      const name = file.name.replace(/\.[^/.]+$/, '') || 'Imagem';
+
+      const newLayer: Layer = {
+        id,
+        type: 'image',
+        name,
+        visible: true,
+        opacity: 100,
+        locked: false,
+        x,
+        y,
+        scale: 1,
+        width: w,
+        height: h,
+        img,
+        blendMode: 'normal',
+      };
+
+      setLayers(prev => [...prev, newLayer]);
+      setSelectedLayer(id);
+      setTool('select');
+      redrawAll();
+      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    };
+    img.src = url;
+  };
+
   const addEmptyDrawingLayer = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2915,7 +2969,8 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
         onChange={e => {
           const f = (e.target as HTMLInputElement).files ? (e.target as HTMLInputElement).files![0] : null;
           if (!f) return;
-          setImageFile(f);
+          addImageLayerFromFile(f);
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }}
       />
 
@@ -3104,6 +3159,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
           onCreateGroup={createGroup}
           onAddDrawingLayer={addEmptyDrawingLayer}
           onAddTextLayer={addEmptyTextLayer}
+          onAddImageLayer={addImageLayerFromFile}
           onToggleGroupCheck={toggleGroupCheck}
           onBatchDelete={batchDelete}
           onBatchLock={batchLock}

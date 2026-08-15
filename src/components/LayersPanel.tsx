@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { LayerItem } from './LayerItem';
 import { Layer } from './tools/UVEditor';
 import { Tooltip } from './ui/Tooltip';
@@ -8,6 +8,7 @@ import {
   FolderPlus,
   Pencil,
   Type,
+  ImageIcon,
   Layers,
   Settings,
   Trash2,
@@ -36,6 +37,7 @@ interface LayersPanelProps {
   onCreateGroup: () => void;
   onAddDrawingLayer: () => void;
   onAddTextLayer: () => void;
+  onAddImageLayer?: (file: File) => void;
   onAddMaskToLayer?: (id: string, mask: HTMLCanvasElement) => void;
   onUpdateLayerOpacity?: (id: string, opacity: number) => void;
   onSetLayerBlendMode?: (id: string, mode: string) => void;
@@ -48,12 +50,38 @@ interface LayersPanelProps {
 
 export function LayersPanel(props: LayersPanelProps) {
   const { layers, selectedLayer, onMoveLayer } = props;
-  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
   const [showActionsBar, setShowActionsBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id?: string } | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+
+  const checkedLayerIds = useMemo(() => {
+    return Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
+  }, [props.groupChecks]);
+
+  const activeBatchSelection = useMemo(() => {
+    if (checkedLayerIds.length > 0) return checkedLayerIds;
+    return selectedLayers;
+  }, [checkedLayerIds, selectedLayers]);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : null;
+    if (!file) return;
+    if (props.onAddImageLayer) {
+      props.onAddImageLayer(file);
+    }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  const handleTriggerImageUpload = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.click();
+    }
+  };
 
   const handleLayerItemContextMenu = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -129,27 +157,21 @@ export function LayersPanel(props: LayersPanelProps) {
   };
 
   const handleBatchDelete = () => {
-    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
-    const toDelete = checked.length > 0 ? checked : selectedLayers;
-    if (toDelete.length > 0) {
-      props.onBatchDelete(toDelete);
+    if (activeBatchSelection.length > 0) {
+      props.onBatchDelete(activeBatchSelection);
       setSelectedLayers([]);
     }
   };
 
   const handleBatchLock = () => {
-    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
-    const toLock = checked.length > 0 ? checked : selectedLayers;
-    if (toLock.length > 0) {
-      props.onBatchLock(toLock);
+    if (activeBatchSelection.length > 0) {
+      props.onBatchLock(activeBatchSelection);
     }
   };
 
   const handleBatchUnlock = () => {
-    const checked = Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
-    const toUnlock = checked.length > 0 ? checked : selectedLayers;
-    if (toUnlock.length > 0) {
-      props.onBatchUnlock(toUnlock);
+    if (activeBatchSelection.length > 0) {
+      props.onBatchUnlock(activeBatchSelection);
     }
   };
 
@@ -178,7 +200,7 @@ export function LayersPanel(props: LayersPanelProps) {
       return (
         <div className="layers-context-menu" style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 2147483646 }} onMouseLeave={closeContextMenu}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Ações para {selectedLayers.length} camada(s)</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Ações para {activeBatchSelection.length} camada(s)</div>
             <button onClick={() => { handleBatchDelete(); }}>Excluir Selecionados</button>
             <button onClick={() => { handleBatchLock(); }}>Bloquear Selecionados</button>
             <button onClick={() => { handleBatchUnlock(); }}>Desbloquear Selecionados</button>
@@ -213,6 +235,15 @@ export function LayersPanel(props: LayersPanelProps) {
 
   return (
     <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{ display: 'flex', flexDirection: 'column', minWidth: 360, maxWidth: 900, height: '100%', minHeight: 0, resize: 'horizontal', overflow: 'hidden' }}>
+      {/* Hidden file input for image uploads */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleImageFileChange}
+      />
+
       <div className="layers-header">
         <h4>Camadas ({layers.length})</h4>
         <input
@@ -224,55 +255,32 @@ export function LayersPanel(props: LayersPanelProps) {
           aria-label="Buscar camadas"
         />
         <div className="layers-header-buttons">
+          <Tooltip id="add-image-header" text="Adicionar Imagem">
+            <button aria-label="Adicionar Imagem" onClick={handleTriggerImageUpload} tabIndex={0} className="icon-btn">
+              <ImageIcon size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip id="add-drawing-layer" text="Adicionar Desenho">
+            <button aria-label="Adicionar Desenho" onClick={props.onAddDrawingLayer} tabIndex={0} className="icon-btn">
+              <Pencil size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip id="add-text-layer" text="Adicionar Texto">
+            <button aria-label="Adicionar Texto" onClick={props.onAddTextLayer} tabIndex={0} className="icon-btn">
+              <Type size={16} />
+            </button>
+          </Tooltip>
           <Tooltip id="create-group" text="Criar Grupo">
             <button aria-label="Criar Grupo" onClick={props.onCreateGroup} tabIndex={0} className="icon-btn">
               <FolderPlus size={16} />
             </button>
           </Tooltip>
-          <Tooltip id="add-drawing-layer" text="Adicionar Camada de Desenho">
-            <button aria-label="Adicionar Camada de Desenho" onClick={props.onAddDrawingLayer} tabIndex={0} className="icon-btn">
-              <Pencil size={16} />
-            </button>
-          </Tooltip>
-          <Tooltip id="add-text-layer" text="Adicionar Camada de Texto">
-            <button aria-label="Adicionar Camada de Texto" onClick={props.onAddTextLayer} tabIndex={0} className="icon-btn">
-              <Type size={16} />
-            </button>
-          </Tooltip>
-          <Tooltip id="add-mask" text="Adicionar Máscara">
+          <Tooltip id="actions-toggle" text="Ações em Lote">
             <button
-              aria-label="Adicionar Máscara"
-              onClick={() => {
-                if (!selectedLayer) return;
-                const targetLayer = layers.find(l => l.id === selectedLayer);
-                const w = (targetLayer as any)?.width || 512;
-                const h = (targetLayer as any)?.height || 512;
-                const maskCanvas = document.createElement('canvas');
-                maskCanvas.width = w;
-                maskCanvas.height = h;
-                const maskCtx = maskCanvas.getContext('2d');
-                if (maskCtx) {
-                  maskCtx.fillStyle = 'white';
-                  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-                }
-                if (props.onAddMaskToLayer) {
-                  props.onAddMaskToLayer(selectedLayer, maskCanvas);
-                } else {
-                  props.onAddDrawingLayer();
-                }
-              }}
-              tabIndex={0}
-              className="icon-btn"
-            >
-              <Layers size={16} />
-            </button>
-          </Tooltip>
-          <Tooltip id="actions-toggle" text="Mostrar ações em lote">
-            <button
-              aria-label="Mostrar ações em lote"
+              aria-label="Ações em Lote"
               onClick={() => setShowActionsBar(s => !s)}
               tabIndex={0}
-              className={`layers-actions-toggle icon-btn ${showActionsBar ? 'active' : ''}`}
+              className={`layers-actions-toggle icon-btn ${(showActionsBar || activeBatchSelection.length > 0) ? 'active' : ''}`}
             >
               <Settings size={16} />
             </button>
@@ -280,27 +288,37 @@ export function LayersPanel(props: LayersPanelProps) {
         </div>
       </div>
 
-      {showActionsBar && selectedLayers.length > 0 ? (
+      {/* Quick Action bar for multi-selection or toggled batch bar */}
+      {(showActionsBar || activeBatchSelection.length > 0) ? (
         <div className="layers-action-bar" role="toolbar" aria-label="Ações de Camada">
+          <span className="batch-counter-badge">{activeBatchSelection.length} selecionada(s)</span>
+          
           <button
             onClick={() => {
-              if (selectedLayers.length === 1) props.onDuplicateLayer(selectedLayers[0]);
-              else selectedLayers.forEach(id => props.onDuplicateLayer(id));
+              if (activeBatchSelection.length === 1) props.onDuplicateLayer(activeBatchSelection[0]);
+              else activeBatchSelection.forEach(id => props.onDuplicateLayer(id));
             }}
             className="action-btn"
+            disabled={activeBatchSelection.length === 0}
           >
             <Copy size={13} style={{ marginRight: 4 }} /> Duplicar
           </button>
 
-          <button onClick={() => { props.onBatchLock(selectedLayers); }} className="action-btn">
+          <button onClick={handleBatchLock} className="action-btn" disabled={activeBatchSelection.length === 0}>
             <Lock size={13} style={{ marginRight: 4 }} /> Bloquear
           </button>
 
-          <button onClick={() => { props.onBatchUnlock(selectedLayers); }} className="action-btn">
+          <button onClick={handleBatchUnlock} className="action-btn" disabled={activeBatchSelection.length === 0}>
             <Unlock size={13} style={{ marginRight: 4 }} /> Desbloquear
           </button>
 
-          <button onClick={() => { handleBatchDelete(); }} className="action-btn action-btn--danger">
+          {activeBatchSelection.length >= 2 && (
+            <button onClick={props.onCreateGroup} className="action-btn">
+              <FolderPlus size={13} style={{ marginRight: 4 }} /> Agrupar
+            </button>
+          )}
+
+          <button onClick={handleBatchDelete} className="action-btn action-btn--danger" disabled={activeBatchSelection.length === 0}>
             <Trash2 size={13} style={{ marginRight: 4 }} /> Excluir
           </button>
         </div>
@@ -326,15 +344,31 @@ export function LayersPanel(props: LayersPanelProps) {
                       return;
                     }
                   }
-                  if (selectedLayers.length > 0) {
+                  if (activeBatchSelection.length > 0) {
                     setContextMenu({ x: e.clientX, y: e.clientY });
                   } else {
                     setContextMenu(null);
                   }
                 }}
               >
-                {filteredLayers.length === 0 ? (
-                  <div className="no-layers" role="alert">Nenhuma camada encontrada.</div>
+                {layers.length === 0 ? (
+                  <div className="layers-empty-state" role="region" aria-label="Nenhuma camada">
+                    <div className="empty-title">Nenhuma camada criada</div>
+                    <div className="empty-subtitle">Adicione elementos para começar a editar:</div>
+                    <div className="empty-actions">
+                      <button className="empty-btn" onClick={handleTriggerImageUpload}>
+                        <ImageIcon size={16} /> Adicionar Imagem
+                      </button>
+                      <button className="empty-btn" onClick={props.onAddDrawingLayer}>
+                        <Pencil size={16} /> Nova Camada de Desenho
+                      </button>
+                      <button className="empty-btn" onClick={props.onAddTextLayer}>
+                        <Type size={16} /> Inserir Texto
+                      </button>
+                    </div>
+                  </div>
+                ) : filteredLayers.length === 0 ? (
+                  <div className="no-layers" role="alert">Nenhuma camada encontrada para "{searchQuery}".</div>
                 ) : (
                   [...filteredLayers].reverse().map((layer, reverseIndex) => {
                     const actualIndex = filteredLayers.length - 1 - reverseIndex;
@@ -451,9 +485,21 @@ export function LayersPanel(props: LayersPanelProps) {
 
       <div className="layers-footer">
         <div className="layers-footer-left">
-          <Tooltip id="add-drawing-footer" text="Criar nova camada">
-            <button className="icon-btn" aria-label="Criar nova camada" onClick={props.onAddDrawingLayer}>
-              <Plus size={16} />
+          <Tooltip id="add-image-footer" text="Adicionar Imagem">
+            <button className="icon-btn" aria-label="Adicionar Imagem" onClick={handleTriggerImageUpload}>
+              <ImageIcon size={16} />
+            </button>
+          </Tooltip>
+
+          <Tooltip id="add-drawing-footer" text="Criar nova camada de desenho">
+            <button className="icon-btn" aria-label="Criar nova camada de desenho" onClick={props.onAddDrawingLayer}>
+              <Pencil size={16} />
+            </button>
+          </Tooltip>
+
+          <Tooltip id="add-text-footer" text="Adicionar Texto">
+            <button className="icon-btn" aria-label="Adicionar Texto" onClick={props.onAddTextLayer}>
+              <Type size={16} />
             </button>
           </Tooltip>
 
@@ -468,7 +514,7 @@ export function LayersPanel(props: LayersPanelProps) {
 
         <div className="layers-footer-right">
           <Tooltip id="delete-selected-footer" text="Excluir camadas selecionadas">
-            <button className="icon-btn icon-btn--danger" aria-label="Excluir camadas selecionadas" onClick={handleBatchDelete} disabled={selectedLayers.length === 0}>
+            <button className="icon-btn icon-btn--danger" aria-label="Excluir camadas selecionadas" onClick={handleBatchDelete} disabled={activeBatchSelection.length === 0}>
               <Trash2 size={16} />
             </button>
           </Tooltip>

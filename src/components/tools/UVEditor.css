@@ -1634,3 +1634,105 @@ body.performance-mode .uv-editor-viewport .viewport-canvas::before {
   border-radius: 4px;
 }
 
+/* ==========================================================================
+   Phase 2 Modernization: Empty State, Batch Badges & Layer Row Polish
+   ========================================================================== */
+
+.batch-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--nexus-blue, #00d7ff);
+  background: rgba(0, 215, 255, 0.12);
+  border: 1px solid rgba(0, 215, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-right: 4px;
+}
+
+/* Layers Empty State */
+.layers-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  margin: 16px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(0, 215, 255, 0.2);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.layers-empty-state .empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color, #d6e6f6);
+  margin-bottom: 4px;
+}
+
+.layers-empty-state .empty-subtitle {
+  font-size: 12px;
+  color: var(--muted-text, #9aa3b2);
+  margin-bottom: 16px;
+}
+
+.layers-empty-state .empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 240px;
+}
+
+.layers-empty-state .empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 215, 255, 0.08);
+  border: 1px solid rgba(0, 215, 255, 0.25);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.layers-empty-state .empty-btn:hover {
+  background: rgba(0, 215, 255, 0.2);
+  border-color: var(--nexus-blue, #00d7ff);
+  box-shadow: 0 0 10px rgba(0, 215, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Layer row styling enhancements */
+.layer-item {
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.layer-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.layer-item.active {
+  background: rgba(0, 215, 255, 0.08);
+  border-color: rgba(0, 215, 255, 0.4);
+  box-shadow: inset 0 0 8px rgba(0, 215, 255, 0.15);
+}
+
+.layer-item.locked {
+  opacity: 0.75;
+}
+
+.layer-item-wrapper {
+  margin-bottom: 2px;
+}
+
+
