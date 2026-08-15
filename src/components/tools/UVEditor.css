@@ -109,9 +109,9 @@
 .uv-editor-panel {
   box-sizing: border-box;
 
-  /* Aumentado para ocupar mais tela por padrão, sem precisar do modo fullscreen */
-  height: 95vh;
-  max-height: 95vh; /* Garante que o editor se ajuste bem à altura da tela */
+  /* Modificado para ocupar a tela inteira */
+  height: 100%;
+  max-height: 100%;
   display: grid;
   grid-template: "uv-header uv-header uv-header" 48px "uv-tools uv-viewport uv-right" 1fr / 60px minmax(
       0,

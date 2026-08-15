@@ -24,7 +24,7 @@ interface LayersPanelProps {
   layers: Layer[];
   selectedLayer: string | null;
   editingLayerName: string | null;
-  groupChecks: Record<string, boolean>;
+
   onSelectLayer: (id: string, multi?: boolean) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (id: string) => void;
@@ -34,7 +34,7 @@ interface LayersPanelProps {
   onSetEditingLayerName: (id: string | null) => void;
   onMoveLayer: (fromIndex: number, toIndex: number) => void;
   onReorder?: (source: { droppableId: string; index: number }, destination: { droppableId: string; index: number }) => void;
-  onCreateGroup: () => void;
+  onCreateGroup: (ids: string[]) => void;
   onAddDrawingLayer: () => void;
   onAddTextLayer: () => void;
   onAddImageLayer?: (file: File) => void;
@@ -42,7 +42,8 @@ interface LayersPanelProps {
   onUpdateLayerOpacity?: (id: string, opacity: number) => void;
   onSetLayerBlendMode?: (id: string, mode: string) => void;
   onToggleMaskEdit?: (id: string) => void;
-  onToggleGroupCheck: (id: string) => void;
+  onRasterizeLayer?: (id: string) => void;
+
   onBatchDelete: (ids: string[]) => void;
   onBatchLock: (ids: string[]) => void;
   onBatchUnlock: (ids: string[]) => void;
@@ -57,14 +58,20 @@ export function LayersPanel(props: LayersPanelProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id?: string } | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const checkedLayerIds = useMemo(() => {
-    return Object.keys(props.groupChecks).filter(k => props.groupChecks[k]);
-  }, [props.groupChecks]);
+  const activeBatchSelection = selectedLayers;
 
-  const activeBatchSelection = useMemo(() => {
-    if (checkedLayerIds.length > 0) return checkedLayerIds;
-    return selectedLayers;
-  }, [checkedLayerIds, selectedLayers]);
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+
+  const flatLayers = useMemo(() => {
+    const flat: string[] = [];
+    layers.forEach(l => {
+      flat.push(l.id);
+      if (l.type === 'group' && l.childrenData && expandedGroups[l.id]) {
+        l.childrenData.forEach(c => flat.push(c.id));
+      }
+    });
+    return flat;
+  }, [layers, expandedGroups]);
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
@@ -146,7 +153,20 @@ export function LayersPanel(props: LayersPanelProps) {
     }
   };
 
-  const handleSelectLayer = (id: string, multi = false) => {
+  const handleSelectLayer = (id: string, multi = false, shift = false) => {
+    if (shift && lastSelectedId) {
+      const startIdx = flatLayers.indexOf(lastSelectedId);
+      const endIdx = flatLayers.indexOf(id);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const min = Math.min(startIdx, endIdx);
+        const max = Math.max(startIdx, endIdx);
+        const rangeIds = flatLayers.slice(min, max + 1);
+        setSelectedLayers(prev => Array.from(new Set([...prev, ...rangeIds])));
+        setLastSelectedId(id);
+        return;
+      }
+    }
+
     if (multi) {
       setSelectedLayers(prev =>
         prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
@@ -154,6 +174,7 @@ export function LayersPanel(props: LayersPanelProps) {
     } else {
       setSelectedLayers([id]);
     }
+    setLastSelectedId(id);
   };
 
   const handleBatchDelete = () => {
@@ -217,7 +238,10 @@ export function LayersPanel(props: LayersPanelProps) {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--nexus-cyan, #00f3ff)' }}>{layer.name}</div>
           <label style={{ fontSize: 12, opacity: 0.85 }}>Opacidade</label>
           <input type="range" min={0} max={100} defaultValue={layer.opacity || 100} onChange={e => props.onUpdateLayerOpacity && props.onUpdateLayerOpacity(layer.id, Number((e.target as HTMLInputElement).value))} />
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4, flexWrap: 'wrap' }}>
+            {layer.type !== 'drawing' && layer.type !== 'group' && (
+              <button onClick={() => { props.onRasterizeLayer?.(layer.id); setContextMenu(null); }} style={{ width: '100%', marginBottom: 4, background: 'rgba(0, 243, 255, 0.1)', color: 'var(--nexus-cyan, #00f3ff)' }}>Rasterizar Camada</button>
+            )}
             <button onClick={() => { props.onDuplicateLayer(layer.id); setContextMenu(null); }}>Duplicar</button>
             <button onClick={() => { props.onToggleLock(layer.id); setContextMenu(null); }}>{layer.locked ? 'Desbloquear' : 'Bloquear'}</button>
             <button onClick={() => { props.onDeleteLayer(layer.id); setContextMenu(null); }} style={{ color: 'var(--danger, #ff0055)' }}>Excluir</button>
@@ -232,6 +256,10 @@ export function LayersPanel(props: LayersPanelProps) {
       layer.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [layers, searchQuery]);
+
+  const activeLayer = layers.find(l => selectedLayers.includes(l.id)) || layers.flatMap(l => l.type === 'group' && l.childrenData ? l.childrenData : []).find(c => selectedLayers.includes(c.id));
+  const currentOpacity = activeLayer?.opacity ?? 100;
+  const currentBlendMode = activeLayer?.blendMode ?? 'normal';
 
   return (
     <div className="uv-sidebar-section layers-section" role="region" aria-label="Painel de Camadas" style={{ display: 'flex', flexDirection: 'column', minWidth: 360, maxWidth: 900, height: '100%', minHeight: 0, resize: 'horizontal', overflow: 'hidden' }}>
@@ -271,7 +299,7 @@ export function LayersPanel(props: LayersPanelProps) {
             </button>
           </Tooltip>
           <Tooltip id="create-group" text="Criar Grupo">
-            <button aria-label="Criar Grupo" onClick={props.onCreateGroup} tabIndex={0} className="icon-btn">
+            <button aria-label="Criar Grupo" onClick={() => props.onCreateGroup(selectedLayers)} tabIndex={0} className="icon-btn">
               <FolderPlus size={16} />
             </button>
           </Tooltip>
@@ -285,6 +313,39 @@ export function LayersPanel(props: LayersPanelProps) {
               <Settings size={16} />
             </button>
           </Tooltip>
+        </div>
+      </div>
+
+      <div className="layers-global-controls" style={{ display: 'flex', gap: 8, padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(0, 243, 255, 0.1)' }}>
+        <select 
+          value={currentBlendMode} 
+          onChange={e => {
+            selectedLayers.forEach(id => props.onSetLayerBlendMode && props.onSetLayerBlendMode(id, e.target.value));
+          }}
+          disabled={selectedLayers.length === 0}
+          className="layer-blend-select"
+          style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '2px 4px', fontSize: 12 }}
+        >
+          <option value="normal">Normal</option>
+          <option value="multiply">Multiply</option>
+          <option value="screen">Screen</option>
+          <option value="overlay">Overlay</option>
+          <option value="add">Add</option>
+          <option value="darken">Darken</option>
+          <option value="lighten">Lighten</option>
+        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+          <label style={{ fontSize: 11, opacity: 0.7 }}>Opac.</label>
+          <input 
+            type="range" 
+            min={0} max={100} 
+            value={currentOpacity} 
+            onChange={e => {
+              selectedLayers.forEach(id => props.onUpdateLayerOpacity && props.onUpdateLayerOpacity(id, Number(e.target.value)));
+            }}
+            disabled={selectedLayers.length === 0}
+            style={{ flex: 1, minWidth: 40 }}
+          />
         </div>
       </div>
 
@@ -313,7 +374,7 @@ export function LayersPanel(props: LayersPanelProps) {
           </button>
 
           {activeBatchSelection.length >= 2 && (
-            <button onClick={props.onCreateGroup} className="action-btn">
+            <button onClick={() => props.onCreateGroup(selectedLayers)} className="action-btn">
               <FolderPlus size={13} style={{ marginRight: 4 }} /> Agrupar
             </button>
           )}
@@ -400,10 +461,9 @@ export function LayersPanel(props: LayersPanelProps) {
                                   isSelected={selectedLayer === layer.id}
                                   isEditing={props.editingLayerName === layer.id}
                                   isLocked={layer.locked}
-                                  groupCheck={!!props.groupChecks[layer.id]}
-                                  onSelect={(id, multi) => {
+                                  onSelect={(id, multi, shift) => {
                                     props.onSelectLayer(id, multi);
-                                    handleSelectLayer(id, multi);
+                                    handleSelectLayer(id, multi, shift);
                                   }}
                                   onDelete={props.onDeleteLayer}
                                   onDuplicate={props.onDuplicateLayer}
@@ -412,7 +472,6 @@ export function LayersPanel(props: LayersPanelProps) {
                                   onRename={(id, name) => props.onRenameLayer(id, name)}
                                   onStartEditing={(id) => props.onSetEditingLayerName(id)}
                                   onStopEditing={() => props.onSetEditingLayerName(null)}
-                                  onToggleGroupCheck={props.onToggleGroupCheck}
                                   onSetBlendMode={props.onSetLayerBlendMode}
                                   onToggleMaskEdit={props.onToggleMaskEdit}
                                   tabIndex={0}
@@ -447,8 +506,7 @@ export function LayersPanel(props: LayersPanelProps) {
                                             isSelected={selectedLayer === child.id}
                                             isEditing={props.editingLayerName === child.id}
                                             isLocked={child.locked}
-                                            groupCheck={!!props.groupChecks[child.id]}
-                                            onSelect={(id, multi) => { props.onSelectLayer(id, multi); handleSelectLayer(id, multi); }}
+                                            onSelect={(id, multi, shift) => { props.onSelectLayer(id, multi); handleSelectLayer(id, multi, shift); }}
                                             onDelete={props.onDeleteLayer}
                                             onDuplicate={props.onDuplicateLayer}
                                             onToggleVisibility={props.onToggleVisibility}
@@ -456,7 +514,6 @@ export function LayersPanel(props: LayersPanelProps) {
                                             onRename={(id, name) => props.onRenameLayer(id, name)}
                                             onStartEditing={(id) => props.onSetEditingLayerName(id)}
                                             onStopEditing={() => props.onSetEditingLayerName(null)}
-                                            onToggleGroupCheck={props.onToggleGroupCheck}
                                             onSetBlendMode={props.onSetLayerBlendMode}
                                             onToggleMaskEdit={props.onToggleMaskEdit}
                                             tabIndex={0}
@@ -504,7 +561,7 @@ export function LayersPanel(props: LayersPanelProps) {
           </Tooltip>
 
           <Tooltip id="create-group-footer" text="Criar novo grupo">
-            <button className="icon-btn" aria-label="Criar novo grupo" onClick={props.onCreateGroup}>
+            <button className="icon-btn" aria-label="Criar novo grupo" onClick={() => props.onCreateGroup(selectedLayers)}>
               <FolderPlus size={16} />
             </button>
           </Tooltip>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 import 'react-tooltip/dist/react-tooltip.css';
@@ -4116,9 +4117,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             </div>
          </div>
       )}
-      {editorMode && (previewUrl || uvEditorBaseUrl) && (
-         <div className="auto-style-297 auto-style-298 auto-style-299 auto-style-300 auto-style-301 auto-style-302 auto-style-303">
-            <div style={{width:'min(1200px,96%)'}}>
+      {editorMode && (previewUrl || uvEditorBaseUrl) && createPortal(
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
               <UVEditor 
                  baseImageUrl={uvEditorBaseUrl || previewUrl}
                  mode={editorMode || 'uv'}
@@ -4166,12 +4167,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  onClose={() => { setEditorMode(null); setFilterInitialImage(null); setUvEditorBaseUrl(null); setUvEditorPurpose(null); }}
               />
             </div>
-         </div>
+         </div>, document.body
       )}
 
-             {showGlitchDesigner && previewUrl && (
-            <div style={{position:'fixed', inset:0, zIndex:16000, display:'flex', alignItems:'center', justifyContent:'center', padding:24, background:'rgba(0,0,0,0.85)'}}>
-               <div style={{width:'min(1200px,96%)'}}>
+             {showGlitchDesigner && previewUrl && createPortal(
+            <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+               <div style={{width:'100vw', height:'100vh', display:'flex', flexDirection:'column'}}>
                  <UVEditor
                             baseImageUrl={previewUrl}
                    mode="uv"
@@ -4191,7 +4192,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                    onClose={() => setShowGlitchDesigner(false)}
                  />
                </div>
-            </div>
+            </div>, document.body
          )}
       
       {showAudioForgeFor && (

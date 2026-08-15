@@ -7,8 +7,8 @@ interface LayerItemProps {
   isSelected: boolean;
   isEditing: boolean;
   isLocked: boolean;
-  groupCheck: boolean;
-  onSelect: (id: string, multi?: boolean) => void;
+
+  onSelect: (id: string, multi?: boolean, shift?: boolean) => void;
   onToggleVisibility: (id: string) => void;
   onToggleLock: (id: string) => void;
   onDelete: (id: string) => void;
@@ -16,7 +16,7 @@ interface LayerItemProps {
   onRename: (id: string, newName: string) => void;
   onStartEditing: (id: string) => void;
   onStopEditing: () => void;
-  onToggleGroupCheck: (id: string) => void;
+
   onContextMenu?: (id: string, e: React.MouseEvent) => void;
   onSetBlendMode?: (id: string, mode: string) => void;
   onToggleMaskEdit?: (id: string) => void;
@@ -44,14 +44,16 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         e.stopPropagation();
         const target = e.target as HTMLElement;
         if (target.closest('button, a, input, textarea, select, .layer-item-actions, .group-toggle-btn')) return;
-        const multi = (e.ctrlKey || e.metaKey || e.shiftKey);
-        props.onSelect(layer.id, multi);
+        const multi = (e.ctrlKey || e.metaKey);
+        const shift = e.shiftKey;
+        props.onSelect(layer.id, multi, shift);
       }}
       onKeyDown={(e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          const multi = (e.ctrlKey || e.metaKey || e.shiftKey);
-          props.onSelect(layer.id, multi);
+          const multi = (e.ctrlKey || e.metaKey);
+          const shift = e.shiftKey;
+          props.onSelect(layer.id, multi, shift);
         }
       }}
       onContextMenu={(e) => {
@@ -63,14 +65,7 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
       }}
     >
       <div className="layer-controls">
-        <input
-          type="checkbox"
-          checked={props.groupCheck}
-          onChange={() => props.onToggleGroupCheck(layer.id)}
-          onClick={e => e.stopPropagation()}
-          title="Selecionar para grupo/lote"
-          aria-label="Selecionar camada para grupo ou lote"
-        />
+
         <button
           className={`layer-btn layer-btn--icon layer-visibility ${!layer.visible ? 'layer-btn--inactive' : ''}`}
           onClick={(e) => {
@@ -105,12 +100,12 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         title="Visualização da camada"
       >
         {layer.img ? (
-          <img src={(layer.img as any)?.src || String(layer.img)} alt={layer.name} className="layer-img-thumbnail" loading="lazy" />
+          <img src={(layer.img as any)?.src || String(layer.img)} alt={layer.name} className="layer-img-thumbnail" loading="lazy" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />
         ) : layer.mask ? (
-          <img src={layer.mask.toDataURL()} alt="Máscara" className="mask-thumbnail" loading="lazy" />
+          <img src={layer.mask.toDataURL()} alt="Máscara" className="mask-thumbnail" loading="lazy" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />
         ) : (
-          <div className="placeholder-thumbnail">
-            <LayerIcon type={layer.type} size={14} className="icon-placeholder" />
+          <div className="placeholder-thumbnail" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
+            <LayerIcon type={layer.type} size={18} className="icon-placeholder" />
           </div>
         )}
       </div>
@@ -120,8 +115,9 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
           if (!layer.locked) {
-            const multi = e.ctrlKey || e.metaKey || e.shiftKey;
-            props.onSelect(layer.id, multi);
+            const multi = e.ctrlKey || e.metaKey;
+            const shift = e.shiftKey;
+            props.onSelect(layer.id, multi, shift);
           }
         }}
       >
@@ -171,62 +167,7 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         </div>
       </div>
 
-      <div className="layer-item-actions">
-        <select
-          value={layer.blendMode || 'normal'}
-          onChange={e => {
-            e.stopPropagation();
-            props.onSetBlendMode && props.onSetBlendMode(layer.id, e.target.value);
-          }}
-          title="Modo de Mesclagem"
-          className="layer-blend-select"
-        >
-          <option value="normal">Normal</option>
-          <option value="multiply">Multiply</option>
-          <option value="screen">Screen</option>
-          <option value="overlay">Overlay</option>
-          <option value="add">Add</option>
-          <option value="darken">Darken</option>
-          <option value="lighten">Lighten</option>
-        </select>
-        {props.onToggleMaskEdit && (
-          <button
-            className={`layer-btn layer-btn--icon ${layer.isEditingMask ? 'layer-btn--active' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onToggleMaskEdit && props.onToggleMaskEdit(layer.id);
-            }}
-            title={layer.isEditingMask ? 'Concluir Edição de Máscara' : 'Editar Máscara'}
-            aria-label="Editar Máscara"
-          >
-            <Layers size={14} />
-          </button>
-        )}
-        <button
-          className="layer-btn layer-btn--icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            props.onDuplicate(layer.id);
-          }}
-          disabled={layer.locked}
-          title="Duplicar camada"
-          aria-label="Duplicar camada"
-        >
-          <Copy size={14} />
-        </button>
-        <button
-          className="layer-btn layer-btn--icon layer-btn--danger"
-          onClick={(e) => {
-            e.stopPropagation();
-            props.onDelete(layer.id);
-          }}
-          disabled={layer.locked}
-          title="Excluir camada"
-          aria-label="Excluir camada"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
+
     </div>
   );
 }
