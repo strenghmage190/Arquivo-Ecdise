@@ -10,3 +10,4 @@ docs/
 .agent
 .github
 .opencode
+/cypress

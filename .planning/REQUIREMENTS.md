@@ -1,72 +1,46 @@
-# Requirements: CreateClueModal UI/UX Refactor
+# Requirements: UVEditor UI/UX Refactor & Layers Modernization
 
-**Defined:** 2026-08-14
-**Core Value:** Clean, maintainable component code (no inline styles) without losing any of the complex visual identity (neon, glitch, scanlines).
+## Overview
 
-## v1.2 Requirements
+Complete refactoring of the `UVEditor` forensic workstation and `LayersPanel` subsystem to eliminate amateur emoji icons, fix cursor and mouse tracking across canvas/code layers, provide an intuitive and efficient layer management interface, and decompose monolithic source files into clean modular components.
 
-Requirements for milestone v1.2 (UVEditor "Mini-Photoshop" UX/UI Refactor). Each maps to roadmap phases.
+## Functional Requirements
 
-### Tools Dock & Insertion Feedback
+### 1. Iconography & Visual Modernization (ICON)
+- **ICON-01:** Replace all emojis in `UVEditor.tsx` toolbar (`select`, `draw`, `erase`, `placeImage`, `placeText`) with Lucide React icons (`MousePointer`, `Pencil`, `Eraser`, `Image`, `Type`).
+- **ICON-02:** Replace all emojis in header, channel selectors (`R`, `G`, `B`), and mode indicators with Lucide icons (`Sparkles`, `Radio`, `Layers`, `Eye`, `Palette`, `Check`).
+- **ICON-03:** Replace all emojis in `LayerItem.tsx` (type indicators, visibility toggle, lock toggle, delete, duplicate, mask icons) with Lucide icons.
+- **ICON-04:** Ensure all icons adhere to the Cyberpunk/Nexus neon accent design tokens defined in `src/styles/nexus.css`.
 
-- [ ] **UV-01**: User can identify the active tool at a glance — the selected tool button in the dock shows a strong neon glow and a colored border
-- [ ] **UV-02**: User in insertion mode (Text/Image) sees a large blinking banner "[ MODO DE INSERÇÃO ATIVO - CLIQUE NO CANVAS PARA POSICIONAR ]" with a big red cancel button
+### 2. Layer Management & Image Ingestion (LAYR)
+- **LAYR-01:** Redesign `LayersPanel` header and action bars with intuitive buttons for "Nova Camada de Desenho", "Adicionar Imagem", "Adicionar Texto", "Criar Grupo" and "Limpar Tudo / Excluir".
+- **LAYR-02:** Provide seamless image ingestion allowing users to pick an image, see an inline scaled preview, position it on the canvas, and automatically register it as a named image layer.
+- **LAYR-03:** Streamline individual layer deletion and multi-select batch deletion with clear confirmation and undo/history push.
+- **LAYR-04:** Improve visual feedback for layer drag-and-drop reordering, active layer selection highlight, locked status, and mask editing state.
 
-### Canvas & Workspace
+### 3. Canvas Mouse Tracking & Interaction (CURS)
+- **CURS-01:** Ensure accurate and visible mouse cursor styling across all active tools (`crosshair` for draw, `cell`/custom ring for eraser/mask, `move` for dragging layers, `text` for inline text editor).
+- **CURS-02:** Implement a visible brush-size indicator / cursor circle following the pointer during brush and eraser operations on the canvas.
+- **CURS-03:** Fix cursor rendering and selection bounds when hovering over cipher/code text overlays and transform bounding boxes.
 
-- [ ] **UV-03**: User can distinguish image content from empty space via a dark two-tone checkerboard background behind the canvas
-- [ ] **UV-04**: UVEditor.tsx contains no inline presentation styles — all static styles moved to semantic CSS classes (.uv-workspace, .uv-sidebar, .uv-property-group, .uv-range-slider); only the 3 documented dynamic-geometry exceptions (textarea geometry, mask-cursor geometry, swatch color) remain inline
+### 4. Modularization & Architecture (MODU)
+- **MODU-01:** Extract `UVToolbar`, `UVViewport`, `UVColorPalette`, `UVPropertiesPanel`, and `UVMaskControls` into standalone subcomponents under `src/components/tools/uveditor/`.
+- **MODU-02:** Extract stateful canvas drawing and history management logic into dedicated custom hooks (e.g., `useUVCanvasState`, `useUVHistory`).
+- **MODU-03:** Eliminate raw inline styles from `UVEditor.tsx` and migrate all layout and visual properties to `UVEditor.css` / scoped CSS classes.
 
-### Controls & Interaction
+## Non-Functional Requirements
 
-- [ ] **UV-05**: User can adjust range controls (brush size, mask softness, mask opacity, image scale) via Nexus/C.R.I.S sliders — dark translucent track with a neon thumb that glows on :hover, working in Chrome/Edge/Safari AND Firefox
-- [ ] **UV-06**: User gets satisfying press feedback (:active) on Salvar, Fechar, and Inverter Máscara buttons (100-150ms scale/inset-shadow)
+- **NFR-PERF:** Canvas redrawing and layer transformations must maintain 60fps without lag on canvas drag/resize operations.
+- **NFR-A11Y:** Interactive buttons must have descriptive `aria-label` and `title` attributes for tooltips.
+- **NFR-COMPAT:** Backward compatibility with existing saved canvas states, mask channels, and Supabase image export payloads.
 
-### Layers Preservation
+## Acceptance Criteria
 
-- [ ] **UV-07**: Existing layers panel purple glow (#b366ff) and drag-and-drop animations remain fully functional after the refactor
-
-## Future Requirements
-
-Deferred to a future release. Tracked but not in the v1.2 roadmap.
-
-### Deferred
-
-- **ESC-01**: User can cancel insertion mode with the Escape key — requires a key handler (logic change)
-- **KBD-01**: Keyboard shortcuts for tools (V/B/E/T) — logic milestone
-- **ICO-01**: SVG icon set replacing emoji tool icons — visual polish, not requested this milestone
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| Canvas math, render loops, state hooks (getCanvasCoordinates, redrawAll, rAF, useState/useRef) | Strict no-touch zones — refactor is HTML skeleton + CSS only |
-| CreateClueModal UX & Copy Overhaul (tooltips, immersive copy, empty states) | v1.1 scoped and skipped by user decision; may return in a future milestone |
-| Esc-key cancel for insertion banner | Requires a new key handler (logic change) |
-| Keyboard shortcuts for tools | Logic milestone, deferred |
-| SVG icon replacement | Large visual diff; not requested |
-| Auto-select after placement / single-insert toggle | Changes existing multi-insert behavior (UVEditor.tsx:1779) |
-| LayersPanel.tsx / LayerItem.tsx inline styles | Different component, out of UV-04 scope — future backlog |
-
-## Traceability
-
-Which phases cover which requirements. Updated during roadmap creation.
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| UV-01 | Phase 4 | Pending |
-| UV-02 | Phase 6 | Pending |
-| UV-03 | Phase 4 | Pending |
-| UV-04 | Phase 3 | Pending |
-| UV-05 | Phase 5 | Pending |
-| UV-06 | Phase 5 | Pending |
-| UV-07 | Phase 7 | Pending |
-
-**Coverage:**
-- v1.2 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+1. Zero emojis present in `UVEditor.tsx`, `LayersPanel.tsx`, and `LayerItem.tsx`.
+2. All 5 tools (`select`, `draw`, `erase`, `placeImage`, `placeText`) activate reliably with appropriate cursor indicators.
+3. Adding and deleting image/drawing/text layers functions cleanly without UI glitches or canvas state desynchronization.
+4. `UVEditor.tsx` line count is reduced significantly through clean subcomponent extraction.
+5. All automated type checks pass (`npm run typecheck`).
 
 ---
-*Requirements defined: 2026-08-14*
-*Last updated: 2026-08-14 after v1.2 roadmap creation*
+*Requirements verified: 2026-08-15*

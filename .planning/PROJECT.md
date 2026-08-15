@@ -1,84 +1,56 @@
-# CreateClueModal UI/UX Refactor
+# UVEditor UI/UX Refactor & Layers Modernization
 
 ## What This Is
 
-A complete UI/UX structural refactoring of the `CreateClueModal` component. The goal is to clean up the TSX by moving all inline styles to CSS utility classes while preserving the existing High-tech / Cyberpunk aesthetics and micro-interactions.
+A comprehensive UI/UX overhaul, functional reorganization, and modular refactoring of the `UVEditor` (`src/components/tools/UVEditor.tsx`), `LayersPanel` (`src/components/LayersPanel.tsx`), `LayerItem` (`src/components/LayerItem.tsx`), and associated stylesheets. The project replaces all emojis with crisp Lucide React icons, fixes missing/broken mouse cursor feedback in the canvas and code/cipher zones, streamlines layer management (image placement, deletion, batch operations, drag-and-drop), and breaks down the 3,100+ line monolithic component into modular subcomponents and custom hooks.
 
 ## Core Value
 
-Clean, maintainable component code (no inline styles) without losing any of the complex visual identity (neon, glitch, scanlines).
+A responsive, high-performance forensic image editor with professional Cyberpunk/Nexus aesthetics, seamless layer manipulations, clear cursor feedback, and maintainable modular architecture.
+
+## Context
+
+- `UVEditor.tsx` currently spans 3,164 lines and mixes canvas logic, history stacks, layer transformations, and UI rendering.
+- Emojis (`🖱️`, `✏️`, `🩹`, `🖼️`, `🅰️`, `🔴`, `🟢`, `🔵`, `👁️`, `🚫`, `📁`, etc.) are scattered across toolbars and layer lists instead of standardized SVG icons.
+- Mouse cursor feedback is lost or inconsistent across canvas drawing, text placement, and code cipher modes.
+- Layer operations (image insertion, deleting layers, drag-and-drop reordering, masks, and groups) suffer from cluttered UI controls and poor visual hierarchy.
+
+## Constraints
+
+- **Visual Identity:** Must preserve and elevate the Nexus Cyberpunk theme (neon cyan/magenta accents, dark translucent surfaces, sleek borders).
+- **Core Functionality:** Multi-spectrum modes (`uv`, `rgb`, `filter`), mask editing, layer blending, and export metadata must remain fully functional.
+- **Dependencies:** Use existing libraries (`lucide-react`, vanilla CSS / CSS modules, `react-beautiful-dnd`) without introducing unnecessary external bloat.
 
 ## Requirements
 
 ### Validated
 
-- ✓ Complex evidence creation panel functionality — existing
-- ✓ High-tech/Cyberpunk visual base (Nexus variables, scanlines, glitch) — existing
-- ✓ Decorative corners (::before/::after) and modal-overlay vignette — existing
-- ✓ CreateClueModal.tsx without inline styles — Phase 1 (v1.0)
-- ✓ Reusable CSS classes for layout (nexus-row, nexus-grid, panel-header) — Phase 1 (v1.0)
-- ✓ Hardcoded colors extracted to CSS classes/variables — Phase 1 (v1.0)
-- ✓ Internal panel classes with backdrop-filter and neon borders — Phase 1 (v1.0)
-- ✓ Interactive states with neon glow (hover/focus/disabled) — Phase 1 (v1.0)
-- ✓ Tabs-header smooth horizontal scrolling — Phase 1 (v1.0)
-- ✓ Tab-content fade-in animation — Phase 1 (v1.0)
+- ✓ Multi-mode canvas editing (`uv`, `rgb`, `filter`) — existing
+- ✓ RGB channel targeting (`R`, `G`, `B`) and forensic layer export — existing
+- ✓ Mask generation and inverted alpha rendering — existing
+- ✓ Web Worker forensic benchmarking and FFT processing — existing
+- ✓ Drag-and-drop layer reordering using `react-beautiful-dnd` — existing
 
 ### Active
 
-- [ ] **UV-01**: Tools dock shows obvious pressed/active state for the selected tool (strong neon glow + colored border)
-- [ ] **UV-02**: Insertion mode shows a large blinking banner "[ MODO DE INSERÇÃO ATIVO - CLIQUE NO CANVAS PARA POSICIONAR ]" with a big red cancel button
-- [ ] **UV-03**: Canvas container shows a dark checkerboard (transparency) background so empty space is distinguishable from content
-- [ ] **UV-04**: UVEditor.tsx contains no inline styles — all moved to semantic CSS classes (.uv-workspace, .uv-sidebar, .uv-property-group, .uv-range-slider)
-- [ ] **UV-05**: Range sliders use Nexus/C.R.I.S styling (dark translucent track, neon glowing thumb on :hover)
-- [ ] **UV-06**: Action buttons (Salvar, Fechar, Inverter Máscara) have satisfying :active transitions
-- [ ] **UV-07**: Layers panel styling (purple glow, drag-and-drop animations) is integrated and preserved
+- [ ] **Iconography & Styling Modernization:** Replace all emojis across `UVEditor`, `LayersPanel`, and `LayerItem` with Lucide React icons styled with Nexus Cyberpunk tokens.
+- [ ] **Layer Operations & UI Reorganization:** Redesign `LayersPanel` with clear action toolbars, intuitive image/text/drawing layer creation, quick layer deletion, multi-select batch actions, and thumbnail previews.
+- [ ] **Canvas Cursor & Mouse Tracking:** Fix mouse cursor rendering and crosshair/brush/selection indicators across canvas interaction zones and code/text overlays.
+- [ ] **Monolith Decomposition:** Break down `UVEditor.tsx` into focused subcomponents (Toolbar, Viewport, ColorPalette, MaskControls, PropertiesPanel) and custom hooks (`useUVCanvas`, `useLayerHistory`).
 
 ### Out of Scope
 
-- Modifying component logic or hooks — to prevent breaking the existing evidence creation system.
-- Altering the backend or database interactions — scope is strictly UI/UX structural refactoring.
-- Removing existing High-tech effects (glitch-anim, scanline, pulse) — strictly prohibited by design rules.
-- CreateClueModal UX & Copy Overhaul (tooltips, copy imersiva, empty states) — v1.1 escopado e pulado por decisão do usuário; pode voltar em milestone futuro.
-
-## Current State
-
-**v1.0 (Shipped)**: Refatoração concluída, estilos inline movidos para CSS, Cyberpunk preservado.
-
-**v1.1 (Skipped)**: CreateClueModal UX & Copy Overhaul foi escopado mas não executado — substituído pelo v1.2 (decisão do usuário).
-
-## Current Milestone: v1.2 UVEditor "Mini-Photoshop" UX/UI Refactor
-
-**Goal:** Transform the UVEditor into a professional Cyberpunk design tool — obvious tool states, guided insertion flow, zero inline styles, Nexus-styled controls.
-
-**Target features:**
-- Tools dock com estado "pressionado" óbvio (neon forte + borda colorida) para Pincel/Borracha/Seleção/Texto/Imagem
-- Banner gigante e piscante em modo de inserção + botão cancelar vermelho
-- Background quadriculado escuro (dark checkerboard) no canvas
-- Remover todos os `style={{...}}` do TSX → classes semânticas (integra estilos de Camadas)
-- Controles Nexus/C.R.I.S: sliders com track escuro e thumb neon; `:active` satisfatório em botões
-
-## Context
-
-- The system is functionally complete and stable.
-- The visual identity is Cyberpunk/High-tech, relying on specific CSS variables (e.g., `--nexus-blue`, `--nexus-glass`).
-- The user is extremely strict about not losing any existing visual effects.
-- The UVEditor (`src/components/tools/UVEditor.tsx`, 3163 lines) is a complex image editor: pincel, máscaras, camadas, texto/imagem, pan/zoom.
-- User reported the UVEditor is "horrível de mexer" and that placing texts/images is confusing.
-- Layers styling (purple glow, drag-and-drop animations) already exists in `UVEditor.css` — must be integrated, not recreated.
-
-## Constraints
-
-- **Scope**: Code refactoring ONLY — No logic changes.
-- **Styling**: Must use vanilla CSS and classes, no inline styles allowed.
-- **Design**: Must strictly protect the existing Cyberpunk identity and specific visual effects.
+- Rewriting the underlying canvas rendering engine to WebGL (existing 2D Canvas + Web Worker pipeline remains).
+- Modifying backend Supabase storage schemas or database tables.
+- Changes to unrelated audio or board modules.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Transfer all inline styles to CSS | Improves maintainability and code readability | ✓ Good (v1.0) |
-| Skip v1.1 (CreateClueModal copy overhaul) | Priority on UVEditor UX — user reported "horrível de mexer" | — Pending |
-| UVEditor refactor is skeleton + CSS only | Protect canvas math, render loops and hooks | — Pending |
+| Adopt `lucide-react` for all toolbar and layer icons | Replaces amateur emojis with consistent, high-contrast, scalable SVG icons matching the app design system | Pending |
+| 4-Phase execution roadmap | Balances visual improvements, layer UX, canvas interaction fixes, and architectural cleanup without disrupting working features | Pending |
+| Extract dedicated hooks for canvas & layers | Decouples complex pointer math, mask rasterization, and undo/redo stacks from React rendering | Pending |
 
 ## Evolution
 
@@ -98,5 +70,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-14 after v1.2 milestone start*
-
+*Last updated: 2026-08-15 after initialization*

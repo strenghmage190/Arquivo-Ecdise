@@ -1,17 +1,17 @@
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**CreateClueModal UI/UX Refactor**
+**UVEditor UI/UX Refactor & Layers Modernization**
 
-A complete UI/UX structural refactoring of the `CreateClueModal` component. The goal is to clean up the TSX by moving all inline styles to CSS utility classes while preserving the existing High-tech / Cyberpunk aesthetics and micro-interactions.
+A comprehensive UI/UX overhaul, functional reorganization, and modular refactoring of the `UVEditor` (`src/components/tools/UVEditor.tsx`), `LayersPanel` (`src/components/LayersPanel.tsx`), `LayerItem` (`src/components/LayerItem.tsx`), and associated stylesheets. The project replaces all emojis with crisp Lucide React icons, fixes missing/broken mouse cursor feedback in the canvas and code/cipher zones, streamlines layer management (image placement, deletion, batch operations, drag-and-drop), and breaks down the 3,100+ line monolithic component into modular subcomponents and custom hooks.
 
-**Core Value:** Clean, maintainable component code (no inline styles) without losing any of the complex visual identity (neon, glitch, scanlines).
+**Core Value:** A responsive, high-performance forensic image editor with professional Cyberpunk/Nexus aesthetics, seamless layer manipulations, clear cursor feedback, and maintainable modular architecture.
 
 ### Constraints
 
-- **Scope**: Code refactoring ONLY — No logic changes.
-- **Styling**: Must use vanilla CSS and classes, no inline styles allowed.
-- **Design**: Must strictly protect the existing Cyberpunk identity and specific visual effects.
+- **Scope**: UI/UX refactoring, layer management reorganization, cursor fixes, and modular decomposition.
+- **Styling**: Must use vanilla CSS / CSS modules and Nexus tokens; replace all emojis with `lucide-react`.
+- **Design**: Strict preservation and enhancement of Cyberpunk neon / dark theme.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
