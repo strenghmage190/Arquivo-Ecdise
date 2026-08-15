@@ -37,7 +37,15 @@ Clean, maintainable component code (no inline styles) without losing any of the 
 
 **v1.0 (Shipped)**: Refatoração concluída, estilos inline movidos para CSS, Cyberpunk preservado.
 
-## Next Milestone Goals
+## Current Milestone: v1.1 CreateClueModal UX & Copy Overhaul
+
+**Goal:** Transform the CreateClueModal into a true 'Investigative Terminal' by rewriting copy with Cyberpunk terminology, adding tooltips, and improving empty states without changing underlying logic.
+
+**Target features:**
+- Immersive Texts & Quotes (Diegetic/Cyberpunk terminology, system quotes)
+- Tooltip Implementation (lucide-react Info/HelpCircle for GM guidance)
+- Helper Text Refinement (Clear impact explanations)
+- Alerts & Error Prevention (Visual warnings for empty fields/passwords)
 
 *(TBD - pending /gsd-new-milestone)*
 
@@ -78,3 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 *Last updated: 2026-08-14 after initialization*
+
