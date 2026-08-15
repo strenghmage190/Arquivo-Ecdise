@@ -7,3 +7,6 @@ dist/
 .gitignore
 sql/
 docs/
+.agent
+.github
+.opencode
