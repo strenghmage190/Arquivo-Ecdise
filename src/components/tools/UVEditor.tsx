@@ -2881,7 +2881,7 @@ export default function UVEditor({ baseImageUrl, onSave, onClose, mode = 'rgb', 
         <button className={`tool-button ${tool === 'select' ? 'active' : ''}`} onClick={() => setTool('select')} title="Selecionar"><span className="icon">🖱️</span></button>
         <button className={`tool-button ${tool === 'draw' ? 'active' : ''}`} onClick={() => setTool('draw')} title="Desenhar"><span className="icon">✏️</span></button>
         <button className={`tool-button ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} title="Borracha"><span className="icon">🩹</span></button>
-        <button className={`tool-button`} onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }} title="Inserir Imagem (picker)"><span className="icon">🖼️</span></button>
+        <button className={`tool-button ${tool === 'placeImage' ? 'active' : ''}`} onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }} title="Inserir Imagem (picker)"><span className="icon">🖼️</span></button>
         <button className={`tool-button ${tool === 'placeText' ? 'active' : ''}`} onClick={() => setTool('placeText')} title="Texto"><span className="icon">🅰️</span></button>
       </div>
 

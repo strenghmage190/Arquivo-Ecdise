@@ -29,6 +29,10 @@
   /* Transitions */
   --transition-fast: 120ms ease;
   --transition-medium: 180ms ease;
+
+  /* Tool-specific accent colors (UV-01) */
+  --tool-erase-color: #ff3b3b;
+  --tool-image-color: #b366ff;
 }
 
 /* ===== Base utilities: buttons, focus, transitions ===== */
@@ -1210,4 +1214,60 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
 .layers-list .layer-item.active .layer-item-thumbnail,
 .layer-item.active .layer-item-thumbnail {
   border-color: rgb(255 255 255 / 6%) !important;
+}
+
+/* ===== Phase 4: Canvas-area Upgrades (UV-01) — per-tool active state identity ===== */
+
+/* Override generic .uv-tools-dock .tool-button.active (specificity 0,3,0) with
+   title-attribute selectors (specificity 0,3,1 = class+class+attribute).
+   Each tool has a distinct neon color identity. */
+
+/* Draw tool — cyan (#00d7ff = --nexus-blue) */
+.uv-tools-dock .tool-button[title="Desenhar"].active {
+  box-shadow:
+    0 0 14px rgb(0 215 255 / 60%),
+    0 0 4px rgb(0 215 255 / 80%),
+    0 0 0 1px rgb(0 215 255 / 10%) inset;
+  border-color: rgb(0 215 255 / 40%);
+}
+
+/* Erase tool — red (--tool-erase-color) */
+.uv-tools-dock .tool-button[title="Borracha"].active {
+  box-shadow:
+    0 0 14px rgb(255 59 59 / 60%),
+    0 0 4px rgb(255 59 59 / 80%),
+    0 0 0 1px rgb(255 59 59 / 10%) inset;
+  border-color: rgb(255 59 59 / 40%);
+}
+
+/* Image tool — purple (--tool-image-color, matches layers panel) */
+.uv-tools-dock .tool-button[title="Inserir Imagem (picker)"].active {
+  box-shadow:
+    0 0 14px rgb(179 102 255 / 60%),
+    0 0 4px rgb(179 102 255 / 80%),
+    0 0 0 1px rgb(179 102 255 / 10%) inset;
+  border-color: rgb(179 102 255 / 40%);
+}
+
+/* Text tool — cyan (same family as draw) */
+.uv-tools-dock .tool-button[title="Texto"].active {
+  box-shadow:
+    0 0 14px rgb(0 215 255 / 60%),
+    0 0 4px rgb(0 215 255 / 80%),
+    0 0 0 1px rgb(0 215 255 / 10%) inset;
+  border-color: rgb(0 215 255 / 40%);
+}
+
+/* Select tool — neutral white/grey */
+.uv-tools-dock .tool-button[title="Selecionar"].active {
+  box-shadow:
+    0 0 10px rgb(255 255 255 / 20%),
+    0 0 0 1px rgb(255 255 255 / 12%) inset;
+  border-color: rgb(255 255 255 / 25%);
+}
+
+/* Phase 4: performance-mode suppression — disable per-tool glow */
+body.performance-mode .uv-tools-dock .tool-button.active {
+  box-shadow: none;
+  border-color: rgb(255 255 255 / 6%);
 }
