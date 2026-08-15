@@ -1271,3 +1271,34 @@ body.performance-mode .uv-tools-dock .tool-button.active {
   box-shadow: none;
   border-color: rgb(255 255 255 / 6%);
 }
+
+/* ===== Phase 4: Canvas-area Upgrades (UV-03) — transparency checkerboard ===== */
+
+/* Remove debug canvas background — replaced by checkerboard ::before */
+.uv-editor-viewport canvas {
+  background-color: transparent;
+}
+
+/* Dark two-tone transparency checkerboard pattern.
+   Parent .viewport-canvas already has position:relative (line 362).
+   z-index:0 sits below canvas (z-index:1100!important via line 384).
+   pointer-events:none — never intercepts draw/erase/pan events. */
+.uv-editor-viewport .viewport-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    #141a20 25%,
+    #1c242e 25% 50%,
+    #141a20 50% 75%,
+    #1c242e 75%
+  );
+  background-size: 10px 10px;
+}
+
+/* Phase 4: performance-mode suppression — hide checkerboard (heavy gradient) */
+body.performance-mode .uv-editor-viewport .viewport-canvas::before {
+  display: none;
+}
