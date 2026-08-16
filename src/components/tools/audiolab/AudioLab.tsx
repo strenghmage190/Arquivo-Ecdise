@@ -69,10 +69,14 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const handleBaseAudioLoaded = useCallback((samples: Float32Array | null, _dur: number) => {
+  const handleBaseAudioLoaded = useCallback((samples: Float32Array | null, dur: number) => {
     setBaseAudioSamples(samples);
-    if (samples) setUsePinkNoise(false);
-    else setUsePinkNoise(true);
+    if (samples) {
+      setUsePinkNoise(false);
+      setDurationSec(dur);
+    } else {
+      setUsePinkNoise(true);
+    }
   }, []);
 
   const handleGeneratedBase = useCallback((samples: Float32Array, sampleRate: number, duration: number) => {
