@@ -66,6 +66,7 @@ type Props = {
   onSeek?: (percentage: number) => void;
   // Optional total duration in seconds to display time tooltip
   duration?: number;
+  hideDecorations?: boolean;
 };
 
 export default function ProfessionalSpectrogram({
@@ -81,6 +82,7 @@ export default function ProfessionalSpectrogram({
   onAnalysisComplete,
   onSeek,
   duration,
+  hideDecorations = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -236,26 +238,28 @@ export default function ProfessionalSpectrogram({
   const handleMouseLeave = () => setHoverInfo(null);
 
   return (
-    <div className="spectrogram-container">
-      <div className="spectrogram-header">
-        <div className="header-content">
-          <div className="header-left">
-            <div className="status-indicator" />
-            <h3 className="header-title">ANÁLISE ESPECTRAL DE SINAL</h3>
+    <div className="spectrogram-container" style={hideDecorations ? { border: 'none', background: 'transparent' } : {}}>
+      {!hideDecorations && (
+        <div className="spectrogram-header">
+          <div className="header-content">
+            <div className="header-left">
+              <div className="status-indicator" />
+              <h3 className="header-title">ANÁLISE ESPECTRAL DE SINAL</h3>
+            </div>
+            <div className="header-right">
+              <span className="status-text">{status}</span>
+              {progress > 0 && progress < 100 && (
+                <span className="progress-percent">{Math.floor(progress)}%</span>
+              )}
+            </div>
           </div>
-          <div className="header-right">
-            <span className="status-text">{status}</span>
-            {progress > 0 && progress < 100 && (
-              <span className="progress-percent">{Math.floor(progress)}%</span>
-            )}
-          </div>
+          {progress > 0 && progress < 100 && (
+            <div className="progress-bar-container">
+              <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+            </div>
+          )}
         </div>
-        {progress > 0 && progress < 100 && (
-          <div className="progress-bar-container">
-            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-          </div>
-        )}
-      </div>
+      )}
 
       <div
         className="canvas-container"
@@ -287,11 +291,13 @@ export default function ProfessionalSpectrogram({
         )}
       </div>
 
-      <div className="spectrogram-footer">
-        <p className="footer-text">
-          💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
-        </p>
-      </div>
+      {!hideDecorations && (
+        <div className="spectrogram-footer">
+          <p className="footer-text">
+            💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
