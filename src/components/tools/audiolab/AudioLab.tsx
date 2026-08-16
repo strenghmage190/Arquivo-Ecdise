@@ -53,7 +53,9 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const [dspFilters, setDspFilters] = useState<DSPFilterNode[]>([]);
 
   const centerRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(600);
+  const [canvasH, setCanvasH] = useState(300);
 
   // Audio playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -160,13 +162,16 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   };
 
   useEffect(() => {
-    if (!centerRef.current) return;
+    const el = wrapRef.current;
+    if (!el) return;
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setCanvasW(Math.max(200, Math.floor(entry.contentRect.width - 2)));
+        const { width, height } = entry.contentRect;
+        if (width > 0)  setCanvasW(Math.floor(width));
+        if (height > 0) setCanvasH(Math.floor(height));
       }
     });
-    ro.observe(centerRef.current);
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
@@ -286,8 +291,8 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
 
             {/* Stacked spectrogram area */}
             <div
+              ref={wrapRef}
               className="al-preview-canvas-wrap"
-              style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden' }}
             >
               {/* Layer 1: Base audio spectrogram (background) */}
               {(baseAudioSamples || baseAudioUrl) ? (
@@ -299,6 +304,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                     colorScheme={scheme}
                     maxFreq={maxFreqHz}
                     width={canvasW}
+                    height={canvasH}
                   />
                 </div>
               ) : (
@@ -327,6 +333,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                     maxFreq={maxFreqHz}
                     hideDecorations={!!(baseAudioSamples || baseAudioUrl)}
                     width={canvasW}
+                    height={canvasH}
                   />
                 </div>
               )}

@@ -60,6 +60,7 @@ type Props = {
   colorScheme?: 'hot' | 'cyan' | 'magma';
   flipVertical?: boolean;
   width: number;
+  height?: number;
   analysisRequestId?: number;
   onAnalysisComplete?: (result: { optimalMaxFreq: number; optimalMinDB: number }) => void;
   // Optional: allows parent to seek when user clicks the spectrogram (0..1)
@@ -80,6 +81,7 @@ export default function ProfessionalSpectrogram({
   colorScheme = 'hot',
   flipVertical = false,
   width,
+  height,
   analysisRequestId = 0,
   onAnalysisComplete,
   onSeek,
@@ -107,17 +109,24 @@ export default function ProfessionalSpectrogram({
     }
 
     const canvas = canvasRef.current;
-    const canvasWidth = Math.max(1, Math.floor(width * horizontalScale));
-    const canvasHeight = spectrogramHeight;
-    canvas.width = canvasWidth;
+    // Use explicit height prop if given, else fall back to spectrogramHeight
+    const cssW = Math.max(1, Math.floor(width * horizontalScale));
+    const cssH = Math.max(1, height ?? spectrogramHeight);
+    const dpr = window.devicePixelRatio || 1;
+    const canvasWidth  = Math.round(cssW * dpr);
+    const canvasHeight = Math.round(cssH * dpr);
+    canvas.width  = canvasWidth;
     canvas.height = canvasHeight;
-    canvas.style.width = `${width}px`;
+    // CSS size: fill parent when height prop supplied, else use explicit px
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
 
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
+    ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#05080a';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillRect(0, 0, cssW, cssH);
 
     const worker = new Worker(new URL('../../workers/spectrogram.worker.ts', import.meta.url));
     workerRef.current = worker;
@@ -133,24 +142,24 @@ export default function ProfessionalSpectrogram({
           setStatus(payload < 100 ? `Processando... ${Math.floor(payload)}%` : '✓ Completo');
           break;
         case 'chunkProcessed': {
-          const { chunkData, startFrame, frames, totalFrames, height } = payload as {
+          const { chunkData, startFrame, frames, totalFrames, height: height_ } = payload as {
             chunkData: ArrayBuffer;
             startFrame: number;
             frames: number;
             totalFrames: number;
             height: number;
           };
-          const imageData = new ImageData(new Uint8ClampedArray(chunkData), frames, height);
+          const imageData = new ImageData(new Uint8ClampedArray(chunkData), frames, height_);
           createImageBitmap(imageData).then((bitmap) => {
-            const x = (startFrame / totalFrames) * canvasWidth;
-            const drawWidth = Math.max(1, (frames / totalFrames) * canvasWidth);
+            const x = (startFrame / totalFrames) * cssW;
+            const drawWidth = Math.max(1, (frames / totalFrames) * cssW);
             ctx.save();
             if (flipVertical) {
-              ctx.translate(0, canvasHeight);
+              ctx.translate(0, cssH);
               ctx.scale(1, -1);
-              ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+              ctx.drawImage(bitmap, x, 0, drawWidth, cssH);
             } else {
-              ctx.drawImage(bitmap, x, 0, drawWidth, canvasHeight);
+              ctx.drawImage(bitmap, x, 0, drawWidth, cssH);
             }
             ctx.restore();
           });
@@ -219,7 +228,7 @@ export default function ProfessionalSpectrogram({
       worker.terminate();
       workerRef.current = null;
     };
-  }, [audioUrl, audioData, sampleRate, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, analysisRequestId, onAnalysisComplete]);
+  }, [audioUrl, audioData, sampleRate, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, height, analysisRequestId, onAnalysisComplete]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
