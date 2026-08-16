@@ -104,7 +104,7 @@ export interface AudioLayerPanelProps {
   mixRatio: number;
   durationSec: number;
   usePinkNoise: boolean;
-  onBaseAudioLoaded: (samples: Float32Array | null, durationSec: number) => void;
+  onBaseAudioLoaded: (samples: Float32Array | null, durationSec: number, url?: string) => void;
   onGeneratedBuffer: (samples: Float32Array, sampleRate: number) => void;
   generatedSamples: Float32Array | null;
   generatedSampleRate: number;
@@ -141,9 +141,11 @@ export default function AudioLayerPanel({
     const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
     const ab = await ac.decodeAudioData(buf);
     const samples = ab.getChannelData(0);
-    const info = { name: file.name, duration: ab.duration, samples };
+    const url = URL.createObjectURL(file);
+    const info = { name: file.name, duration: ab.duration, samples, url };
     setBaseAudioInfo(info);
-    onBaseAudioLoaded(samples, ab.duration);
+    onBaseAudioLoaded(samples, ab.duration, url);
+    onGeneratedBuffer(samples, ab.sampleRate);
     await ac.close();
   };
 
@@ -285,7 +287,11 @@ export default function AudioLayerPanel({
             <WaveformThumb samples={baseAudioInfo.samples} />
             <button
               className="al-btn-ghost al-btn-sm"
-              onClick={() => { setBaseAudioInfo(null); onBaseAudioLoaded(null, 0); }}
+              onClick={() => {
+                if (baseAudioInfo?.url) URL.revokeObjectURL(baseAudioInfo.url);
+                setBaseAudioInfo(null); 
+                onBaseAudioLoaded(null, 0); 
+              }}
             >
               Remover
             </button>
@@ -350,24 +356,6 @@ export default function AudioLayerPanel({
         </div>
       )}
 
-      {/* Export */}
-      {generatedSamples && (
-        <>
-          <div className="al-section-divider" />
-          <div className="al-section-title">Exportar</div>
-          <div className="al-export-btns">
-            <button className="al-btn-secondary" onClick={exportWav}>
-              <Download size={13} /> WAV
-            </button>
-            <button className="al-btn-secondary" onClick={exportMp3} disabled={isExporting}>
-              <Download size={13} /> MP3
-            </button>
-          </div>
-          <button className="al-btn-save" onClick={saveToClue}>
-            <Save size={14} /> Salvar na Pista
-          </button>
-        </>
-      )}
     </div>
   );
 }
