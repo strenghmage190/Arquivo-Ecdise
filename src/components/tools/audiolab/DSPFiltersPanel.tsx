@@ -16,6 +16,7 @@ export default function DSPFiltersPanel({ filters, onChange }: DSPFiltersPanelPr
       frequency: 2000,
       Q: 1,
       detune: 0,
+      gain: 0,
     };
     onChange([...filters, newFilter]);
   };
@@ -55,6 +56,9 @@ export default function DSPFiltersPanel({ filters, onChange }: DSPFiltersPanelPr
                   <option value="highpass">Highpass</option>
                   <option value="bandpass">Bandpass</option>
                   <option value="notch">Notch</option>
+                  <option value="peaking">Peaking (EQ)</option>
+                  <option value="lowshelf">Low Shelf</option>
+                  <option value="highshelf">High Shelf</option>
                 </select>
                 <button className="al-dsp-remove-btn" onClick={() => removeFilter(filter.id)}>
                   <Trash2 size={14} />
@@ -84,6 +88,19 @@ export default function DSPFiltersPanel({ filters, onChange }: DSPFiltersPanelPr
                     onChange={(e) => updateFilter(filter.id, { Q: Number(e.target.value) })}
                   />
                 </div>
+                {['peaking', 'lowshelf', 'highshelf'].includes(filter.type) && (
+                  <div className="al-dsp-control">
+                    <label>Gain ({filter.gain ?? 0} dB)</label>
+                    <input
+                      type="range"
+                      min={-40}
+                      max={40}
+                      step={0.5}
+                      value={filter.gain ?? 0}
+                      onChange={(e) => updateFilter(filter.id, { gain: Number(e.target.value) })}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))
