@@ -67,6 +67,8 @@ type Props = {
   // Optional total duration in seconds to display time tooltip
   duration?: number;
   hideDecorations?: boolean;
+  audioData?: Float32Array;
+  sampleRate?: number;
 };
 
 export default function ProfessionalSpectrogram({
@@ -83,6 +85,8 @@ export default function ProfessionalSpectrogram({
   onSeek,
   duration,
   hideDecorations = false,
+  audioData,
+  sampleRate = 44100,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -92,7 +96,7 @@ export default function ProfessionalSpectrogram({
   const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; time: string; freq: string } | null>(null);
 
   useEffect(() => {
-    if (!audioUrl || !canvasRef.current || width <= 0) {
+    if ((!audioUrl && !audioData) || !canvasRef.current || width <= 0) {
       setStatus('Sem áudio');
       setProgress(0);
       return;
@@ -168,29 +172,40 @@ export default function ProfessionalSpectrogram({
         setStatus('Carregando áudio...');
         setProgress(0);
 
-        const response = await fetch(audioUrl);
-        if (!response.ok) throw new Error(`Falha no fetch: ${response.statusText}`);
+        let transferBuffer: ArrayBuffer;
+        let actualSampleRate = sampleRate;
 
-        const arrayBuffer = await response.arrayBuffer();
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        const channelCopy = new Float32Array(audioBuffer.getChannelData(0));
-        const transfer = channelCopy.buffer;
+        if (audioData) {
+          const channelCopy = new Float32Array(audioData);
+          transferBuffer = channelCopy.buffer;
+        } else if (audioUrl) {
+          const response = await fetch(audioUrl);
+          if (!response.ok) throw new Error(`Falha no fetch: ${response.statusText}`);
+
+          const arrayBuffer = await response.arrayBuffer();
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          const channelCopy = new Float32Array(audioBuffer.getChannelData(0));
+          transferBuffer = channelCopy.buffer;
+          actualSampleRate = audioBuffer.sampleRate;
+          audioCtx.close().catch(() => undefined);
+        } else {
+          throw new Error('Nenhum dado de áudio fornecido');
+        }
 
         worker.postMessage(
           {
-            channelData: transfer,
-            sampleRate: audioBuffer.sampleRate,
+            channelData: transferBuffer,
+            sampleRate: actualSampleRate,
             fftSize: FFT_SIZE,
             hopSize: HOP_SIZE,
             minDB,
             maxFreq,
             colorScheme,
           },
-          [transfer]
+          [transferBuffer]
         );
 
-        audioCtx.close().catch(() => undefined);
       } catch (err) {
         console.error('[Spectrogram] Erro:', err);
         setStatus(`Erro: ${err instanceof Error ? err.message : 'Desconhecido'}`);
@@ -204,7 +219,7 @@ export default function ProfessionalSpectrogram({
       worker.terminate();
       workerRef.current = null;
     };
-  }, [audioUrl, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, analysisRequestId, onAnalysisComplete]);
+  }, [audioUrl, audioData, sampleRate, spectrogramHeight, horizontalScale, maxFreq, minDB, colorScheme, width, analysisRequestId, onAnalysisComplete]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);

@@ -227,7 +227,7 @@ export default function SpectrogramPreviewCanvas({
       ctx.lineWidth = 1;
       ctx.strokeRect(AXIS_LEFT, 0, drawW, drawH);
     }
-  }, [imageData, colormap, minFreqHz, maxFreqHz, durationSec, width, height]);
+  }, [imageData, colormap, minFreqHz, maxFreqHz, durationSec, width, height, hasBaseAudio]);
 
   return (
     <canvas
