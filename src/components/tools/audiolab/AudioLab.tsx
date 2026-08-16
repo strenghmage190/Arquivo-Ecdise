@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Radio, Music2, BarChart2 } from 'lucide-react';
+import { X, Radio, Music2, BarChart2, Play, Pause, Square } from 'lucide-react';
 import SteganoInputPanel from './SteganoInputPanel';
 import FrequencyControls from './FrequencyControls';
 import AudioLayerPanel from './AudioLayerPanel';
@@ -55,6 +55,110 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const centerRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(600);
 
+  // Audio playback
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const genSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const genCtxRef = useRef<AudioContext | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  const stopAll = useCallback(() => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    if (genSourceRef.current) { try { genSourceRef.current.stop(); } catch {} genSourceRef.current = null; }
+    if (genCtxRef.current) { genCtxRef.current.close(); genCtxRef.current = null; }
+    cancelAnimationFrame(rafRef.current);
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }, []);
+
+  // Sync audio element when baseAudioUrl changes
+  useEffect(() => {
+    stopAll();
+    const el = audioRef.current;
+    if (!el || !baseAudioUrl) { setTotalDuration(0); return; }
+    el.src = baseAudioUrl;
+    el.onloadedmetadata = () => setTotalDuration(el.duration);
+  }, [baseAudioUrl, stopAll]);
+
+  // Update totalDuration when generatedSamples arrive (no base)
+  useEffect(() => {
+    if (!baseAudioUrl && generatedSamples) {
+      setTotalDuration(generatedSamples.length / (generatedSampleRate || 44100));
+    }
+  }, [generatedSamples, generatedSampleRate, baseAudioUrl]);
+
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) { stopAll(); return; }
+
+    // Play base audio via <audio> element if available
+    if (baseAudioUrl && audioRef.current) {
+      const el = audioRef.current;
+      el.play().catch(() => {});
+      setIsPlaying(true);
+      const tick = () => {
+        if (!el.paused) {
+          setCurrentTime(el.currentTime);
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+      el.onended = () => { setIsPlaying(false); setCurrentTime(0); };
+      return;
+    }
+
+    // Play generated audio via Web Audio API
+    if (generatedSamples) {
+      const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+      genCtxRef.current = ac;
+      const buf = ac.createBuffer(1, generatedSamples.length, generatedSampleRate || 44100);
+      buf.getChannelData(0).set(generatedSamples);
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      src.connect(ac.destination);
+      src.start();
+      genSourceRef.current = src;
+      setIsPlaying(true);
+      const startedAt = ac.currentTime;
+      const dur = buf.duration;
+      setTotalDuration(dur);
+      const tick = () => {
+        const t = ac.currentTime - startedAt;
+        if (t < dur) {
+          setCurrentTime(t);
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setIsPlaying(false);
+          setCurrentTime(0);
+          ac.close();
+          genCtxRef.current = null;
+        }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+      src.onended = () => { setIsPlaying(false); setCurrentTime(0); };
+    }
+  }, [isPlaying, baseAudioUrl, generatedSamples, generatedSampleRate, stopAll]);
+
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t = frac * totalDuration;
+    if (baseAudioUrl && audioRef.current) {
+      audioRef.current.currentTime = t;
+      setCurrentTime(t);
+    }
+  }, [baseAudioUrl, totalDuration]);
+
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     if (!centerRef.current) return;
     const ro = new ResizeObserver((entries) => {
@@ -95,6 +199,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   }, []);
 
   const scheme = colormapToScheme(colormap);
+  const hasAudio = !!(baseAudioUrl || generatedSamples);
 
   return (
     <div className="al-overlay" role="dialog" aria-label="AudioLab — Estúdio de Esteganografia">
@@ -147,8 +252,37 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
 
         {/* Center: Spectrogram + input panel */}
         <div className="al-col-center">
+          {/* Hidden audio element for base audio playback */}
+          <audio ref={audioRef} style={{ display: 'none' }} />
+
           <div className="al-preview-section" ref={centerRef}>
             <span className="al-preview-label">Espectrograma Preview</span>
+
+            {/* Compact player bar */}
+            {hasAudio && (
+              <div className="al-player-bar">
+                <button
+                  className={`al-player-btn ${isPlaying ? 'active' : ''}`}
+                  onClick={handlePlayPause}
+                  title={isPlaying ? 'Parar' : 'Reproduzir'}
+                >
+                  {isPlaying ? <Square size={12} /> : <Play size={12} />}
+                </button>
+                <span className="al-player-time">
+                  {fmt(currentTime)} / {fmt(totalDuration)}
+                </span>
+                <div
+                  className="al-player-seek"
+                  onClick={handleSeek}
+                  title="Clique para buscar"
+                >
+                  <div
+                    className="al-player-seek-fill"
+                    style={{ width: totalDuration > 0 ? `${(currentTime / totalDuration) * 100}%` : '0%' }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Stacked spectrogram area */}
             <div
