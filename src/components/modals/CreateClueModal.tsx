@@ -25,7 +25,7 @@ import './CreateClueModal.css';
 import DiegeticWindow from '../ui/DiegeticWindow';
 import GlitchImageEngine from '../tools/GlitchImageEngine';
 import AudioForge from '../tools/AudioForge';
-import AudioLab from '../tools/audiolab/AudioLab';
+const AudioLab = React.lazy(() => import('../tools/audiolab/AudioLab'));
 import ForensicChannelEditor, { ForensicConfig } from '../tools/ForensicChannelEditor';
 import { supabase } from '../../supabaseClient';
 import { FieldVisibilityConfig, defaultFieldVisibility, fieldVisibilityPresets } from '../../config/fieldVisibilityConfig';
@@ -4162,33 +4162,39 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          )}
       
       {showAudioForgeFor && (
-         <AudioLab
-            isOpen={!!showAudioForgeFor}
-            onClose={() => setShowAudioForgeFor(null)}
-            initialBaseAudio={showAudioForgeFor === 'base' ? audioBase : audioHidden}
-            onSave={async (file) => {
-               if (showAudioForgeFor === 'hidden') {
-                  revokeUrl(audioHiddenPreview);
-                  const newUrl = createAndRegisterBlobUrl(file);
-                  if (newUrl) {
-                     setAudioHidden(file);
-                     setAudioHiddenPreview(newUrl);
-                     setAudioHiddenUploadedUrl(null);
-                     setAudioHiddenUploading(true);
-                     try {
-                        const publicUrl = await uploadAudio(file, investigationId);
-                        if (publicUrl) { setAudioHiddenUploadedUrl(publicUrl); revokeUrl(newUrl); setAudioHiddenPreview(publicUrl); }
-                     } catch (e) { console.error('AudioLab upload failed', e); }
-                     finally { setAudioHiddenUploading(false); }
+         <React.Suspense fallback={
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', color: '#00f3ff', zIndex: 9999 }}>
+               Carregando Laboratório de Áudio...
+            </div>
+         }>
+            <AudioLab
+               isOpen={!!showAudioForgeFor}
+               onClose={() => setShowAudioForgeFor(null)}
+               initialBaseAudio={showAudioForgeFor === 'base' ? audioBase : audioHidden}
+               onSave={async (file) => {
+                  if (showAudioForgeFor === 'hidden') {
+                     revokeUrl(audioHiddenPreview);
+                     const newUrl = createAndRegisterBlobUrl(file);
+                     if (newUrl) {
+                        setAudioHidden(file);
+                        setAudioHiddenPreview(newUrl);
+                        setAudioHiddenUploadedUrl(null);
+                        setAudioHiddenUploading(true);
+                        try {
+                           const publicUrl = await uploadAudio(file, investigationId);
+                           if (publicUrl) { setAudioHiddenUploadedUrl(publicUrl); revokeUrl(newUrl); setAudioHiddenPreview(publicUrl); }
+                        } catch (e) { console.error('AudioLab upload failed', e); }
+                        finally { setAudioHiddenUploading(false); }
+                     }
+                  } else {
+                     revokeUrl(audioBasePreview);
+                     const newUrl = createAndRegisterBlobUrl(file);
+                     if (newUrl) { setAudioBase(file); setAudioBasePreview(newUrl); }
                   }
-               } else {
-                  revokeUrl(audioBasePreview);
-                  const newUrl = createAndRegisterBlobUrl(file);
-                  if (newUrl) { setAudioBase(file); setAudioBasePreview(newUrl); }
-               }
-               setShowAudioForgeFor(null);
-            }}
-         />
+                  setShowAudioForgeFor(null);
+               }}
+            />
+         </React.Suspense>
       )}
 
       {showThermalEditor && imgFile && (

@@ -2,6 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Music, Layers, Play, Square, Download, Save, Loader2, Upload } from 'lucide-react';
 import InteractiveWaveform from './InteractiveWaveform';
 import { processAudioChain, type DSPFilterNode, type RegionOption } from '../../../utils/dspAudioEngine';
+// @ts-ignore
+import * as lamejs from 'lamejs';
 import './AudioLab.css';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +31,35 @@ function bufferToWav(samples: Float32Array, sampleRate: number): Blob {
     offset += 2;
   }
   return new Blob([view], { type: 'audio/wav' });
+}
+
+function bufferToMp3(samples: Float32Array, sampleRate: number): Blob {
+  // Config mp3encoder (channels, samplerate, kbps)
+  const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, 128);
+  
+  // Convert Float32Array to Int16Array
+  const int16Samples = new Int16Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    let s = Math.max(-1, Math.min(1, samples[i]));
+    int16Samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+
+  const mp3Data: Uint8Array[] = [];
+  const sampleBlockSize = 1152; 
+  for (let i = 0; i < int16Samples.length; i += sampleBlockSize) {
+    const sampleChunk = int16Samples.subarray(i, i + sampleBlockSize);
+    const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+    if (mp3buf.length > 0) {
+      mp3Data.push(new Uint8Array(mp3buf));
+    }
+  }
+  
+  const mp3buf = mp3encoder.flush();
+  if (mp3buf.length > 0) {
+    mp3Data.push(new Uint8Array(mp3buf));
+  }
+
+  return new Blob(mp3Data as unknown as BlobPart[], { type: 'audio/mp3' });
 }
 
 // ---------------------------------------------------------------------------
@@ -201,43 +232,18 @@ export default function AudioLayerPanel({
     if (!generatedSamples) return;
     setIsExporting(true);
     try {
-      // Dynamic import lamejs if available, fallback to WAV
-      // @ts-ignore
-      let lamejs: any;
-      try {
-        // @ts-ignore
-        lamejs = await import('lamejs');
-      } catch {
-        // lamejs not installed, fallback to WAV
-        exportWav();
-        setIsExporting(false);
-        return;
-      }
       const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
         generatedSamples,
         generatedSampleRate || 44100,
         dspFilters,
         exportRegion
       );
-
-      const mp3enc = new lamejs.Mp3Encoder(1, processedRate, 128);
-      const int16 = new Int16Array(processedSamples.length);
-      for (let i = 0; i < processedSamples.length; i++) {
-        int16[i] = Math.max(-32768, Math.min(32767, processedSamples[i] * 32767));
-      }
-      const chunkSize = 1152;
-      const mp3Data: any[] = [];
-      for (let i = 0; i < int16.length; i += chunkSize) {
-        const chunk = int16.subarray(i, i + chunkSize);
-        const mp3buf = mp3enc.encodeBuffer(chunk);
-        if (mp3buf.length > 0) mp3Data.push(new Uint8Array(mp3buf.buffer, mp3buf.byteOffset, mp3buf.length));
-      }
-      const end = mp3enc.flush();
-      if (end.length > 0) mp3Data.push(new Uint8Array(end.buffer, end.byteOffset, end.length));
-      const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+      const blob = bufferToMp3(processedSamples, processedRate);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'audiolab_steg.mp3'; a.click();
+      a.href = url;
+      a.download = 'audiolab_steg.mp3';
+      a.click();
       URL.revokeObjectURL(url);
     } finally {
       setIsExporting(false);
@@ -254,8 +260,8 @@ export default function AudioLayerPanel({
         dspFilters,
         exportRegion
       );
-      const blob = bufferToWav(processedSamples, processedRate);
-      const file = new File([blob], 'audiolab_steg.wav', { type: 'audio/wav' });
+      const blob = bufferToMp3(processedSamples, processedRate);
+      const file = new File([blob], 'audiolab_steg.mp3', { type: 'audio/mp3' });
       onSave(file);
     } finally {
       setIsExporting(false);
