@@ -3,14 +3,14 @@ import { createPortal } from 'react-dom';
 import { X, Radio, Music2, BarChart2 } from 'lucide-react';
 import SteganoInputPanel from './SteganoInputPanel';
 import FrequencyControls from './FrequencyControls';
-import SpectrogramPreviewCanvas, { type ColormapName } from './SpectrogramPreviewCanvas';
 import AudioLayerPanel from './AudioLayerPanel';
 import DSPFiltersPanel from './DSPFiltersPanel';
 import SignalGeneratorPanel from './SignalGeneratorPanel';
-import InteractiveWaveform from './InteractiveWaveform';
 import ProfessionalSpectrogram from '../ProfessionalSpectrogram';
 import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
+
+export type ColormapName = 'cyberneon' | 'inferno' | 'viridis';
 
 export interface AudioLabProps {
   isOpen: boolean;
@@ -27,12 +27,16 @@ const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
   { id: 'synth',  label: 'Sintetizador',   icon: <Music2 size={13} /> },
 ];
 
+function colormapToScheme(c: ColormapName): 'cyan' | 'hot' | 'magma' {
+  if (c === 'cyberneon') return 'cyan';
+  if (c === 'inferno') return 'hot';
+  return 'magma';
+}
+
 function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabProps, 'isOpen'>) {
-  // Shared state
   const [activeTab, setActiveTab] = useState<ActiveTab>('steg');
   const [imageData, setImageData] = useState<ImageData | null>(null);
 
-  // Frequency / synthesis params
   const [minFreqHz, setMinFreqHz] = useState(8000);
   const [maxFreqHz, setMaxFreqHz] = useState(18000);
   const [intensity, setIntensity] = useState(0.8);
@@ -41,32 +45,27 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const [colormap, setColormap] = useState<ColormapName>('cyberneon');
   const [usePinkNoise, setUsePinkNoise] = useState(true);
 
-  // Audio state
   const [baseAudioSamples, setBaseAudioSamples] = useState<Float32Array | null>(null);
   const [baseAudioUrl, setBaseAudioUrl] = useState<string | null>(null);
   const [generatedSamples, setGeneratedSamples] = useState<Float32Array | null>(null);
   const [generatedSampleRate, setGeneratedSampleRate] = useState(44100);
 
-  // DSP state
   const [dspFilters, setDspFilters] = useState<DSPFilterNode[]>([]);
 
-  // Canvas size tracking
   const centerRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ w: 600, h: 200 });
+  const [canvasW, setCanvasW] = useState(600);
 
   useEffect(() => {
     if (!centerRef.current) return;
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setCanvasSize({ w: Math.max(200, Math.floor(width - 24)), h: Math.max(100, Math.floor(height * 0.45)) });
+        setCanvasW(Math.max(200, Math.floor(entry.contentRect.width - 2)));
       }
     });
     ro.observe(centerRef.current);
     return () => ro.disconnect();
   }, []);
 
-  // Keyboard: Escape to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
@@ -84,7 +83,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
     }
   }, []);
 
-  const handleGeneratedBase = useCallback((samples: Float32Array, sampleRate: number, duration: number) => {
+  const handleGeneratedBase = useCallback((samples: Float32Array, _sampleRate: number, duration: number) => {
     setBaseAudioSamples(samples);
     setUsePinkNoise(false);
     setDurationSec(duration);
@@ -94,6 +93,8 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
     setGeneratedSamples(samples);
     setGeneratedSampleRate(sampleRate);
   }, []);
+
+  const scheme = colormapToScheme(colormap);
 
   return (
     <div className="al-overlay" role="dialog" aria-label="AudioLab — Estúdio de Esteganografia">
@@ -144,57 +145,57 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
           )}
         </div>
 
-        {/* Center: Preview canvas + input panel */}
+        {/* Center: Spectrogram + input panel */}
         <div className="al-col-center">
           <div className="al-preview-section" ref={centerRef}>
             <span className="al-preview-label">Espectrograma Preview</span>
-            <div className="al-preview-canvas-wrap" style={{ position: 'relative', width: '100%', height: '100%' }}>
-              
-              {/* Timeline (InteractiveWaveform) if audio exists */}
-              {baseAudioSamples && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, zIndex: 10 }}>
-                  <InteractiveWaveform
-                    samples={baseAudioSamples}
-                    sampleRate={44100}
-                    onRegionChange={() => {}}
-                    height={40}
-                    timelineOnly={true}
-                  />
-                </div>
-              )}
 
-              {/* Base Audio Spectrogram */}
-              {baseAudioUrl && (
-                <div style={{ position: 'absolute', top: 44, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' }}>
+            {/* Stacked spectrogram area */}
+            <div
+              className="al-preview-canvas-wrap"
+              style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden' }}
+            >
+              {/* Layer 1: Base audio spectrogram (background) */}
+              {(baseAudioSamples || baseAudioUrl) ? (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
                   <ProfessionalSpectrogram
-                    audioUrl={baseAudioUrl}
-                    audioData={baseAudioSamples}
+                    audioUrl={baseAudioUrl ?? undefined}
+                    audioData={baseAudioSamples ?? undefined}
                     sampleRate={44100}
-                    colorScheme={colormap === 'cyberneon' ? 'cyan' : colormap === 'inferno' ? 'hot' : 'magma'}
+                    colorScheme={scheme}
                     maxFreq={maxFreqHz}
-                    hideDecorations={true}
-                    width={canvasSize.w}
+                    width={canvasW}
                   />
+                </div>
+              ) : (
+                /* Empty state */
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--nx-text-muted, #4a5a6a)', fontSize: 13,
+                  border: '1px solid var(--nx-border, #1a2535)', borderRadius: 4,
+                }}>
+                  Carregue um áudio base ou configure os parâmetros
                 </div>
               )}
 
-              {/* Payload Preview (overlaid) */}
-              <div style={{ position: 'absolute', top: baseAudioUrl ? 44 : 0, left: 0, right: 0, bottom: 0, zIndex: 5, mixBlendMode: baseAudioUrl ? 'screen' : 'normal', pointerEvents: 'none' }}>
-                <SpectrogramPreviewCanvas
-                  imageData={imageData}
-                  minFreqHz={minFreqHz}
-                  maxFreqHz={maxFreqHz}
-                  durationSec={durationSec}
-                  colormap={colormap}
-                  intensity={intensity}
-                  mixRatio={mixRatio}
-                  usePinkNoise={usePinkNoise}
-                  hasBaseAudio={!!baseAudioSamples}
-                  width={canvasSize.w}
-                  height={canvasSize.h - (baseAudioUrl ? 44 : 0)}
-                  className="al-preview-canvas"
-                />
-              </div>
+              {/* Layer 2: Generated payload spectrogram (screen blend) */}
+              {generatedSamples && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 2,
+                  mixBlendMode: (baseAudioSamples || baseAudioUrl) ? 'screen' : 'normal',
+                  pointerEvents: 'none',
+                }}>
+                  <ProfessionalSpectrogram
+                    audioData={generatedSamples}
+                    sampleRate={generatedSampleRate}
+                    colorScheme={scheme}
+                    maxFreq={maxFreqHz}
+                    hideDecorations={!!(baseAudioSamples || baseAudioUrl)}
+                    width={canvasW}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

@@ -54,12 +54,24 @@ Overhaul and unify all forensic audio and spectrogram tools into a single modula
 
 ---
 
+### Phase 11: AudioLab Spectrogram Preview & Player Parity
+- **Goal:** Unify the AudioLab center spectrogram preview with the high-quality ProfessionalSpectrogram visualization used in the InspectionModal, removing layout visual bugs.
+- **Scope:**
+  - Replace the Wavesurfer Spectrogram plugin in the center view with ProfessionalSpectrogram.tsx for visual parity with player tools.
+  - Overlay the steganography payload preview (SpectrogramPreviewCanvas) directly on top of the base audio spectrogram using CSS mix-blend modes to allow users to visualize the real-time mix of payload and base audio.
+  - Remove extraneous controls (like the 'Limpar Seleção' button) from the center preview area.
+- **Requirements Covered:** AUDW-05
+- **Success Criteria:** The center preview shows the full-height ProfessionalSpectrogram of the base audio, perfectly overlaid with the SpectrogramPreviewCanvas preview when typing text/adding images, with no visual gaps.
+
+---
+
 ## Progress Tracking
 
 - [ ] **Phase 7: High-Fidelity Spectrogram Steganography Engine**
 - [ ] **Phase 8: Forensic Audio DSP & Manipulation Suite**
 - [ ] **Phase 9: Unified AudioLab Workstation Architecture & UI**
 - [ ] **Phase 10: CreateClueModal Integration, Performance & E2E Validation**
+- [x] **Phase 11: AudioLab Spectrogram Preview & Player Parity** (completed 2026-08-16)
 
 ---
 *Roadmap defined: 2026-08-15*

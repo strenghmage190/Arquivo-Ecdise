@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ColormapName } from './SpectrogramPreviewCanvas';
+import type { ColormapName } from './AudioLab';
 import './AudioLab.css';
 
 export interface FrequencyControlsProps {
