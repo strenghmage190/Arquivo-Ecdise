@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
+import SpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram.esm.js';
 import type { RegionOption } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
 interface InteractiveWaveformProps {
   samples: Float32Array;
   sampleRate: number;
-  onRegionChange: (region: RegionOption | null) => void;
+  onRegionChange?: (region: RegionOption | null) => void;
+  height?: number;
+  spectrogramHeight?: number;
+  timelineOnly?: boolean;
 }
 
-export default function InteractiveWaveform({ samples, sampleRate, onRegionChange }: InteractiveWaveformProps) {
+export default function InteractiveWaveform({ samples, sampleRate, onRegionChange, height = 60, spectrogramHeight = 100, timelineOnly = false }: InteractiveWaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<any | null>(null);
   const regionsRef = useRef<any>(null);
@@ -44,6 +48,19 @@ export default function InteractiveWaveform({ samples, sampleRate, onRegionChang
 
     const regions = RegionsPlugin.create();
     regionsRef.current = regions;
+    
+    const plugins: any[] = [regions];
+    
+    if (!timelineOnly) {
+      const spectrogram = SpectrogramPlugin.create({
+        labels: true,
+        height: spectrogramHeight,
+        frequencyMin: 0,
+        frequencyMax: 22050,
+        splitChannels: false,
+      });
+      plugins.push(spectrogram);
+    }
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
@@ -53,8 +70,8 @@ export default function InteractiveWaveform({ samples, sampleRate, onRegionChang
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
-      height: 60,
-      plugins: [regions]
+      height: height,
+      plugins: plugins
     });
 
     ws.load(url);
@@ -107,9 +124,11 @@ export default function InteractiveWaveform({ samples, sampleRate, onRegionChang
   return (
     <div className="al-interactive-waveform">
       <div ref={containerRef} className="al-iw-container" />
-      <button className="al-btn-ghost al-btn-sm" onClick={clearRegion} style={{ marginTop: '4px' }}>
-        Limpar Seleção (Exportar Tudo)
-      </button>
+      {!timelineOnly && (
+        <button className="al-btn-ghost al-btn-sm" onClick={clearRegion} style={{ marginTop: '4px' }}>
+          Limpar Seleção (Exportar Tudo)
+        </button>
+      )}
     </div>
   );
 }
