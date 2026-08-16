@@ -7,6 +7,8 @@ import SpectrogramPreviewCanvas, { type ColormapName } from './SpectrogramPrevie
 import AudioLayerPanel from './AudioLayerPanel';
 import DSPFiltersPanel from './DSPFiltersPanel';
 import SignalGeneratorPanel from './SignalGeneratorPanel';
+import InteractiveWaveform from './InteractiveWaveform';
+import ProfessionalSpectrogram from '../ProfessionalSpectrogram';
 import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
@@ -41,6 +43,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
 
   // Audio state
   const [baseAudioSamples, setBaseAudioSamples] = useState<Float32Array | null>(null);
+  const [baseAudioUrl, setBaseAudioUrl] = useState<string | null>(null);
   const [generatedSamples, setGeneratedSamples] = useState<Float32Array | null>(null);
   const [generatedSampleRate, setGeneratedSampleRate] = useState(44100);
 
@@ -70,8 +73,9 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const handleBaseAudioLoaded = useCallback((samples: Float32Array | null, dur: number) => {
+  const handleBaseAudioLoaded = useCallback((samples: Float32Array | null, dur: number, url?: string) => {
     setBaseAudioSamples(samples);
+    setBaseAudioUrl(url || null);
     if (samples) {
       setUsePinkNoise(false);
       setDurationSec(dur);
@@ -144,21 +148,50 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
         <div className="al-col-center">
           <div className="al-preview-section" ref={centerRef}>
             <span className="al-preview-label">Espectrograma Preview</span>
-            <div className="al-preview-canvas-wrap">
-              <SpectrogramPreviewCanvas
-                imageData={imageData}
-                minFreqHz={minFreqHz}
-                maxFreqHz={maxFreqHz}
-                durationSec={durationSec}
-                colormap={colormap}
-                intensity={intensity}
-                mixRatio={mixRatio}
-                usePinkNoise={usePinkNoise}
-                hasBaseAudio={!!baseAudioSamples}
-                width={canvasSize.w}
-                height={canvasSize.h}
-                className="al-preview-canvas"
-              />
+            <div className="al-preview-canvas-wrap" style={{ position: 'relative', width: '100%', height: '100%' }}>
+              
+              {/* Timeline (InteractiveWaveform) if audio exists */}
+              {baseAudioSamples && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, zIndex: 10 }}>
+                  <InteractiveWaveform
+                    samples={baseAudioSamples}
+                    sampleRate={44100}
+                    onRegionChange={() => {}}
+                    height={40}
+                    timelineOnly={true}
+                  />
+                </div>
+              )}
+
+              {/* Base Audio Spectrogram */}
+              {baseAudioUrl && (
+                <div style={{ position: 'absolute', top: 44, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' }}>
+                  <ProfessionalSpectrogram
+                    audioUrl={baseAudioUrl}
+                    colorScheme={colormap === 'hot' ? 'hot' : colormap === 'cyan' ? 'cyan' : 'magma'}
+                    maxFreq={maxFreqHz}
+                    hideDecorations={true}
+                  />
+                </div>
+              )}
+
+              {/* Payload Preview (overlaid) */}
+              <div style={{ position: 'absolute', top: baseAudioUrl ? 44 : 0, left: 0, right: 0, bottom: 0, zIndex: 5, mixBlendMode: baseAudioUrl ? 'screen' : 'normal', pointerEvents: 'none' }}>
+                <SpectrogramPreviewCanvas
+                  imageData={imageData}
+                  minFreqHz={minFreqHz}
+                  maxFreqHz={maxFreqHz}
+                  durationSec={durationSec}
+                  colormap={colormap}
+                  intensity={intensity}
+                  mixRatio={mixRatio}
+                  usePinkNoise={usePinkNoise}
+                  hasBaseAudio={!!baseAudioSamples}
+                  width={canvasSize.w}
+                  height={canvasSize.h - (baseAudioUrl ? 44 : 0)}
+                  className="al-preview-canvas"
+                />
+              </div>
             </div>
           </div>
 
