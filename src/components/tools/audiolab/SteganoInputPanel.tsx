@@ -219,12 +219,12 @@ function TextTab({ onData }: { onData: (d: ImageData | null) => void }) {
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${fs}px ${ff}`;
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
+    ctx.textAlign = 'center';
     // Word-wrap
     const words = t.split('\n');
     let y = CANVAS_H / 2 - ((words.length - 1) * fs * 0.6);
     for (const line of words) {
-      ctx.fillText(line, 8, y, CANVAS_W - 16);
+      ctx.fillText(line, CANVAS_W / 2, y, CANVAS_W - 16);
       y += fs * 1.2;
     }
     onData(ctx.getImageData(0, 0, CANVAS_W, CANVAS_H));

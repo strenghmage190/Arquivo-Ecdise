@@ -4165,6 +4165,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          <AudioLab
             isOpen={!!showAudioForgeFor}
             onClose={() => setShowAudioForgeFor(null)}
+            initialBaseAudio={showAudioForgeFor === 'base' ? audioBase : audioHidden}
             onSave={async (file) => {
                if (showAudioForgeFor === 'hidden') {
                   revokeUrl(audioHiddenPreview);

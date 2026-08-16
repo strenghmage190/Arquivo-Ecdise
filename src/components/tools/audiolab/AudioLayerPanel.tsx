@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Music, Layers, Play, Square, Download, Save, Loader2, Upload } from 'lucide-react';
 import InteractiveWaveform from './InteractiveWaveform';
 import { processAudioChain, type DSPFilterNode, type RegionOption } from '../../../utils/dspAudioEngine';
@@ -79,6 +79,7 @@ export interface AudioLayerPanelProps {
   generatedSampleRate: number;
   dspFilters: DSPFilterNode[];
   onSave: (file: File) => void;
+  initialBaseAudio?: File | null;
 }
 
 export default function AudioLayerPanel({
@@ -95,6 +96,7 @@ export default function AudioLayerPanel({
   generatedSampleRate,
   dspFilters,
   onSave,
+  initialBaseAudio,
 }: AudioLayerPanelProps) {
   const [baseAudioInfo, setBaseAudioInfo] = useState<{ name: string; duration: number; samples: Float32Array } | null>(null);
   const [synthProgress, setSynthProgress] = useState(0);
@@ -113,6 +115,12 @@ export default function AudioLayerPanel({
     onBaseAudioLoaded(samples, ab.duration);
     await ac.close();
   };
+
+  useEffect(() => {
+    if (initialBaseAudio && !baseAudioInfo) {
+      loadBaseAudio(initialBaseAudio).catch(err => console.error("Failed to load initial base audio", err));
+    }
+  }, [initialBaseAudio]);
 
   const synthesize = useCallback(() => {
     if (!imageData) return;

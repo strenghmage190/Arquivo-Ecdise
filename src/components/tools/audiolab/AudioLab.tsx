@@ -14,6 +14,7 @@ export interface AudioLabProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (file: File) => void;
+  initialBaseAudio?: File | null;
 }
 
 type ActiveTab = 'steg' | 'dsp' | 'synth';
@@ -24,7 +25,7 @@ const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
   { id: 'synth',  label: 'Sintetizador',   icon: <Music2 size={13} /> },
 ];
 
-function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
+function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabProps, 'isOpen'>) {
   // Shared state
   const [activeTab, setActiveTab] = useState<ActiveTab>('steg');
   const [imageData, setImageData] = useState<ImageData | null>(null);
@@ -182,6 +183,7 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
             generatedSampleRate={generatedSampleRate}
             dspFilters={dspFilters}
             onSave={onSave}
+            initialBaseAudio={initialBaseAudio}
           />
         </div>
       </div>
@@ -189,10 +191,12 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
   );
 }
 
-export default function AudioLab({ isOpen, onClose, onSave }: AudioLabProps) {
+export default function AudioLab({ isOpen, onClose, onSave, initialBaseAudio }: AudioLabProps) {
   if (!isOpen) return null;
   return createPortal(
-    <AudioLabContent onClose={onClose} onSave={onSave} />,
+    <div className="al-overlay">
+      <AudioLabContent onClose={onClose} onSave={onSave} initialBaseAudio={initialBaseAudio} />
+    </div>,
     document.body
   );
 }
