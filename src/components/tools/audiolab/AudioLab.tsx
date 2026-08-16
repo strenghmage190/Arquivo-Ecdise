@@ -5,6 +5,9 @@ import SteganoInputPanel from './SteganoInputPanel';
 import FrequencyControls from './FrequencyControls';
 import SpectrogramPreviewCanvas, { type ColormapName } from './SpectrogramPreviewCanvas';
 import AudioLayerPanel from './AudioLayerPanel';
+import DSPFiltersPanel from './DSPFiltersPanel';
+import SignalGeneratorPanel from './SignalGeneratorPanel';
+import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
 export interface AudioLabProps {
@@ -13,12 +16,12 @@ export interface AudioLabProps {
   onSave: (file: File) => void;
 }
 
-type ActiveTab = 'steg' | 'editor' | 'analyzer';
+type ActiveTab = 'steg' | 'dsp' | 'synth';
 
 const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'steg',     label: 'Esteganografia', icon: <Radio size={13} /> },
-  { id: 'editor',   label: 'Editor',         icon: <Music2 size={13} /> },
-  { id: 'analyzer', label: 'Analisador',     icon: <BarChart2 size={13} /> },
+  { id: 'steg',   label: 'Esteganografia', icon: <Radio size={13} /> },
+  { id: 'dsp',    label: 'Filtros DSP',    icon: <BarChart2 size={13} /> },
+  { id: 'synth',  label: 'Sintetizador',   icon: <Music2 size={13} /> },
 ];
 
 function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
@@ -39,6 +42,9 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
   const [baseAudioSamples, setBaseAudioSamples] = useState<Float32Array | null>(null);
   const [generatedSamples, setGeneratedSamples] = useState<Float32Array | null>(null);
   const [generatedSampleRate, setGeneratedSampleRate] = useState(44100);
+
+  // DSP state
+  const [dspFilters, setDspFilters] = useState<DSPFilterNode[]>([]);
 
   // Canvas size tracking
   const centerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +73,12 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
     setBaseAudioSamples(samples);
     if (samples) setUsePinkNoise(false);
     else setUsePinkNoise(true);
+  }, []);
+
+  const handleGeneratedBase = useCallback((samples: Float32Array, sampleRate: number, duration: number) => {
+    setBaseAudioSamples(samples);
+    setUsePinkNoise(false);
+    setDurationSec(duration);
   }, []);
 
   const handleGeneratedBuffer = useCallback((samples: Float32Array, sampleRate: number) => {
@@ -103,16 +115,24 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
       <div className="al-body">
         {/* Left: Frequency / params */}
         <div className="al-col-left">
-          <FrequencyControls
-            minFreqHz={minFreqHz}          setMinFreqHz={setMinFreqHz}
-            maxFreqHz={maxFreqHz}          setMaxFreqHz={setMaxFreqHz}
-            intensity={intensity}          setIntensity={setIntensity}
-            mixRatio={mixRatio}            setMixRatio={setMixRatio}
-            durationSec={durationSec}      setDurationSec={setDurationSec}
-            colormap={colormap}            setColormap={setColormap}
-            usePinkNoise={usePinkNoise}    setUsePinkNoise={setUsePinkNoise}
-            hasBaseAudio={!!baseAudioSamples}
-          />
+          {activeTab === 'steg' && (
+            <FrequencyControls
+              minFreqHz={minFreqHz}          setMinFreqHz={setMinFreqHz}
+              maxFreqHz={maxFreqHz}          setMaxFreqHz={setMaxFreqHz}
+              intensity={intensity}          setIntensity={setIntensity}
+              mixRatio={mixRatio}            setMixRatio={setMixRatio}
+              durationSec={durationSec}      setDurationSec={setDurationSec}
+              colormap={colormap}            setColormap={setColormap}
+              usePinkNoise={usePinkNoise}    setUsePinkNoise={setUsePinkNoise}
+              hasBaseAudio={!!baseAudioSamples}
+            />
+          )}
+          {activeTab === 'dsp' && (
+            <DSPFiltersPanel filters={dspFilters} onChange={setDspFilters} />
+          )}
+          {activeTab === 'synth' && (
+            <SignalGeneratorPanel onGenerateBase={handleGeneratedBase} />
+          )}
         </div>
 
         {/* Center: Preview canvas + input panel */}
@@ -126,8 +146,13 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
                 maxFreqHz={maxFreqHz}
                 durationSec={durationSec}
                 colormap={colormap}
+                intensity={intensity}
+                mixRatio={mixRatio}
+                usePinkNoise={usePinkNoise}
+                hasBaseAudio={!!baseAudioSamples}
                 width={canvasSize.w}
                 height={canvasSize.h}
+                className="al-preview-canvas"
               />
             </div>
           </div>
@@ -151,6 +176,7 @@ function AudioLabContent({ onClose, onSave }: Omit<AudioLabProps, 'isOpen'>) {
             onGeneratedBuffer={handleGeneratedBuffer}
             generatedSamples={generatedSamples}
             generatedSampleRate={generatedSampleRate}
+            dspFilters={dspFilters}
             onSave={onSave}
           />
         </div>

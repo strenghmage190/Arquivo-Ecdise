@@ -8,6 +8,10 @@ export interface SpectrogramPreviewCanvasProps {
   maxFreqHz: number;
   durationSec: number;
   colormap: ColormapName;
+  intensity?: number;
+  mixRatio?: number;
+  usePinkNoise?: boolean;
+  hasBaseAudio?: boolean;
   width?: number;
   height?: number;
   className?: string;
@@ -89,6 +93,10 @@ export default function SpectrogramPreviewCanvas({
   maxFreqHz,
   durationSec,
   colormap,
+  intensity = 1,
+  mixRatio = 0.5,
+  usePinkNoise = false,
+  hasBaseAudio = false,
   width = 600,
   height = 200,
   className,
@@ -132,14 +140,43 @@ export default function SpectrogramPreviewCanvas({
     const out = octx.createImageData(imageData.width, imageData.height);
     const dst = out.data;
 
-    for (let i = 0; i < imageData.width * imageData.height; i++) {
-      const si = i * 4;
-      const brightness = (src[si] + src[si + 1] + src[si + 2]) / 3 / 255;
-      const [r, g, b] = fn(brightness);
-      dst[si] = r;
-      dst[si + 1] = g;
-      dst[si + 2] = b;
-      dst[si + 3] = 255;
+    for (let y = 0; y < imageData.height; y++) {
+      for (let x = 0; x < imageData.width; x++) {
+        const i = y * imageData.width + x;
+        const si = i * 4;
+        
+        // Brilho do sinal oculto (0..1)
+        const srcBrightness = (src[si] + src[si + 1] + src[si + 2]) / 3 / 255;
+        
+        // Simular o fundo (áudio base ou pink noise)
+        let bgBrightness = 0;
+        if (usePinkNoise) {
+          // Ruído rosa simulado (um pouco de random)
+          bgBrightness = Math.random() * 0.4;
+        } else if (hasBaseAudio) {
+          // Simula frequências graves mais fortes, médias, e alguns picos (bem grosseiro)
+          const freqNorm = 1 - (y / imageData.height); // 0 no topo (alta freq), 1 na base (baixa freq)
+          const baseEnergy = Math.pow(freqNorm, 2) * 0.6; // Graves mais fortes
+          const noise = Math.random() * 0.3;
+          // Adiciona faixas verticais aleatórias pra simular batidas/ritmo
+          const beat = Math.sin(x * 0.1) > 0.8 ? 0.2 : 0;
+          bgBrightness = Math.min(1, baseEnergy + noise + beat);
+        }
+
+        let finalBrightness = srcBrightness;
+
+        if (usePinkNoise || hasBaseAudio) {
+          // Mixer Equation: Fundo*(1 - mix) + Imagem*(mix * intensity)
+          const imgVal = srcBrightness * intensity;
+          finalBrightness = bgBrightness * (1 - mixRatio) + imgVal * mixRatio;
+        }
+
+        const [r, g, b] = fn(finalBrightness);
+        dst[si] = r;
+        dst[si + 1] = g;
+        dst[si + 2] = b;
+        dst[si + 3] = 255;
+      }
     }
 
     octx.putImageData(out, 0, 0);

@@ -1,0 +1,111 @@
+.al-dsp-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.al-dsp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.al-dsp-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-mono);
+  color: var(--color-neon-blue);
+  font-size: 13px;
+}
+
+.al-dsp-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  color: var(--color-neon-blue);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.al-dsp-add-btn:hover {
+  background: rgba(0, 243, 255, 0.2);
+}
+
+.al-dsp-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.al-dsp-empty {
+  color: var(--color-text-dim);
+  font-size: 13px;
+  text-align: center;
+  padding: var(--spacing-md) 0;
+  font-style: italic;
+}
+
+.al-dsp-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+}
+
+.al-dsp-card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.al-dsp-select {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.al-dsp-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.al-dsp-remove-btn:hover {
+  opacity: 1;
+}
+
+.al-dsp-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.al-dsp-control label {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: 4px;
+}
+
+.al-dsp-control input[type="range"] {
+  width: 100%;
+}

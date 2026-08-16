@@ -1,5 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Music, Layers, Play, Square, Download, Save, Loader2, Upload } from 'lucide-react';
+import InteractiveWaveform from './InteractiveWaveform';
+import { processAudioChain, type DSPFilterNode, type RegionOption } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +77,7 @@ export interface AudioLayerPanelProps {
   onGeneratedBuffer: (samples: Float32Array, sampleRate: number) => void;
   generatedSamples: Float32Array | null;
   generatedSampleRate: number;
+  dspFilters: DSPFilterNode[];
   onSave: (file: File) => void;
 }
 
@@ -90,12 +93,14 @@ export default function AudioLayerPanel({
   onGeneratedBuffer,
   generatedSamples,
   generatedSampleRate,
+  dspFilters,
   onSave,
 }: AudioLayerPanelProps) {
   const [baseAudioInfo, setBaseAudioInfo] = useState<{ name: string; duration: number; samples: Float32Array } | null>(null);
   const [synthProgress, setSynthProgress] = useState(0);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportRegion, setExportRegion] = useState<RegionOption | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
   const loadBaseAudio = async (file: File) => {
@@ -164,13 +169,24 @@ export default function AudioLayerPanel({
     });
   }, [imageData, baseAudioInfo, durationSec, minFreqHz, maxFreqHz, intensity, mixRatio, usePinkNoise, onGeneratedBuffer]);
 
-  const exportWav = () => {
+  const exportWav = async () => {
     if (!generatedSamples) return;
-    const blob = bufferToWav(generatedSamples, generatedSampleRate || 44100);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'audiolab_steg.wav'; a.click();
-    URL.revokeObjectURL(url);
+    setIsExporting(true);
+    try {
+      const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
+        generatedSamples,
+        generatedSampleRate || 44100,
+        dspFilters,
+        exportRegion
+      );
+      const blob = bufferToWav(processedSamples, processedRate);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'audiolab_steg.wav'; a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const exportMp3 = async () => {
@@ -189,10 +205,17 @@ export default function AudioLayerPanel({
         setIsExporting(false);
         return;
       }
-      const mp3enc = new lamejs.Mp3Encoder(1, generatedSampleRate || 44100, 128);
-      const int16 = new Int16Array(generatedSamples.length);
-      for (let i = 0; i < generatedSamples.length; i++) {
-        int16[i] = Math.max(-32768, Math.min(32767, generatedSamples[i] * 32767));
+      const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
+        generatedSamples,
+        generatedSampleRate || 44100,
+        dspFilters,
+        exportRegion
+      );
+
+      const mp3enc = new lamejs.Mp3Encoder(1, processedRate, 128);
+      const int16 = new Int16Array(processedSamples.length);
+      for (let i = 0; i < processedSamples.length; i++) {
+        int16[i] = Math.max(-32768, Math.min(32767, processedSamples[i] * 32767));
       }
       const chunkSize = 1152;
       const mp3Data: any[] = [];
@@ -213,11 +236,22 @@ export default function AudioLayerPanel({
     }
   };
 
-  const saveToClue = () => {
+  const saveToClue = async () => {
     if (!generatedSamples) return;
-    const blob = bufferToWav(generatedSamples, generatedSampleRate || 44100);
-    const file = new File([blob], 'audiolab_steg.wav', { type: 'audio/wav' });
-    onSave(file);
+    setIsExporting(true);
+    try {
+      const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
+        generatedSamples,
+        generatedSampleRate || 44100,
+        dspFilters,
+        exportRegion
+      );
+      const blob = bufferToWav(processedSamples, processedRate);
+      const file = new File([blob], 'audiolab_steg.wav', { type: 'audio/wav' });
+      onSave(file);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const genDuration = generatedSamples
@@ -264,7 +298,11 @@ export default function AudioLayerPanel({
             {Math.round(intensity * 100)}% intensidade · {Math.round(mixRatio * 100)}% mistura
           </span>
           {generatedSamples && (
-            <WaveformThumb samples={generatedSamples} />
+            <InteractiveWaveform
+              samples={generatedSamples}
+              sampleRate={generatedSampleRate || 44100}
+              onRegionChange={setExportRegion}
+            />
           )}
         </div>
       </div>

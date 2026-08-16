@@ -8,8 +8,6 @@ import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/s
 import UVEditor from '../tools/UVEditor';
 import ThermalEditor from '../tools/ThermalEditor';
 import { bufferToWav } from '../../utils/audioGenerator';
-import AdvancedAudioLab from '../tools/AdvancedAudioLab';
-import UrlRealTimeSpectrogram from '../tools/UrlRealTimeSpectrogram';
 import { 
   fetchClueTemplates, 
   createClueTemplate, 
@@ -3010,8 +3008,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     📂 Selecionar Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioBaseSelect} />
                                  </label>
-                                 <button className="upload-btn auto-style-196" onClick={() => setShowMixer(true)}>
-                                    🎛️ Estação de Mixagem
+                                 {/* [OUTDATED] - Antiga Estação de Mixagem removida a favor do AudioLab */}
+                                 <button className="upload-btn auto-style-196" style={{opacity: 0.3, cursor: 'not-allowed'}} disabled title="Função absorvida pelo AudioLab">
+                                    🎛️ <s>Estação de Mixagem</s> (Outdated)
                                  </button>
                               </div>
                               {audioBase && (
@@ -3035,10 +3034,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     📂 Upload de Áudio
                                     <input type="file" accept="audio/*" hidden onChange={handleAudioHiddenSelect} />
                                  </label>
+                                 {/* [OUTDATED] - Antiga Forja de FX removida a favor do AudioLab */}
                                  <button 
                                     className="upload-btn" 
-                                    onClick={() => setShowAudioForgeFor('hidden')}
-                                    style={{minWidth:'180px', borderColor:'rgba(198,164,95,0.3)', color:'#c6a45f'}}
+                                    disabled
+                                    style={{minWidth:'180px', borderColor:'rgba(198,164,95,0.1)', color:'rgba(198,164,95,0.3)', cursor: 'not-allowed'}}
+                                    title="Função absorvida pelo AudioLab"
                                  >
                                     🛠️ Forja de FX
                                  </button>
@@ -4082,19 +4083,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            </div>
         )}
 
-      {showMixer && (
-         <div className="auto-style-292 auto-style-293 auto-style-294 flex items-center justify-center auto-style-295">
-            <div style={{ width: 'min(1000px,96%)', background: '#0b0b0b', borderRadius: 8, padding: 12 }}>
-               <div className="flex justify-between items-center auto-style-296">
-                  <strong style={{ color: '#fff' }}>Estação de Mixagem — Visualizador de Espectrograma</strong>
-                  <button className="btn-cancel" onClick={() => setShowMixer(false)}>Fechar</button>
-               </div>
-               <div style={{background: '#000', padding: 8, borderRadius: 6 }}>
-                  <UrlRealTimeSpectrogram audioUrl={audioBasePreview} />
-               </div>
-            </div>
-         </div>
-      )}
       {editorMode && (previewUrl || uvEditorBaseUrl) && createPortal(
          <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
             <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
