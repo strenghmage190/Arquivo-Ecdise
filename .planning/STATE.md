@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: planning
-last_updated: "2026-08-16T00:17:05.936Z"
+last_updated: "2026-08-16T01:38:47.033Z"
 last_activity: Milestone v1.1 started
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 0
-  total_plans: 2
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
