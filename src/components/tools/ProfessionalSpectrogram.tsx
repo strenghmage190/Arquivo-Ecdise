@@ -117,16 +117,23 @@ export default function ProfessionalSpectrogram({
     const canvasHeight = Math.round(cssH * dpr);
     canvas.width  = canvasWidth;
     canvas.height = canvasHeight;
-    // CSS size: fill parent when height prop supplied, else use explicit px
     canvas.style.width  = '100%';
     canvas.style.height = '100%';
 
-    const ctx = canvas.getContext('2d', { alpha: false });
+    // Overlay mode (hideDecorations): MUST use alpha:true + clearRect so
+    // pixels with no signal are transparent — required for mix-blend-mode:screen.
+    // Base mode: alpha:false is fine (opaque black background).
+    const isOverlay = hideDecorations;
+    const ctx = canvas.getContext('2d', { alpha: isOverlay });
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#05080a';
-    ctx.fillRect(0, 0, cssW, cssH);
+    if (isOverlay) {
+      ctx.clearRect(0, 0, cssW, cssH);
+    } else {
+      ctx.fillStyle = '#05080a';
+      ctx.fillRect(0, 0, cssW, cssH);
+    }
 
     const worker = new Worker(new URL('../../workers/spectrogram.worker.ts', import.meta.url));
     workerRef.current = worker;
@@ -149,7 +156,16 @@ export default function ProfessionalSpectrogram({
             totalFrames: number;
             height: number;
           };
-          const imageData = new ImageData(new Uint8ClampedArray(chunkData), frames, height_);
+          const raw = new Uint8ClampedArray(chunkData);
+          // In overlay mode: make near-black pixels fully transparent so
+          // mix-blend-mode:screen treats them as "no signal" (screen(0,x)=x).
+          if (isOverlay) {
+            for (let i = 0; i < raw.length; i += 4) {
+              const brightness = raw[i] + raw[i + 1] + raw[i + 2];
+              raw[i + 3] = brightness < 12 ? 0 : 255;
+            }
+          }
+          const imageData = new ImageData(raw, frames, height_);
           createImageBitmap(imageData).then((bitmap) => {
             const x = (startFrame / totalFrames) * cssW;
             const drawWidth = Math.max(1, (frames / totalFrames) * cssW);
