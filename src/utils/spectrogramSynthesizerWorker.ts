@@ -1,19 +1,27 @@
 /*
-  spectrogramSynthesizerWorker.ts
-  High-fidelity spectrogram steganography synthesis Web Worker.
-  Accepts: ImageData (RGBA) + SynthParams → Float32 stereo PCM buffer.
+  spectrogramSynthesizerWorker.ts  —  Coagula-style spectrogram steganography
+  ============================================================================
+  DSP improvements over previous version:
 
-  Algorithm:
-  1. Parse ImageData RGBA → per-pixel brightness
-  2. For each column x, for each row y:
-     - Map y → frequency bin within [minFreqHz, maxFreqHz]
-     - Map brightness → sine amplitude * intensity
-     - Add sine wave to column buffer, apply Hann window
-  3. Generate pink noise bed if usePinkNoiseBed === true
-  4. Mix steg signal + base audio at mixRatio
-  5. Normalize to prevent clipping
-  6. Report progress every 16 columns
-  7. Return { cmd: 'result', samples: ArrayBuffer, sampleRate }
+  1. PHASE RANDOMIZATION  — each frequency gets a random initial phase in [0, 2π].
+     Without this, all sines start at 0, creating a huge constructive-interference
+     spike at t=0 that causes severe clipping and wastes headroom. Random phases
+     spread energy uniformly over time → no spikes → more headroom for actual signal.
+
+  2. LINEAR FREQUENCY SCALE  — y=0 (top) maps to maxFreqHz, y=height-1 maps to
+     minFreqHz. Frequencies quantized to the nearest FFT bin boundary so that each
+     sine occupies exactly ONE bin with ZERO spectral leakage.
+
+  3. dB AMPLITUDE CURVE  — pixel brightness is mapped through an exponential curve:
+       amp = intensity * 10^((brightness_normalized - 1) * dynamic_range_dB / 20)
+     This compresses soft pixels and boosts loud ones, exactly like Coagula.
+     Pure black (0) → 0 (absolute silence). Pure white (255) → intensity (maximum).
+
+  4. mixRatio DUCKING  — the base audio is attenuated by (1 - mixRatio), so when
+     mixRatio is high the base "opens space" for the steg signal to be audible.
+     steg gain  = intensity * mixRatio
+     base gain  = 1 - mixRatio
+     This avoids both signals fighting for the same headroom.
 */
 
 type SynthParams = {
@@ -24,15 +32,15 @@ type SynthParams = {
   intensity: number;       // 0–1
   mixRatio: number;        // 0 = base only, 1 = steg only
   usePinkNoiseBed: boolean;
-  baseAudioBuffer: ArrayBuffer | null; // Float32 PCM of base audio channel 0
-  baseAudioLength: number;             // number of float32 samples in base
+  baseAudioBuffer: ArrayBuffer | null;
+  baseAudioLength: number;
 };
 
 type MsgIn = {
   cmd: 'synthesize';
   width: number;
   height: number;
-  imageData: ArrayBuffer; // RGBA Uint8ClampedArray bytes
+  imageData: ArrayBuffer;
   params: SynthParams;
 };
 
@@ -42,36 +50,22 @@ type MsgOut =
   | { cmd: 'error'; error: string };
 
 // ---------------------------------------------------------------------------
-// Hann window factory
+// Pink noise — Voss-McCartney 16-stage
 // ---------------------------------------------------------------------------
-function makeHannWindow(n: number): Float32Array {
-  const w = new Float32Array(n);
-  const twoPi = 2 * Math.PI;
-  for (let i = 0; i < n; i++) {
-    w[i] = 0.5 * (1 - Math.cos((twoPi * i) / (n - 1)));
-  }
-  return w;
-}
-
-// ---------------------------------------------------------------------------
-// Pink noise generator — Voss-McCartney algorithm (16-stage)
-// ---------------------------------------------------------------------------
-function generatePinkNoise(length: number, amplitude = 0.3): Float32Array {
+function generatePinkNoise(length: number, amplitude = 0.25): Float32Array {
   const buf = new Float32Array(length);
   const stages = 16;
   const runners = new Float32Array(stages);
-  let maxKey = 0xffff;
   let key = 0;
   let sum = 0;
-
   for (let i = 0; i < length; i++) {
     const lastKey = key;
-    key = (key + 1) & maxKey;
+    key = (key + 1) & 0xffff;
     const diff = lastKey ^ key;
     for (let j = 0; j < stages; j++) {
       if (diff & (1 << j)) {
         const prev = runners[j];
-        runners[j] = (Math.random() * 2 - 1);
+        runners[j] = Math.random() * 2 - 1;
         sum += runners[j] - prev;
       }
     }
@@ -81,7 +75,21 @@ function generatePinkNoise(length: number, amplitude = 0.3): Float32Array {
 }
 
 // ---------------------------------------------------------------------------
-// Main message handler
+// dB amplitude curve  — maps brightness [0,255] → amplitude [0, intensity]
+// Using a 40 dB dynamic range: black=-40 dB (≈0), white=0 dB (=intensity)
+// ---------------------------------------------------------------------------
+const DB_RANGE = 40; // dB below full scale for darkest non-zero pixel
+
+function brightnessToAmp(brightness: number, intensity: number): number {
+  if (brightness <= 0) return 0;
+  const norm = brightness / 255; // 0..1
+  // Exponential mapping: amp = 10^((norm - 1) * DB_RANGE / 20)
+  const amp = Math.pow(10, (norm - 1) * DB_RANGE / 20);
+  return amp * intensity;
+}
+
+// ---------------------------------------------------------------------------
+// Main
 // ---------------------------------------------------------------------------
 self.addEventListener('message', (ev: MessageEvent) => {
   const data = ev.data as MsgIn;
@@ -105,14 +113,29 @@ self.addEventListener('message', (ev: MessageEvent) => {
     const totalSamples = Math.max(1, Math.floor(sampleRate * durationSec));
     const samplesPerColumn = Math.max(1, Math.floor(totalSamples / width));
     const actualTotal = samplesPerColumn * width;
-
-    const stegSignal = new Float32Array(actualTotal);
     const twoPi = 2 * Math.PI;
-    const win = makeHannWindow(samplesPerColumn);
-    const tmp = new Float32Array(samplesPerColumn);
-    const BRIGHTNESS_THRESHOLD = 20; // ignore near-black pixels
 
-    // Synthesize steg signal
+    // --- Frequency quantization to nearest FFT bin ---
+    // Bin width = sampleRate / samplesPerColumn
+    // Snapping to bin boundaries eliminates spectral leakage.
+    const binWidth = sampleRate / samplesPerColumn;
+
+    // Pre-compute quantized freq and phase increment per row
+    const rowFreqs = new Float32Array(height);
+    const rowPhaseIncs = new Float32Array(height);
+    for (let y = 0; y < height; y++) {
+      const freqNorm = 1 - y / Math.max(1, height - 1); // top=high, bottom=low
+      const rawFreq = minFreqHz + freqNorm * (maxFreqHz - minFreqHz);
+      const quantized = Math.round(rawFreq / binWidth) * binWidth;
+      rowFreqs[y] = quantized;
+      rowPhaseIncs[y] = twoPi * quantized / sampleRate;
+    }
+
+    // --- Steg signal synthesis ---
+    const stegSignal = new Float32Array(actualTotal);
+    const tmp = new Float32Array(samplesPerColumn);
+    const BRIGHTNESS_THRESHOLD = 8; // ignore near-black noise pixels
+
     const chunkSize = 16;
     for (let cx = 0; cx < width; cx += chunkSize) {
       const endX = Math.min(width, cx + chunkSize);
@@ -122,75 +145,75 @@ self.addEventListener('message', (ev: MessageEvent) => {
 
         for (let y = 0; y < height; y++) {
           const idx = (y * width + x) * 4;
-          const r = pixels[idx];
-          const g = pixels[idx + 1];
-          const b = pixels[idx + 2];
-          const a = pixels[idx + 3];
-          if (a < 10) continue;
-          const brightness = (r + g + b) / 3;
+          if (pixels[idx + 3] < 10) continue; // skip transparent
+          const brightness = (pixels[idx] + pixels[idx + 1] + pixels[idx + 2]) / 3;
           if (brightness <= BRIGHTNESS_THRESHOLD) continue;
 
-          const amp = (brightness / 255) * intensity * 0.9;
-          const freqNorm = 1 - (y / Math.max(1, height - 1));
-          const freq = minFreqHz + freqNorm * (maxFreqHz - minFreqHz);
-          const phaseInc = (twoPi * freq) / sampleRate;
+          const amp = brightnessToAmp(brightness, intensity);
+          const phaseInc = rowPhaseIncs[y];
 
-          let phase = 0;
+          // PHASE RANDOMIZATION — critical: random start phase per freq per column
+          // prevents constructive interference spike at t=0 → no clipping.
+          let phase = Math.random() * twoPi;
+
+          // Rectangular window: zero-leakage sines + sharp column edges
           for (let s = 0; s < samplesPerColumn; s++) {
             tmp[s] += Math.sin(phase) * amp;
             phase += phaseInc;
+            if (phase > twoPi) phase -= twoPi; // keep phase bounded
           }
         }
 
-        // Apply Hann window and write to steg buffer
         const offset = x * samplesPerColumn;
         for (let s = 0; s < samplesPerColumn; s++) {
-          stegSignal[offset + s] = tmp[s] * win[s];
+          stegSignal[offset + s] = tmp[s];
         }
       }
 
-      // Report progress
-      const percent = Math.round((endX / width) * 80); // 0–80% for synthesis
+      const percent = Math.round((endX / width) * 75);
       (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent });
     }
 
-    // Build base audio: either imported audio or pink noise fallback
+    // --- Base audio / noise bed ---
     let base: Float32Array;
     if (baseAudioBuffer && baseAudioLength > 0) {
       const imported = new Float32Array(baseAudioBuffer);
       if (imported.length >= actualTotal) {
         base = imported.subarray(0, actualTotal);
       } else {
-        // Loop imported audio to fill duration
         base = new Float32Array(actualTotal);
         for (let i = 0; i < actualTotal; i++) {
           base[i] = imported[i % imported.length];
         }
       }
     } else if (usePinkNoiseBed) {
-      base = generatePinkNoise(actualTotal, 0.3);
+      base = generatePinkNoise(actualTotal, 0.25);
     } else {
-      base = new Float32Array(actualTotal); // silence
+      base = new Float32Array(actualTotal);
     }
 
-    (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent: 85 });
+    (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent: 80 });
 
-    // Mix steg + base
+    // --- Mix with ducking ---
+    // steg gain  = mixRatio          (more mix = more steg signal)
+    // base gain  = 1 - mixRatio      (high mixRatio ducks base → opens space)
+    // intensity acts as master gain on the steg layer.
+    const stegGain = Math.max(0, Math.min(1, mixRatio));
+    const baseGain = 1 - stegGain;
+
     const output = new Float32Array(actualTotal);
-    const stegWeight = Math.max(0, Math.min(1, mixRatio));
-    const baseWeight = 1 - stegWeight;
     for (let i = 0; i < actualTotal; i++) {
-      output[i] = stegSignal[i] * stegWeight + base[i] * baseWeight;
+      output[i] = stegSignal[i] * stegGain + base[i] * baseGain;
     }
 
-    // Normalize to prevent clipping
+    // --- Normalize: prevent clipping, target peak at -1 dBFS (≈0.891) ---
     let peak = 0;
     for (let i = 0; i < actualTotal; i++) {
-      const abs = Math.abs(output[i]);
+      const abs = output[i] < 0 ? -output[i] : output[i];
       if (abs > peak) peak = abs;
     }
-    if (peak > 0.999) {
-      const scale = 0.95 / peak;
+    if (peak > 0.001) {
+      const scale = 0.891 / peak;
       for (let i = 0; i < actualTotal; i++) {
         output[i] *= scale;
       }
@@ -198,7 +221,6 @@ self.addEventListener('message', (ev: MessageEvent) => {
 
     (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent: 100 });
 
-    // Transfer buffer ownership (zero-copy)
     const transferable = output.buffer;
     (self.postMessage as (msg: MsgOut, transfer: Transferable[]) => void)(
       { cmd: 'result', samples: transferable, sampleRate },
