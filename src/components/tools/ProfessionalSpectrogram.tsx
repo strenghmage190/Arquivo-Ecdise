@@ -52,7 +52,7 @@ const getMagmaColor = (value: number) => {
 };
 
 type Props = {
-  audioUrl: string | null;
+  audioUrl?: string | null;
   spectrogramHeight?: number;
   horizontalScale?: number;
   maxFreq?: number;

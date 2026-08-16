@@ -17,5 +17,6 @@
     "types": ["cypress", "node"],
     "typeRoots": ["node_modules/@types", "node_modules/react-hot-toast"]
   },
-  "include": ["src", "cypress"]
+  "include": ["src", "cypress"],
+  "exclude": ["src/**/outdated/**"]
 }

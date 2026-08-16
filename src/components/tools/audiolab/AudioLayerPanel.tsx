@@ -1,6 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Music, Layers, Play, Square, Download, Save, Loader2, Upload } from 'lucide-react';
-import InteractiveWaveform from './InteractiveWaveform';
 import { processAudioChain, type DSPFilterNode, type RegionOption } from '../../../utils/dspAudioEngine';
 // @ts-ignore
 import * as lamejs from 'lamejs';
@@ -318,11 +317,7 @@ export default function AudioLayerPanel({
             {Math.round(intensity * 100)}% intensidade · {Math.round(mixRatio * 100)}% mistura
           </span>
           {generatedSamples && (
-            <InteractiveWaveform
-              samples={generatedSamples}
-              sampleRate={generatedSampleRate || 44100}
-              onRegionChange={setExportRegion}
-            />
+            <WaveformThumb samples={generatedSamples} />
           )}
         </div>
       </div>
