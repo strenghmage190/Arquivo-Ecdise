@@ -165,7 +165,12 @@ export default function SpectrogramPreviewCanvas({
 
         let finalBrightness = srcBrightness;
 
-        if (usePinkNoise || hasBaseAudio) {
+        if (hasBaseAudio) {
+          // Em mix-blend-mode screen, o fundo deve ser preto puro
+          bgBrightness = 0;
+          const imgVal = srcBrightness * intensity;
+          finalBrightness = imgVal * mixRatio; // Apenas a intensidade do sinal oculto
+        } else if (usePinkNoise) {
           // Mixer Equation: Fundo*(1 - mix) + Imagem*(mix * intensity)
           const imgVal = srcBrightness * intensity;
           finalBrightness = bgBrightness * (1 - mixRatio) + imgVal * mixRatio;
@@ -182,44 +187,46 @@ export default function SpectrogramPreviewCanvas({
     octx.putImageData(out, 0, 0);
 
     // Draw scaled to canvas
-    const AXIS_LEFT = 46;
-    const AXIS_BOTTOM = 18;
+    const AXIS_LEFT = hasBaseAudio ? 0 : 46;
+    const AXIS_BOTTOM = hasBaseAudio ? 0 : 18;
     const drawW = canvas.width - AXIS_LEFT;
     const drawH = canvas.height - AXIS_BOTTOM;
 
     ctx.drawImage(offscreen, AXIS_LEFT, 0, drawW, drawH);
 
-    // Y-axis labels (Hz)
-    ctx.fillStyle = '#00f3ffbb';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'right';
-    const hzRange = maxFreqHz - minFreqHz;
-    const tickCount = 5;
-    for (let t = 0; t <= tickCount; t++) {
-      const y = Math.floor((t / tickCount) * drawH);
-      const hz = maxFreqHz - (t / tickCount) * hzRange;
-      const label = hz >= 1000 ? `${(hz / 1000).toFixed(0)}k` : `${hz.toFixed(0)}`;
-      ctx.fillText(label, AXIS_LEFT - 4, y + 4);
-      ctx.strokeStyle = '#00f3ff22';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(AXIS_LEFT, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
+    if (!hasBaseAudio) {
+      // Y-axis labels (Hz)
+      ctx.fillStyle = '#00f3ffbb';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'right';
+      const hzRange = maxFreqHz - minFreqHz;
+      const tickCount = 5;
+      for (let t = 0; t <= tickCount; t++) {
+        const y = Math.floor((t / tickCount) * drawH);
+        const hz = maxFreqHz - (t / tickCount) * hzRange;
+        const label = hz >= 1000 ? `${(hz / 1000).toFixed(0)}k` : `${hz.toFixed(0)}`;
+        ctx.fillText(label, AXIS_LEFT - 4, y + 4);
+        ctx.strokeStyle = '#00f3ff22';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(AXIS_LEFT, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
 
-    // X-axis labels (time)
-    ctx.fillStyle = '#00f3ffbb';
-    ctx.textAlign = 'center';
-    const timeStops = [0, 0.25, 0.5, 0.75, 1];
-    for (const frac of timeStops) {
-      const x = AXIS_LEFT + Math.floor(frac * drawW);
-      const t = frac * durationSec;
-      const label = t < 10 ? `${t.toFixed(1)}s` : `${Math.round(t)}s`;
-      ctx.fillText(label, x, canvas.height - 2);
-    }
+      // X-axis labels (time)
+      ctx.fillStyle = '#00f3ffbb';
+      ctx.textAlign = 'center';
+      const timeStops = [0, 0.25, 0.5, 0.75, 1];
+      for (const frac of timeStops) {
+        const x = AXIS_LEFT + Math.floor(frac * drawW);
+        const t = frac * durationSec;
+        const label = t < 10 ? `${t.toFixed(1)}s` : `${Math.round(t)}s`;
+        ctx.fillText(label, x, canvas.height - 2);
+      }
 
-    // Border
-    ctx.strokeStyle = '#00f3ff44';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(AXIS_LEFT, 0, drawW, drawH);
+      // Border
+      ctx.strokeStyle = '#00f3ff44';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(AXIS_LEFT, 0, drawW, drawH);
+    }
   }, [imageData, colormap, minFreqHz, maxFreqHz, durationSec, width, height]);
 
   return (
