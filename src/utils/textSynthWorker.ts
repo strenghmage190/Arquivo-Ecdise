@@ -1,7 +1,18 @@
 /*
   textSynthWorker.ts
-  WebWorker that receives ImageData bytes and synthesizes a Float32 mono buffer
-  mapping Y -> frequency and X -> time. Processes columns in chunks and reports progress.
+  WebWorker: synthesizes a Float32 mono buffer from ImageData.
+  Y -> frequency, X -> time (one sine per white pixel per column).
+
+  DSP improvements for spectrogram sharpness:
+  - Pixels are treated as BINARY (on/off) after threshold — no amplitude
+    gradient from grey values, which caused frequency smearing.
+  - Frequencies are QUANTIZED to exact FFT bin centers to eliminate
+    spectral leakage. A frequency that doesn't land on a bin boundary
+    spreads energy across adjacent bins (blur). Bin-aligned sines don't.
+  - Window: rectangular (boxcar) instead of Hann. Hann reduces leakage
+    for arbitrary frequencies, but since we quantize to bins we get zero
+    leakage anyway, and rectangular gives sharper time-domain edges
+    (harder on/off per column = sharper vertical edges in spectrogram).
 */
 
 type MsgIn = {
@@ -29,16 +40,28 @@ self.addEventListener('message', (ev: MessageEvent) => {
     const totalSamples = width * samplesPerColumn;
     const output = new Float32Array(totalSamples);
 
-    const threshold = 80; // brightness threshold
-    const twoPi = 2 * Math.PI;
+    // --- DSP: Pre-compute bin-quantized frequencies ---
+    // An FFT of size N over SAMPLE_RATE has bin width = SAMPLE_RATE / N.
+    // We use samplesPerColumn as our analysis frame size.
+    // Any frequency F quantized to bin k = round(F * N / SR) * SR / N
+    // will produce ZERO spectral leakage in a rectangular window.
+    const N = samplesPerColumn;
+    const binWidth = SAMPLE_RATE / N;
 
-    // Hann window for each column
-    const windowFunc = (n: number) => {
-      const w = new Float32Array(n);
-      for (let i = 0; i < n; i++) w[i] = 0.5 * (1 - Math.cos((twoPi * i) / (n - 1)));
-      return w;
-    };
-    const win = windowFunc(samplesPerColumn);
+    // Pre-compute one quantized frequency per Y row (saves work inside loop)
+    const rowFreqs = new Float32Array(height);
+    for (let y = 0; y < height; y++) {
+      const freqNorm = 1 - y / (height - 1); // top = high freq
+      const rawFreq = MIN_FREQ + freqNorm * (MAX_FREQ - MIN_FREQ);
+      // Snap to nearest FFT bin center
+      const bin = Math.round(rawFreq / binWidth);
+      rowFreqs[y] = bin * binWidth;
+    }
+
+    // --- Binary threshold: treat pixels as on/off ---
+    const THRESHOLD = 80; // same as before
+    const AMPLITUDE = 0.6; // fixed per active row (no grey gradient = no blur)
+    const twoPi = 2 * Math.PI;
 
     const chunkColumns = 16;
     const tmp = new Float32Array(samplesPerColumn);
@@ -46,9 +69,8 @@ self.addEventListener('message', (ev: MessageEvent) => {
     for (let cx = 0; cx < width; cx += chunkColumns) {
       const endX = Math.min(width, cx + chunkColumns);
       for (let x = cx; x < endX; x++) {
-        // zero tmp
         tmp.fill(0);
-        // for each y (row) check pixel brightness
+
         for (let y = 0; y < height; y++) {
           const idx = (y * width + x) * 4;
           const r = pixels[idx];
@@ -56,28 +78,26 @@ self.addEventListener('message', (ev: MessageEvent) => {
           const b = pixels[idx + 2];
           const a = pixels[idx + 3];
           const brightness = a === 0 ? 0 : (r + g + b) / 3;
-          if (brightness <= threshold) continue;
-          const amp = (brightness / 255) * 0.9; // amplitude scaling
-          // map y->freq (top=high)
-          const freqNorm = 1 - (y / (height - 1));
-          const freq = MIN_FREQ + freqNorm * (MAX_FREQ - MIN_FREQ);
+          if (brightness <= THRESHOLD) continue;
+
+          const freq = rowFreqs[y];
           const phaseInc = twoPi * freq / SAMPLE_RATE;
-          // add sine into tmp for the duration of column
+
+          // Rectangular window: no taper, sharp column boundaries
           let phase = 0;
           for (let s = 0; s < samplesPerColumn; s++) {
-            tmp[s] += Math.sin(phase) * amp;
+            tmp[s] += Math.sin(phase) * AMPLITUDE;
             phase += phaseInc;
           }
         }
 
-        // apply window and add to output at offset
+        // Copy column to output (no windowing multiply — rectangular)
         const offset = x * samplesPerColumn;
         for (let s = 0; s < samplesPerColumn; s++) {
-          output[offset + s] += tmp[s] * win[s];
+          output[offset + s] += tmp[s];
         }
       }
 
-      // report progress
       const percent = Math.min(100, Math.round((endX / width) * 100));
       (self as any).postMessage({ cmd: 'progress', percent });
     }
@@ -85,14 +105,18 @@ self.addEventListener('message', (ev: MessageEvent) => {
     // Normalize to avoid clipping
     let max = 0;
     for (let i = 0; i < output.length; i++) {
-      max = Math.max(max, Math.abs(output[i]));
+      const abs = output[i] < 0 ? -output[i] : output[i];
+      if (abs > max) max = abs;
     }
-    if (max > 1) {
-      for (let i = 0; i < output.length; i++) output[i] = output[i] / max;
+    if (max > 0.001) {
+      const scale = 0.9 / max;
+      for (let i = 0; i < output.length; i++) output[i] *= scale;
     }
 
-    // send back as transferable
-    (self as any).postMessage({ cmd: 'result', samples: output.buffer, sampleRate: SAMPLE_RATE }, [output.buffer]);
+    (self as any).postMessage(
+      { cmd: 'result', samples: output.buffer, sampleRate: SAMPLE_RATE },
+      [output.buffer]
+    );
   } catch (err) {
     (self as any).postMessage({ cmd: 'error', error: String(err) });
   }

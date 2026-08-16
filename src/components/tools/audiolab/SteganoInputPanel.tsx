@@ -213,21 +213,40 @@ function TextTab({ onData }: { onData: (d: ImageData | null) => void }) {
     if (!t.trim()) { onData(null); return; }
     const c = document.createElement('canvas');
     c.width = CANVAS_W; c.height = CANVAS_H;
-    const ctx = c.getContext('2d')!;
+    const ctx = c.getContext('2d', { willReadFrequently: true })!;
+
+    // Step 1: black background
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Step 2: disable ALL anti-aliasing and smoothing
+    ctx.imageSmoothingEnabled = false;
+    (ctx as any).textRenderingHint = 'pixelated'; // non-standard but helps in some browsers
+
+    // Step 3: render white text
     ctx.fillStyle = '#fff';
     ctx.font = `bold ${fs}px ${ff}`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-    // Word-wrap
-    const words = t.split('\n');
-    let y = CANVAS_H / 2 - ((words.length - 1) * fs * 0.6);
-    for (const line of words) {
+    const lines = t.split('\n');
+    let y = CANVAS_H / 2 - ((lines.length - 1) * fs * 0.6);
+    for (const line of lines) {
       ctx.fillText(line, CANVAS_W / 2, y, CANVAS_W - 16);
       y += fs * 1.2;
     }
-    onData(ctx.getImageData(0, 0, CANVAS_W, CANVAS_H));
+
+    // Step 4: BINARIZE — every pixel becomes pure black or pure white.
+    // This eliminates grey anti-alias fringe that causes spectral smearing.
+    const raw = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+    const THRESHOLD = 96; // tune: lower = fewer grey halos
+    for (let i = 0; i < raw.data.length; i += 4) {
+      const lum = (raw.data[i] * 0.299 + raw.data[i + 1] * 0.587 + raw.data[i + 2] * 0.114);
+      const v = lum >= THRESHOLD ? 255 : 0;
+      raw.data[i] = raw.data[i + 1] = raw.data[i + 2] = v;
+      raw.data[i + 3] = 255;
+    }
+    ctx.putImageData(raw, 0, 0);
+    onData(raw);
   }, [onData]);
 
   useEffect(() => { render(text, fontFamily, fontSize); }, [text, fontFamily, fontSize, render]);
@@ -236,10 +255,14 @@ function TextTab({ onData }: { onData: (d: ImageData | null) => void }) {
     <div className="al-input-tab">
       <div className="al-text-controls">
         <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="al-select-sm">
+          {/* Pixel/blocky fonts — best for spectrogram sharpness */}
+          <option value="'Courier New', monospace">Courier New (recomendado)</option>
           <option value="monospace">Monospace</option>
+          <option value="'Lucida Console', monospace">Lucida Console</option>
+          {/* Below: google-font imports needed in index.html for full sharpness */}
+          <option value="'Press Start 2P', monospace">Press Start 2P (pixel art)</option>
           <option value="sans-serif">Sans-serif</option>
           <option value="serif">Serif</option>
-          <option value="'Courier New', monospace">Courier New</option>
         </select>
         <label className="al-label-sm">Tamanho: {fontSize}px</label>
         <input type="range" min={12} max={96} value={fontSize} onChange={(e) => setFontSize(+e.target.value)} className="al-slider-sm" />
