@@ -168,9 +168,10 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                 <div style={{ position: 'absolute', top: 44, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' }}>
                   <ProfessionalSpectrogram
                     audioUrl={baseAudioUrl}
-                    colorScheme={colormap === 'hot' ? 'hot' : colormap === 'cyan' ? 'cyan' : 'magma'}
+                    colorScheme={colormap === 'cyberneon' ? 'cyan' : colormap === 'inferno' ? 'hot' : 'magma'}
                     maxFreq={maxFreqHz}
                     hideDecorations={true}
+                    width={canvasSize.w}
                   />
                 </div>
               )}

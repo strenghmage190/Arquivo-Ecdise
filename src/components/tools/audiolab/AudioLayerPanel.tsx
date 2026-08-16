@@ -129,7 +129,7 @@ export default function AudioLayerPanel({
   onSave,
   initialBaseAudio,
 }: AudioLayerPanelProps) {
-  const [baseAudioInfo, setBaseAudioInfo] = useState<{ name: string; duration: number; samples: Float32Array } | null>(null);
+  const [baseAudioInfo, setBaseAudioInfo] = useState<{ name: string; duration: number; samples: Float32Array; url?: string } | null>(null);
   const [synthProgress, setSynthProgress] = useState(0);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
