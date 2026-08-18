@@ -6,6 +6,9 @@ import DiegeticWindow from '../ui/DiegeticWindow';
 import { ClueModalProvider, useClueModal } from '../../contexts/ClueModalContext';
 import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
 import './CreateClueModal_Refactored.css';
+import TabGeneral from './createclueTabs/TabGeneral';
+import TabVisual from './createclueTabs/TabVisual';
+import TabAudio from './createclueTabs/TabAudio';
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +18,7 @@ interface Props {
   initialY?: number;
   onSaved: (card: Record<string, any>) => void;
   existingCard?: any;
+  defaultHidden?: boolean;
 }
 
 const TABS = [
@@ -140,11 +144,17 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
                 exit="exit"
                 className="cc-tab-motion-container"
               >
-                <div className="cc-tab-placeholder">
-                  <h2>{TABS.find(t => t.id === activeTab)?.label}</h2>
-                  <p>Área reservada para os campos da aba {activeTab}.</p>
-                  <p className="cc-cyber-note">Status: Conectado ao ClueModalContext</p>
-                </div>
+                {activeTab === 'geral' && <TabGeneral />}
+                {activeTab === 'visual' && <TabVisual />}
+                {activeTab === 'audio' && <TabAudio />}
+                
+                {!['geral', 'visual', 'audio'].includes(activeTab) && (
+                  <div className="cc-tab-placeholder">
+                    <h2>{TABS.find(t => t.id === activeTab)?.label}</h2>
+                    <p>Área reservada para os campos da aba {activeTab}.</p>
+                    <p className="cc-cyber-note">Status: Conectado ao ClueModalContext</p>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
