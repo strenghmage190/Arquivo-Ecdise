@@ -292,8 +292,15 @@ export default function AudioLayerPanel({
         dspFilters,
         exportRegion
       );
-      const blob = bufferToMp3(processedSamples, processedRate);
-      const file = new File([blob], stegoMethod === 'lsb' ? 'audiolab_steg.wav' : 'audiolab_steg.mp3', { type: stegoMethod === 'lsb' ? 'audio/wav' : 'audio/mp3' });
+      const blob = stegoMethod === 'lsb' 
+        ? bufferToWav(processedSamples, processedRate) 
+        : bufferToMp3(processedSamples, processedRate);
+        
+      const file = new File(
+        [blob], 
+        stegoMethod === 'lsb' ? 'audiolab_steg.wav' : 'audiolab_steg.mp3', 
+        { type: stegoMethod === 'lsb' ? 'audio/wav' : 'audio/mp3' }
+      );
       onSave(file);
     } finally {
       setIsExporting(false);

@@ -4172,7 +4172,10 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                onClose={() => setShowAudioForgeFor(null)}
                initialBaseAudio={audioBase}
                onSave={async (file) => {
-                  if (showAudioForgeFor === 'hidden') {
+                  const currentForgeFor = showAudioForgeFor;
+                  setShowAudioForgeFor(null); // Fecha o modal imediatamente
+                  
+                  if (currentForgeFor === 'hidden') {
                      revokeUrl(audioHiddenPreview);
                      const newUrl = createAndRegisterBlobUrl(file);
                      if (newUrl) {
@@ -4191,7 +4194,6 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                      const newUrl = createAndRegisterBlobUrl(file);
                      if (newUrl) { setAudioBase(file); setAudioBasePreview(newUrl); }
                   }
-                  setShowAudioForgeFor(null);
                }}
             />
          </React.Suspense>
