@@ -36,7 +36,7 @@ const TABS = [
   { id: 'display', label: 'Display', icon: Settings },
 ];
 
-function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initialX, initialY }: Props) {
+function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initialX, initialY, investigationId }: Props) {
   const { playBoot, playClick, playHover, playClose, playProcess, playSuccess } = useCyberpunkUI();
   const { resetForm, loadExistingCard, coreState } = useClueModal();
   const [activeTab, setActiveTab] = useState('geral');
