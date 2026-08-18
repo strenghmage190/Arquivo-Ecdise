@@ -81,7 +81,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
   const handleEditCard = (card: CardSummary) => {
     setEditingCard(card);
     setShowCreatorModal(true);
-    onClose(); // Close CreatorHub when opening modal
+    // onClose(); // Removed to prevent unmounting CreatorHub and the modal with it
   };
 
   const handleToggleHidden = async (card: CardSummary) => {
@@ -226,7 +226,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                       setCreateHiddenClue(false);
                       setEditingCard(null);
                       setShowCreatorModal(true);
-                      onClose(); // Close CreatorHub when opening modal
+                      // onClose(); // Removed to prevent unmounting CreatorHub and the modal with it
                     } else {
                       console.log('Opening legacy modal');
                       onOpenLegacyModal();

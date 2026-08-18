@@ -14,6 +14,7 @@ import BottomNavigationBar from './components/BottomNavigationBar';
 import ForensicBenchmarkPage from './pages/__dev/ForensicBenchmarkPage';
 // ConnectionLine removed for production layout
 import { Toaster } from 'react-hot-toast';
+import { Toaster as SonnerToaster } from 'sonner';
 
 type EvidenceCardProps = {
   title: string;
@@ -126,6 +127,7 @@ function App() {
           bottom: isMobile ? 80 : 20, // Above the Bottom Bar on mobile
         }}
       />
+      <SonnerToaster richColors theme="dark" position="top-right" />
       {/* Board container removed - example cards were for demo */}
       {isMobile && (
         <button 
