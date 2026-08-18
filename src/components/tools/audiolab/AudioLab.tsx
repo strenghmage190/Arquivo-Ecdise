@@ -7,7 +7,7 @@ import AudioLayerPanel from './AudioLayerPanel';
 import DSPFiltersPanel from './DSPFiltersPanel';
 import SignalGeneratorPanel from './SignalGeneratorPanel';
 import ProfessionalSpectrogram from '../ProfessionalSpectrogram';
-import ForensicTerminal from './ForensicTerminal';
+import ForensicTerminalModal from '../../modals/ForensicTerminalModal';
 import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
@@ -55,6 +55,10 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const [baseAudioDuration, setBaseAudioDuration] = useState<number>(0);
   const [generatedSamples, setGeneratedSamples] = useState<Float32Array | null>(null);
   const [generatedSampleRate, setGeneratedSampleRate] = useState(44100);
+  const [synthType, setSynthType] = useState<OscillatorType>('sine');
+  const [synthFrequency, setSynthFrequency] = useState<number>(440);
+
+  const [showForensicTerminal, setShowForensicTerminal] = useState(false);
 
   const [dspFilters, setDspFilters] = useState<DSPFilterNode[]>([]);
 
@@ -413,7 +417,19 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
           
           {/* SEU NOVO MINIGAME DE INVESTIGAÇÃO AQUI: */}
           <div className="al-section-divider" style={{ marginTop: '16px', marginBottom: '16px' }} />
-          <ForensicTerminal baseAudioSamples={generatedSamples || baseAudioSamples} />
+          <button 
+            className="al-btn-secondary" 
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px', border: '1px solid var(--nx-neon-cyan)', color: 'var(--nx-neon-cyan)' }}
+            onClick={() => setShowForensicTerminal(true)}
+          >
+            Abrir Terminal Forense (LSB)
+          </button>
+          
+          <ForensicTerminalModal 
+            isOpen={showForensicTerminal}
+            onClose={() => setShowForensicTerminal(false)}
+            baseAudioSamples={generatedSamples || baseAudioSamples} 
+          />
         </div>
       </div>
     </div>

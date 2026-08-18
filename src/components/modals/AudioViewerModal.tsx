@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
-import ForensicTerminal from '../tools/audiolab/ForensicTerminal';
+import ForensicTerminalModal from './ForensicTerminalModal';
 import './AudioViewerModal.css';
 
 interface Props {
@@ -344,39 +344,12 @@ export default function AudioViewerModal({
           </div>
         </div>
 
-        {/* Floating Forensic Terminal */}
-        {showTerminal && (
-          <div style={{
-            position: 'absolute',
-            right: '24px',
-            bottom: '24px',
-            zIndex: 50,
-            width: '380px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 0 1px #333',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            backgroundColor: '#0a0a0c'
-          }}>
-            <div style={{
-              background: '#111',
-              borderBottom: '1px solid #333',
-              padding: '8px 12px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span style={{color: '#00f3ff', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px'}}>SISTEMA LSB</span>
-              <button 
-                onClick={() => setShowTerminal(false)} 
-                style={{background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '14px', padding: 0}}
-                title="Fechar Terminal"
-              >
-                ✕
-              </button>
-            </div>
-            <ForensicTerminal audioUrl={audioSrc} />
-          </div>
-        )}
+        {/* Terminal Modal LSB */}
+        <ForensicTerminalModal
+          isOpen={showTerminal}
+          onClose={() => setShowTerminal(false)}
+          audioUrl={audioSrc}
+        />
 
         {/* Espectrograma Principal */}
         <div className="audio-viewer-spectrogram" ref={spectrogramContainerRef}>
