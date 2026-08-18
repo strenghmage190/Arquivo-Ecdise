@@ -117,8 +117,8 @@ export default function ProfessionalSpectrogram({
     const canvasHeight = Math.round(cssH * dpr);
     canvas.width  = canvasWidth;
     canvas.height = canvasHeight;
-    canvas.style.width  = '100%';
-    canvas.style.height = '100%';
+    canvas.style.width  = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
 
     // Overlay mode (hideDecorations): MUST use alpha:true + clearRect so
     // pixels with no signal are transparent — required for mix-blend-mode:screen.
@@ -279,27 +279,25 @@ export default function ProfessionalSpectrogram({
 
   return (
     <div className="spectrogram-container" style={hideDecorations ? { border: 'none', background: 'transparent' } : {}}>
-      {!hideDecorations && (
-        <div className="spectrogram-header">
-          <div className="header-content">
-            <div className="header-left">
-              <div className="status-indicator" />
-              <h3 className="header-title">ANÁLISE ESPECTRAL DE SINAL</h3>
-            </div>
-            <div className="header-right">
-              <span className="status-text">{status}</span>
-              {progress > 0 && progress < 100 && (
-                <span className="progress-percent">{Math.floor(progress)}%</span>
-              )}
-            </div>
+      <div className="spectrogram-header" style={hideDecorations ? { visibility: 'hidden' } : {}}>
+        <div className="header-content">
+          <div className="header-left">
+            <div className="status-indicator" />
+            <h3 className="header-title">ANÁLISE ESPECTRAL DE SINAL</h3>
           </div>
-          {progress > 0 && progress < 100 && (
-            <div className="progress-bar-container">
-              <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-            </div>
-          )}
+          <div className="header-right">
+            <span className="status-text">{status}</span>
+            {progress > 0 && progress < 100 && (
+              <span className="progress-percent">{Math.floor(progress)}%</span>
+            )}
+          </div>
         </div>
-      )}
+        {progress > 0 && progress < 100 && (
+          <div className="progress-bar-container">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </div>
 
       <div
         className="canvas-container"
@@ -307,37 +305,45 @@ export default function ProfessionalSpectrogram({
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        style={{ cursor: onSeek ? 'crosshair' : 'default' }}
+        style={{ 
+          cursor: onSeek ? 'crosshair' : 'default',
+          overflowX: 'scroll',
+          overflowY: 'hidden',
+          display: 'block',
+          ...(hideDecorations ? { borderColor: 'transparent', background: 'transparent' } : {})
+        }}
       >
-        <canvas ref={canvasRef} className="spectrogram-canvas" />
+        <div style={{ minWidth: width ? `${width}px` : '100%', height: '100%', position: 'relative' }}>
+          <canvas ref={canvasRef} className="spectrogram-canvas" />
 
-        <div className="frequency-markers">
-          {[0.9, 0.75, 0.5, 0.25].map((p) => (
-            <div key={p} className="freq-marker" style={{ top: `${(1 - p) * 100}%` }}>
-              {(maxFreq * p / 1000).toFixed(1)}k
+          {!hideDecorations && (
+            <div className="frequency-markers">
+              {[0.9, 0.75, 0.5, 0.25].map((p) => (
+                <div key={p} className="freq-marker" style={{ top: `${(1 - p) * 100}%` }}>
+                  {(maxFreq * p / 1000).toFixed(1)}k
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Crosshair overlays */}
+          {hoverInfo && !hideDecorations && (
+            <>
+              <div className="crosshair-v" style={{ left: `${hoverInfo.x}px` }} />
+              <div className="crosshair-h" style={{ top: `${hoverInfo.y}px` }} />
+              <div className="crosshair-tooltip" style={{ left: `${hoverInfo.x + 10}px`, top: `${hoverInfo.y - 30}px` }}>
+                {hoverInfo.freq} | {hoverInfo.time}
+              </div>
+            </>
+          )}
         </div>
-
-        {/* Crosshair overlays */}
-        {hoverInfo && (
-          <>
-            <div className="crosshair-v" style={{ left: `${hoverInfo.x}px` }} />
-            <div className="crosshair-h" style={{ top: `${hoverInfo.y}px` }} />
-            <div className="crosshair-tooltip" style={{ left: `${hoverInfo.x + 10}px`, top: `${hoverInfo.y - 30}px` }}>
-              {hoverInfo.freq} | {hoverInfo.time}
-            </div>
-          </>
-        )}
       </div>
 
-      {!hideDecorations && (
-        <div className="spectrogram-footer">
-          <p className="footer-text">
-            💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
-          </p>
-        </div>
-      )}
+      <div className="spectrogram-footer" style={hideDecorations ? { visibility: 'hidden' } : {}}>
+        <p className="footer-text">
+          💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
+        </p>
+      </div>
     </div>
   );
 }

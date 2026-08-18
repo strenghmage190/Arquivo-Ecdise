@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
+import ForensicTerminal from '../tools/audiolab/ForensicTerminal';
 import './AudioViewerModal.css';
 
 interface Props {
@@ -36,11 +37,9 @@ export default function AudioViewerModal({
   const [minDB, setMinDB] = useState(-60);
   const [colorScheme, setColorScheme] = useState<'hot' | 'cyan' | 'magma'>('hot');
   
-  // CORREÇÃO: Adicionado estado para saber se estamos esperando uma análise automática
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisRequestId, setAnalysisRequestId] = useState(0);
-
-  
+  const [showTerminal, setShowTerminal] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !waveformRef.current) {
@@ -314,14 +313,19 @@ export default function AudioViewerModal({
             <button
               className="spectrum-action-btn"
               onClick={() => {
-                // CORREÇÃO: Sinalizamos que ESTAMOS esperando uma análise
                 setIsAnalyzing(true);
                 setAnalysisRequestId((prev) => prev + 1);
-                // Removi o reset forçado aqui, pois a função handleAutoAnalysis cuidará disso quando a análise voltar
               }}
               title="Analisar áudio e ajustar visualização automaticamente"
             >
               🔬 ANÁLISE RÁPIDA
+            </button>
+            <button 
+              className={`spectrum-action-btn ${showTerminal ? 'active' : ''}`}
+              onClick={() => setShowTerminal(!showTerminal)}
+              title="Abrir Terminal Forense para ler mensagens ocultas LSB"
+            >
+              💻 TERMINAL LSB
             </button>
             <button 
               className="spectrum-action-btn"
@@ -339,6 +343,40 @@ export default function AudioViewerModal({
             </button>
           </div>
         </div>
+
+        {/* Floating Forensic Terminal */}
+        {showTerminal && (
+          <div style={{
+            position: 'absolute',
+            right: '24px',
+            bottom: '24px',
+            zIndex: 50,
+            width: '380px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 0 1px #333',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: '#0a0a0c'
+          }}>
+            <div style={{
+              background: '#111',
+              borderBottom: '1px solid #333',
+              padding: '8px 12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{color: '#00f3ff', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px'}}>SISTEMA LSB</span>
+              <button 
+                onClick={() => setShowTerminal(false)} 
+                style={{background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '14px', padding: 0}}
+                title="Fechar Terminal"
+              >
+                ✕
+              </button>
+            </div>
+            <ForensicTerminal audioUrl={audioSrc} />
+          </div>
+        )}
 
         {/* Espectrograma Principal */}
         <div className="audio-viewer-spectrogram" ref={spectrogramContainerRef}>

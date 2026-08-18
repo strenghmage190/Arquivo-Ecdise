@@ -13,11 +13,13 @@ export interface FrequencyControlsProps {
   setMixRatio: (v: number) => void;
   durationSec: number;
   setDurationSec: (v: number) => void;
+  offsetSec: number;
+  setOffsetSec: (v: number) => void;
   colormap: ColormapName;
   setColormap: (v: ColormapName) => void;
   usePinkNoise: boolean;
   setUsePinkNoise: (v: boolean) => void;
-  hasBaseAudio: boolean;
+  baseAudioDuration: number;
 }
 
 const COLORMAP_OPTIONS: { id: ColormapName; label: string; color: string }[] = [
@@ -76,11 +78,13 @@ export default function FrequencyControls({
   setMixRatio,
   durationSec,
   setDurationSec,
+  offsetSec,
+  setOffsetSec,
   colormap,
   setColormap,
   usePinkNoise,
   setUsePinkNoise,
-  hasBaseAudio,
+  baseAudioDuration,
 }: FrequencyControlsProps) {
   const fmtHz = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)} kHz` : `${v} Hz`;
 
@@ -141,18 +145,48 @@ export default function FrequencyControls({
       </div>
 
       <div className="al-section-divider" />
-      <div className="al-section-title">Duração</div>
+      <div className="al-section-title">Tempo e Duração</div>
+
+      {baseAudioDuration > 0 && (
+        <div className="al-control-row" style={{ marginBottom: '12px' }}>
+          <div className="al-control-header">
+            <span className="al-control-label">Início da injeção no áudio (s)</span>
+            <span className="al-control-value">{offsetSec}s</span>
+          </div>
+          <div className="al-duration-row">
+            <input
+              type="range"
+              min={0}
+              max={Math.max(1, Math.floor(baseAudioDuration))}
+              step={0.1}
+              value={offsetSec}
+              onChange={(e) => setOffsetSec(Number(e.target.value))}
+              className="al-slider"
+            />
+            <input
+              type="number"
+              min={0}
+              max={baseAudioDuration}
+              step={0.1}
+              value={offsetSec}
+              onChange={(e) => setOffsetSec(Math.max(0, Math.min(baseAudioDuration, Number(e.target.value))))}
+              className="al-input-num"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="al-control-row">
         <div className="al-control-header">
-          <span className="al-control-label">Duração do áudio</span>
+          <span className="al-control-label">Duração do desenho (s)</span>
           <span className="al-control-value">{durationSec}s</span>
         </div>
         <div className="al-duration-row">
           <input
             type="range"
             min={1}
-            max={60}
+            max={baseAudioDuration > 0 ? Math.max(60, baseAudioDuration) : 60}
+            step={0.1}
             value={durationSec}
             onChange={(e) => setDurationSec(Number(e.target.value))}
             className="al-slider"
@@ -160,9 +194,10 @@ export default function FrequencyControls({
           <input
             type="number"
             min={1}
-            max={60}
+            max={baseAudioDuration > 0 ? Math.max(60, baseAudioDuration) : 60}
+            step={0.1}
             value={durationSec}
-            onChange={(e) => setDurationSec(Math.max(1, Math.min(60, Number(e.target.value))))}
+            onChange={(e) => setDurationSec(Math.max(1, Number(e.target.value)))}
             className="al-input-num"
           />
         </div>
@@ -185,7 +220,7 @@ export default function FrequencyControls({
         ))}
       </div>
 
-      {!hasBaseAudio && (
+      {baseAudioDuration === 0 && (
         <>
           <div className="al-section-divider" />
           <div className="al-control-row">

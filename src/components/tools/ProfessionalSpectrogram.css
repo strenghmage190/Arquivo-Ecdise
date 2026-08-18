@@ -8,6 +8,8 @@
   border: 1px solid #333;
   padding: 15px;
   border-radius: 4px;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .spectrogram-header {

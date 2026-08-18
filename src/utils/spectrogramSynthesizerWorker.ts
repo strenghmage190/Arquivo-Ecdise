@@ -1,36 +1,13 @@
-/*
-  spectrogramSynthesizerWorker.ts  —  Coagula-style spectrogram steganography
-  ============================================================================
-  DSP improvements over previous version:
-
-  1. PHASE RANDOMIZATION  — each frequency gets a random initial phase in [0, 2π].
-     Without this, all sines start at 0, creating a huge constructive-interference
-     spike at t=0 that causes severe clipping and wastes headroom. Random phases
-     spread energy uniformly over time → no spikes → more headroom for actual signal.
-
-  2. LINEAR FREQUENCY SCALE  — y=0 (top) maps to maxFreqHz, y=height-1 maps to
-     minFreqHz. Frequencies quantized to the nearest FFT bin boundary so that each
-     sine occupies exactly ONE bin with ZERO spectral leakage.
-
-  3. dB AMPLITUDE CURVE  — pixel brightness is mapped through an exponential curve:
-       amp = intensity * 10^((brightness_normalized - 1) * dynamic_range_dB / 20)
-     This compresses soft pixels and boosts loud ones, exactly like Coagula.
-     Pure black (0) → 0 (absolute silence). Pure white (255) → intensity (maximum).
-
-  4. mixRatio DUCKING  — the base audio is attenuated by (1 - mixRatio), so when
-     mixRatio is high the base "opens space" for the steg signal to be audible.
-     steg gain  = intensity * mixRatio
-     base gain  = 1 - mixRatio
-     This avoids both signals fighting for the same headroom.
-*/
+// spectrogramSynthesizerWorker.ts
 
 type SynthParams = {
   sampleRate: number;
   durationSec: number;
+  offsetSec: number;
   minFreqHz: number;
   maxFreqHz: number;
-  intensity: number;       // 0–1
-  mixRatio: number;        // 0 = base only, 1 = steg only
+  intensity: number;
+  mixRatio: number;
   usePinkNoiseBed: boolean;
   baseAudioBuffer: ArrayBuffer | null;
   baseAudioLength: number;
@@ -49,9 +26,6 @@ type MsgOut =
   | { cmd: 'result'; samples: ArrayBuffer; sampleRate: number }
   | { cmd: 'error'; error: string };
 
-// ---------------------------------------------------------------------------
-// Pink noise — Voss-McCartney 16-stage
-// ---------------------------------------------------------------------------
 function generatePinkNoise(length: number, amplitude = 0.25): Float32Array {
   const buf = new Float32Array(length);
   const stages = 16;
@@ -74,31 +48,25 @@ function generatePinkNoise(length: number, amplitude = 0.25): Float32Array {
   return buf;
 }
 
-// ---------------------------------------------------------------------------
-// dB amplitude curve  — maps brightness [0,255] → amplitude [0, intensity]
-// Using a 40 dB dynamic range: black=-40 dB (≈0), white=0 dB (=intensity)
-// ---------------------------------------------------------------------------
-const DB_RANGE = 40; // dB below full scale for darkest non-zero pixel
-
+const DB_RANGE = 40;
 function brightnessToAmp(brightness: number, intensity: number): number {
   if (brightness <= 0) return 0;
-  const norm = brightness / 255; // 0..1
-  // Exponential mapping: amp = 10^((norm - 1) * DB_RANGE / 20)
+  const norm = brightness / 255;
   const amp = Math.pow(10, (norm - 1) * DB_RANGE / 20);
   return amp * intensity;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 self.addEventListener('message', (ev: MessageEvent) => {
   const data = ev.data as MsgIn;
   if (!data || data.cmd !== 'synthesize') return;
 
   const { width, height, imageData: imageDataBuffer, params } = data;
+  
+  // CORREÇÃO: Removido o 'const {' duplicado que estava gerando erro de sintaxe
   const {
     sampleRate,
     durationSec,
+    offsetSec,
     minFreqHz,
     maxFreqHz,
     intensity,
@@ -110,25 +78,31 @@ self.addEventListener('message', (ev: MessageEvent) => {
 
   try {
     const pixels = new Uint8ClampedArray(imageDataBuffer);
-    const totalSamples = Math.max(1, Math.floor(sampleRate * durationSec));
-    const samplesPerColumn = Math.max(1, Math.floor(totalSamples / width));
-    const actualTotal = samplesPerColumn * width;
+    const payloadSamples = Math.max(1, Math.floor(sampleRate * durationSec));
+    const offsetSamples = Math.max(0, Math.floor(sampleRate * offsetSec));
+    const samplesPerColumn = Math.max(1, Math.floor(payloadSamples / width));
+    const actualPayloadLen = samplesPerColumn * width;
+
+    const baseLength = baseAudioBuffer ? baseAudioLength : 0;
+    const actualTotal = Math.max(baseLength, offsetSamples + actualPayloadLen);
     const twoPi = 2 * Math.PI;
 
-    // --- Frequency quantization to nearest FFT bin ---
-    // Bin width = sampleRate / samplesPerColumn
-    // Snapping to bin boundaries eliminates spectral leakage.
-    const binWidth = sampleRate / samplesPerColumn;
+    // --- Hann Window ---
+    // Rectangular windows cause broadband clicks at column boundaries.
+    // Hann window softens the edges, preventing vertical smearing in the spectrogram.
+    const win = new Float32Array(samplesPerColumn);
+    for (let i = 0; i < samplesPerColumn; i++) {
+      win[i] = 0.5 * (1 - Math.cos((twoPi * i) / (samplesPerColumn - 1)));
+    }
 
-    // Pre-compute quantized freq and phase increment per row
+    // Pre-compute exact freq and phase increment per row
     const rowFreqs = new Float32Array(height);
     const rowPhaseIncs = new Float32Array(height);
     for (let y = 0; y < height; y++) {
       const freqNorm = 1 - y / Math.max(1, height - 1); // top=high, bottom=low
       const rawFreq = minFreqHz + freqNorm * (maxFreqHz - minFreqHz);
-      const quantized = Math.round(rawFreq / binWidth) * binWidth;
-      rowFreqs[y] = quantized;
-      rowPhaseIncs[y] = twoPi * quantized / sampleRate;
+      rowFreqs[y] = rawFreq;
+      rowPhaseIncs[y] = twoPi * rawFreq / sampleRate;
     }
 
     // --- Steg signal synthesis ---
@@ -153,10 +127,8 @@ self.addEventListener('message', (ev: MessageEvent) => {
           const phaseInc = rowPhaseIncs[y];
 
           // PHASE RANDOMIZATION — critical: random start phase per freq per column
-          // prevents constructive interference spike at t=0 → no clipping.
           let phase = Math.random() * twoPi;
 
-          // Rectangular window: zero-leakage sines + sharp column edges
           for (let s = 0; s < samplesPerColumn; s++) {
             tmp[s] += Math.sin(phase) * amp;
             phase += phaseInc;
@@ -166,12 +138,27 @@ self.addEventListener('message', (ev: MessageEvent) => {
 
         const offset = x * samplesPerColumn;
         for (let s = 0; s < samplesPerColumn; s++) {
-          stegSignal[offset + s] = tmp[s];
+          stegSignal[offsetSamples + offset + s] = tmp[s] * win[s]; // Apply Hann window
         }
       }
 
       const percent = Math.round((endX / width) * 75);
       (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent });
+    }
+
+    // CORREÇÃO: Normalizar o Sinal do Espectrograma ANTES de misturar!
+    // Isso garante que o desenho tenha impacto visual sem esmagar o resto do áudio
+    let stegPeak = 0;
+    for (let i = 0; i < actualPayloadLen; i++) {
+      const abs = Math.abs(stegSignal[i]);
+      if (abs > stegPeak) stegPeak = abs;
+    }
+
+    if (stegPeak > 0) {
+      const scale = 1.0 / stegPeak; // Traz o pico para 1.0 (Volume Máximo)
+      for (let i = 0; i < actualPayloadLen; i++) {
+        stegSignal[i] *= scale;
+      }
     }
 
     // --- Base audio / noise bed ---
@@ -182,9 +169,7 @@ self.addEventListener('message', (ev: MessageEvent) => {
         base = imported.subarray(0, actualTotal);
       } else {
         base = new Float32Array(actualTotal);
-        for (let i = 0; i < actualTotal; i++) {
-          base[i] = imported[i % imported.length];
-        }
+        base.set(imported, 0);
       }
     } else if (usePinkNoiseBed) {
       base = generatePinkNoise(actualTotal, 0.25);
@@ -194,28 +179,18 @@ self.addEventListener('message', (ev: MessageEvent) => {
 
     (self.postMessage as (msg: MsgOut) => void)({ cmd: 'progress', percent: 80 });
 
-    // --- Mix with ducking ---
-    // steg gain  = mixRatio          (more mix = more steg signal)
-    // base gain  = 1 - mixRatio      (high mixRatio ducks base → opens space)
-    // intensity acts as master gain on the steg layer.
+    // --- Mix ---
     const stegGain = Math.max(0, Math.min(1, mixRatio));
     const baseGain = 1 - stegGain;
+    const output = new Float32Array(base);
 
-    const output = new Float32Array(actualTotal);
-    for (let i = 0; i < actualTotal; i++) {
-      output[i] = stegSignal[i] * stegGain + base[i] * baseGain;
-    }
-
-    // --- Normalize: prevent clipping, target peak at -1 dBFS (≈0.891) ---
-    let peak = 0;
-    for (let i = 0; i < actualTotal; i++) {
-      const abs = output[i] < 0 ? -output[i] : output[i];
-      if (abs > peak) peak = abs;
-    }
-    if (peak > 0.001) {
-      const scale = 0.891 / peak;
-      for (let i = 0; i < actualTotal; i++) {
-        output[i] *= scale;
+    // Sobrescreve apenas a região injetada com a mistura
+    for (let i = 0; i < actualPayloadLen; i++) {
+      const outIdx = offsetSamples + i;
+      if (outIdx < actualTotal) {
+        // Como o stegSignal e a base já têm limite de 1.0, e (stegGain + baseGain = 1)
+        // Isso aqui NUNCA vai passar de 1.0 (Não precisa mais daquela normalização destrutiva do final)
+        output[outIdx] = stegSignal[i] * stegGain + base[outIdx] * baseGain;
       }
     }
 

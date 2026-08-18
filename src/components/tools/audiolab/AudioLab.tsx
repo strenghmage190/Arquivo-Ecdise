@@ -7,6 +7,7 @@ import AudioLayerPanel from './AudioLayerPanel';
 import DSPFiltersPanel from './DSPFiltersPanel';
 import SignalGeneratorPanel from './SignalGeneratorPanel';
 import ProfessionalSpectrogram from '../ProfessionalSpectrogram';
+import ForensicTerminal from './ForensicTerminal';
 import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
 import './AudioLab.css';
 
@@ -41,12 +42,17 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const [maxFreqHz, setMaxFreqHz] = useState(18000);
   const [intensity, setIntensity] = useState(0.8);
   const [mixRatio, setMixRatio] = useState(0.5);
-  const [durationSec, setDurationSec] = useState(10);
+  const [durationSec, setDurationSec] = useState(1);
+  const [offsetSec, setOffsetSec] = useState(0);
   const [colormap, setColormap] = useState<ColormapName>('cyberneon');
   const [usePinkNoise, setUsePinkNoise] = useState(true);
 
+  const [stegoMethod, setStegoMethod] = useState<'spectrogram' | 'lsb'>('spectrogram');
+  const [lsbText, setLsbText] = useState('');
+
   const [baseAudioSamples, setBaseAudioSamples] = useState<Float32Array | null>(null);
   const [baseAudioUrl, setBaseAudioUrl] = useState<string | null>(null);
+  const [baseAudioDuration, setBaseAudioDuration] = useState<number>(0);
   const [generatedSamples, setGeneratedSamples] = useState<Float32Array | null>(null);
   const [generatedSampleRate, setGeneratedSampleRate] = useState(44100);
 
@@ -56,6 +62,7 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const wrapRef = useRef<HTMLDivElement>(null);
   const [canvasW, setCanvasW] = useState(600);
   const [canvasH, setCanvasH] = useState(300);
+  const [zoom, setZoom] = useState(1);
 
   // Audio playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -184,11 +191,12 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
   const handleBaseAudioLoaded = useCallback((samples: Float32Array | null, dur: number, url?: string) => {
     setBaseAudioSamples(samples);
     setBaseAudioUrl(url || null);
+    setBaseAudioDuration(dur);
     if (samples) {
       setUsePinkNoise(false);
-      setDurationSec(dur);
     } else {
       setUsePinkNoise(true);
+      setOffsetSec(0);
     }
   }, []);
 
@@ -205,10 +213,15 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
 
   const scheme = colormapToScheme(colormap);
   const hasAudio = !!(baseAudioUrl || generatedSamples);
+  
+  const renderDuration = Math.max(durationSec + offsetSec, baseAudioDuration);
+  
+  // Zoom logic: 1.0x fits on standard screen width (~800px)
+  // Max width is capped at 16000px by browser canvas limits.
+  const specWidth = Math.min(16000, Math.max(800, Math.floor(800 * zoom)));
 
   return (
     <div className="al-overlay" role="dialog" aria-label="AudioLab — Estúdio de Esteganografia">
-      {/* Header */}
       <header className="al-header">
         <div className="al-header-logo">
           <Radio size={16} />
@@ -231,21 +244,54 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
         </button>
       </header>
 
-      {/* Body */}
       <div className="al-body">
-        {/* Left: Frequency / params */}
         <div className="al-col-left">
-          {activeTab === 'steg' && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--nx-bg-darker)', borderRadius: '4px', border: '1px solid var(--nx-border)' }}>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--nx-text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Método de Ocultação
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`al-btn-ghost al-btn-sm ${stegoMethod === 'spectrogram' ? 'active' : ''}`}
+                style={{ flex: 1, border: stegoMethod === 'spectrogram' ? '1px solid var(--al-neon)' : undefined }}
+                onClick={() => setStegoMethod('spectrogram')}
+              >
+                Espectrograma
+              </button>
+              <button
+                className={`al-btn-ghost al-btn-sm ${stegoMethod === 'lsb' ? 'active' : ''}`}
+                style={{ flex: 1, border: stegoMethod === 'lsb' ? '1px solid var(--al-neon)' : undefined }}
+                onClick={() => setStegoMethod('lsb')}
+              >
+                LSB (Silencioso)
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'steg' && stegoMethod === 'spectrogram' && (
             <FrequencyControls
-              minFreqHz={minFreqHz}          setMinFreqHz={setMinFreqHz}
-              maxFreqHz={maxFreqHz}          setMaxFreqHz={setMaxFreqHz}
-              intensity={intensity}          setIntensity={setIntensity}
-              mixRatio={mixRatio}            setMixRatio={setMixRatio}
-              durationSec={durationSec}      setDurationSec={setDurationSec}
-              colormap={colormap}            setColormap={setColormap}
-              usePinkNoise={usePinkNoise}    setUsePinkNoise={setUsePinkNoise}
-              hasBaseAudio={!!baseAudioSamples}
+              minFreqHz={minFreqHz} setMinFreqHz={setMinFreqHz}
+              maxFreqHz={maxFreqHz} setMaxFreqHz={setMaxFreqHz}
+              intensity={intensity} setIntensity={setIntensity}
+              mixRatio={mixRatio} setMixRatio={setMixRatio}
+              durationSec={durationSec} setDurationSec={setDurationSec}
+              offsetSec={offsetSec} setOffsetSec={setOffsetSec}
+              colormap={colormap} setColormap={setColormap}
+              usePinkNoise={usePinkNoise} setUsePinkNoise={setUsePinkNoise}
+              baseAudioDuration={baseAudioDuration}
             />
+          )}
+          {activeTab === 'steg' && stegoMethod === 'lsb' && (
+            <div style={{ padding: '12px', color: 'var(--nx-text-muted)', fontSize: '12px', background: 'rgba(0,243,255,0.05)', border: '1px dashed var(--nx-border)', borderRadius: '4px' }}>
+              <strong>Modo LSB (Least Significant Bit)</strong>
+              <p style={{ marginTop: '8px', marginBottom: '8px' }}>
+                Este modo não usa ondas sonoras. O texto digitado será convertido em binário e embutido no último bit de cada amostra do arquivo de áudio original.
+              </p>
+              <p>
+                O resultado é <strong>100% inaudível</strong> e não aparecerá no espectrograma acima. 
+                Somente arquivos base WAV são suportados para manter a integridade dos dados sem perdas.
+              </p>
+            </div>
           )}
           {activeTab === 'dsp' && (
             <DSPFiltersPanel filters={dspFilters} onChange={setDspFilters} />
@@ -255,15 +301,12 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
           )}
         </div>
 
-        {/* Center: Spectrogram + input panel */}
         <div className="al-col-center">
-          {/* Hidden audio element for base audio playback */}
           <audio ref={audioRef} style={{ display: 'none' }} />
 
           <div className="al-preview-section" ref={centerRef}>
             <span className="al-preview-label">Espectrograma Preview</span>
 
-            {/* Compact player bar */}
             {hasAudio && (
               <div className="al-player-bar">
                 <button
@@ -276,6 +319,19 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                 <span className="al-player-time">
                   {fmt(currentTime)} / {fmt(totalDuration)}
                 </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px', marginRight: '8px' }}>
+                  <label style={{ fontSize: '11px', color: 'var(--nx-text-muted, #4a5a6a)' }}>Zoom:</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    style={{ width: '100px', accentColor: 'var(--nexus-blue, #00f3ff)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--nexus-blue, #00f3ff)', width: '30px' }}>{zoom.toFixed(1)}x</span>
+                </div>
                 <div
                   className="al-player-seek"
                   onClick={handleSeek}
@@ -289,28 +345,35 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
               </div>
             )}
 
-            {/* Stacked spectrogram area */}
             <div
               ref={wrapRef}
               className="al-preview-canvas-wrap"
+              style={{ overflowX: 'auto', overflowY: 'auto', height: '100%' }}
             >
-              {/* Layer 1: Base audio spectrogram (background) */}
-              {(baseAudioSamples || baseAudioUrl) ? (
-                <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+              {generatedSamples ? (
+                <div style={{ position: 'relative', zIndex: 1, minWidth: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <ProfessionalSpectrogram
+                    audioData={generatedSamples}
+                    sampleRate={generatedSampleRate}
+                    colorScheme={scheme}
+                    maxFreq={22050}
+                    width={specWidth}
+                  />
+                </div>
+              ) : (baseAudioSamples || baseAudioUrl) ? (
+                <div style={{ position: 'relative', zIndex: 1, minWidth: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <ProfessionalSpectrogram
                     audioUrl={baseAudioUrl ?? undefined}
                     audioData={baseAudioSamples ?? undefined}
                     sampleRate={44100}
                     colorScheme={scheme}
-                    maxFreq={maxFreqHz}
-                    width={canvasW}
-                    height={canvasH}
+                    maxFreq={22050}
+                    width={specWidth}
                   />
                 </div>
               ) : (
-                /* Empty state */
                 <div style={{
-                  position: 'absolute', inset: 0, zIndex: 1,
+                  position: 'relative', zIndex: 1, height: '100%', minHeight: '350px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'var(--nx-text-muted, #4a5a6a)', fontSize: 13,
                   border: '1px solid var(--nx-border, #1a2535)', borderRadius: 4,
@@ -318,42 +381,26 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                   Carregue um áudio base ou configure os parâmetros
                 </div>
               )}
-
-              {/* Layer 2: Generated payload spectrogram (screen blend) */}
-              {generatedSamples && (
-                <div style={{
-                  position: 'absolute', inset: 0, zIndex: 2,
-                  mixBlendMode: (baseAudioSamples || baseAudioUrl) ? 'screen' : 'normal',
-                  pointerEvents: 'none',
-                }}>
-                  <ProfessionalSpectrogram
-                    audioData={generatedSamples}
-                    sampleRate={generatedSampleRate}
-                    colorScheme={scheme}
-                    maxFreq={maxFreqHz}
-                    hideDecorations={!!(baseAudioSamples || baseAudioUrl)}
-                    width={canvasW}
-                    height={canvasH}
-                  />
-                </div>
-              )}
             </div>
           </div>
 
           <div className="al-input-section">
-            <SteganoInputPanel onImageDataChange={setImageData} />
+            <SteganoInputPanel onImageDataChange={setImageData} onTextChange={setLsbText} stegoMethod={stegoMethod} />
           </div>
         </div>
 
-        {/* Right: Layers + synth + export */}
         <div className="al-col-right">
+          {/* Audio Tracks & Mix */}
           <AudioLayerPanel
             imageData={imageData}
+            lsbText={lsbText}
+            stegoMethod={stegoMethod}
             minFreqHz={minFreqHz}
             maxFreqHz={maxFreqHz}
             intensity={intensity}
             mixRatio={mixRatio}
             durationSec={durationSec}
+            offsetSec={offsetSec}
             usePinkNoise={usePinkNoise}
             onBaseAudioLoaded={handleBaseAudioLoaded}
             onGeneratedBuffer={handleGeneratedBuffer}
@@ -363,6 +410,10 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
             onSave={onSave}
             initialBaseAudio={initialBaseAudio}
           />
+          
+          {/* SEU NOVO MINIGAME DE INVESTIGAÇÃO AQUI: */}
+          <div className="al-section-divider" style={{ marginTop: '16px', marginBottom: '16px' }} />
+          <ForensicTerminal baseAudioSamples={generatedSamples || baseAudioSamples} />
         </div>
       </div>
     </div>

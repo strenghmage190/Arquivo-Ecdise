@@ -97,11 +97,14 @@ function WaveformThumb({ samples }: { samples: Float32Array }) {
 // ---------------------------------------------------------------------------
 export interface AudioLayerPanelProps {
   imageData: ImageData | null;
+  lsbText?: string;
+  stegoMethod?: 'spectrogram' | 'lsb';
   minFreqHz: number;
   maxFreqHz: number;
   intensity: number;
   mixRatio: number;
   durationSec: number;
+  offsetSec: number;
   usePinkNoise: boolean;
   onBaseAudioLoaded: (samples: Float32Array | null, durationSec: number, url?: string) => void;
   onGeneratedBuffer: (samples: Float32Array, sampleRate: number) => void;
@@ -114,11 +117,14 @@ export interface AudioLayerPanelProps {
 
 export default function AudioLayerPanel({
   imageData,
+  lsbText,
+  stegoMethod,
   minFreqHz,
   maxFreqHz,
   intensity,
   mixRatio,
   durationSec,
+  offsetSec,
   usePinkNoise,
   onBaseAudioLoaded,
   onGeneratedBuffer,
@@ -133,6 +139,7 @@ export default function AudioLayerPanel({
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportRegion, setExportRegion] = useState<RegionOption | null>(null);
+  const [encodePassword, setEncodePassword] = useState('');
   const workerRef = useRef<Worker | null>(null);
 
   const loadBaseAudio = async (file: File) => {
@@ -154,7 +161,27 @@ export default function AudioLayerPanel({
     }
   }, [initialBaseAudio]);
 
-  const synthesize = useCallback(() => {
+  const synthesize = useCallback(async () => {
+    if (stegoMethod === 'lsb') {
+      if (!baseAudioInfo) {
+        alert("Modo LSB requer um Áudio Base carregado primeiro!");
+        return;
+      }
+      setIsSynthesizing(true);
+      setSynthProgress(0);
+      try {
+        const { encodeLSB } = await import('../../../utils/lsbStegoEngine');
+        const stegoSamples = encodeLSB(baseAudioInfo.samples, lsbText || '', encodePassword);
+        onGeneratedBuffer(stegoSamples, 44100);
+        setSynthProgress(100);
+      } catch (err: any) {
+        alert(`Erro ao embutir LSB: ${err.message}`);
+      } finally {
+        setIsSynthesizing(false);
+      }
+      return;
+    }
+
     if (!imageData) return;
     setIsSynthesizing(true);
     setSynthProgress(0);
@@ -198,6 +225,7 @@ export default function AudioLayerPanel({
       params: {
         sampleRate: 44100,
         durationSec,
+        offsetSec,
         minFreqHz,
         maxFreqHz,
         intensity,
@@ -207,11 +235,12 @@ export default function AudioLayerPanel({
         baseAudioLength: baseAudioInfo ? baseAudioInfo.samples.length : 0,
       },
     });
-  }, [imageData, baseAudioInfo, durationSec, minFreqHz, maxFreqHz, intensity, mixRatio, usePinkNoise, onGeneratedBuffer]);
+  }, [imageData, lsbText, stegoMethod, baseAudioInfo, durationSec, offsetSec, minFreqHz, maxFreqHz, intensity, mixRatio, usePinkNoise, onGeneratedBuffer]);
 
   const exportWav = async () => {
     if (!generatedSamples) return;
     setIsExporting(true);
+    await new Promise(r => setTimeout(r, 50)); // Allow UI to render the loading spinner
     try {
       const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
         generatedSamples,
@@ -232,6 +261,7 @@ export default function AudioLayerPanel({
   const exportMp3 = async () => {
     if (!generatedSamples) return;
     setIsExporting(true);
+    await new Promise(r => setTimeout(r, 50)); // Allow UI to render the loading spinner
     try {
       const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
         generatedSamples,
@@ -254,6 +284,7 @@ export default function AudioLayerPanel({
   const saveToClue = async () => {
     if (!generatedSamples) return;
     setIsExporting(true);
+    await new Promise(r => setTimeout(r, 50)); // Allow UI to render the loading spinner
     try {
       const { samples: processedSamples, sampleRate: processedRate } = await processAudioChain(
         generatedSamples,
@@ -262,10 +293,26 @@ export default function AudioLayerPanel({
         exportRegion
       );
       const blob = bufferToMp3(processedSamples, processedRate);
-      const file = new File([blob], 'audiolab_steg.mp3', { type: 'audio/mp3' });
+      const file = new File([blob], stegoMethod === 'lsb' ? 'audiolab_steg.wav' : 'audiolab_steg.mp3', { type: stegoMethod === 'lsb' ? 'audio/wav' : 'audio/mp3' });
       onSave(file);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const decodeLSBMsg = async () => {
+    const audioToDecode = generatedSamples || baseAudioInfo?.samples;
+    if (!audioToDecode) return;
+    try {
+      const { decodeLSB } = await import('../../../utils/lsbStegoEngine');
+      const msg = decodeLSB(audioToDecode);
+      if (msg) {
+        alert(`MENSAGEM SECRETA ENCONTRADA:\n\n${msg}`);
+      } else {
+        alert("Nenhuma mensagem LSB encontrada ou áudio corrompido.");
+      }
+    } catch (err: any) {
+      alert(`Erro na decodificação LSB: ${err.message}`);
     }
   };
 
@@ -309,17 +356,31 @@ export default function AudioLayerPanel({
       </div>
 
       {/* Steg Layer */}
-      <div className="al-layer-card al-layer-steg">
+      <div className="al-layer-card al-layer-steg" style={{ flexWrap: 'wrap' }}>
         <Layers size={14} className="al-layer-icon al-neon" />
-        <div className="al-layer-info">
-          <span className="al-layer-name">Sinal Oculto</span>
+        <div className="al-layer-info" style={{ flex: 1 }}>
+          <span className="al-layer-name">Sinal Oculto {stegoMethod === 'lsb' && '(LSB)'}</span>
           <span className="al-layer-meta">
-            {Math.round(intensity * 100)}% intensidade · {Math.round(mixRatio * 100)}% mistura
+            {stegoMethod === 'lsb' 
+              ? `${(lsbText || '').length} caracteres` 
+              : `${Math.round(intensity * 100)}% intensidade · ${Math.round(mixRatio * 100)}% mistura`}
           </span>
-          {generatedSamples && (
+          {generatedSamples && stegoMethod !== 'lsb' && (
             <WaveformThumb samples={generatedSamples} />
           )}
         </div>
+        {stegoMethod === 'lsb' && (
+          <div style={{ width: '100%', marginTop: '8px' }}>
+            <input
+              type="text"
+              placeholder="Senha de Criptografia (Opcional)"
+              value={encodePassword}
+              onChange={(e) => setEncodePassword(e.target.value)}
+              className="al-synth-input"
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '11px' }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Synthesis */}
@@ -329,12 +390,12 @@ export default function AudioLayerPanel({
       <button
         className={`al-btn-primary ${isSynthesizing ? 'loading' : ''}`}
         onClick={synthesize}
-        disabled={!imageData || isSynthesizing}
+        disabled={(stegoMethod === 'spectrogram' && !imageData) || (stegoMethod === 'lsb' && !baseAudioInfo) || isSynthesizing}
       >
         {isSynthesizing ? (
           <><Loader2 size={14} className="al-spin" /> Gerando... {synthProgress}%</>
         ) : (
-          <><Play size={14} /> Gerar Áudio</>
+          <><Play size={14} /> {stegoMethod === 'lsb' ? 'Embutir LSB' : 'Gerar Áudio'}</>
         )}
       </button>
 
@@ -350,6 +411,38 @@ export default function AudioLayerPanel({
           {genDuration}s gerado · {generatedSampleRate} Hz
         </div>
       )}
+
+      {/* Export Actions */}
+      <div className="al-section-divider" style={{ marginTop: 'auto' }} />
+      <div className="al-export-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <button
+          className={`al-btn-primary ${isExporting ? 'loading' : ''}`}
+          disabled={!generatedSamples || isExporting}
+          onClick={saveToClue}
+        >
+          {isExporting ? <Loader2 size={14} className="al-spin" /> : <Save size={14} />}
+          Salvar na Pista
+        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="al-btn-ghost al-btn-sm"
+            style={{ flex: 1 }}
+            disabled={!generatedSamples || isExporting}
+            onClick={exportWav}
+          >
+            <Download size={14} /> WAV
+          </button>
+          <button
+            className="al-btn-ghost al-btn-sm"
+            style={{ flex: 1 }}
+            disabled={!generatedSamples || isExporting || stegoMethod === 'lsb'}
+            onClick={exportMp3}
+            title={stegoMethod === 'lsb' ? 'MP3 não é suportado para LSB (destrói os dados)' : 'Exportar MP3'}
+          >
+            <Download size={14} /> MP3
+          </button>
+        </div>
+      </div>
 
     </div>
   );

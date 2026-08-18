@@ -4,6 +4,8 @@ import './AudioLab.css';
 
 export interface SteganoInputPanelProps {
   onImageDataChange: (data: ImageData | null) => void;
+  onTextChange?: (text: string) => void;
+  stegoMethod?: 'spectrogram' | 'lsb';
 }
 
 type InputMode = 'image' | 'draw' | 'text';
@@ -204,10 +206,16 @@ function DrawTab({ onData }: { onData: (d: ImageData | null) => void }) {
 // ---------------------------------------------------------------------------
 // Tab: Text / Code
 // ---------------------------------------------------------------------------
-function TextTab({ onData }: { onData: (d: ImageData | null) => void }) {
+function TextTab({ onData, onTextChange, stegoMethod }: { onData: (d: ImageData | null) => void, onTextChange?: (text: string) => void, stegoMethod?: 'spectrogram' | 'lsb' }) {
   const [text, setText] = useState('');
   const [fontFamily, setFontFamily] = useState('monospace');
   const [fontSize, setFontSize] = useState(48);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setText(val);
+    if (onTextChange) onTextChange(val);
+  };
 
   const render = useCallback((t: string, ff: string, fs: number) => {
     if (!t.trim()) { onData(null); return; }
@@ -253,26 +261,28 @@ function TextTab({ onData }: { onData: (d: ImageData | null) => void }) {
 
   return (
     <div className="al-input-tab">
-      <div className="al-text-controls">
-        <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="al-select-sm">
-          {/* Pixel/blocky fonts — best for spectrogram sharpness */}
-          <option value="'Courier New', monospace">Courier New (recomendado)</option>
-          <option value="monospace">Monospace</option>
-          <option value="'Lucida Console', monospace">Lucida Console</option>
-          {/* Below: google-font imports needed in index.html for full sharpness */}
-          <option value="'Press Start 2P', monospace">Press Start 2P (pixel art)</option>
-          <option value="sans-serif">Sans-serif</option>
-          <option value="serif">Serif</option>
-        </select>
-        <label className="al-label-sm">Tamanho: {fontSize}px</label>
-        <input type="range" min={12} max={96} value={fontSize} onChange={(e) => setFontSize(+e.target.value)} className="al-slider-sm" />
-      </div>
+      {stegoMethod !== 'lsb' && (
+        <div className="al-text-controls">
+          <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="al-select-sm">
+            {/* Pixel/blocky fonts — best for spectrogram sharpness */}
+            <option value="'Courier New', monospace">Courier New (recomendado)</option>
+            <option value="monospace">Monospace</option>
+            <option value="'Lucida Console', monospace">Lucida Console</option>
+            {/* Below: google-font imports needed in index.html for full sharpness */}
+            <option value="'Press Start 2P', monospace">Press Start 2P (pixel art)</option>
+            <option value="sans-serif">Sans-serif</option>
+            <option value="serif">Serif</option>
+          </select>
+          <label className="al-label-sm">Tamanho: {fontSize}px</label>
+          <input type="range" min={12} max={96} value={fontSize} onChange={(e) => setFontSize(+e.target.value)} className="al-slider-sm" />
+        </div>
+      )}
       <textarea
         className="al-textarea"
-        rows={4}
-        placeholder="Digite o texto ou código que ficará oculto no espectrograma..."
+        rows={stegoMethod === 'lsb' ? 7 : 4}
+        placeholder={stegoMethod === 'lsb' ? "Digite a mensagem secreta para ocultação LSB (100% inaudível)..." : "Digite o texto ou código que ficará oculto no espectrograma..."}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleTextChange}
       />
     </div>
   );
@@ -287,26 +297,35 @@ const TABS: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   { id: 'text',  label: 'Texto',   icon: <Type size={14} /> },
 ];
 
-export default function SteganoInputPanel({ onImageDataChange }: SteganoInputPanelProps) {
+export default function SteganoInputPanel({ onImageDataChange, onTextChange, stegoMethod }: SteganoInputPanelProps) {
   const [mode, setMode] = useState<InputMode>('text');
+
+  // Forçar modo texto se for LSB
+  useEffect(() => {
+    if (stegoMethod === 'lsb') {
+      setMode('text');
+    }
+  }, [stegoMethod]);
 
   return (
     <div className="al-input-panel">
-      <div className="al-tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={`al-tab ${mode === t.id ? 'active' : ''}`}
-            onClick={() => setMode(t.id)}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="al-tab-body">
-        {mode === 'image' && <ImageTab onData={onImageDataChange} />}
-        {mode === 'draw'  && <DrawTab  onData={onImageDataChange} />}
-        {mode === 'text'  && <TextTab  onData={onImageDataChange} />}
+      {stegoMethod !== 'lsb' && (
+        <div className="al-tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              className={`al-tab ${mode === t.id ? 'active' : ''}`}
+              onClick={() => setMode(t.id)}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="al-tab-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {mode === 'image' && stegoMethod !== 'lsb' && <ImageTab onData={onImageDataChange} />}
+        {mode === 'draw'  && stegoMethod !== 'lsb' && <DrawTab  onData={onImageDataChange} />}
+        {mode === 'text'  && <TextTab  onData={onImageDataChange} onTextChange={onTextChange} stegoMethod={stegoMethod} />}
       </div>
     </div>
   );
