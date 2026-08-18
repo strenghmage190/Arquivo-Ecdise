@@ -5,10 +5,14 @@ import { toast } from 'sonner';
 import DiegeticWindow from '../ui/DiegeticWindow';
 import { ClueModalProvider, useClueModal } from '../../contexts/ClueModalContext';
 import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
+import 'react-tooltip/dist/react-tooltip.css';
 import './CreateClueModal_Refactored.css';
 import TabGeneral from './createclueTabs/TabGeneral';
 import TabVisual from './createclueTabs/TabVisual';
 import TabAudio from './createclueTabs/TabAudio';
+import TabCipher from './createclueTabs/TabCipher';
+import TabGlitch from './createclueTabs/TabGlitch';
+import TabMegaClue from './createclueTabs/TabMegaClue';
 
 interface Props {
   isOpen: boolean;
@@ -82,7 +86,7 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
       x: 0,
       opacity: 1,
       scale: 1,
-      transition: { type: 'spring', stiffness: 300, damping: 30 }
+      transition: { type: 'spring' as const, stiffness: 300, damping: 30 }
     },
     exit: (direction: number) => ({
       zIndex: 0,
@@ -96,12 +100,7 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
   return (
     <DiegeticWindow
       title={existingCard ? 'EDITAR EVIDÊNCIA' : 'NOVA EVIDÊNCIA'}
-      subtitle={coreState.title || 'Sistema de Catalogação'}
       onClose={() => { playClose(); onClose(); }}
-      initialX={initialX || 50}
-      initialY={initialY || 50}
-      width={1100}
-      height={800}
       className="create-clue-refactored-modal"
     >
       <div className="cc-refactored-layout">
@@ -147,8 +146,11 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
                 {activeTab === 'geral' && <TabGeneral />}
                 {activeTab === 'visual' && <TabVisual />}
                 {activeTab === 'audio' && <TabAudio />}
+                {activeTab === 'cifra' && <TabCipher />}
+                {activeTab === 'glitch' && <TabGlitch />}
+                {activeTab === 'mega' && <TabMegaClue investigationId={investigationId} />}
                 
-                {!['geral', 'visual', 'audio'].includes(activeTab) && (
+                {!['geral', 'visual', 'audio', 'cifra', 'glitch', 'mega'].includes(activeTab) && (
                   <div className="cc-tab-placeholder">
                     <h2>{TABS.find(t => t.id === activeTab)?.label}</h2>
                     <p>Área reservada para os campos da aba {activeTab}.</p>

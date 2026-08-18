@@ -49,7 +49,9 @@ export default function TabVisual() {
       <div style={{ marginTop: 24 }}>
         <h4 style={{ color: 'var(--cc-text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           Modo Fake Phone
-          <Info data-tooltip-id="fake-phone-tip" size={16} color="var(--cc-neon)" style={{ cursor: 'help' }} />
+          <span data-tooltip-id="fake-phone-tip" style={{ display: 'flex', cursor: 'help' }}>
+            <Info size={16} color="#00ffff" />
+          </span>
         </h4>
         <Tooltip id="fake-phone-tip" className="cyber-tooltip">
           <span className="cyber-tooltip-title">[ PROTOCOLO FAKE PHONE ]</span>
@@ -63,7 +65,9 @@ export default function TabVisual() {
       <div style={{ marginTop: 24 }}>
         <h4 style={{ color: 'var(--cc-text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
           Camada UV / Luz Negra
-          <Info data-tooltip-id="uv-light-tip" size={16} color="var(--cc-neon)" style={{ cursor: 'help' }} />
+          <span data-tooltip-id="uv-light-tip" style={{ display: 'flex', cursor: 'help' }}>
+            <Info size={16} color="#00ffff" />
+          </span>
         </h4>
         <Tooltip id="uv-light-tip" className="cyber-tooltip">
           <span className="cyber-tooltip-title">[ LUZ NEGRA ]</span>
