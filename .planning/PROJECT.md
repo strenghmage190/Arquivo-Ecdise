@@ -1,22 +1,22 @@
-# Audio Lab & Spectrogram Steganography Suite Overhaul
+# CreateClueModal Refactoring & Cyberpunk UX Onboarding
 
 ## What This Is
 
-A complete architectural refactoring, functional overhaul, and visual modernization of the forensic audio suite: `AudioForge`, `AdvancedAudioLab`, `SpectrogramCreator`, `ProfessionalSpectrogram`, and `UrlRealTimeSpectrogram`. The project unifies fragmented audio tools into a cohesive Cyberpunk studio interface, implements high-fidelity spectrogram steganography (embedding hidden images/text into audio frequencies without jarring or destructive auditory artifacts), enhances audio manipulation capabilities (filters, pitch, reverse, slice, synthesizer), and optimizes modal integration in `CreateClueModal`.
+A complete architectural refactoring of the monolithic `CreateClueModal.tsx` component into modular, focused tab components. Alongside this structural cleanup, this project introduces a premium Cyberpunk User Experience featuring an interactive onboarding tour (via `driver.js`), smooth animations (`framer-motion`), immersive sound design (`use-sound`), and neon notifications (`sonner`).
 
 ## Core Value
 
-A studio-grade forensic audio workstation enabling investigators to craft, manipulate, synthesize, and encode subtle, high-clarity spectrogram steganography seamlessly.
+A highly maintainable, organized codebase for clue creation that simultaneously delivers an AAA-tier "hacker" experience for the Game Master, ensuring they understand complex systems like Glitches and Cipher puzzles through built-in tutorials.
 
-## Current Milestone: v1.1 Audio Lab & Spectrogram Steganography Suite
+## Current Milestone: v1.2 CreateClueModal Refactoring & Cyberpunk UX
 
-**Goal:** Overhaul audio tools, unbundle chaotic modals into an integrated workspace, and provide clean, high-fidelity spectrogram image/text steganography.
+**Goal:** Deconstruct `CreateClueModal.tsx` into modular sub-tabs, consolidate React state into logical domains, and implement a first-time interactive tutorial and advanced UX polish.
 
 **Target Features:**
-1. **Spectrogram Steganography Engine:** Encode images and text directly into audio frequency bins with subtle auditory masking and high visual contrast in spectrogram analyzers.
-2. **Audio Suite Unification:** Consolidate `AudioForge`, `AdvancedAudioLab`, and `SpectrogramCreator` into a single modular workstation with clear tabbed navigation.
-3. **Forensic Audio Manipulation & Synthesis:** Pitch shift, reverse, bandpass/notch filters, waveform visualizer, and multi-track tone generator.
-4. **Professional UI & Modal Overhaul:** High-performance responsive modal workspace with Wavesurfer / WebAudio integration and Cyberpunk theme aesthetics.
+1. **Modular Tabs Extraction:** Split the God Component into `TabGeneral`, `TabVisual`, `TabAudio`, `TabCipher`, `TabGlitch`, `TabMegaClue`, `TabFieldsVisibility`, and `TabDisplayConfig`.
+2. **State Orchestration:** Create centralized state objects (`clueData`, `glitchConfig`, etc.) to pass down to tabs instead of prop-drilling 50+ individual states.
+3. **Cyberpunk Onboarding:** Integrate `driver.js` for an automatic first-visit guided tour with dark/neon CSS styling.
+4. **UX Polish Library Integrations:** Add `framer-motion` (animations), `sonner` (neon toasts), and `use-sound` (UI interactions) for maximum immersion.
 
 ## Requirements
 
@@ -26,27 +26,30 @@ A studio-grade forensic audio workstation enabling investigators to craft, manip
 - ✓ Photoshop/GIMP-style layers mechanics with locked background and explicit rasterization — v1.0
 - ✓ Full Lucide React iconography and zero emojis — v1.0
 - ✓ Full-screen portal workspace for image forensics — v1.0
+- ✓ Spectrogram Steganography: Encode hidden visual patterns/text into audio frequencies without harsh auditory distortion. — v1.1
+- ✓ Unified Audio Workstation: Combine fragmented audio tools (`AudioForge`, `AdvancedAudioLab`, `SpectrogramCreator`) into a cohesive studio UI. — v1.1
+- ✓ Audio Editing & Filtering: Waveform trimming, pitch shifting, speed modulation, bandpass/notch filtering, and audio export. — v1.1
+- ✓ Real-time Spectrogram & Waveform Visualizer: High-FPS WebAudio-powered real-time spectrogram and spectrum analyzer. — v1.1
+- ✓ Modal UX & Performance: Clean integration into `CreateClueModal` with lazy loading and responsive full-screen capability. — v1.1
 
 ### Active
 
-- [ ] **Spectrogram Steganography:** Encode hidden visual patterns/text into audio frequencies without harsh auditory distortion.
-- [ ] **Unified Audio Workstation:** Combine fragmented audio tools (`AudioForge`, `AdvancedAudioLab`, `SpectrogramCreator`) into a cohesive studio UI.
-- [ ] **Audio Editing & Filtering:** Waveform trimming, pitch shifting, speed modulation, bandpass/notch filtering, and audio export.
-- [ ] **Real-time Spectrogram & Waveform Visualizer:** High-FPS WebAudio-powered real-time spectrogram and spectrum analyzer.
-- [ ] **Modal UX & Performance:** Clean integration into `CreateClueModal` with lazy loading and responsive full-screen capability.
+- [ ] **CreateClueModal Modularization**: Break down the monolithic CreateClueModal.tsx into tab-specific components (`TabGeneral`, `TabVisual`, etc.) and establish a strong Context/Prop orchestration.
+- [ ] **State Management Consolidation**: Refactor dozens of isolated state variables into cohesive logical groups (`clueData`, `mediaState`, `glitchConfig`).
+- [ ] **Interactive Onboarding Tour**: Implement a first-time user tour via `driver.js` with custom Cyberpunk CSS and `localStorage` tracking.
+- [ ] **Cyberpunk UX Polish**: Integrate `framer-motion` for fluid modal/tab transitions, `sonner` for neon toast notifications, and `use-sound` for mechanical/holographic UI sound effects.
+- [ ] **In-App Mini-Tutorials**: Add contextual Lucide React `Info` tooltips and help blocks inside complex tabs like Glitch Calibration and Shredder.
 
 ### Out of Scope
 
-- Cloud-based AI voice cloning or neural audio synthesis.
-- Proprietary VST plugin host.
+- Changes to the backend logic of how clues are saved/uploaded (only the UI state handling changes).
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Frequency Bin Steganography | Synthesize sine waves mapped to pixel brightness for clear spectrogram rendering | — Pending |
-| Unified Audio Studio UI | Eliminates confusion from multiple disconnected audio modals | — Pending |
-| Web Audio API + Web Worker | Keeps audio synthesis and FFT processing off the main UI thread | — Pending |
+| Tab Modularization | Reduces CreateClueModal.tsx from a 4k+ line monolith to a clean orchestrator | — Pending |
+| Driver.js | Lightweight and easy to style for the Cyberpunk Onboarding requirement | — Pending |
 
 ## Evolution
 
@@ -66,4 +69,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-15 for v1.1 milestone*
+*Last updated: 2026-08-18 for v1.2 milestone*
