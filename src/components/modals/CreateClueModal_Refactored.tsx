@@ -1,177 +1,186 @@
-import React, { useReducer, useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import './CreateClueModal_Refactored.css';
-import './createclueTabs/createclueTabs.css';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Save, Eye, EyeOff, Shield, Image as ImageIcon, Music, Lock, Zap, Settings, BookOpen } from 'lucide-react';
+import { toast } from 'sonner';
 import DiegeticWindow from '../ui/DiegeticWindow';
-import UVEditor from '../tools/UVEditor';
-import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
-import { uploadInvestigationImage } from '../../utils/storage';
-import { FieldVisibilityConfig, defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
-import {
-  ClueGeneralTab,
-  ClueVisualTab,
-  ClueAudioTab,
-  ClueCipherTab,
-  ClueGlitchTab,
-  ClueMegaTab,
-  ClueFieldsTab,
-  ClueDisplayTab,
-  ClueForensicTab
-} from './createclueTabs';
-import { useFileUpload } from '../../hooks/useFileUpload';
-import { useBlobUrl } from '../../hooks/useBlobUrl';
-import { validateClue } from '../../schemas/clueValidation';
-import {
-  basicReducer,
-  glitchReducer,
-  megaReducer,
-  forensicReducer,
-  initialBasicState,
-  initialGlitchState,
-  initialMegaState,
-  initialForensicState,
-} from '../../reducers/clueFormReducer';
+import { ClueModalProvider, useClueModal } from '../../contexts/ClueModalContext';
+import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
+import './CreateClueModal_Refactored.css';
 
-type Props = {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   investigationId: string;
-  onSaved?: (card: Record<string, any>) => void;
-  defaultHidden?: boolean;
+  initialX?: number;
+  initialY?: number;
+  onSaved: (card: Record<string, any>) => void;
   existingCard?: any;
-};
-
-type ChatSender = 'me' | 'them' | 'system' | string;
-interface EditingChatMessage {
-  sender: ChatSender;
-  type: string;
-  text: string;
-}
-
-interface ForensicConfig {
-  baseChannel: 'R' | 'G' | 'B';
-  hiddenChannel: 'R' | 'G' | 'B';
-  blendMode: 'screen' | 'multiply' | 'overlay';
-  opacity: number;
 }
 
 const TABS = [
-  { key: 'geral', label: 'GERAL', icon: '📄' },
-  { key: 'visual', label: 'VISUAL', icon: '👁️' },
-  { key: 'audio', label: 'ÁUDIO', icon: '🔊' },
-  { key: 'cifra', label: 'CIFRAS', icon: '🧩' },
-  { key: 'forense', label: 'FORENSE', icon: '🔬' },
-  { key: 'campos', label: 'CAMPOS', icon: '🎯' },
-  { key: 'display', label: 'CONFIG', icon: '⚙️' },
+  { id: 'geral', label: 'Geral', icon: BookOpen },
+  { id: 'visual', label: 'Visual', icon: ImageIcon },
+  { id: 'audio', label: 'Áudio', icon: Music },
+  { id: 'cifra', label: 'Cifra & Hex', icon: Lock },
+  { id: 'glitch', label: 'Glitch Puzzle', icon: Zap },
+  { id: 'mega', label: 'Mega Clue', icon: Shield },
+  { id: 'campos', label: 'Campos', icon: Eye },
+  { id: 'display', label: 'Display', icon: Settings },
 ];
 
-export default function CreateClueModal_Refactored({ isOpen, onClose, investigationId, onSaved, defaultHidden = false, existingCard }: Props) {
-  const mountedRef = React.useRef(true);
-  const [activeTab, setActiveTab] = useState<string>(TABS[0].key);
+function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initialX, initialY }: Props) {
+  const { playBoot, playClick, playHover, playClose, playProcess, playSuccess } = useCyberpunkUI();
+  const { resetForm, loadExistingCard, coreState } = useClueModal();
+  const [activeTab, setActiveTab] = useState('geral');
+  const [direction, setDirection] = useState(0);
 
-  // ===== REDUCERS =====
-  const [basicState, dispatchBasic] = useReducer(basicReducer, initialBasicState);
-  const [glitchState, dispatchGlitch] = useReducer(glitchReducer, initialGlitchState);
-  const [megaState, dispatchMega] = useReducer(megaReducer, initialMegaState);
-  const [forensicState, dispatchForensic] = useReducer(forensicReducer, initialForensicState);
-
-  // ===== HOOKS =====
-  const { uploadFile, progress, errors, uploading, clearErrors, resetProgress } = useFileUpload();
-  const previewUrl = useBlobUrl(basicState.imgFile);
-
-  // ===== HANDLERS =====
-  const handleSave = async () => {
-    const validation = validateClue({
-      ...basicState,
-      ...glitchState,
-      ...megaState,
-      ...forensicState,
-    });
-
-    if (!validation.success) {
-      console.error('Validation errors:', validation.errors);
-      return;
-    }
-
-    try {
-      // Example: Upload image file
-      if (basicState.imgFile) {
-        const { url, error } = await uploadFile(basicState.imgFile, 'image', { investigationId });
-        if (error) throw error;
-        console.log('Uploaded image URL:', url);
-      }
-
-      // Call onSaved callback
-      if (onSaved) {
-        onSaved({ ...basicState, ...glitchState, ...megaState, ...forensicState });
-      }
-
-      onClose();
-    } catch (err) {
-      console.error('Error saving clue:', err);
-    }
-  };
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+    if (isOpen) {
+      playBoot();
+      if (existingCard) {
+        loadExistingCard(existingCard);
+      } else {
+        resetForm();
+      }
+    } else {
+      playClose();
+    }
+  }, [isOpen, existingCard]);
 
   if (!isOpen) return null;
 
-  const modal = (
-    <div className="createclue-modal-overlay" onClick={onClose}>
-      <div className="createclue-modal" onClick={e => e.stopPropagation()} role="dialog">
-        <div className="createclue-header">
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="createclue-title">Criar Pista</div>
-              <div className="createclue-tabs">
-                {TABS.map(tab => (
-                  <button
-                    key={tab.key}
-                    className={`createclue-tab-btn ${activeTab === tab.key ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab.key)}
-                  >
-                    {tab.icon} {tab.label}
-                  </button>
-                ))}
-              </div>
+  const handleTabChange = (tabId: string) => {
+    const currentIndex = TABS.findIndex(t => t.id === activeTab);
+    const nextIndex = TABS.findIndex(t => t.id === tabId);
+    setDirection(nextIndex > currentIndex ? 1 : -1);
+    setActiveTab(tabId);
+    playClick();
+  };
+
+  const handleSave = () => {
+    playProcess();
+    toast.success('[ SISTEMA ] Evidência processada com sucesso.', {
+      style: { background: 'var(--nexus-bg)', color: 'var(--nexus-neon)', border: '1px solid var(--nexus-neon)' }
+    });
+    onSaved({});
+    playSuccess();
+    onClose();
+  };
+
+  const variants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 50 : -50,
+      opacity: 0,
+      scale: 0.95
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 300, damping: 30 }
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? 50 : -50,
+      opacity: 0,
+      scale: 0.95,
+      transition: { duration: 0.2 }
+    })
+  };
+
+  return (
+    <DiegeticWindow
+      title={existingCard ? 'EDITAR EVIDÊNCIA' : 'NOVA EVIDÊNCIA'}
+      subtitle={coreState.title || 'Sistema de Catalogação'}
+      onClose={() => { playClose(); onClose(); }}
+      initialX={initialX || 50}
+      initialY={initialY || 50}
+      width={1100}
+      height={800}
+      className="create-clue-refactored-modal"
+    >
+      <div className="cc-refactored-layout">
+        <aside className="cc-refactored-sidebar">
+          <nav className="cc-tabs-nav">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  className={`cc-tab-button ${isActive ? 'active' : ''}`}
+                  onClick={() => handleTabChange(tab.id)}
+                  onMouseEnter={() => playHover()}
+                >
+                  <Icon size={18} />
+                  <span>{tab.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabIndicator"
+                      className="cc-tab-indicator"
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <main className="cc-refactored-main">
+          <div className="cc-tab-content-wrapper">
+            <AnimatePresence custom={direction} mode="wait">
+              <motion.div
+                key={activeTab}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="cc-tab-motion-container"
+              >
+                <div className="cc-tab-placeholder">
+                  <h2>{TABS.find(t => t.id === activeTab)?.label}</h2>
+                  <p>Área reservada para os campos da aba {activeTab}.</p>
+                  <p className="cc-cyber-note">Status: Conectado ao ClueModalContext</p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <footer className="cc-refactored-footer">
+            <div className="cc-footer-info">
+              <span className="cc-status-badge">PRONTO</span>
             </div>
-          </div>
-          <div>
-            <button className="createclue-close" onClick={onClose}>Fechar</button>
-          </div>
-        </div>
-
-        <div className="createclue-body">
-          {/* Básicos mínimos para edição rápida */}
-          <div className="field-block">
-            <label className="field-title">Título</label>
-            <input
-              className="input"
-              value={basicState.title}
-              onChange={e => dispatchBasic({ type: 'SET_TITLE', payload: e.target.value })}
-            />
-          </div>
-
-          <div className="field-block">
-            <label className="field-title">Descrição pública</label>
-            <textarea
-              className="textarea"
-              value={basicState.descPublic}
-              onChange={e => dispatchBasic({ type: 'SET_DESC_PUBLIC', payload: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="primary-btn" onClick={handleSave}>Salvar</button>
-            <button className="ghost-btn" onClick={onClose}>Cancelar</button>
-          </div>
-        </div>
+            <div className="cc-footer-buttons">
+              <button 
+                className="cc-btn cc-btn-cancel" 
+                onClick={() => { playClose(); onClose(); }}
+                onMouseEnter={() => playHover()}
+              >
+                <X size={16} /> CANCELAR
+              </button>
+              <button 
+                className="cc-btn cc-btn-save" 
+                onClick={handleSave}
+                onMouseEnter={() => playHover()}
+              >
+                <Save size={16} /> SALVAR EVIDÊNCIA
+              </button>
+            </div>
+          </footer>
+        </main>
       </div>
-    </div>
+    </DiegeticWindow>
   );
+}
 
-  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal;
+export default function CreateClueModal_Refactored(props: Props) {
+  if (!props.isOpen) return null;
+  return (
+    <ClueModalProvider>
+      <CreateClueModalContent {...props} />
+    </ClueModalProvider>
+  );
 }
