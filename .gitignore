@@ -11,3 +11,7 @@ docs/
 .github
 .opencode
 /cypress
+graphify-out/
+.agents/
+.kilo/
+.planning/
