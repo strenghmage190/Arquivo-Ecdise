@@ -30,7 +30,7 @@ export default function Home() {
     // Busca todas as investigações ordenadas pela mais recente
     const res = await supabase
       .from('investigations')
-      .select('*')
+      .select('id, title, description, cover_url, created_at, owner_id')
       .order('created_at', { ascending: false });
     if (res.error) {
       setCases([]);

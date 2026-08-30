@@ -14,7 +14,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
       try {
         const { data } = await supabase
           .from('investigations')
-          .select('*')
+          .select('id, title, description, cover_url, created_at, owner_id')
           .order('created_at', { ascending: false });
         if (!mounted) return;
         setCases(data || []);
@@ -37,7 +37,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
       // refresh list
       const { data } = await supabase
         .from('investigations')
-        .select('*')
+        .select('id, title, description, cover_url, created_at, owner_id')
         .order('created_at', { ascending: false });
       setCases(data || []);
       // navigate to new case

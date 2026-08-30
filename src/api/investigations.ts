@@ -2,29 +2,26 @@ import { supabase } from '../supabaseClient';
 import { nanoid } from 'nanoid';
 import { isValidId } from '../utils/supabaseHelpers';
 
-// Debug helper: perform low-level REST fetch to capture raw PostgREST error body
-async function debugFetchInvestigationsRest() {
-  try {
-    const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
-    const anon = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
-    if (!supabaseUrl) return null;
-    const url = `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/investigations?select=*&order=created_at.desc`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        apikey: anon,
-        Authorization: `Bearer ${anon}`,
-        Accept: '*/*',
-      },
-    });
-    const text = await res.text();
-    console.error('debugFetchInvestigationsRest', { status: res.status, statusText: res.statusText, body: text });
-    return { status: res.status, body: text };
-  } catch (e) {
-    console.error('debugFetchInvestigationsRest failed', e);
-    return null;
-  }
+// --- Allowlists para Mass Assignment ---
+const INVESTIGATION_UPDATABLE_FIELDS = [
+  'title', 'description', 'cover_url', 'whiteboard_data', 'conspiracy_board_data',
+] as const;
+type InvestigationUpdatableKey = typeof INVESTIGATION_UPDATABLE_FIELDS[number];
+
+const CARD_UPDATABLE_FIELDS = [
+  'title', 'description_public', 'description_hidden', 'image_url', 'image_uv_url',
+  'video_url', 'audio_url', 'audio_hidden_url', 'audio_target_freq', 'image_filter_layer',
+  'is_locked', 'lock_password', 'is_hidden', 'discovery_code', 'x', 'y', 'z_index',
+  'visibility', 'tags', 'insights', 'metadata', 'chat_data', 'chat_contact_name', 'type',
+] as const;
+type CardUpdatableKey = typeof CARD_UPDATABLE_FIELDS[number];
+
+function pickAllowed<T extends string>(obj: Record<string, unknown>, allowed: readonly T[]): Partial<Record<T, unknown>> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([k]) => (allowed as readonly string[]).includes(k))
+  ) as Partial<Record<T, unknown>>;
 }
+
 
 // --- Types ---
 export interface InvestigationCardInsight {
@@ -67,13 +64,12 @@ export interface InvestigationCard {
 export async function fetchInvestigationById(id: string) {
   const { data, error } = await supabase
     .from('investigations')
-    .select('*')
+    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data, campaign_id')
     .eq('id', id)
     .maybeSingle();
 
   if (error) {
     console.error('fetchInvestigationById error', error);
-    await debugFetchInvestigationsRest();
     throw error;
   }
 
@@ -84,12 +80,13 @@ export async function fetchInvestigationById(id: string) {
   return data;
 }
 
-export async function updateInvestigation(id: string, updates: any) {
-  const { data, error } = await (supabase as any)
+export async function updateInvestigation(id: string, updates: Partial<Record<InvestigationUpdatableKey, unknown>>) {
+  const safe = pickAllowed(updates as Record<string, unknown>, INVESTIGATION_UPDATABLE_FIELDS);
+  const { data, error } = await supabase
     .from('investigations')
-    .update(updates)
+    .update(safe as any)
     .eq('id', id)
-    .select()
+    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data')
     .single();
   if (error) {
     console.error('updateInvestigation error', error);
@@ -157,33 +154,27 @@ export async function createInvestigationCard(card: InvestigationCard) {
     chat_contact_name: (card as any).chat_contact_name || null,
   };
   try {
-    // debug: log payload shape being sent to Supabase
-    // eslint-disable-next-line no-console
-    console.debug('createInvestigationCard: payload', payload);
     const { data, error } = await supabase
       .from('investigation_cards')
       .insert(payload)
       .select()
       .single();
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error('Erro ao criar card:', error);
+      console.error('Erro ao criar card');
       throw error;
     }
-    // eslint-disable-next-line no-console
-    console.debug('createInvestigationCard: response', data);
     return data;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('createInvestigationCard unexpected error', err);
+    console.error('createInvestigationCard unexpected error');
     throw err;
   }
 }
 
-export async function updateCard(id: string, updates: any) {
-  const { data, error } = await (supabase as any)
+export async function updateCard(id: string, updates: Partial<Record<CardUpdatableKey, unknown>>) {
+  const safe = pickAllowed(updates as Record<string, unknown>, CARD_UPDATABLE_FIELDS);
+  const { data, error } = await supabase
     .from('investigation_cards')
-    .update(updates)
+    .update(safe as any)
     .eq('id', id)
     .select()
     .single();
@@ -231,14 +222,13 @@ export async function fetchOrCreateInvestigationForCampaign(campaignId: string) 
     }
     const { data: existing, error: selErr } = await supabase
       .from('investigations')
-      .select('*')
+      .select('id, title, owner_id, created_at, campaign_id')
       .eq('campaign_id', campaignId)
       .limit(1)
       .maybeSingle();
 
     if (selErr) {
       console.error('Erro ao buscar investigation para campanha:', selErr);
-      await debugFetchInvestigationsRest();
       throw selErr;
     }
 
@@ -272,7 +262,6 @@ export async function fetchInvestigationDetails(id: string) {
     .single();
   if (error) {
     console.error('fetchInvestigationDetails error', error);
-    await debugFetchInvestigationsRest();
     throw error;
   }
   return data;

@@ -23,6 +23,7 @@
   "type": "commonjs",
   "dependencies": {
     "@excalidraw/excalidraw": "^0.17.6",
+    "@marsidev/react-turnstile": "^1.6.1",
     "@supabase/supabase-js": "^2.89.0",
     "@types/react-tooltip": "^3.11.0",
     "@wavesurfer/react": "^1.0.12",

@@ -18,9 +18,6 @@ let supabaseInstance: ReturnType<typeof createClient> | null = null;
 function getSupabaseClient() {
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('[Supabase] Client instantiated (singleton)');
-  } else {
-    console.debug('[Supabase] Returning existing instance');
   }
   return supabaseInstance;
 }
