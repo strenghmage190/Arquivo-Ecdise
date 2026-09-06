@@ -25,6 +25,9 @@ Migrar e reconectar os submódulos de editores complexos (`UVEditor`, `AudioLab`
 ### State Management
 - **Context-Driven Triggers:** Os estados que controlam a abertura dos portais (ex: `editorMode`, `showAudioForgeFor`, `uvEditorBaseUrl`) devem ser elevados para dentro do `ClueModalContext.tsx`, permitindo que qualquer Aba (como a `TabVisual` ou `TabAudio`) dispare a abertura dos modais com facilidade.
 - **Rendering:** A renderização real (`createPortal`) deve ficar no final do arquivo `CreateClueModal_Refactored.tsx`, para garantir que os editores cubram todo o Modal Cyberpunk.
+
+### File Pickers & Uploads
+- **Basic Inputs Restored:** Devido à atual falta de meios para inserir áudios (e outros arquivos específicos) na interface refatorada, é mandatório garantir que as lógicas de "Selecionar Arquivo" via input oculto (`<input type="file" hidden />`) associadas à seleção base de áudios funcionem perfeitamente em conjunção com a chamada para os Sub-editores. Sem isso, a feature de áudio e outras mídias ficam inacessíveis.
 </decisions>
 
 <canonical_refs>
