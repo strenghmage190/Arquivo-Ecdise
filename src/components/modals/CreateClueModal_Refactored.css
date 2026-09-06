@@ -1,5 +1,13 @@
-.create-clue-refactored-modal {
-  /* Override or extend DiegeticWindow styles if needed */
+.cc-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
   --cc-bg: var(--nexus-bg);
   --cc-neon: var(--nexus-neon);
   --cc-neon-dim: rgba(0, 255, 255, 0.2);
@@ -10,12 +18,36 @@
 
 .cc-refactored-layout {
   display: flex;
-  height: 100%;
-  width: 100%;
-  background: var(--cc-bg);
-  color: var(--cc-text);
+  height: 100vh;
+  width: 100vw;
+  background: var(--nexus-bg);
+  color: var(--nexus-text, #e0e0e0);
   overflow: hidden;
   font-family: 'Inter', sans-serif;
+  border: 1px solid var(--nexus-border);
+}
+
+.cc-fullscreen-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: transparent;
+  border: 1px solid var(--nexus-border);
+  color: var(--nexus-text, #fff);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s ease;
+}
+
+.cc-fullscreen-close:hover {
+  border-color: var(--nexus-neon);
+  color: var(--nexus-neon);
+  background: rgba(0, 255, 255, 0.1);
 }
 
 /* SIDEBAR */
@@ -86,7 +118,16 @@
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 2rem;
+  padding: 3rem 4rem 8rem 4rem;
+  perspective: 1200px;
+}
+
+.cc-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--nexus-border), transparent);
+  margin: 2rem 0;
+  border: none;
 }
 
 .cc-tab-motion-container {
@@ -242,4 +283,63 @@
 .neon-warning-box[style*="border-color: #ffaa00"]::before {
   background: #ffaa00;
   box-shadow: 0 0 8px #ffaa00;
+}
+
+/* ─── Save Button Loading State ─── */
+.cc-btn-save:disabled,
+.cc-btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Driver.js Cyberpunk Tour Popovers ─── */
+.cyber-tour-popover {
+  background: var(--nexus-bg, #0a0a0f) !important;
+  border: 1px solid var(--nexus-neon, #00ffcc) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.2), 0 0 40px rgba(0, 255, 204, 0.05) !important;
+  color: var(--nexus-text, #e0e0e0) !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  border-radius: 4px !important;
+}
+
+.cyber-tour-popover .driver-popover-title {
+  color: var(--nexus-neon, #00ffcc) !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.12em !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+}
+
+.cyber-tour-popover .driver-popover-description {
+  font-size: 0.82rem !important;
+  color: var(--nexus-text, #e0e0e0) !important;
+  line-height: 1.5 !important;
+}
+
+.cyber-tour-popover .driver-popover-footer button {
+  background: transparent !important;
+  border: 1px solid var(--nexus-neon, #00ffcc) !important;
+  color: var(--nexus-neon, #00ffcc) !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.08em !important;
+  padding: 4px 10px !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+}
+
+.cyber-tour-popover .driver-popover-footer button:hover {
+  background: rgba(0, 255, 204, 0.1) !important;
+}
+
+.cyber-tour-popover .driver-popover-progress-text {
+  color: var(--nexus-neon, #00ffcc) !important;
+  font-size: 0.7rem !important;
+  opacity: 0.7 !important;
+}
+
+.cyber-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--nexus-neon, #00ffcc) !important;
 }

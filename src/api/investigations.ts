@@ -64,7 +64,7 @@ export interface InvestigationCard {
 export async function fetchInvestigationById(id: string) {
   const { data, error } = await supabase
     .from('investigations')
-    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data, campaign_id')
+    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data')
     .eq('id', id)
     .maybeSingle();
 
@@ -80,11 +80,11 @@ export async function fetchInvestigationById(id: string) {
   return data;
 }
 
-export async function updateInvestigation(id: string, updates: Partial<Record<InvestigationUpdatableKey, unknown>>) {
-  const safe = pickAllowed(updates as Record<string, unknown>, INVESTIGATION_UPDATABLE_FIELDS);
-  const { data, error } = await supabase
+export async function updateInvestigation(id: string, updates: Record<string, unknown>) {
+  const safe = pickAllowed(updates, INVESTIGATION_UPDATABLE_FIELDS);
+  const { data, error } = await (supabase as any)
     .from('investigations')
-    .update(safe as any)
+    .update(safe)
     .eq('id', id)
     .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data')
     .single();
@@ -172,9 +172,9 @@ export async function createInvestigationCard(card: InvestigationCard) {
 
 export async function updateCard(id: string, updates: Partial<Record<CardUpdatableKey, unknown>>) {
   const safe = pickAllowed(updates as Record<string, unknown>, CARD_UPDATABLE_FIELDS);
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('investigation_cards')
-    .update(safe as any)
+    .update(safe)
     .eq('id', id)
     .select()
     .single();

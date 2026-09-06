@@ -37,9 +37,9 @@
 
 - [ ] **Phase 12: Core State Orchestration & Skeleton**
 - [ ] **Phase 13: Basic Tabs Extraction & UX Tooltips**
-- [ ] **Phase 14: Complex Tabs Extraction & UX Warnings**
-- [ ] **Phase 15: Configuration Tabs Extraction**
-- [ ] **Phase 16: Final Integration, Onboarding Tour & Polish**
+- [x] **Phase 14: Complex Tabs Extraction & UX Warnings**
+- [x] **Phase 15: Configuration Tabs Extraction**
+- [x] **Phase 16: Final Integration, Onboarding Tour & Polish**
 
 <details>
 <summary>✅ v1.1 Audio Lab & Spectrogram Steganography Suite (Phases 7-11) — SHIPPED 2026-08-18</summary>

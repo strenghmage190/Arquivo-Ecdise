@@ -77,6 +77,48 @@ export interface MegaClueState {
   megaRequiredPuzzleIds: string[];
 }
 
+export interface DisplayConfig {
+  cipher: {
+    showShredded: boolean;
+    showCipherText: boolean;
+    showRealText: boolean;
+    showShredConfig: boolean;
+  };
+  megaClue: {
+    showHints: boolean;
+    showAnswer: boolean;
+    showProgress: boolean;
+  };
+}
+
+export interface MediaVisibility {
+  audioBase: 'always' | 'glitch_only' | 'post_solve';
+  audioHidden: 'post_solve' | 'post_keyword' | 'always';
+  visual: 'glitch_active' | 'post_keyword' | 'always';
+  uvLayer: 'post_keyword' | 'always' | 'post_solve';
+}
+
+export const defaultDisplayConfig: DisplayConfig = {
+  cipher: {
+    showShredded: true,
+    showCipherText: true,
+    showRealText: false,
+    showShredConfig: false,
+  },
+  megaClue: {
+    showHints: true,
+    showAnswer: false,
+    showProgress: true,
+  },
+};
+
+export const defaultMediaVisibility: MediaVisibility = {
+  audioBase: 'always',
+  audioHidden: 'post_solve',
+  visual: 'glitch_active',
+  uvLayer: 'post_keyword',
+};
+
 export interface ClueModalContextType {
   // States
   coreState: CoreState;
@@ -99,6 +141,12 @@ export interface ClueModalContextType {
   
   fieldVisibilityConfig: FieldVisibilityConfig;
   setFieldVisibilityConfig: React.Dispatch<React.SetStateAction<FieldVisibilityConfig>>;
+
+  displayConfig: DisplayConfig;
+  setDisplayConfig: React.Dispatch<React.SetStateAction<DisplayConfig>>;
+
+  mediaVisibility: MediaVisibility;
+  setMediaVisibility: React.Dispatch<React.SetStateAction<MediaVisibility>>;
   
   // URL management
   registerUrl: (url: string | null | undefined) => void;
@@ -177,6 +225,8 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(defaultDisplayConfig);
+  const [mediaVisibility, setMediaVisibility] = useState<MediaVisibility>(defaultMediaVisibility);
 
   // URL management for cleanup
   const urlsRef = React.useRef<Set<string>>(new Set());
@@ -210,6 +260,8 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setGlitchState({ glitchCorrectFrequency: 17, glitchCorrectShift: 33, glitchCorrectChromatic: 12, glitchRewardCode: 'ALPHA-01', glitchKeyword: '', glitchRequireKeyword: false, glitchUnlockMode: 'code', glitchDifficulty: 'hard', glitchToleranceFreq: 1, glitchToleranceShift: 2, glitchToleranceChroma: 2, glitchFocusedImageFile: null, glitchFocusedImagePreview: null, showGlitchDesigner: false, glitchHiddenAudioUrl: '', glitchHiddenVideoUrl: '', glitchHint: '', glitchAccessInstructions: '', glitchStartFrequency: 12, glitchStartShift: 20, glitchStartChromatic: 8 });
     setMegaClueState({ megaFinalTruthText: '', megaImageFile: null, megaImagePreview: null, megaRequiredPuzzleIds: [] });
     setFieldVisibilityConfig(defaultFieldVisibility);
+    setDisplayConfig(defaultDisplayConfig);
+    setMediaVisibility(defaultMediaVisibility);
   };
 
   const loadExistingCard = (card: any) => {
@@ -273,6 +325,8 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       glitchState, setGlitchState,
       megaClueState, setMegaClueState,
       fieldVisibilityConfig, setFieldVisibilityConfig,
+      displayConfig, setDisplayConfig,
+      mediaVisibility, setMediaVisibility,
       registerUrl, revokeUrl, resetForm, loadExistingCard
     }}>
       {children}
