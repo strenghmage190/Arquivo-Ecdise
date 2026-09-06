@@ -1,26 +1,54 @@
-# Phase 13: Basic Tabs Extraction & UX Tooltips
+# Phase 13: Basic Tabs Extraction & UX Tooltips - Context
 
-## Domain
-Extraction of the General, Visual, and Audio tabs into modular components (`TabGeneral.tsx`, `TabVisual.tsx`, `TabAudio.tsx`), and the implementation of UX tooltips to explain features like Fake Phone and UV Light.
+**Gathered:** 2026-09-06
+**Status:** Ready for planning
+**Source:** User Discussion
 
-## Decisions
+<domain>
+## Phase Boundary
 
-### 1. Tooltips Appearance
-- **Decision:** React Tooltip with Cyberpunk styling
-- **Rationale:** Tooltips will use `react-tooltip` with a dark, neon-bordered style. They will appear when hovering over an `(i)` info icon next to the relevant feature.
+Extração e estilização das abas de Mídia Visual (`TabVisual`) e Áudio (`TabAudio`) do `CreateClueModal_Refactored.tsx`, implementando Tooltips de UX para campos complexos (ex: Filtros UV, Fake Phone/Data). A aba `TabGeneral` já foi predominantemente extraída na Phase 12.
+</domain>
 
-### 2. Audio Lab Integration
-- **Decision:** Context integration & Auto-close
-- **Rationale:** The AudioLab will save its resulting Blob/URL directly into the shared `ClueModalContext` and then automatically close. The user is returned to the Audio tab, which will now display the newly loaded track without manual file selection.
+<prior_decisions>
+## Carrying Forward from Phase 12
+- O UI system utilizará as classes estabelecidas `.cc-field`, `.cc-input`, `.cc-checkbox`, `.cc-divider`.
+- As abas devem seguir a mecânica do novo layout full-screen com 3D Flips.
+</prior_decisions>
 
-### 3. Tooltip Tone (Diegetic vs Functional)
-- **Decision:** Mixed (Diegetic Titles, Functional Explanations)
-- **Rationale:** The tooltips will have in-universe titles (e.g., "Protocolo Fake Phone") but the body text will be functional and direct to ensure the user understands exactly what the feature does, preventing confusion while maintaining immersion.
+<decisions>
+## Implementation Decisions
 
-## Canonical Refs
-- N/A
+### Media Handling (TabVisual)
+- **Preview Interativo:** Ao invés de um campo de arquivo simples, a interface terá um "Rich preview com Grid" inspirado no UVEditor. O preview da imagem carregada aparecerá sobre um grid Cyberpunk com suporte básico a exibição de dimensões/redimensionamento visual.
 
-## Code Context
-- `src/components/modals/CreateClueModal_Refactored.tsx` (the skeleton)
-- `src/contexts/ClueModalContext.tsx` (the state manager)
-- `src/components/modals/CreateClueModal.tsx` (current monolith to extract from)
+### UX Tooltips
+- **Estilo Padrão:** Uso do componente `Tooltip` do `react-tooltip` atrelado a ícones `<Info />` da biblioteca `lucide-react`, mantendo a consistência do sistema. Tooltips devem adotar a classe CSS `.cyber-tooltip`.
+
+### TabAudio
+- **the agent's Discretion:** A interface de carregamento de áudio (AudioLab integrador ou simples file picker para `audioBase`/`audioHidden`) segue a critério do dev, priorizando o reuso dos hooks existentes da Phase 7-11 se cabível, ou apenas file inputs estilizados `.cc-input`.
+</decisions>
+
+<canonical_refs>
+## Canonical References
+
+**Downstream agents MUST read these before planning or implementing.**
+
+- `src/components/modals/CreateClueModal_Refactored.css` — Estilos Core Cyberpunk (cc-field, cc-checkbox).
+- `src/components/modals/createclueTabs/TabGeneral.tsx` — Exemplo de layout e organização das abas no novo formato.
+</canonical_refs>
+
+<specifics>
+## Specific Ideas
+- O Grid no `TabVisual` deve remeter à estética do `UVEditor` para conectar a linguagem visual do projeto.
+</specifics>
+
+<deferred>
+## Deferred Ideas
+None
+</deferred>
+
+---
+
+*Phase: 13-basic-tabs-extraction-ux-tooltips*
+*Context gathered: 2026-09-06 via GSD discussion*

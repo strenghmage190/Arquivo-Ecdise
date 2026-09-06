@@ -1,22 +1,16 @@
-# Phase 13 Discussion Log
+# Phase 13: Basic Tabs Extraction & UX Tooltips - Discussion Log
 
-## Q1. Aparência dos Tooltips
-- **Opções:**
-  - (Recommended) Tooltips usando `react-tooltip` em estilo Cyberpunk (escuro, bordas neon) que aparecem ao passar o mouse sobre um ícone (i).
-  - Textos inline escondidos que expandem como um acordeão ao clicar no botão "Ajuda".
-  - Blocos de texto diegético fixos no topo de cada seção (como "MANUAL DO SISTEMA").
-- **Seleção:** (Recommended) Tooltips usando `react-tooltip` em estilo Cyberpunk (escuro, bordas neon) que aparecem ao passar o mouse sobre um ícone (i).
+**Date:** 2026-09-06
 
-## Q2. Integração do Audio Lab
-- **Opções:**
-  - (Recommended) O AudioLab salva o Blob/URL no contexto compartilhado (`ClueModalContext`) e fecha automaticamente, voltando para a aba Áudio do CreateClue, que exibirá a nova pista carregada.
-  - A aba Áudio exibe o AudioLab embutido na própria tela, sem precisar abrir outro modal.
-  - O AudioLab apenas avisa que salvou e o usuário precisa selecionar o arquivo manualmente na aba Áudio.
-- **Seleção:** (Recommended) O AudioLab salva o Blob/URL no contexto compartilhado (`ClueModalContext`) e fecha automaticamente, voltando para a aba Áudio do CreateClue, que exibirá a nova pista carregada.
+## Gray Area: Media Handling (Visual Tab)
+**Question:** Como devemos implementar o carregamento de imagens e vídeos no TabVisual?
+**Options presented:**
+1. Rich preview com Grid — Mostrar o preview da imagem carregada e um grid Cyberpunk (lembrando a UVEditor) com suporte básico a redimensionamento visual.
+2. Simples File Input — Apenas o input de arquivo estilizado (cc-input) para manter o formulário leve e rápido.
+**User selected:** Rich preview com Grid
+**Notes:** O usuário deseja que o TabVisual seja mais interativo, remetendo à estética cibernética do UVEditor, em vez de apenas ser um formulário básico.
 
-## Q3. Tom dos Tooltips
-- **Opções:**
-  - (Recommended) Misto: Título e estilo diegético (ex: "Protocolo Fake Phone"), mas o texto explicativo é direto e funcional para o usuário não ficar confuso.
-  - 100% Diegético: Escrito como se o usuário fosse um detetive operando um software militar ("Atenção Agente: Este módulo ofusca sinais...").
-  - 100% Funcional: Texto claro e direto ("Usa o visual de um celular. Oculta a barra de status.").
-- **Seleção:** (Recommended) Misto: Título e estilo diegético (ex: "Protocolo Fake Phone"), mas o texto explicativo é direto e funcional para o usuário não ficar confuso.
+---
+
+## Deferred Ideas
+- Nenhuma ideia adiada nesta sessão.
