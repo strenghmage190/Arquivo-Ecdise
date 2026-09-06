@@ -1,42 +1,153 @@
+---
+phase: 13
+name: Basic Tabs Extraction & UX Tooltips
+wave: 1
+status: Pending
+requirements:
+  - MOD-01
+  - MOD-02
+  - MOD-03
+  - UX-03
+autonomous: true
+files_modified:
+  - src/components/modals/createclueTabs/TabVisual.tsx
+  - src/components/modals/createclueTabs/TabAudio.tsx
+  - src/components/modals/CreateClueModal_Refactored.css
+---
+
 # Phase 13: Basic Tabs Extraction & UX Tooltips
 
-## Objective
-Extract the General, Visual, and Audio tabs from the monolithic `CreateClueModal.tsx` into modular components, wire them up to `ClueModalContext`, and implement UX Tooltips with `react-tooltip`.
+**Goal:** Refatorar as abas de Mídia (Visual e Áudio) para adotar o sistema de design Cyberpunk do modal full-screen. Isso inclui implementar "Rich Previews" com Grid interativo para as imagens e Tooltips padronizados (`.cyber-tooltip`) para as funcionalidades avançadas.
 
-## Context
-- **UI-SPEC:** Approved. Cyberpunk neon styling for tooltips, mixed tone (diegetic titles, functional text).
-- **AudioLab:** Must save its result directly into `ClueModalContext` and auto-close.
+## must_haves
 
-## Tasks
+- `TabVisual` deve exibir a pré-visualização de imagem (`mediaState.previewUrl`) centralizada sobre um grid cibernético (`.cc-media-grid`).
+- `TabAudio` deve adotar as classes `.cc-section-header`, `.cc-section-title` e usar tooltips para explicar o funcionamento de Áudio Oculto (Spectrogram Steganography).
+- Todas as abas (`TabVisual`, `TabAudio`) perdem o velho `.field-block` em favor do `.cc-tab-content`.
+- Separadores lógicos (`<hr className="cc-divider" />`) aplicados entre diferentes blocos de mídia/configuração.
+- Ícones `<Info>` com suporte ao `react-tooltip` aplicados em todos os jargões do app (Fake Phone, Lupa UV, Áudio Oculto).
+- `npx tsc --noEmit` executa sem erros.
 
-### 1. Tooltip Setup (`react-tooltip`)
-- [ ] Install/Verify `react-tooltip` in `package.json`.
-- [ ] Create a reusable `CyberTooltip.tsx` or inject the styles from `13-UI-SPEC.md` into `CreateClueModal_Refactored.css`.
-- [ ] Implement the `(i)` icons for Fake Phone and UV Light/Revealer features in their respective tabs.
+---
 
-### 2. Extract `TabGeneral.tsx`
-- [ ] Create `src/components/modals/createclueTabs/TabGeneral.tsx`.
-- [ ] Consume `ClueModalContext` to read/write `coreState` (title, descPublic, descHidden, tags, discoveryCode).
-- [ ] Render the General tab JSX from `CreateClueModal.tsx`.
+## Wave 1 — Visual Tab & Media Grid
 
-### 3. Extract `TabVisual.tsx`
-- [ ] Create `src/components/modals/createclueTabs/TabVisual.tsx`.
-- [ ] Consume `ClueModalContext` to read/write `mediaState` (imgFile, previewUrl, uvFile, filterFile).
-- [ ] Render the Visual tab JSX (Image Upload, PhoneViewer config, UV Editor, Filter Editor, Forensic RGB).
-- [ ] Add the UX tooltips for Fake Phone and UV Light.
+### Task 1.1: Criar CSS do Grid Cyberpunk
 
-### 4. Extract `TabAudio.tsx` & AudioLab Integration
-- [ ] Create `src/components/modals/createclueTabs/TabAudio.tsx`.
-- [ ] Consume `ClueModalContext` to read/write audio-related media state.
-- [ ] Render the Audio tab JSX.
-- [ ] Update `AudioLabModal.tsx` (if it's a modal) or `AudioLab.tsx` to accept a `onSaveToContext(blob)` prop or use the context directly, then close itself.
-- [ ] Update `TabAudio.tsx` to display the AudioLab output.
+<read_first>
+- src/components/modals/CreateClueModal_Refactored.css
+</read_first>
 
-### 5. Wire Up in `CreateClueModal_Refactored.tsx`
-- [ ] Import `TabGeneral`, `TabVisual`, `TabAudio` into `CreateClueModal_Refactored.tsx`.
-- [ ] Render them conditionally based on the active tab in the sidebar.
+<action>
+Modify `CreateClueModal_Refactored.css`:
+
+1. Adicionar os estilos do Grid de Preview e Containers de Imagem ao final do arquivo:
+```css
+/* ─── MEDIA PREVIEW GRID ─── */
+.cc-media-grid {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  max-height: 350px;
+  background-color: rgba(5, 8, 10, 0.95);
+  background-image: 
+    linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px dashed var(--cc-neon-dim);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  margin-top: 12px;
+}
+
+.cc-media-grid img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.2));
+  z-index: 2;
+}
+
+.cc-media-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+```
+</action>
+
+<acceptance_criteria>
+- `.cc-media-grid` is defined with a grid background and neon border.
+</acceptance_criteria>
+
+### Task 1.2: Refactor TabVisual.tsx
+
+<read_first>
+- src/components/modals/createclueTabs/TabVisual.tsx
+</read_first>
+
+<action>
+Modify `TabVisual.tsx`:
+
+1. Substituir a raiz `<div className="field-block">` por `<div className="cc-tab-content">`.
+2. Usar `.cc-section-header` e `.cc-section-title` no lugar de `.field-title`.
+3. Substituir o container de preview da imagem existente para utilizar a classe `<div className="cc-media-grid">`.
+4. Separar "IMAGEM BASE", "Modo Fake Phone" e "Camada UV / Luz Negra" usando `<hr className="cc-divider" />`.
+5. Estilizar e alinhar os tooltips e seus botões (usando `.cc-btn` se necessário).
+</action>
+
+<acceptance_criteria>
+- `TabVisual` implements the UI design contract (cc- classes).
+- Image preview uses `.cc-media-grid`.
+- Tooltips are intact and properly labeled.
+</acceptance_criteria>
+
+---
+
+## Wave 2 — Audio Tab Refactoring
+
+### Task 2.1: Refactor TabAudio.tsx
+
+<read_first>
+- src/components/modals/createclueTabs/TabAudio.tsx
+</read_first>
+
+<action>
+Modify `TabAudio.tsx`:
+
+1. Substituir a raiz `<div className="field-block">` por `<div className="cc-tab-content">`.
+2. Usar `.cc-section-header` e `.cc-section-title` para o título principal e subtítulos.
+3. Adicionar Tooltips (Ícone de Info + `react-tooltip`) para as seções de Áudio Base e Áudio Oculto (explicando como o Steganography funciona).
+4. Usar `<hr className="cc-divider" />` para separar o Áudio Base do Áudio Oculto.
+5. Adicionar a classe `.cc-btn-save` (ou um cyber btn verde) quando o áudio base for aberto, e a `cc-btn-cancel` como padrão.
+</action>
+
+<acceptance_criteria>
+- `TabAudio` matches the Cyberpunk UI.
+- At least 2 `react-tooltip` tooltips exist explaining the audio layers.
+- Typescript passes without errors.
+</acceptance_criteria>
+
+---
 
 ## Verification
-- Test General tab state persistence when switching tabs.
-- Test hovering over `(i)` icons shows the Cyberpunk tooltips.
-- Test AudioLab saving a file returns to the Audio tab with the file loaded.
+
+### Automated
+```bash
+npx tsc --noEmit
+```
+
+### Manual Checklist
+1. Open the modal and navigate to the **Visual** tab.
+2. Observe the Grid interface. Upload a test image and ensure it renders properly centered within the `.cc-media-grid`.
+3. Hover over the `Info` icons on the Visual tab and verify `.cyber-tooltip` popups render cleanly on dark background.
+4. Navigate to the **Áudio** tab.
+5. Observe the dividers, section headers, and the new Audio Oculto tooltip.
+6. Verify no scrolling or padding issues exist (inherited from Phase 12).
