@@ -12,6 +12,18 @@ export interface CoreState {
   isHidden: boolean;
 }
 
+export interface EditorState {
+  editorMode: 'uv' | 'filter' | 'rgb' | null;
+  uvEditorBaseUrl: string | null;
+  uvEditorPurpose: 'forensic' | null;
+  filterInitialImage: File | null;
+  showAudioForgeFor: 'hidden' | 'base' | null;
+  showGlitchDesigner: boolean;
+  showKeypadEditor: boolean;
+  showForensicEditor: boolean;
+  showThermalEditor: boolean;
+}
+
 export interface SecurityState {
   isLocked: boolean;
   lockPass: string;
@@ -139,6 +151,9 @@ export interface ClueModalContextType {
   megaClueState: MegaClueState;
   setMegaClueState: React.Dispatch<React.SetStateAction<MegaClueState>>;
   
+  editorState: EditorState;
+  setEditorState: React.Dispatch<React.SetStateAction<EditorState>>;
+
   fieldVisibilityConfig: FieldVisibilityConfig;
   setFieldVisibilityConfig: React.Dispatch<React.SetStateAction<FieldVisibilityConfig>>;
 
@@ -222,6 +237,18 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     megaImageFile: null,
     megaImagePreview: null,
     megaRequiredPuzzleIds: [],
+  });
+
+  const [editorState, setEditorState] = useState<EditorState>({
+    editorMode: null,
+    uvEditorBaseUrl: null,
+    uvEditorPurpose: null,
+    filterInitialImage: null,
+    showAudioForgeFor: null,
+    showGlitchDesigner: false,
+    showKeypadEditor: false,
+    showForensicEditor: false,
+    showThermalEditor: false,
   });
 
   const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
@@ -324,6 +351,7 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       cipherState, setCipherState,
       glitchState, setGlitchState,
       megaClueState, setMegaClueState,
+      editorState, setEditorState,
       fieldVisibilityConfig, setFieldVisibilityConfig,
       displayConfig, setDisplayConfig,
       mediaVisibility, setMediaVisibility,

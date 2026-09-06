@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Eye, EyeOff, Shield, Image as ImageIcon, Music, Lock, Zap, Settings, BookOpen } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
+import UVEditor from '../tools/UVEditor';
+import AudioLab from '../tools/audiolab/AudioLab';
+import ThermalEditor from '../tools/ThermalEditor';
+import ForensicChannelEditor from '../tools/ForensicChannelEditor';
+import PhoneViewer from '../tools/PhoneViewer';
+import GlitchImageEngine from '../tools/GlitchImageEngine';
 import { toast } from 'sonner';
 import { ClueModalProvider, useClueModal } from '../../contexts/ClueModalContext';
 import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
@@ -17,6 +25,23 @@ import TabMegaClue from './createclueTabs/TabMegaClue';
 import TabFieldsVisibility from './createclueTabs/TabFieldsVisibility';
 import TabDisplayConfig from './createclueTabs/TabDisplayConfig';
 import TabSecurity from './createclueTabs/TabSecurity';
+
+async function uploadAudio(file: File, investigationId: string): Promise<string | null> {
+   const originalName = file.name || 'audio';
+   const ext = originalName.split('.').pop() || '';
+   const base = originalName.replace(/\.[^/.]+$/, '')
+      .normalize('NFKD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 120);
+   const safeName = `audio_${Date.now()}_${base}${ext ? '.' + ext : ''}`;
+   const path = `${investigationId}/${safeName}`;
+   const { data, error } = await supabase.storage.from('investigation-assets').upload(path, file);
+  if (error) throw error;
+  const { data: publicData } = await supabase.storage.from('investigation-assets').getPublicUrl(path);
+  return (publicData as any)?.publicUrl || null;
+}
 
 interface Props {
   isOpen: boolean;
@@ -45,10 +70,11 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
   const { playBoot, playClick, playHover, playClose, playProcess, playSuccess } = useCyberpunkUI();
   const { startTour, shouldShowTour } = useClueTour();
   const {
-    resetForm, loadExistingCard,
-    coreState, securityState, mediaState,
+    resetForm, loadExistingCard, registerUrl, revokeUrl,
+    coreState, securityState, mediaState, setMediaState,
     cipherState, glitchState, megaClueState,
     displayConfig, mediaVisibility, fieldVisibilityConfig,
+    editorState, setEditorState
   } = useClueModal();
   const [activeTab, setActiveTab] = useState('geral');
   const [direction, setDirection] = useState(0);
@@ -272,6 +298,90 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
           </footer>
         </main>
       </div>
+
+      {editorState.editorMode && (mediaState.previewUrl || editorState.uvEditorBaseUrl) && createPortal(
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+              <UVEditor 
+                 baseImageUrl={editorState.uvEditorBaseUrl || mediaState.previewUrl}
+                 mode={editorState.editorMode || 'uv'}
+                 initialImageFile={editorState.editorMode === 'filter' ? editorState.filterInitialImage : undefined}
+                 showForensicControls={editorState.uvEditorPurpose === 'forensic'}
+                 onSave={(file, meta) => { 
+                    if (editorState.uvEditorPurpose === 'forensic') {
+                       setMediaState(prev => ({ ...prev, imgFile: file }));
+                       const newUrl = URL.createObjectURL(file);
+                       registerUrl(newUrl);
+                       revokeUrl(mediaState.previewUrl);
+                       setMediaState(prev => ({ ...prev, previewUrl: newUrl }));
+                       alert('✅ Camada forense aplicada na imagem principal!');
+                    } else if (editorState.editorMode === 'uv') {
+                       setMediaState(prev => ({ ...prev, uvFile: file }));
+                       const newUvUrl = URL.createObjectURL(file);
+                       registerUrl(newUvUrl);
+                       revokeUrl(mediaState.uvPreviewUrl);
+                       setMediaState(prev => ({ ...prev, uvPreviewUrl: newUvUrl }));
+                    } else if (editorState.editorMode === 'filter') {
+                       setMediaState(prev => ({ ...prev, filterFile: file }));
+                    }
+                    setEditorState(prev => ({ ...prev, editorMode: null, filterInitialImage: null, uvEditorPurpose: null }));
+                 }}
+                 onClose={() => { setEditorState(prev => ({ ...prev, editorMode: null, filterInitialImage: null, uvEditorBaseUrl: null, uvEditorPurpose: null })); }}
+              />
+            </div>
+         </div>, document.body
+      )}
+
+      {editorState.showGlitchDesigner && mediaState.previewUrl && createPortal(
+        <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+           <div style={{width:'100vw', height:'100vh', display:'flex', flexDirection:'column'}}>
+             <UVEditor
+               baseImageUrl={mediaState.previewUrl}
+               mode="uv"
+               showForensicControls={false}
+               onSave={(file, meta) => {
+                 const newUrl = URL.createObjectURL(file);
+                 registerUrl(newUrl);
+                 setEditorState(prev => ({ ...prev, showGlitchDesigner: false }));
+               }}
+               onClose={() => setEditorState(prev => ({ ...prev, showGlitchDesigner: false }))}
+             />
+           </div>
+        </div>, document.body
+      )}
+
+      {editorState.showAudioForgeFor && createPortal(
+        <AudioLab
+           isOpen={!!editorState.showAudioForgeFor}
+           onClose={() => setEditorState(prev => ({ ...prev, showAudioForgeFor: null }))}
+           initialBaseAudio={mediaState.audioBase}
+           onSave={async (file) => {
+              const currentForgeFor = editorState.showAudioForgeFor;
+              setEditorState(prev => ({ ...prev, showAudioForgeFor: null }));
+              
+              if (currentForgeFor === 'hidden') {
+                 revokeUrl(mediaState.audioHiddenPreview);
+                 const newUrl = URL.createObjectURL(file);
+                 registerUrl(newUrl);
+                 setMediaState(prev => ({ ...prev, audioHidden: file, audioHiddenPreview: newUrl }));
+                 
+                 // Lógica de upload direto do AudioLab oculto mantida
+                 try {
+                    const publicUrl = await uploadAudio(file, investigationId);
+                    if (publicUrl) {
+                      setMediaState(prev => ({ ...prev, audioHiddenUploadedUrl: publicUrl, audioHiddenPreview: publicUrl }));
+                    }
+                 } catch (e) { console.error('AudioLab upload failed', e); }
+              } else {
+                 revokeUrl(mediaState.audioBasePreview);
+                 const newUrl = URL.createObjectURL(file);
+                 registerUrl(newUrl);
+                 setMediaState(prev => ({ ...prev, audioBase: file, audioBasePreview: newUrl }));
+              }
+           }}
+        />, document.body
+      )}
+
     </div>
   );
 }
