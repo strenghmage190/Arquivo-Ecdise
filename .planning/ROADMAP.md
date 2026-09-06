@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- 🔄 **v1.2 CreateClueModal Refactoring & Cyberpunk UX** — Phases 12-16 (Active)
+- 🔄 **v1.2 CreateClueModal Refactoring & Cyberpunk UX** — Phases 12-17 (Active)
 - ✅ **v1.1 Audio Lab & Spectrogram Steganography Suite** — Phases 7-11 (shipped 2026-08-18)
 - ✅ **v1.0 UVEditor UI/UX Refactor & Layers Modernization** — Phases 1-6 (shipped 2026-08-15)
 
@@ -33,13 +33,19 @@
 - **Requirements Covered:** `UX-01`, `UX-02`, `UX-05`
 - **Success Criteria:** The `driver.js` tour auto-plays only once for new users, highlighting the core tabs and save button with a Cyberpunk aesthetic. Saving triggers a neon toast notification, and all data properly uploads and persists.
 
+### Phase 17: Advanced Sub-editors Reintegration
+- **Goal:** Migrate and reconnect the complex sub-editors (UVEditor, AudioLab, PhoneViewer, GlitchImageEngine) from the legacy file to the new refactored modal.
+- **Requirements Covered:** `MOD-09` (Legacy parity)
+- **Success Criteria:** The context `ClueModalContext` manages all editor overlay states (`editorMode`, `showAudioForgeFor`, etc.). Clicking "Abrir AudioLab" or "Camada UV" in the new tabs successfully launches the full-screen tools via `createPortal`, returning the processed media back to the tabs precisely as they did in the legacy modal.
+
 ## Progress Tracking
 
 - [x] **Phase 12: Core State Orchestration & Skeleton**
-- [ ] **Phase 13: Basic Tabs Extraction & UX Tooltips**
+- [x] **Phase 13: Basic Tabs Extraction & UX Tooltips**
 - [x] **Phase 14: Complex Tabs Extraction & UX Warnings**
 - [x] **Phase 15: Configuration Tabs Extraction**
 - [x] **Phase 16: Final Integration, Onboarding Tour & Polish**
+- [ ] **Phase 17: Advanced Sub-editors Reintegration**
 
 <details>
 <summary>✅ v1.1 Audio Lab & Spectrogram Steganography Suite (Phases 7-11) — SHIPPED 2026-08-18</summary>
