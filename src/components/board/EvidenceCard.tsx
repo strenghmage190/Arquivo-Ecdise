@@ -81,22 +81,12 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   }
 
   const getTypeIcon = (t: string) => {
-    if (t === 'locked') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 8V7a5 5 0 10-10 0v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="8" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    );
-    if (t === 'video') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.6"/><path d="M21 8l-4 3.5V9.5L21 6v2z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    );
-    if (t === 'audio') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3v6H3z" fill="currentColor"/><path d="M10 9v9a2 2 0 002 2h6v-2h-6v-9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    );
-    if (t === 'text') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M7 11h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M7 15h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.2"/></svg>
-    );
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M4 16h16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>
-    );
-  }
+    if (t === 'locked') return <Lock size={14} />;
+    if (t === 'video') return <Video size={14} />;
+    if (t === 'audio') return <Volume2 size={14} />;
+    if (t === 'text') return <FileText size={14} />;
+    return <ImageIcon size={14} />;
+  };
 
   const rootClasses = [
     'clue-card',
@@ -134,6 +124,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       data-card-type={cardType}
       data-locked={locked}
       data-player-view={playerView}
+      data-element={element || undefined}
       style={{
         touchAction: 'none',
         userSelect: 'none',
@@ -148,10 +139,10 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           <div className={`type-badge small ${locked ? 'locked' : fileType}`} title={locked ? 'Protegido' : fileType}>{getTypeIcon(locked ? 'locked' : fileType)}</div>
           {hasUV && <div className="type-badge small uv" title="Camada UV">UV</div>}
           {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto"><Volume2 className="lucide-icon inline-icon" size={16} /></div>}
-          {hasChat && <div className="type-badge small chat" title="Chat/Conversas">💬</div>}
-          {hasThermal && <div className="type-badge small thermal" title="Termal"><Thermometer className="lucide-icon inline-icon" size={16} /></div>}
-          {hasStamp && <div className="type-badge small stamp" title="Carimbo">🏷️</div>}
-          {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
+          {hasChat && <div className="type-badge small chat" title="Chat/Conversas"><MessageSquare size={14} /></div>}
+          {hasThermal && <div className="type-badge small thermal" title="Termal"><Thermometer size={14} /></div>}
+          {hasStamp && <div className="type-badge small stamp" title="Carimbo"><Check size={14} /></div>}
+          {hasExternalLink && <div className="type-badge small link" title="Link Externo"><Link2 size={14} /></div>}
           {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye className="lucide-icon inline-icon" size={16} /></div>}
         </div>
 
@@ -178,40 +169,33 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       <div className="clue-info">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="clue-uuid">ID: {shortId}</span>
-          {locked && (
-            <span title="Evidência Protegida por Senha" style={{ color: '#f39c12', display: 'inline-flex', alignItems: 'center' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 8V7a5 5 0 10-10 0v1" stroke="#f39c12" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="8" width="18" height="13" rx="2" stroke="#f39c12" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </span>
-          )}
-          {hasRecord && (
-            <span title="Prontuário / Ficha da vítima" style={{ color: '#9ee7c8', display: 'inline-flex', alignItems: 'center' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="#9ee7c8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="7" r="4" stroke="#9ee7c8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </span>
-          )}
+          {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
+          {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
         <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
+        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : '[VALIDADO]'}</span>}
       </div>
 
       <div className="decision-bar">
         <button className={`btn-decision true ${status === 'verified' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('verified'); }} title="Confirmado" aria-label="confirm">
-          <svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>
+          <Check size={16} />
         </button>
 
         <button className={`btn-decision theory ${status === 'theory' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('theory'); }} title="Hipótese" aria-label="theory">
-          <svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h2v-.5c0-.8.45-1.3 1.07-1.92l1.2-1.22c.37-.36.73-.86.73-1.66 0-1.1-.9-2-2-2s-2 .9-2 2H9c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.22-.7 2.08-1.93 3.25z" /></svg>
+          <CircleHelp size={16} />
         </button>
 
         <button className={`btn-decision false ${status === 'false' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('false'); }} title="Descartado" aria-label="discard">
-          <svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+          <X size={16} />
         </button>
 
         <div className="divider" />
         <button className="btn-decision open" onClick={(e) => { e.stopPropagation(); if (onOpen) onOpen(); }} title="Abrir Arquivo" aria-label="open">
-          <svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" /></svg>
+          <FolderOpen size={16} />
         </button>
         {isGameMaster && !playerView && onEdit && (
           <button className="btn-decision edit" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Editar Pista" aria-label="edit">
-            <svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>
+            <Pencil size={16} />
           </button>
         )}
       </div>
@@ -221,7 +205,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element'
   ];
   // Nota: onEdit e onOpen são funções, comparação por referência pode causar re-renders
   return keys.every((k) => prev[k] === next[k]);
