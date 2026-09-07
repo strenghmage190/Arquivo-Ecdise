@@ -1,32 +1,40 @@
-﻿# Roadmap: CreateClueModal Refactoring & Cyberpunk UX
+# Milestone v1.3 Roadmap
 
-## Milestones
+**4 phases** | **8 requirements mapped** | All covered ✓
 
-- ✅ **v1.2 CreateClueModal Refactoring & Cyberpunk UX** — Phases 12-17 (shipped 2026-09-06)
-- ✅ **v1.1 Audio Lab & Spectrogram Steganography Suite** — Phases 7-11 (shipped 2026-08-18)
-- ✅ **v1.0 UVEditor UI/UX Refactor & Layers Modernization** — Phases 1-6 (shipped 2026-08-15)
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 1 | A Purga | Deletar código morto e features inúteis | PURGE-01, PURGE-02 | 2 |
+| 2 | Assets & Temas | Substituir emojis e refinar Light Mode | ASSET-01, THEME-01 | 2 |
+| 3 | Componentes e UX | Refatorar modais e tooltips | UX-01, UX-02 | 2 |
+| 4 | O "Chefão" (Home) | Redesign pontual da Home Page | HOME-01, HOME-02 | 2 |
 
-## Phases
+### Phase Details
 
-<details>
-<summary>✅ v1.2 CreateClueModal Refactoring & Cyberpunk UX (Phases 12-17) — SHIPPED 2026-09-06</summary>
+**Phase 1: A Purga**
+Goal: Deletar código morto e features que não agregam.
+Requirements: PURGE-01, PURGE-02
+Success criteria:
+1. Página de perfil inacessível e código deletado.
+2. Nenhuma referência a "coisas de conspiração" na UI principal.
 
-- [x] Phase 12: Core State Orchestration & Skeleton — completed 2026-09-06
-- [x] Phase 13: Basic Tabs Extraction & UX Tooltips — completed 2026-09-06
-- [x] Phase 14: Complex Tabs Extraction & UX Warnings — completed 2026-09-06
-- [x] Phase 15: Configuration Tabs Extraction — completed 2026-09-06
-- [x] Phase 16: Final Integration, Onboarding Tour & Polish — completed 2026-09-06
-- [x] Phase 17: Advanced Sub-editors Reintegration — completed 2026-09-06
+**Phase 2: Assets & Temas**
+Goal: Deixar o sistema com cara de profissional (Lucide Icons + Light Mode).
+Requirements: ASSET-01, THEME-01
+Success criteria:
+1. 100% dos emojis removidos e substituídos por Lucide.
+2. Light mode com contraste adequado e sem cores lavadas.
 
-</details>
+**Phase 3: Componentes e UX**
+Goal: Resolver as dores de modais e tooltips da interface.
+Requirements: UX-01, UX-02
+Success criteria:
+1. Modais fecham com ESC e clique fora (overlay escuro).
+2. Tooltips não quebram a tela nem piscam (title nativo ou CSS puro).
 
-<details>
-<summary>✅ v1.1 Audio Lab & Spectrogram Steganography Suite (Phases 7-11) — SHIPPED 2026-08-18</summary>
-
-- [x] Phase 7: High-Fidelity Spectrogram Steganography Engine — completed 2026-08-18
-- [x] Phase 8: Forensic Audio DSP & Manipulation Suite — completed 2026-08-18
-- [x] Phase 9: Unified AudioLab Workstation Architecture & UI — completed 2026-08-18
-- [x] Phase 10: CreateClueModal Integration, Performance & E2E Validation — completed 2026-08-18
-- [x] Phase 11: AudioLab Spectrogram Preview & Player Parity — completed 2026-08-16
-
-</details>
+**Phase 4: O "Chefão" (Home)**
+Goal: Identificar e atacar os problemas estruturais da Home.
+Requirements: HOME-01, HOME-02
+Success criteria:
+1. Interface limpa, com margens respiros.
+2. CTA claro e hierarquia visual resolvida.
