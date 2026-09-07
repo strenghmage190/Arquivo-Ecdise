@@ -8,15 +8,15 @@ A complete architectural refactoring of the monolithic `CreateClueModal.tsx` com
 
 A highly maintainable, organized codebase for clue creation that simultaneously delivers an AAA-tier "hacker" experience for the Game Master, ensuring they understand complex systems like Glitches and Cipher puzzles through built-in tutorials.
 
-## Current Milestone: v1.2 CreateClueModal Refactoring & Cyberpunk UX
+## Current Milestone: v1.3 Total CSS & UI/UX Overhaul
 
-**Goal:** Deconstruct `CreateClueModal.tsx` into modular sub-tabs, consolidate React state into logical domains, and implement a first-time interactive tutorial and advanced UX polish.
+**Goal:** Melhoria geral do CSS, remoção de código/features mortas e refinamento das interfaces principais (Home, Modals, Tooltips, Light Mode).
 
-**Target Features:**
-1. **Modular Tabs Extraction:** Split the God Component into `TabGeneral`, `TabVisual`, `TabAudio`, `TabCipher`, `TabGlitch`, `TabMegaClue`, `TabFieldsVisibility`, and `TabDisplayConfig`.
-2. **State Orchestration:** Create centralized state objects (`clueData`, `glitchConfig`, etc.) to pass down to tabs instead of prop-drilling 50+ individual states.
-3. **Cyberpunk Onboarding:** Integrate `driver.js` for an automatic first-visit guided tour with dark/neon CSS styling.
-4. **UX Polish Library Integrations:** Add `framer-motion` (animations), `sonner` (neon toasts), and `use-sound` (UI interactions) for maximum immersion.
+**Target features:**
+1. **Purga de features:** Remover página de Perfil e elementos "conspiração".
+2. **Assets & Temas:** Substituição de emojis por SVGs (Lucide) e refinamento das variáveis do Light Mode.
+3. **Componentes e UX:** Refatoração de Modais e Tooltips nativas/leves.
+4. **Home Page Redesign:** Limpeza, hierarquia visual e respiro.
 
 ## Requirements
 
@@ -69,4 +69,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-06 for v1.2 milestone completion*
+*Last updated: 2026-09-06 for v1.3 milestone start*
