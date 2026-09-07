@@ -137,41 +137,23 @@ export default function SystemOverlays() {
 
   return (
     <>
-      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
-        <div className="hud-left">
-          {location.pathname === '/' ? (
-            <>
-              <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
-                <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
-                <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
-                <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
-                <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-            </>
-          ) : (
+      {location.pathname !== '/' && (
+        <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
+          <div className="hud-left">
             <div style={{ width: 160, height: 1 }} aria-hidden />
-          )}
-        </div>
-
-        <div className="hud-right">
-          <div className="system-monitor" aria-hidden>
-            <div className="label">INTEGRIDADE NEXUS</div>
-            <div className="bar-container">
-              <div className="fill" id="integrity-bar" ref={integrityRef}></div>
-            </div>
-            <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
           </div>
-          {location.pathname === '/' && (
-            <button className="btn-logout" onClick={() => navigate('/login')}>SAIR DO SISTEMA</button>
-          )}
-        </div>
-      </header>
+
+          <div className="hud-right">
+            <div className="system-monitor" aria-hidden>
+              <div className="label">INTEGRIDADE NEXUS</div>
+              <div className="bar-container">
+                <div className="fill" id="integrity-bar" ref={integrityRef}></div>
+              </div>
+              <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
+            </div>
+          </div>
+        </header>
+      )}
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
       <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />

@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Folder, Skull, Radio, User } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
 import ordoCrest from '../../assets/ordem/Simbolo da Ordem.png';
 import Desktop from '../components/layout/Desktop';
 import Button from '../components/ui/Button';
 import { createInvestigation, deleteInvestigation } from '../api/investigations';
- 
+
+function generateDossierCode(title: string, id: string) {
+  const words = title.split(' ').filter(w => w.length > 2).slice(0, 2);
+  const initials = words.map(w => w[0].toUpperCase()).join('');
+  const suffix = String(id).slice(0, 4).toUpperCase();
+  return `#${initials || 'CX'}-${suffix}`;
+}
+
+function getCaseElement(id: string) {
+  const elements = ['sangue', 'morte', 'energia', 'conhecimento'];
+  const hash = String(id).split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  return elements[hash % 4];
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -83,6 +96,24 @@ export default function Home() {
 
   return (
     <div className={`${styles['home-screen']} nexus-page`}>
+      <div className={styles['home-nav-left']}>
+        <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
+          <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
+        </button>
+        <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
+          <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
+        </button>
+        <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
+          <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
+        </button>
+        <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
+          <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
+        </button>
+      </div>
+      <div className={styles['home-nav-right']}>
+        <button className="btn-logout" onClick={handleLogout}>SAIR DO SISTEMA</button>
+      </div>
+
       <Desktop cases={cases} />
       <div className={styles['ordo-header']}>
         <img src={ordoCrest} alt="Ordo Realitas" className={styles['ordo-crest']} />
@@ -100,18 +131,27 @@ export default function Home() {
         </div>
 
         {/* Lista de Casos */}
-        {cases.map(c => (
-          <div key={c.id} className={styles['case-card']} onClick={() => { const clean = String(c.id).split(':')[0]; navigate(`/case/${clean}`); }}>
+        {cases.map(c => {
+          const element = getCaseElement(c.id);
+          const dossieCode = generateDossierCode(c.title, c.id);
+          return (
+          <div key={c.id} className={styles['case-card']} style={{ '--card-color': `var(--el-${element})` } as React.CSSProperties} onClick={() => { const clean = String(c.id).split(':')[0]; navigate(`/case/${clean}`); }}>
             {c.cover_url && <div className={styles['case-cover']} style={{ backgroundImage: `url(${c.cover_url})` }} aria-hidden />}
+            <div className={styles['elemental-badge']} title={`Elemento Principal: ${element.toUpperCase()}`} />
             <Button variant="caseDelete" title="Apagar caso" onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}>✕</Button>
-            <div>
-              <div className={styles['meta']}>CONFIDENCIAL</div>
+            
+            <div className={styles['case-content']}>
+              <div className={`${styles['dossier-code']} font-terminal`}>{dossieCode}</div>
               <h2>{c.title}</h2>
               {c.description && <p className={styles['case-desc']}>{c.description}</p>}
+              <div className={styles['paranormal-meta']}>
+                <span>AMEAÇA: DESCONHECIDA</span>
+                <span>EVIDÊNCIAS: 12</span>
+              </div>
             </div>
-            <div className={styles['meta']}>{new Date(c.created_at).toLocaleDateString()}</div>
+            <div className={`${styles['case-footer']} font-documento`}>{new Date(c.created_at).toLocaleDateString()}</div>
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Terminal is disponível via atalhos HUD */}
