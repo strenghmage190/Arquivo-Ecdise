@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { CircleDot } from 'lucide-react';
 import './MysteryEffects.css';
 import useThrottledMouse from '../../hooks/useThrottledMouse';
 

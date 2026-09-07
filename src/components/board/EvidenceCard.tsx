@@ -1,4 +1,4 @@
-import { Volume2, Eye, Check, Thermometer } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -29,6 +29,7 @@ export interface EvidenceCardProps {
   cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal' | 'hidden'
   performanceMode?: boolean
   blurred?: boolean
+  element?: string | null
 }
 
 const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false }) => {

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import './TerminalSearch.css';
 
 declare global {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 
 interface BottomSheetProps {

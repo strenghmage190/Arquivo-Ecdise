@@ -1,5 +1,37 @@
 import { AlertTriangle, X, Search, Check, Settings, Eye, Lock, Zap, Glasses, Crown } from 'lucide-react';
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
+  Check,
+  CircleHelp,
+  Crown,
+  Eye,
+  Flashlight,
+  FolderOpen,
+  Glasses,
+  LayoutGrid,
+  Layers2,
+  Lightbulb,
+  Link2,
+  Lock,
+  LocateFixed,
+  Mail,
+  Menu,
+  Plus,
+  Redo2,
+  RotateCcw,
+  Search,
+  Settings,
+  Terminal,
+  Trash2,
+  Undo2,
+  X,
+  Zap,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
@@ -19,6 +51,7 @@ import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import './EvidenceCard.css';
 import './investigation.css';
+import './InvestigationBoard.css';
 import EvidenceCard from './EvidenceCard';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';

@@ -1,4 +1,4 @@
-import { Settings, Search, Lock, Monitor } from 'lucide-react';
+import { Flashlight, FolderOpen, House, LayoutPanelTop, Link2, LocateFixed, Lock, Menu, MoreHorizontal, Search, Settings, Terminal, Undo2, X } from 'lucide-react';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './BottomNavigationBar.css';
