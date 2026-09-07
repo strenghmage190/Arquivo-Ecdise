@@ -1,22 +1,52 @@
 /* stylelint-disable at-rule-no-unknown */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Share+Tech+Mono&family=Special+Elite&family=Teko:wght@600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #0f172a;
-  --fg: #e6eef8;
-  --nexus-blue: #00f3ff;
-  --ordo-red: #b33030;
+  /* Chrome do sistema — monocromático */
+  --bg: #0A0A0B;
+  --surface: #131315;
+  --border: #2A2A2C;
+  --text-primary: #E8E8EA;
+  --text-secondary: #8A8A8C;
+
+  /* Vermelho institucional — apenas ações destrutivas */
+  --institutional-red: #8B1414;
+
+  /* Elementos Estruturais */
+  --el-sangue: #8B1414;
+  --el-morte: #1C1C1E;
+  --el-morte-border: #3A3A3C;
+  --el-energia: #3D2E7C;
+  --el-conhecimento: #B08D2E;
+
+  /* Elementos Evolucionais (Junções) */
+  --ev-metamorfose: linear-gradient(135deg, #1C1C1E 0%, #00C2D1 100%);
+  --ev-encarnacao: linear-gradient(135deg, #8B1414 0%, #C9A227 100%);
+  --ev-apoteose: linear-gradient(135deg, #E4D9C8 0%, #5A1010 100%);
+  --ev-sintese: linear-gradient(135deg, #B08D2E 0%, #00C2D1 100%);
+  --ev-quimera: linear-gradient(135deg, #D1204A 0%, #3D2E7C 100%);
+  --ev-singularidade: linear-gradient(135deg, #0A0A0B 0%, #B08D2E 100%);
+}
+
+* {
+  border-radius: 0;
 }
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-family: 'Share Tech Mono', monospace;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text-primary);
 }
+
+.font-oculto { font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
+.font-terminal { font-family: 'Share Tech Mono', monospace; }
+.font-documento { font-family: 'Special Elite', cursive; }
+.font-ameaca { font-family: 'Teko', sans-serif; letter-spacing: 0.1em; }
 
 .container {
   padding: 1rem;
@@ -27,23 +57,20 @@ body {
 .loading-spinner {
   width: 60px;
   height: 60px;
-  border: 3px solid rgb(0 243 255 / 10%);
-  border-top-color: var(--nexus-blue);
-  border-right-color: var(--ordo-red);
+  border: 3px solid var(--border);
+  border-top-color: var(--text-primary);
+  border-right-color: var(--institutional-red);
   border-radius: 50%;
-  animation:
-    spin 1.2s linear infinite,
-    pulse 2s ease-in-out infinite;
+  animation: spin 1.2s linear infinite;
   position: relative;
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
 }
 
 .loading-spinner::before {
   content: "";
   position: absolute;
   inset: 8px;
-  border: 2px solid rgb(180 50 50 / 20%);
-  border-top-color: var(--ordo-red);
+  border: 2px solid var(--border);
+  border-top-color: var(--institutional-red);
   border-radius: 50%;
   animation: spin 0.8s linear infinite reverse;
 }
@@ -57,7 +84,7 @@ body {
   font-family: "Share Tech Mono", monospace;
   font-size: 10px;
   letter-spacing: 3px;
-  color: var(--nexus-blue);
+  color: var(--text-primary);
   white-space: nowrap;
   animation: blink 1.5s infinite;
 }
@@ -65,15 +92,6 @@ body {
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
-  }
-  50% { 
-    box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.2);
   }
 }
 
