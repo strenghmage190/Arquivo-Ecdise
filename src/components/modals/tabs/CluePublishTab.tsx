@@ -1,3 +1,4 @@
+import { FileText, Gamepad2, Check, X } from 'lucide-react';
 /**
  * 🚀 CluePublishTab.tsx
  * Tab para publicação final
@@ -106,7 +107,7 @@ export default function CluePublishTab({
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 'bold', color: '#e74c3c', marginBottom: 8 }}>
-            ❌ ERROS:
+            <X className="lucide-icon inline-icon" size={16} /> ERROS:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {errors.map((error, idx) => (

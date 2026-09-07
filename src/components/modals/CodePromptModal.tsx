@@ -1,3 +1,4 @@
+import { Lock, AlertTriangle, Lightbulb } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import './CodePromptModal.css';
 
@@ -96,7 +97,7 @@ export default function CodePromptModal({
     <div className="code-prompt-overlay" onClick={onClose}>
       <div className="code-prompt-modal" onClick={(e) => e.stopPropagation()}>
         <div className="code-prompt-header">
-          <h3>🔐 {title}</h3>
+          <h3><Lock className="lucide-icon inline-icon" size={16} /> {title}</h3>
           <button className="code-prompt-close" onClick={onClose}>×</button>
         </div>
         
@@ -155,7 +156,7 @@ export default function CodePromptModal({
                     maxLength={20}
                     disabled={submitting}
                   />
-                  {error && <span className="code-error">⚠ Código inválido</span>}
+                  {error && <span className="code-error"><AlertTriangle className="lucide-icon inline-icon" size={16} /> Código inválido</span>}
                 </div>
 
                 <div className="code-prompt-actions">
@@ -169,7 +170,7 @@ export default function CodePromptModal({
               </form>
 
               <div className="code-prompt-hint form-fade-in">
-                <small>💡 Dica: Procure pistas nos documentos e fotografias da investigação</small>
+                <small><Lightbulb className="lucide-icon inline-icon" size={16} /> Dica: Procure pistas nos documentos e fotografias da investigação</small>
               </div>
             </>
           )}

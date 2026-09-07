@@ -1,3 +1,4 @@
+import { Camera, Check, RefreshCw, Thermometer } from 'lucide-react';
 import React from 'react';
 
 interface InvestigationMediaTabProps {
@@ -44,7 +45,7 @@ export default function InvestigationMediaTab({
       {/* Main Image */}
       <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #333' }}>
         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: 8 }}>
-          📷 Imagem Principal
+          <Camera className="lucide-icon inline-icon" size={16} /> Imagem Principal
         </label>
         {isGameMaster ? (
           <>
@@ -125,7 +126,7 @@ export default function InvestigationMediaTab({
 
           {uvUrl ? (
             <div style={{ fontSize: 12, color: '#aaa' }}>
-              ✅ Camada UV carregada
+              <Check className="lucide-icon inline-icon" size={16} /> Camada UV carregada
               <button
                 type="button"
                 onClick={() => {
@@ -150,7 +151,7 @@ export default function InvestigationMediaTab({
                   cursor: 'pointer',
                 }}
               >
-                🔄 Substituir
+                <RefreshCw className="lucide-icon inline-icon" size={16} /> Substituir
               </button>
             </div>
           ) : (
@@ -196,7 +197,7 @@ export default function InvestigationMediaTab({
               marginBottom: 8,
             }}
           >
-            <span>🌡️ Camada Térmica</span>
+            <span><Thermometer className="lucide-icon inline-icon" size={16} /> Camada Térmica</span>
             {thermalUrl && (
               <button
                 type="button"
@@ -218,7 +219,7 @@ export default function InvestigationMediaTab({
 
           {thermalUrl ? (
             <div style={{ fontSize: 12, color: '#aaa' }}>
-              ✅ Camada Térmica carregada
+              <Check className="lucide-icon inline-icon" size={16} /> Camada Térmica carregada
               <button
                 type="button"
                 onClick={() => {
@@ -243,7 +244,7 @@ export default function InvestigationMediaTab({
                   cursor: 'pointer',
                 }}
               >
-                🔄 Substituir
+                <RefreshCw className="lucide-icon inline-icon" size={16} /> Substituir
               </button>
             </div>
           ) : (

@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react';
 import React, { useState } from 'react';
 import FieldVisibilityEditor from './FieldVisibilityEditor';
 import './FieldVisibilityButton.css';
@@ -12,7 +13,7 @@ export default function FieldVisibilityButton() {
         onClick={() => setShowEditor(true)}
         title="Escolher quais campos aparecem"
       >
-        👁️
+        <Eye className="lucide-icon inline-icon" size={16} />
       </button>
 
       {showEditor && (

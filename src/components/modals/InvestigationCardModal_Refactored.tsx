@@ -1,3 +1,4 @@
+import { Edit3, Camera, Lock, Check, X, Pen } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
@@ -32,10 +33,10 @@ interface Props {
 type TabKey = 'basics' | 'media' | 'chat' | 'megaclue' | 'status';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'basics', label: 'Básicos', icon: '📝' },
+  { key: 'basics', label: 'Básicos', icon: '' },
   { key: 'media', label: 'Mídia', icon: '📷' },
   { key: 'chat', label: 'Chat', icon: '💬' },
-  { key: 'megaclue', label: 'Mega-Pista', icon: '🔐' },
+  { key: 'megaclue', label: 'Mega-Pista', icon: '🔒' },
   { key: 'status', label: 'Status', icon: '📊' },
 ];
 

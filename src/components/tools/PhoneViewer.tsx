@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import NumericKeypad from './NumericKeypad';
 import PatternLock from './PatternLock';
@@ -81,7 +82,7 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
           {!unlocked && password ? (
              <div className="chat-body locked-body" style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ marginBottom: 40, textAlign: 'center' }}>
-                   <div style={{ fontSize: 60 }}>🔒</div>
+                   <div style={{ fontSize: 60 }}><Lock className="lucide-icon inline-icon" size={16} /></div>
                    <h3 style={{ margin: '10px 0', color: '#fff' }}>Acesso Restrito</h3>
                    <p style={{ color: '#888', fontSize: 12 }}>Biometria falhou. Insira credenciais.</p>
                 </div>
@@ -122,7 +123,7 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
                       );
                    }) : (
                       <div style={{ margin:'auto', color:'#555', fontSize:12, padding:20, textAlign:'center', background:'rgba(0,0,0,0.2)', borderRadius:10 }}>
-                         🔒 As mensagens deste chat são protegidas com criptografia de ponta-a-ponta.
+                         <Lock className="lucide-icon inline-icon" size={16} /> As mensagens deste chat são protegidas com criptografia de ponta-a-ponta.
                       </div>
                    )}
                 </div>

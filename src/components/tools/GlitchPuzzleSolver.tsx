@@ -1,3 +1,4 @@
+import { Check, AlertTriangle, Lightbulb } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import GlitchImageEngine from './GlitchImageEngine';
 import { addCollectedCode } from '../../utils/codeTracking';
@@ -86,7 +87,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
   const [shift, setShift] = useState(resolvedConfig.start_shift ?? 50);
   const [chroma, setChroma] = useState(resolvedConfig.start_chromatic ?? 50);
   
-  // ✅ FIXED: Removido shadowing - apenas debouncedConfig agora (estados desnecessários removidos)
+  // <Check className="lucide-icon inline-icon" size={16} /> FIXED: Removido shadowing - apenas debouncedConfig agora (estados desnecessários removidos)
   const [aligned, setAligned] = useState(alreadySolved || false);
   const [isAligned, setIsAligned] = useState(false); // player has aligned sliders but hasn't confirmed
   const [verified, setVerified] = useState(alreadySolved || !needsKeyword);
@@ -270,7 +271,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
       {/* AREA DA IMAGEM - Ela se conserta conforme os valores chegam no alvo */}
       {imageLoadError && (
         <div style={{padding: 12, background: 'rgba(255,0,0,0.1)', border: '1px solid red', color: 'red', fontSize: 11, marginBottom: 8}}>
-          ⚠️ Falha ao carregar imagem do puzzle. Verifique sua conexão.
+          <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Falha ao carregar imagem do puzzle. Verifique sua conexão.
         </div>
       )}
       <div className="glitch-display">
@@ -331,7 +332,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
               {alignmentSatisfied ? (needsKeyword ? 'ASSINATURA DIGITAL PENDENTE' : 'CAMADA DE DADOS PRONTA') : 'CALIBRANDO SISTEMA DE SINCRONIZAÇÃO'}
             </div>
             {resolvedConfig.hint && (
-              <div className="solver-hint">💡 {resolvedConfig.hint}</div>
+              <div className="solver-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> {resolvedConfig.hint}</div>
             )}
           </div>
 

@@ -1,3 +1,4 @@
+import { FileText, Gamepad2, Save, Lock } from 'lucide-react';
 /**
  * 📋 ClueBasicsTab.tsx
  * Tab para configuração básica da pista
@@ -115,7 +116,7 @@ export default function ClueBasicsTab({
               cursor: loading ? 'default' : 'pointer',
             }}
           >
-            💾 Salvar como Template
+            <Save className="lucide-icon inline-icon" size={16} /> Salvar como Template
           </button>
         </div>
 
@@ -178,7 +179,7 @@ export default function ClueBasicsTab({
 
       {/* DESCRIPTION - HIDDEN */}
       <div className="field-block">
-        <label>🔐 DESCRIÇÃO (Oculta - Notas do GM)</label>
+        <label><Lock className="lucide-icon inline-icon" size={16} /> DESCRIÇÃO (Oculta - Notas do GM)</label>
         <textarea
           className="textarea"
           value={basicState.descHidden}

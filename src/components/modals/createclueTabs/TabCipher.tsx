@@ -88,6 +88,60 @@ export default function TabCipher() {
           placeholder="O texto embaralhado que o usuário vê..."
         />
       </div>
+      <hr className="cc-divider" style={{ margin: '30px 0' }} />
+
+      <div className="cc-section-header">
+        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          HEX VIEWER & ENCODING
+          <span data-tooltip-id="hex-tip" style={{ display: 'flex', cursor: 'help' }}>
+            <Info size={16} color="#00ffff" />
+          </span>
+        </h3>
+        <Tooltip id="hex-tip" className="cyber-tooltip">
+          Configura o código oculto no Inspecionar Arquivo.
+        </Tooltip>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <label className="field-title">Comentário Oculto / Código Hex</label>
+        <textarea
+          className="cc-input"
+          style={{ minHeight: 60, resize: 'vertical' }}
+          value={cipherState.hexCode}
+          onChange={(e) => setCipherState(s => ({ ...s, hexCode: e.target.value }))}
+          placeholder="Ex: SECTOR_7G_COMPROMISED"
+        />
+      </div>
+
+      <div style={{ marginTop: 16, display: 'flex', gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <label className="field-title">Método de Encoding Hex</label>
+          <select
+            className="cc-input"
+            value={cipherState.hexEncodingMethod}
+            onChange={(e) => setCipherState(s => ({ ...s, hexEncodingMethod: e.target.value as any }))}
+          >
+            <option value="plain">Texto Puro (Plain)</option>
+            <option value="utf8hex">UTF-8 para Hex (Padrão)</option>
+            <option value="xor">Cifra XOR</option>
+            <option value="enigma">Cifra Enigma Simples</option>
+          </select>
+        </div>
+        
+        {cipherState.hexEncodingMethod !== 'plain' && cipherState.hexEncodingMethod !== 'utf8hex' && (
+          <div style={{ flex: 1 }}>
+            <label className="field-title">Chave do Encoding</label>
+            <input
+              type="text"
+              className="cc-input"
+              value={cipherState.hexEncodingKey}
+              onChange={(e) => setCipherState(s => ({ ...s, hexEncodingKey: e.target.value }))}
+              placeholder="Ex: 42 ou CHAVE_SECRETA"
+            />
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

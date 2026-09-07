@@ -1,3 +1,4 @@
+import { AlertTriangle, Search, RefreshCw } from 'lucide-react';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -45,14 +46,14 @@ export class ErrorBoundary extends Component<Props, State> {
           boxShadow: '0 0 30px rgba(255,0,0,0.3)'
         }}>
           <h2 style={{ color: '#ff3333', marginBottom: '20px', fontSize: '24px' }}>
-            ⚠️ ERRO CRÍTICO DO SISTEMA
+            <AlertTriangle className="lucide-icon inline-icon" size={16} />️ ERRO CRÍTICO DO SISTEMA
           </h2>
           <p style={{ marginBottom: '16px', fontSize: '14px' }}>
             Uma falha inesperada foi detectada. O sistema pode estar instável.
           </p>
           <details style={{ marginTop: '20px', cursor: 'pointer' }}>
             <summary style={{ color: '#ffaa00', fontWeight: 'bold', marginBottom: '12px' }}>
-              🔍 Detalhes Técnicos (clique para expandir)
+              <Search className="lucide-icon inline-icon" size={16} /> Detalhes Técnicos (clique para expandir)
             </summary>
             <pre style={{
               background: '#0a0000',
@@ -83,7 +84,7 @@ export class ErrorBoundary extends Component<Props, State> {
               boxShadow: '0 0 15px rgba(255,0,0,0.4)'
             }}
           >
-            🔄 REINICIAR APLICAÇÃO
+            <RefreshCw className="lucide-icon inline-icon" size={16} /> REINICIAR APLICAÇÃO
           </button>
         </div>
       );

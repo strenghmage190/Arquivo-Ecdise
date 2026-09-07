@@ -1,7 +1,7 @@
 import React from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
 import { Tooltip } from 'react-tooltip';
-import { Info } from 'lucide-react';
+import { Info, FileText, Zap, Shield } from 'lucide-react';
 
 export default function TabGeneral() {
   const { coreState, setCoreState } = useClueModal();
@@ -19,6 +19,39 @@ export default function TabGeneral() {
           Campos principais que identificam a evidência na lousa de investigação.
         </Tooltip>
       </div>
+
+      <div className="cc-section-header" style={{ marginTop: '1rem' }}>
+        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileText className="lucide-icon inline-icon" size={16} /> SUBTIPO DE EVIDÊNCIA
+        </h3>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '10px', marginTop: '10px', marginBottom: '20px' }}>
+        <button
+          className={`cc-btn ${coreState.evidenceType === 'document' || !coreState.evidenceType ? 'cc-btn-save' : 'cc-btn-cancel'}`}
+          style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+          onClick={() => setCoreState(s => ({ ...s, evidenceType: 'document' }))}
+        >
+          <FileText size={16} /> DOCUMENTO PADRÃO
+        </button>
+        <button
+          className={`cc-btn ${coreState.evidenceType === 'glitch_puzzle' ? 'cc-btn-save' : 'cc-btn-cancel'}`}
+          style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+          onClick={() => setCoreState(s => ({ ...s, evidenceType: 'glitch_puzzle' }))}
+        >
+          <Zap size={16} /> QUEBRA-CABEÇA DE GLITCH
+        </button>
+        <button
+          className={`cc-btn ${coreState.evidenceType === 'mega_clue' ? 'cc-btn-save' : 'cc-btn-cancel'}`}
+          style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+          onClick={() => setCoreState(s => ({ ...s, evidenceType: 'mega_clue' }))}
+        >
+          <Shield size={16} /> MEGA-PISTA FINAL
+        </button>
+      </div>
+
+
+      <hr className="cc-divider" />
 
       <div className="cc-field" style={{ marginTop: '1rem' }}>
         <label className="cc-label">Título da Pista</label>

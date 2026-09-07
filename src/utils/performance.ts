@@ -1,3 +1,4 @@
+import { Zap } from 'lucide-react';
 const performanceCSS = `/* ============================================================================
    PERFORMANCE MODE v3.0 (Funcional + Otimizado)
    ========================================================================== */
@@ -334,7 +335,7 @@ body.performance-mode [data-forensic="true"] * {
    ========================================================================== */
 
 body.performance-mode::before {
-  content: "⚡ MODO PERFORMANCE";
+  content: " MODO PERFORMANCE";
   position: fixed;
   top: 10px;
   right: 10px;

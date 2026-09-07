@@ -1,3 +1,4 @@
+import { RefreshCw, Eye, Users, Gamepad2, Lightbulb, Lock } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import './ShredderPuzzle.css';
 
@@ -206,7 +207,7 @@ export default function ShredderPuzzle({
       {/* Controls */}
       <div className="shredder-controls">
         <button className="shredder-btn" onClick={handleReset}>
-          🔄 Embaralhar
+          <RefreshCw className="lucide-icon inline-icon" size={16} /> Embaralhar
         </button>
         
         {isGameMaster && (
@@ -238,8 +239,8 @@ export default function ShredderPuzzle({
       {/* GM Reveal Controls */}
       {isGameMaster && showRevealControl && (
         <div className="shredder-gm-controls">
-          <p className="shredder-gm-title">🎮 Controle de Revelação</p>
-          <p className="shredder-gm-hint">💡 Ctrl+Click em peças para revelar/ocultar individualmente</p>
+          <p className="shredder-gm-title"><Gamepad2 className="lucide-icon inline-icon" size={16} /> Controle de Revelação</p>
+          <p className="shredder-gm-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> Ctrl+Click em peças para revelar/ocultar individualmente</p>
           <div className="shredder-gm-buttons">
             <button onClick={() => handleRevealRandom(1)}>Revelar 1</button>
             <button onClick={() => handleRevealRandom(3)}>Revelar 3</button>
@@ -322,7 +323,7 @@ export default function ShredderPuzzle({
               {/* Locked Overlay */}
               {!isRevealed && (
                 <div className="shredder-piece-locked-overlay">
-                  <div className="shredder-piece-lock-icon">🔒</div>
+                  <div className="shredder-piece-lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></div>
                   <div className="shredder-piece-lock-text">BLOQUEADA</div>
                 </div>
               )}

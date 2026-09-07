@@ -1,3 +1,4 @@
+import { Check, Edit3, Palette, Music, Settings, Lightbulb, Clapperboard, Lock } from 'lucide-react';
 import React, { useState } from 'react';
 import { createInvestigationCard } from '../../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../../utils/storage';
@@ -291,19 +292,19 @@ export default function GlitchPuzzleForm({
           className={`tab-btn ${activeTab === 'geral' ? 'active' : ''}`}
           onClick={() => setActiveTab('geral')}
         >
-          📝 GERAL
+          <Edit3 className="lucide-icon inline-icon" size={16} /> GERAL
         </button>
         <button 
           className={`tab-btn ${activeTab === 'visual' ? 'active' : ''}`}
           onClick={() => setActiveTab('visual')}
         >
-          🎨 VISUAL
+          <Palette className="lucide-icon inline-icon" size={16} /> VISUAL
         </button>
         <button 
           className={`tab-btn ${activeTab === 'audio' ? 'active' : ''}`}
           onClick={() => setActiveTab('audio')}
         >
-          🎵 ÁUDIO
+          <Music className="lucide-icon inline-icon" size={16} /> ÁUDIO
         </button>
       </div>
 
@@ -352,7 +353,7 @@ export default function GlitchPuzzleForm({
 
       {/* Seção 2: Parâmetros Corretos */}
       <div className="form-section">
-        <h3>⚙️ PARÂMETROS CORRETOS PARA RESOLVER</h3>
+        <h3><Settings className="lucide-icon inline-icon" size={16} /> PARÂMETROS CORRETOS PARA RESOLVER</h3>
         
         <div className="param-group">
           <label>
@@ -397,13 +398,13 @@ export default function GlitchPuzzleForm({
         </div>
 
         <div className="hint-box">
-          💡 <strong>Memorize ou anote estes valores!</strong> Você precisará deles para verificar.
+          <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong>Memorize ou anote estes valores!</strong> Você precisará deles para verificar.
         </div>
       </div>
 
       {/* Seção 3: Metadados */}
       <div className="form-section">
-        <h3>📝 METADADOS DO QUEBRA-CABEÇA</h3>
+        <h3><Edit3 className="lucide-icon inline-icon" size={16} /> METADADOS DO QUEBRA-CABEÇA</h3>
         
         <div className="field-group">
           <label>Título:</label>
@@ -467,7 +468,7 @@ export default function GlitchPuzzleForm({
           <p>📌 <strong>Tipo:</strong> Quebra-cabeça de Glitch</p>
           <p>🎯 <strong>Objetivo:</strong> Jogador descobre parâmetros e decodifica</p>
           <p>🔧 <strong>Parâmetros corretos:</strong> {config.correctFrequency} fatias, {config.correctShift}% deslocamento, {config.correctChromatic}% cromática</p>
-          <p>🎨 <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida (opcional)</p>
+          <p><Palette className="lucide-icon inline-icon" size={16} /> <strong>Imagens:</strong> {config.originalImageFile ? '✓' : '✗'} Original | {config.corruptedImageFile ? '✓' : '✗'} Corrompida (opcional)</p>
           <p>🎁 <strong>Recompensa:</strong> <code style={{ background: '#333', padding: '2px 6px', borderRadius: 3, color: '#c6a45f' }}>{config.rewardCode}</code></p>
           </div>
         </div>
@@ -478,7 +479,7 @@ export default function GlitchPuzzleForm({
         <>
           {/* Descrições Públicas e Ocultas */}
           <div className="form-section">
-            <h3>📝 DESCRIÇÕES</h3>
+            <h3><Edit3 className="lucide-icon inline-icon" size={16} /> DESCRIÇÕES</h3>
             
             <div className="field-group">
               <label>Descrição Pública (visível antes de resolver):</label>
@@ -534,7 +535,7 @@ export default function GlitchPuzzleForm({
 
           {/* Vídeo */}
           <div className="form-section">
-            <h3>🎬 VÍDEO (opcional)</h3>
+            <h3><Clapperboard className="lucide-icon inline-icon" size={16} /> VÍDEO (opcional)</h3>
             
             <div className="field-group">
               <label>Upload de vídeo:</label>
@@ -566,7 +567,7 @@ export default function GlitchPuzzleForm({
 
           {/* Áudio */}
           <div className="form-section">
-            <h3>🎵 ÁUDIO (opcional)</h3>
+            <h3><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO (opcional)</h3>
             
             <div className="field-group">
               <label>Áudio Base (ouvido normalmente):</label>
@@ -597,7 +598,7 @@ export default function GlitchPuzzleForm({
 
           {/* Ferramentas Visuais */}
           <div className="form-section">
-            <h3>🎨 FERRAMENTAS VISUAIS (opcional)</h3>
+            <h3><Palette className="lucide-icon inline-icon" size={16} /> FERRAMENTAS VISUAIS (opcional)</h3>
             
             <div className="field-group">
               <label>Camada UV (Luz Negra):</label>
@@ -663,7 +664,7 @@ export default function GlitchPuzzleForm({
 
           {/* Segurança */}
           <div className="form-section">
-            <h3>🔒 SEGURANÇA</h3>
+            <h3><Lock className="lucide-icon inline-icon" size={16} /> SEGURANÇA</h3>
             
             <div className="field-group">
               <label style={{display:'flex', alignItems:'center', gap:8}}>
@@ -757,7 +758,7 @@ export default function GlitchPuzzleForm({
         <>
           {/* Áudio */}
           <div className="form-section">
-            <h3>🎵 ÁUDIO</h3>
+            <h3><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO</h3>
             
             <div className="field-group">
               <label>Áudio Base (ouvido normalmente):</label>

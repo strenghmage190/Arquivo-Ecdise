@@ -1,5 +1,6 @@
+import { Check } from 'lucide-react';
 /**
- * ✅ clueValidation.ts
+ * <Check className="lucide-icon inline-icon" size={16} /> clueValidation.ts
  * Schemas de validação para pistas usando Zod
  */
 

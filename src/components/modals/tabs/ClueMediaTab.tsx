@@ -1,5 +1,6 @@
+import { Palette, Clapperboard, Camera, Check, Volume2, Lock, Thermometer } from 'lucide-react';
 /**
- * 🎨 ClueMediaTab.tsx
+ * <Palette className="lucide-icon inline-icon" size={16} /> ClueMediaTab.tsx
  * Tab para upload de mídia
  * - Imagem principal, UV, Thermal, Filter
  * - Áudio base e oculto
@@ -92,11 +93,11 @@ export default function ClueMediaTab({
 }: ClueMediaTabProps) {
   return (
     <div className="field-block createclue-media createclue-tab-section">
-      <span className="field-title">🎬 MÍDIA</span>
+      <span className="field-title"><Clapperboard className="lucide-icon inline-icon" size={16} /> MÍDIA</span>
 
       {/* IMAGE */}
       <div className="field-block" style={{ background: 'rgba(52,152,219,0.05)', padding: 12, borderRadius: 6, border: '1px solid rgba(52,152,219,0.1)', marginBottom: 20 }}>
-        <label>📷 IMAGEM PRINCIPAL</label>
+        <label><Camera className="lucide-icon inline-icon" size={16} /> IMAGEM PRINCIPAL</label>
         <label className="upload-btn" style={{ cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
           SELECIONAR IMAGEM
           <input
@@ -110,7 +111,7 @@ export default function ClueMediaTab({
         {previewUrl && (
           <div style={{ marginTop: 8 }}>
             <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 6 }} />
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ Imagem carregada</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Imagem carregada</div>
           </div>
         )}
         {uploadProgress['image'] !== undefined && uploadProgress['image'] < 100 && (
@@ -137,7 +138,7 @@ export default function ClueMediaTab({
         {previewUrl2 && (
           <div style={{ marginTop: 8 }}>
             <img src={previewUrl2} alt="uv" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 6 }} />
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ UV carregado</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> UV carregado</div>
           </div>
         )}
         {uploadProgress['uv'] !== undefined && uploadProgress['uv'] < 100 && (
@@ -157,7 +158,7 @@ export default function ClueMediaTab({
             disabled={loading}
             style={{ cursor: 'pointer' }}
           />
-          <span>🌡️ ATIVAR CAMADA TÉRMICA</span>
+          <span><Thermometer className="lucide-icon inline-icon" size={16} /> ATIVAR CAMADA TÉRMICA</span>
         </label>
 
         {thermalEnabled && (
@@ -195,7 +196,7 @@ export default function ClueMediaTab({
                 cursor: loading ? 'default' : 'pointer',
               }}
             >
-              🎨 ABRIR EDITOR TÉRMICO
+              <Palette className="lucide-icon inline-icon" size={16} /> ABRIR EDITOR TÉRMICO
             </button>
           </div>
         )}
@@ -217,14 +218,14 @@ export default function ClueMediaTab({
         {filterPreviewUrl && (
           <div style={{ marginTop: 8 }}>
             <img src={filterPreviewUrl} alt="filter" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 6 }} />
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ Filtro carregado</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Filtro carregado</div>
           </div>
         )}
       </div>
 
       {/* AUDIO BASE */}
       <div className="field-block" style={{ background: 'rgba(52,73,94,0.05)', padding: 12, borderRadius: 6, border: '1px solid rgba(52,73,94,0.1)', marginBottom: 20 }}>
-        <label>🔊 ÁUDIO BASE (público/sempre visível)</label>
+        <label><Volume2 className="lucide-icon inline-icon" size={16} /> ÁUDIO BASE (público/sempre visível)</label>
         <label className="upload-btn" style={{ cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
           SELECIONAR ÁUDIO
           <input
@@ -240,14 +241,14 @@ export default function ClueMediaTab({
             <audio controls style={{ width: '100%', borderRadius: 6 }}>
               <source src={audioBasePreview} />
             </audio>
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ Áudio carregado</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Áudio carregado</div>
           </div>
         )}
       </div>
 
       {/* AUDIO HIDDEN */}
       <div className="field-block" style={{ background: 'rgba(155,89,182,0.05)', padding: 12, borderRadius: 6, border: '1px solid rgba(155,89,182,0.1)', marginBottom: 20 }}>
-        <label>🔐 ÁUDIO OCULTO (espectrograma)</label>
+        <label><Lock className="lucide-icon inline-icon" size={16} /> ÁUDIO OCULTO (espectrograma)</label>
         <label className="upload-btn" style={{ cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
           SELECIONAR ÁUDIO OCULTO
           <input
@@ -263,7 +264,7 @@ export default function ClueMediaTab({
             <audio controls style={{ width: '100%', borderRadius: 6 }}>
               <source src={audioHiddenPreview} />
             </audio>
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ Áudio oculto carregado</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Áudio oculto carregado</div>
           </div>
         )}
         <button
@@ -328,7 +329,7 @@ export default function ClueMediaTab({
             <video controls style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 6 }}>
               <source src={videoPreviewUrl} />
             </video>
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>✅ Vídeo carregado</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Vídeo carregado</div>
           </div>
         )}
 

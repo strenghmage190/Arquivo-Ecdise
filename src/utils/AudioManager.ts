@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 /**
  * AudioManager - Sistema centralizado de gerenciamento de áudio
  * 
@@ -24,7 +25,7 @@ class AudioManager {
   }
 
   /**
-   * ✅ Retorna a instância única do AudioManager
+   * <Check className="lucide-icon inline-icon" size={16} /> Retorna a instância única do AudioManager
    */
   static getInstance(): AudioManager {
     if (!AudioManager.instance) {
@@ -36,7 +37,7 @@ class AudioManager {
   }
 
   /**
-   * ✅ Validação: garante que nenhuma AudioContext extra foi criada
+   * <Check className="lucide-icon inline-icon" size={16} /> Validação: garante que nenhuma AudioContext extra foi criada
    */
   static validateNoExtraContexts(): boolean {
     try {
@@ -73,7 +74,7 @@ class AudioManager {
       // Cleanup anterior se houver
       await this.cleanup();
 
-      // ✅ Valida que não há múltiplas instâncias
+      // <Check className="lucide-icon inline-icon" size={16} /> Valida que não há múltiplas instâncias
       if (!AudioManager.validateNoExtraContexts()) {
         console.error('[AudioManager] Extra AudioContext instances detected - may cause issues');
       }

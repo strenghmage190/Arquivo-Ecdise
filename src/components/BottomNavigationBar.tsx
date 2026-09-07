@@ -1,3 +1,4 @@
+import { Settings, Search, Lock, Monitor } from 'lucide-react';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './BottomNavigationBar.css';
@@ -11,7 +12,7 @@ const MOBILE_TOOLS = [
   { id: 'uv', icon: '🔦', label: 'Luz UV' },
   { id: 'organize', icon: '🗂️', label: 'Organizar' },
   { id: 'reset-cam', icon: '🎯', label: 'Focar' },
-  { id: 'decoder', icon: '🔐', label: 'Decodificar' },
+  { id: 'decoder', icon: '🔒', label: 'Decodificar' },
   { id: 'undo', icon: '↩', label: 'Desfazer' },
 ];
 

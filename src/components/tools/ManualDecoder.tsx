@@ -1,3 +1,4 @@
+import { Search, Settings } from 'lucide-react';
 import React, { useState } from 'react';
 import './ManualDecoder.css';
 
@@ -156,7 +157,7 @@ export default function ManualDecoder() {
         <label>DADOS DE ENTRADA (Cole aqui)</label>
         <textarea value={input} onChange={e => setInput(e.target.value)} rows={4} placeholder="Cole o texto a ser analisado" />
         <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn-action" onClick={analyzePattern}>🔍 GERAR RELATÓRIO ESTATÍSTICO</button>
+          <button className="btn-action" onClick={analyzePattern}><Search className="lucide-icon inline-icon" size={16} /> GERAR RELATÓRIO ESTATÍSTICO</button>
           <div style={{ color: '#888', fontSize: 12 }}>Relatório técnico e frio — sem sugestões de solução.</div>
         </div>
       </div>
@@ -181,7 +182,7 @@ export default function ManualDecoder() {
         )}
 
         <div style={{ marginTop: 8 }}>
-          <button className="btn-process" onClick={handleDecrypt} disabled={!algo || !input}>⚙️ EXECUTAR ROTINA DE TRADUÇÃO</button>
+          <button className="btn-process" onClick={handleDecrypt} disabled={!algo || !input}><Settings className="lucide-icon inline-icon" size={16} /> EXECUTAR ROTINA DE TRADUÇÃO</button>
         </div>
       </div>
 

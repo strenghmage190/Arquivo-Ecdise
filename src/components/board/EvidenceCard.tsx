@@ -1,3 +1,4 @@
+import { Volume2, Eye, Check, Thermometer } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -145,15 +146,15 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
         <div className="badges-container" aria-hidden>
           <div className={`type-badge small ${locked ? 'locked' : fileType}`} title={locked ? 'Protegido' : fileType}>{getTypeIcon(locked ? 'locked' : fileType)}</div>
           {hasUV && <div className="type-badge small uv" title="Camada UV">UV</div>}
-          {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto">🔊</div>}
+          {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto"><Volume2 className="lucide-icon inline-icon" size={16} /></div>}
           {hasChat && <div className="type-badge small chat" title="Chat/Conversas">💬</div>}
-          {hasThermal && <div className="type-badge small thermal" title="Termal">🌡️</div>}
+          {hasThermal && <div className="type-badge small thermal" title="Termal"><Thermometer className="lucide-icon inline-icon" size={16} /></div>}
           {hasStamp && <div className="type-badge small stamp" title="Carimbo">🏷️</div>}
           {hasExternalLink && <div className="type-badge small link" title="Link Externo">🔗</div>}
-          {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta">👁️‍🗨️</div>}
+          {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye className="lucide-icon inline-icon" size={16} /></div>}
         </div>
 
-        {/* ✅ Content container with view classes - NO NESTING */}
+        {/* <Check className="lucide-icon inline-icon" size={16} /> Content container with view classes - NO NESTING */}
         <div className={contentContainerClass}>
           <EvidenceCardContent
             id={id}

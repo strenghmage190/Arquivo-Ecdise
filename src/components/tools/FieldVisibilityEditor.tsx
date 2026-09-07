@@ -1,3 +1,4 @@
+import { Check, FileText, Camera, User, Edit3, Lock, Lightbulb, Settings, AlertTriangle, Music, Clapperboard, Volume2, Palette, Search, Eye, Radio, Gamepad2, Sparkles, Zap, Save } from 'lucide-react';
 import React, { useState } from 'react';
 import {
   FieldVisibilityConfig,
@@ -101,7 +102,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     { id: 'gpsCoords', label: '🗺️ GPS', description: 'Coordenadas de localização' },
     { id: 'ownerName', label: '👤 Dono', description: 'Quem é o proprietário' },
     { id: 'hexComment', label: '🔧 HEX Comment', description: 'Dados hexadecimais' },
-    { id: 'technicalNote', label: '📝 Nota Técnica', description: 'Anotações técnicas' },
+    { id: 'technicalNote', label: ' Nota Técnica', description: 'Anotações técnicas' },
     { id: 'stamp', label: '🔖 Carimbo/Stamp', description: 'Carimbo do documento' },
     { id: 'externalLink', label: '🔗 Link Externo', description: 'Link para recurso externo' },
     { id: 'fakeLocation', label: '📍 Localização Falsa', description: 'Localização fictícia do arquivo' },
@@ -120,7 +121,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     { id: 'calibrationControls', label: '⚙️ Controles', description: 'Sliders de calibração' },
     { id: 'logs', label: '📜 Logs', description: 'Terminal/logs de recuperação' },
     { id: 'rewardCode', label: '🎁 Código', description: 'Código de recompensa' },
-    { id: 'correctAnswerWhenSolved', label: '⚠️ Resposta Correta', description: 'Mostra valores corretos (entrega solução!)' },
+    { id: 'correctAnswerWhenSolved', label: '⚠️️ Resposta Correta', description: 'Mostra valores corretos (entrega solução!)' },
     { id: 'keyword', label: '🔑 Palavra-chave', description: 'Palavra-chave para desbloquear' },
     { id: 'focusedImage', label: '🖼️ Imagem Focada', description: 'Imagem revelada ao resolver' },
     { id: 'hiddenAudioUrl', label: '🎵 Áudio Oculto', description: 'URL de áudio secreto' },
@@ -135,7 +136,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
   const megaClueOptions = [
     { id: 'hints', label: '💡 Dicas', description: 'Dicas da mega-pista' },
     { id: 'progress', label: '📊 Progresso', description: 'Quantas pistas foram resolvidas' },
-    { id: 'answer', label: '⚠️ Resposta Final', description: 'Mostra o segredo final (cuidado!)' },
+    { id: 'answer', label: '⚠️️ Resposta Final', description: 'Mostra o segredo final (cuidado!)' },
     { id: 'requiredPuzzles', label: '🔗 Puzzles Obrigatórios', description: 'Lista de puzzles que precisam resolver' },
   ];
 
@@ -153,15 +154,15 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
     { id: 'uv_layer', label: '💡 Camada UV', description: 'Camada ultravioleta oculta', onChange: (value) => handleFieldChange('uv_layer', value) },
     { id: 'is_shredded', label: '📃 Fragmentado', description: 'Se o documento está fragmentado' },
     { id: 'shred_config', label: '✂️ Config de Fragmentação', description: 'Linhas/colunas de fragmentação' },
-    { id: 'real_text', label: '📝 Texto Real', description: 'Texto verdadeiro (fragmentado)' },
-    { id: 'cipher_text', label: '🔐 Texto Cifrado', description: 'Texto codificado' },
+    { id: 'real_text', label: ' Texto Real', description: 'Texto verdadeiro (fragmentado)' },
+    { id: 'cipher_text', label: '🔒 Texto Cifrado', description: 'Texto codificado' },
     { id: 'chat_data', label: '💬 Dados de Chat', description: 'Conversas de mensagens' },
     { id: 'chat_contact_name', label: '👤 Nome do Contato', description: 'Nome do contato no chat' },
     { id: 'video_url', label: '🎬 URL de Vídeo', description: 'Link do vídeo' },
     { id: 'media_visibility', label: '👁️ Visibilidade de Mídia', description: 'Quando áudio/vídeo aparecem' },
     { id: 'security_layer', label: '🔒 Camada de Segurança', description: 'Proteção de mídia' },
     { id: 'reveal_logic', label: '🔓 Lógica de Revelação', description: 'always_visible/aligned_only/aligned_keyword' },
-    { id: 'signal_targets', label: '📡 Alvos de Sinal', description: 'visual/audio sync' },
+    { id: 'signal_targets', label: ' Alvos de Sinal', description: 'visual/audio sync' },
     { id: 'audio_static_sync', label: '📻 Sincronização Estática', description: 'Sincronizar áudio com estática visual' },
     { id: 'narrative_links', label: '📖 Links Narrativos', description: 'Conexões narrativas entre elementos' },
     { id: 'hide_preview_board', label: '🙈 Ocultar Preview', description: 'Ocultar preview no board' },
@@ -171,7 +172,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
   return (
     <div className="field-visibility-editor">
       <div className="editor-header">
-        <h2>👁️ EDITOR DE CAMPOS VISÍVEIS</h2>
+        <h2><Eye className="lucide-icon inline-icon" size={16} /> EDITOR DE CAMPOS VISÍVEIS</h2>
         <button className="close-btn" onClick={onClose}>✖</button>
       </div>
 
@@ -180,25 +181,25 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
           className={`tab ${activeTab === 'files' ? 'active' : ''}`}
           onClick={() => setActiveTab('files')}
         >
-          📄 Arquivo
+          <FileText className="lucide-icon inline-icon" size={16} /> Arquivo
         </button>
         <button
           className={`tab ${activeTab === 'puzzle' ? 'active' : ''}`}
           onClick={() => setActiveTab('puzzle')}
         >
-          🎮 Puzzle
+          <Gamepad2 className="lucide-icon inline-icon" size={16} /> Puzzle
         </button>
         <button
           className={`tab ${activeTab === 'mega' ? 'active' : ''}`}
           onClick={() => setActiveTab('mega')}
         >
-          🔮 Mega-Pista
+          <Sparkles className="lucide-icon inline-icon" size={16} /> Mega-Pista
         </button>
         <button
           className={`tab ${activeTab === 'custom' ? 'active' : ''}`}
           onClick={() => setActiveTab('custom')}
         >
-          ⚡ Customizado
+          <Zap className="lucide-icon inline-icon" size={16} /> Customizado
         </button>
       </div>
 
@@ -211,14 +212,14 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
             onClick={() => handlePreset('MINIMAL')}
             title="Mostra o mínimo"
           >
-            🔒 Mínimo
+            <Lock className="lucide-icon inline-icon" size={16} /> Mínimo
           </button>
           <button
             className="preset-btn"
             onClick={() => handlePreset('DEFAULT')}
             title="Padrão seguro"
           >
-            ✅ Padrão
+            <Check className="lucide-icon inline-icon" size={16} /> Padrão
           </button>
           <button
             className="preset-btn"
@@ -239,7 +240,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
         {/* ABA: ARQUIVO */}
         {activeTab === 'files' && (
           <div className="tab-content">
-            <h3>📄 CAMPOS DE ARQUIVO (FileProperties)</h3>
+            <h3><FileText className="lucide-icon inline-icon" size={16} /> CAMPOS DE ARQUIVO (FileProperties)</h3>
             <p className="tab-description">
               Escolha quais informações do arquivo aparecerão quando inspecionar um documento.
             </p>
@@ -262,7 +263,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
         {/* ABA: PUZZLE */}
         {activeTab === 'puzzle' && (
           <div className="tab-content">
-            <h3>🎮 SEÇÕES DO PUZZLE (Glitch Puzzle)</h3>
+            <h3><Gamepad2 className="lucide-icon inline-icon" size={16} /> SEÇÕES DO PUZZLE (Glitch Puzzle)</h3>
             <p className="tab-description">
               Escolha quais partes do puzzle aparecem para o jogador.
             </p>
@@ -288,7 +289,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
         {/* ABA: MEGA-PISTA */}
         {activeTab === 'mega' && (
           <div className="tab-content">
-            <h3>🔮 SEÇÕES DA MEGA-PISTA</h3>
+            <h3><Sparkles className="lucide-icon inline-icon" size={16} /> SEÇÕES DA MEGA-PISTA</h3>
             <p className="tab-description">
               Escolha quais informações aparecem na mega-pista final.
             </p>
@@ -314,7 +315,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
         {/* ABA: CUSTOM */}
         {activeTab === 'custom' && (
           <div className="tab-content">
-            <h3>⚡ CAMPOS CUSTOMIZADOS (JSON Metadata)</h3>
+            <h3><Zap className="lucide-icon inline-icon" size={16} /> CAMPOS CUSTOMIZADOS (JSON Metadata)</h3>
             <p className="tab-description">
               Escolha quais campos do JSON de metadados aparecem por padrão.
             </p>
@@ -332,7 +333,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
                     }
                   }))}
                 />
-                <span>✅ Ativar campos customizados</span>
+                <span><Check className="lucide-icon inline-icon" size={16} /> Ativar campos customizados</span>
               </label>
             </div>
 
@@ -359,7 +360,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
         {savedMessage && <div className="saved-message">{savedMessage}</div>}
         <div className="button-group">
           <button className="btn btn-save" onClick={handleSave}>
-            💾 SALVAR CONFIGURAÇÃO
+            <Save className="lucide-icon inline-icon" size={16} /> SALVAR CONFIGURAÇÃO
           </button>
           {onClose && (
             <button className="btn btn-close" onClick={onClose}>

@@ -1,3 +1,4 @@
+import { Lock, Pen } from 'lucide-react';
 import React from 'react';
 
 interface InvestigationMegaClueTabProps {
@@ -26,7 +27,7 @@ export default function InvestigationMegaClueTab({
   if (!isGameMaster || !(existing as any)?.metadata?.mega_clue) {
     return (
       <div style={{ color: '#999', textAlign: 'center', padding: 20 }}>
-        🔐 Nenhuma Mega-Pista configurada neste card
+        <Lock className="lucide-icon inline-icon" size={16} /> Nenhuma Mega-Pista configurada neste card
       </div>
     );
   }
@@ -70,7 +71,7 @@ export default function InvestigationMegaClueTab({
     <div style={{ flex: 1 }}>
       <div style={{ marginBottom: 12, borderBottom: '1px solid #333', paddingBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <strong>🔐 Editor de Mega-Pista</strong>
+          <strong><Lock className="lucide-icon inline-icon" size={16} /> Editor de Mega-Pista</strong>
           <button
             type="button"
             onClick={() => {

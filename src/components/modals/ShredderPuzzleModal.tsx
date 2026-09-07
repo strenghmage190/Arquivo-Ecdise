@@ -1,3 +1,4 @@
+import { Gamepad2, Check } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
@@ -75,7 +76,7 @@ export default function ShredderPuzzleModal({
         {/* GM Instructions */}
         {isGameMaster && (
           <div className="shredder-gm-banner">
-            <span className="gm-badge">🎮 GM</span>
+            <span className="gm-badge"><Gamepad2 className="lucide-icon inline-icon" size={16} /> GM</span>
             <div className="gm-instructions">
               <strong>Controles:</strong> Botões para revelar peças | <strong>Ctrl+Click</strong> em peças individuais | <strong>Ver Jogador</strong> para testar visão dos players
             </div>
@@ -99,7 +100,7 @@ export default function ShredderPuzzleModal({
         {puzzleSolved && (
           <div className="shredder-solved-overlay">
             <div className="solved-card">
-              <div className="solved-icon">✅</div>
+              <div className="solved-icon"><Check className="lucide-icon inline-icon" size={16} /></div>
               <h3>DOCUMENTO RECONSTRUÍDO!</h3>
               <p>O puzzle foi resolvido com sucesso.</p>
               <button className="solved-ok-btn" onClick={onClose}>

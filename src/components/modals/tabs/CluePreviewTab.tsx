@@ -1,5 +1,6 @@
+import { Eye, AlertTriangle, Gamepad2, User, FileText, Lock, Edit3, Lightbulb, Check, X, Thermometer } from 'lucide-react';
 /**
- * 👁️ CluePreviewTab.tsx
+ * <Eye className="lucide-icon inline-icon" size={16} /> CluePreviewTab.tsx
  * Tab para preview ao vivo da pista
  * - Renderização de como o player vai ver
  * - Simulação de inspeção
@@ -45,7 +46,7 @@ export default function CluePreviewTab({
 }: CluePreviewTabProps) {
   return (
     <div className="field-block createclue-preview createclue-tab-section">
-      <span className="field-title">👁️ PREVIEW</span>
+      <span className="field-title"><Eye className="lucide-icon inline-icon" size={16} /> PREVIEW</span>
 
       {/* WARNING: GM ONLY */}
       <div
@@ -59,7 +60,7 @@ export default function CluePreviewTab({
           color: '#aaa',
         }}
       >
-        <strong>⚠️ VISTA DO GM:</strong> Você está vendo informações ocultas que NÃO serão mostradas aos jogadores.
+        <strong><AlertTriangle className="lucide-icon inline-icon" size={16} />️ VISTA DO GM:</strong> Você está vendo informações ocultas que NÃO serão mostradas aos jogadores.
       </div>
 
       {/* PLAYER VIEW */}
@@ -74,7 +75,7 @@ export default function CluePreviewTab({
             }}
           >
         <div style={{ fontSize: 13, fontWeight: 'bold', marginBottom: 12, color: '#ecf0f1' }}>
-          🎮 COMO O JOGADOR VÊ:
+          <Gamepad2 className="lucide-icon inline-icon" size={16} /> COMO O JOGADOR VÊ:
         </div>
 
         {/* Card Wrapper */}
@@ -121,7 +122,7 @@ export default function CluePreviewTab({
                 textAlign: 'center',
               }}
             >
-              🔒 BLOQUEADO
+              <Lock className="lucide-icon inline-icon" size={16} /> BLOQUEADO
             </div>
           )}
 
@@ -144,10 +145,10 @@ export default function CluePreviewTab({
           {evidenceType === 'glitch_puzzle' && (
             <div style={{ fontSize: 10, color: '#f39c12', marginBottom: 12 }}>
               <div style={{ marginBottom: 4 }}>
-                📝 <strong>Instruções:</strong> {glitchAccessInstructions || '(Não definidas)'}
+                <Edit3 className="lucide-icon inline-icon" size={16} /> <strong>Instruções:</strong> {glitchAccessInstructions || '(Não definidas)'}
               </div>
               <div>
-                💡 <strong>Dica:</strong> {glitchHint || '(Não definida)'}
+                <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong>Dica:</strong> {glitchHint || '(Não definida)'}
               </div>
             </div>
           )}
@@ -172,7 +173,7 @@ export default function CluePreviewTab({
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 'bold', color: '#9b59b6', marginBottom: 12 }}>
-          🔐 APENAS GM (OCULTO DO PLAYER):
+          <Lock className="lucide-icon inline-icon" size={16} /> APENAS GM (OCULTO DO PLAYER):
         </div>
 
         <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.6 }}>
@@ -185,7 +186,7 @@ export default function CluePreviewTab({
 
           {thermalEnabled && thermalSecretText && (
             <div style={{ marginBottom: 8 }}>
-              <strong>🌡️ Térmica:</strong>
+              <strong><Thermometer className="lucide-icon inline-icon" size={16} /> Térmica:</strong>
               <div style={{ paddingLeft: 12, marginTop: 4, color: '#e74c3c' }}>{thermalSecretText}</div>
             </div>
           )}
@@ -193,7 +194,7 @@ export default function CluePreviewTab({
           {uvFile && (
             <div style={{ marginBottom: 8 }}>
               <strong>🟣 UV:</strong>
-              <div style={{ paddingLeft: 12, marginTop: 4 }}>✅ Camada UV anexada</div>
+              <div style={{ paddingLeft: 12, marginTop: 4 }}><Check className="lucide-icon inline-icon" size={16} /> Camada UV anexada</div>
             </div>
           )}
         </div>
@@ -209,24 +210,24 @@ export default function CluePreviewTab({
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 'bold', color: '#f39c12', marginBottom: 12 }}>
-          ⚠️ AVISOS:
+          <AlertTriangle className="lucide-icon inline-icon" size={16} />️ AVISOS:
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: '#aaa' }}>
-          {!title && <div>❌ Título/Código não definido</div>}
-          {!previewUrl && <div>❌ Imagem/Vídeo não carregado</div>}
+          {!title && <div><X className="lucide-icon inline-icon" size={16} /> Título/Código não definido</div>}
+          {!previewUrl && <div><X className="lucide-icon inline-icon" size={16} /> Imagem/Vídeo não carregado</div>}
           {evidenceType === 'glitch_puzzle' && !glitchAccessInstructions && (
-            <div>❌ Instruções de Glitch Puzzle não definidas</div>
+            <div><X className="lucide-icon inline-icon" size={16} /> Instruções de Glitch Puzzle não definidas</div>
           )}
           {evidenceType === 'mega_clue' && !megaFinalTruthText && (
-            <div>❌ Verdade final da Mega-Pista não definida</div>
+            <div><X className="lucide-icon inline-icon" size={16} /> Verdade final da Mega-Pista não definida</div>
           )}
-          {!descPublic && <div>⚠️ Descrição pública não definida (recomendado)</div>}
-          {isLocked && <div>🔒 Pista está bloqueada - players não conseguem acessar</div>}
+          {!descPublic && <div><AlertTriangle className="lucide-icon inline-icon" size={16} />️ Descrição pública não definida (recomendado)</div>}
+          {isLocked && <div><Lock className="lucide-icon inline-icon" size={16} /> Pista está bloqueada - players não conseguem acessar</div>}
 
           {!title && !previewUrl && !descPublic && (
             <div style={{ color: '#e74c3c', fontWeight: 'bold', marginTop: 8 }}>
-              ⚠️ Esta pista está incompleta. Preencha ao menos Título, Imagem e Descrição.
+              <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Esta pista está incompleta. Preencha ao menos Título, Imagem e Descrição.
             </div>
           )}
         </div>

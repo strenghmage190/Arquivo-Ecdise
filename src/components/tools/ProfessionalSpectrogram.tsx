@@ -1,3 +1,4 @@
+import { Lightbulb } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import './ProfessionalSpectrogram.css';
 
@@ -341,7 +342,7 @@ export default function ProfessionalSpectrogram({
 
       <div className="spectrogram-footer" style={hideDecorations ? { visibility: 'hidden' } : {}}>
         <p className="footer-text">
-          💡 <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
+          <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong>Dica:</strong> Padrões anômalos ou formas geométricas podem indicar dados ocultos.
         </p>
       </div>
     </div>

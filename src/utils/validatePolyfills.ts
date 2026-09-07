@@ -1,5 +1,6 @@
+import { Check, AlertTriangle, Search, X, Siren } from 'lucide-react';
 /**
- * ✅ POLYFILL VALIDATION
+ * <Check className="lucide-icon inline-icon" size={16} /> POLYFILL VALIDATION
  * 
  * Validates that all required polyfills are correctly loaded
  * and warns about missing or conflicting implementations.
@@ -50,7 +51,7 @@ export function validatePolyfills(): PolyfillValidationResult {
     if (hasAudioContext) {
       const contextCount = countActiveAudioContexts();
       if (contextCount > 1) {
-        warnings.push(`⚠️ Multiple AudioContext instances detected (${contextCount})`);
+        warnings.push(`⚠️️ Multiple AudioContext instances detected (${contextCount})`);
       }
     }
   } catch (e) {
@@ -197,14 +198,14 @@ export function logValidationResults(result: PolyfillValidationResult): void {
 
   // Warnings
   if (result.warnings.length > 0) {
-    console.group('⚠️ Warnings:');
+    console.group('⚠️️ Warnings:');
     result.warnings.forEach(w => console.warn(w));
     console.groupEnd();
   }
 
   // Errors
   if (result.errors.length > 0) {
-    console.group('🚨 Errors:');
+    console.group(' Errors:');
     result.errors.forEach(e => console.error(e));
     console.groupEnd();
   }

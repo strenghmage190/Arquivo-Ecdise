@@ -1,3 +1,4 @@
+import { Hand, Pen } from 'lucide-react';
 import React, { useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -134,7 +135,7 @@ function App() {
           className="fab-toggle-mode" 
           onClick={() => setInteractionMode(prev => prev === 'pan' ? 'edit' : 'pan')}
         >
-          {interactionMode === 'pan' ? '🖐️' : '✏️'}
+          {interactionMode === 'pan' ? '' : '✏️'}
         </button>
       )}
     </AuthProvider>

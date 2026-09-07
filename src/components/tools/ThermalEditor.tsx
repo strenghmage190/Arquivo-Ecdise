@@ -1,3 +1,4 @@
+import { Lightbulb, Thermometer } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import './ThermalEditor.css';
 
@@ -185,7 +186,7 @@ export default function ThermalEditor({
     <div className="thermal-editor-modal">
       <div className="thermal-editor-content">
         <div className="thermal-editor-header">
-          <h2>🌡️ EDITOR DE TEXTO TERMAL</h2>
+          <h2><Thermometer className="lucide-icon inline-icon" size={16} /> EDITOR DE TEXTO TERMAL</h2>
           <button className="btn-close" onClick={onClose}>
             ✕
           </button>
@@ -203,7 +204,7 @@ export default function ThermalEditor({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             />
-            <p className="preview-hint">💡 Arraste verticalmente no canvas para mover o texto</p>
+            <p className="preview-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> Arraste verticalmente no canvas para mover o texto</p>
           </div>
 
           {/* Controls */}

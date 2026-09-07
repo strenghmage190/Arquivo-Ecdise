@@ -1,3 +1,4 @@
+import { Check, Search } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
@@ -164,7 +165,7 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     setIsSynced(synced);
   }, [triggerLocal, baseDuration, triggerTime]);
 
-  // ✅ Unified cleanup: revoke URL AND destroy wavesurfer together
+  // <Check className="lucide-icon inline-icon" size={16} /> Unified cleanup: revoke URL AND destroy wavesurfer together
   useEffect(() => {
     return () => {
       if (prevLocalHiddenRef.current) {
@@ -432,7 +433,7 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
               }}
               className="btn-utility text-xs"
             >
-              🔍 ZOOM
+              <Search className="lucide-icon inline-icon" size={16} /> ZOOM
             </button>
           )}
         </div>

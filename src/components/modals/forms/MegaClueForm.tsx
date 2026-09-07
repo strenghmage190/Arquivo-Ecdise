@@ -1,3 +1,4 @@
+import { Search, Check, TrendingUp, X, Edit3, Palette, Music, AlertTriangle, Lock, Clapperboard } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createInvestigationCard, fetchCardsForInvestigation } from '../../../api/investigations';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../../utils/storage';
@@ -156,7 +157,7 @@ export default function MegaClueForm({
         }));
       
       console.log('✅ Puzzles filtrados:', puzzles);
-      console.log('📈 Total de puzzles:', puzzles.length);
+      console.log(' Total de puzzles:', puzzles.length);
       
       setAvailablePuzzles(puzzles);
     } catch (err) {
@@ -350,19 +351,19 @@ export default function MegaClueForm({
           className={`tab-btn ${activeTab === 'geral' ? 'active' : ''}`}
           onClick={() => setActiveTab('geral')}
         >
-          📝 GERAL
+          <Edit3 className="lucide-icon inline-icon" size={16} /> GERAL
         </button>
         <button 
           className={`tab-btn ${activeTab === 'visual' ? 'active' : ''}`}
           onClick={() => setActiveTab('visual')}
         >
-          🎨 VISUAL
+          <Palette className="lucide-icon inline-icon" size={16} /> VISUAL
         </button>
         <button 
           className={`tab-btn ${activeTab === 'audio' ? 'active' : ''}`}
           onClick={() => setActiveTab('audio')}
         >
-          🎵 ÁUDIO
+          <Music className="lucide-icon inline-icon" size={16} /> ÁUDIO
         </button>
       </div>
 
@@ -405,7 +406,7 @@ export default function MegaClueForm({
           </div>
         ) : availablePuzzles.length === 0 ? (
           <div className="no-puzzles">
-            <p>⚠️ <strong>Nenhum quebra-cabeça encontrado!</strong></p>
+            <p><AlertTriangle className="lucide-icon inline-icon" size={16} />️ <strong>Nenhum quebra-cabeça encontrado!</strong></p>
             <p>Você precisa criar pelo menos um Glitch Puzzle antes de criar uma Mega-Pista.</p>
             <p>Feche este formulário e crie os quebra-cabeças primeiro.</p>
           </div>
@@ -487,8 +488,8 @@ export default function MegaClueForm({
         <h3>✓ RESUMO</h3>
         <div className="summary-content">
           <p>📌 <strong>Tipo:</strong> Mega-Pista (Verdade Final)</p>
-          <p>🔒 <strong>Desbloqueio:</strong> Requer resolver {config.selectedPuzzleIds.length} quebra-cabeça{config.selectedPuzzleIds.length !== 1 ? 's' : ''} vinculado{config.selectedPuzzleIds.length !== 1 ? 's' : ''}</p>
-          <p>📝 <strong>Texto:</strong> {config.finalTruthText.substring(0, 50)}...</p>
+          <p><Lock className="lucide-icon inline-icon" size={16} /> <strong>Desbloqueio:</strong> Requer resolver {config.selectedPuzzleIds.length} quebra-cabeça{config.selectedPuzzleIds.length !== 1 ? 's' : ''} vinculado{config.selectedPuzzleIds.length !== 1 ? 's' : ''}</p>
+          <p><Edit3 className="lucide-icon inline-icon" size={16} /> <strong>Texto:</strong> {config.finalTruthText.substring(0, 50)}...</p>
           <p>🖼 <strong>Imagem:</strong> {config.imageFile ? '✓ Será incluída' : '✗ Nenhuma'}</p>
           {config.selectedPuzzleIds.length > 0 && (
             <div className="selected-puzzles-summary">
@@ -515,7 +516,7 @@ export default function MegaClueForm({
         <>
           {/* Descrições Públicas e Ocultas */}
           <div className="form-section">
-            <h3>📝 DESCRIÇÕES</h3>
+            <h3><Edit3 className="lucide-icon inline-icon" size={16} /> DESCRIÇÕES</h3>
             
             <div className="field-group">
               <label>Descrição Pública (visível antes de desbloquear):</label>
@@ -571,7 +572,7 @@ export default function MegaClueForm({
 
           {/* Vídeo */}
           <div className="form-section">
-            <h3>🎬 VÍDEO (opcional)</h3>
+            <h3><Clapperboard className="lucide-icon inline-icon" size={16} /> VÍDEO (opcional)</h3>
             
             <div className="field-group">
               <label>Upload de vídeo:</label>
@@ -603,7 +604,7 @@ export default function MegaClueForm({
 
           {/* Áudio */}
           <div className="form-section">
-            <h3>🎵 ÁUDIO (opcional)</h3>
+            <h3><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO (opcional)</h3>
             
             <div className="field-group">
               <label>Áudio Base (ouvido normalmente):</label>
@@ -634,7 +635,7 @@ export default function MegaClueForm({
 
           {/* Ferramentas Visuais */}
           <div className="form-section">
-            <h3>🎨 FERRAMENTAS VISUAIS (opcional)</h3>
+            <h3><Palette className="lucide-icon inline-icon" size={16} /> FERRAMENTAS VISUAIS (opcional)</h3>
             
             <div className="field-group">
               <label>Camada UV (Luz Negra):</label>
@@ -700,7 +701,7 @@ export default function MegaClueForm({
 
           {/* Segurança */}
           <div className="form-section">
-            <h3>🔒 SEGURANÇA</h3>
+            <h3><Lock className="lucide-icon inline-icon" size={16} /> SEGURANÇA</h3>
             
             <div className="field-group">
               <label style={{display:'flex', alignItems:'center', gap:8}}>
@@ -795,7 +796,7 @@ export default function MegaClueForm({
         <>
           {/* Áudio */}
           <div className="form-section">
-            <h3>🎵 ÁUDIO</h3>
+            <h3><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO</h3>
             
             <div className="field-group">
               <label>Áudio Base (ouvido normalmente):</label>

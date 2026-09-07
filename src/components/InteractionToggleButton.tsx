@@ -1,3 +1,4 @@
+import { Hand, Pen } from 'lucide-react';
 import React, { useState } from 'react';
 import './InteractionToggleButton.css';
 
@@ -10,7 +11,7 @@ const InteractionToggleButton: React.FC = () => {
 
   return (
     <button className="fab-toggle-mode" onClick={toggleMode}>
-      {interactionMode === 'pan' ? '🖐️' : '✏️'}
+      {interactionMode === 'pan' ? '' : '✏️'}
     </button>
   );
 };

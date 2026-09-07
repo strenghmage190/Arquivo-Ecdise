@@ -1,3 +1,4 @@
+import { Camera, Save } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import './ForensicChannelEditor.css';
 
@@ -428,7 +429,7 @@ export default function ForensicChannelEditor({
             {/* Image Upload */}
             {overlayType === 'image' && (
               <div className="control-group">
-                <label>📷 IMAGEM/STAMP SECRETO</label>
+                <label><Camera className="lucide-icon inline-icon" size={16} /> IMAGEM/STAMP SECRETO</label>
                 <input
                   type="file"
                   accept="image/*"

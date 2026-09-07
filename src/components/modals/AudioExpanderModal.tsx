@@ -1,3 +1,4 @@
+import { Music } from 'lucide-react';
 import React, { useState } from 'react';
 import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import './AudioExpanderModal.css';

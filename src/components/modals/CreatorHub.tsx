@@ -1,3 +1,4 @@
+import { Lock, Music, FileText, Settings, Edit3, Pen, Eye, Search, Lightbulb } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { fetchCardsForInvestigation, InvestigationCard } from '../../api/investigations';
 import { supabase } from '../../supabaseClient';
@@ -155,7 +156,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
       case 'glitch_puzzle':
         return '🧩';
       case 'mega_clue':
-        return '🔐';
+        return '🔒';
       case 'video':
         return '📹';
       case 'audio':
@@ -195,7 +196,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
       <div className="creator-hub-overlay" onClick={handleOverlayClick}>
         <div className="creator-hub-modal" onClick={e => e.stopPropagation()}>
           <div className="creator-hub-header">
-            <h2>⚙️ HUB DE CRIAÇÃO DE INVESTIGAÇÃO</h2>
+            <h2><Settings className="lucide-icon inline-icon" size={16} /> HUB DE CRIAÇÃO DE INVESTIGAÇÃO</h2>
             <button className="close-btn" onClick={handleClose}>×</button>
           </div>
 
@@ -214,7 +215,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                     className={`btn-create-new${selectedCreator === 'legacy' ? ' selected' : ''}`}
                     onClick={() => setSelectedCreator('legacy')}
                   >
-                    📝 LEGADO
+                    <Edit3 className="lucide-icon inline-icon" size={16} /> LEGADO
                   </button>
                 </div>
 
@@ -281,7 +282,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                         
                         {card.requiredPuzzleIds && card.requiredPuzzleIds.length > 0 && (
                           <div className="card-meta">
-                            <span className="meta-label">🔒 Requer:</span>
+                            <span className="meta-label"><Lock className="lucide-icon inline-icon" size={16} /> Requer:</span>
                             <span className="required-count">{card.requiredPuzzleIds.length} quebra-cabeça{card.requiredPuzzleIds.length !== 1 ? 's' : ''} vinculado{card.requiredPuzzleIds.length !== 1 ? 's' : ''}</span>
                           </div>
                         )}
@@ -293,7 +294,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                           onClick={() => handleEditCard(card)}
                           title="Editar pista"
                         >
-                          ✏️
+                          <Pen className="lucide-icon inline-icon" size={16} />
                         </button>
                         <button 
                           className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`} 
@@ -311,7 +312,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
               {/* Pistas Ocultas */}
               {cards.filter(c => c.is_hidden).length > 0 && (
                 <div style={{ marginTop: '20px' }}>
-                  <h3>👁️ PISTAS OCULTAS ({cards.filter(c => c.is_hidden).length})</h3>
+                  <h3><Eye className="lucide-icon inline-icon" size={16} /> PISTAS OCULTAS ({cards.filter(c => c.is_hidden).length})</h3>
                   <div className="cards-grid">
                     {cards.filter(c => c.is_hidden).map(card => (
                       <div key={card.id} className="card-summary hidden-clue">
@@ -326,7 +327,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                         <div className="card-summary-body">
                           {card.discovery_code && (
                             <div className="card-meta">
-                              <span className="meta-label">🔍 Código:</span>
+                              <span className="meta-label"><Search className="lucide-icon inline-icon" size={16} /> Código:</span>
                               <code className="reward-code">{card.discovery_code}</code>
                             </div>
                           )}
@@ -345,7 +346,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                             onClick={() => handleEditCard(card)}
                             title="Editar pista"
                           >
-                            ✏️
+                            <Pen className="lucide-icon inline-icon" size={16} />
                           </button>
                           <button 
                             className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`} 
@@ -364,7 +365,7 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
 
             {/* Informações úteis */}
             <div className="hub-info">
-              <h4>💡 DICAS RÁPIDAS</h4>
+              <h4><Lightbulb className="lucide-icon inline-icon" size={16} /> DICAS RÁPIDAS</h4>
               <ul>
                 <li><strong>Quebra-cabeças de Glitch:</strong> Fornecem códigos de recompensa quando resolvidos</li>
                 <li><strong>Mega-Pista:</strong> Você vincula os puzzles específicos que devem ser resolvidos para desbloqueá-la</li>

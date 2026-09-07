@@ -1,5 +1,6 @@
+import { Check, Search, X, AlertTriangle, Edit3 } from 'lucide-react';
 /**
- * ✅ ClueValidationTab.tsx
+ * <Check className="lucide-icon inline-icon" size={16} /> ClueValidationTab.tsx
  * Tab para validação de dados
  * - Schemas Zod
  * - Validação de campos obrigatórios
@@ -87,7 +88,7 @@ export default function ClueValidationTab({
           marginBottom: 20,
         }}
       >
-        🔍 {validationRun ? 'Validar Novamente' : 'Executar Validação'}
+        <Search className="lucide-icon inline-icon" size={16} /> {validationRun ? 'Validar Novamente' : 'Executar Validação'}
       </button>
 
       {validationRun && (
@@ -114,7 +115,7 @@ export default function ClueValidationTab({
                   {errorCount === 0 && warningCount === 0 && <span>Todos os campos validados!</span>}
                 </div>
               </div>
-              <div style={{ fontSize: 30 }}>{isValid ? '✅' : '⚠️'}</div>
+              <div style={{ fontSize: 30 }}>{isValid ? '✅' : '⚠️️'}</div>
             </div>
           </div>
 
@@ -146,7 +147,7 @@ export default function ClueValidationTab({
                     }}
                   >
                     <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 4 }}>
-                      {error.severity === 'error' && '❌'} {error.severity === 'warning' && '⚠️'}{' '}
+                      {error.severity === 'error' && '❌'} {error.severity === 'warning' && '⚠️️'}{' '}
                       {error.severity === 'info' && 'ℹ️'} {error.field}
                     </div>
                     <div style={{ fontSize: 11, color: '#aaa' }}>{error.message}</div>
@@ -158,14 +159,14 @@ export default function ClueValidationTab({
 
           {/* CHECKLIST */}
           <div style={{ marginTop: 20 }}>
-            <span className="field-title">📝 CHECKLIST</span>
+            <span className="field-title"><Edit3 className="lucide-icon inline-icon" size={16} /> CHECKLIST</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
                 <span>{title ? '✅' : '❌'}</span>
                 <span>Título/Código definido</span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
-                <span>{imgFile || videoUrlInput || videoUrl ? '✅' : '⚠️'}</span>
+                <span>{imgFile || videoUrlInput || videoUrl ? '✅' : '⚠️️'}</span>
                 <span>Mídia anexada (imagem/vídeo)</span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
@@ -181,7 +182,7 @@ export default function ClueValidationTab({
                 <span>Mega-Pista: puzzle(s) obrigatório(s) definido(s)</span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
-                <span>{isLocked && !lockPass ? '⚠️' : '✅'}</span>
+                <span>{isLocked && !lockPass ? '⚠️️' : '✅'}</span>
                 <span>Senha de bloqueio (se aplicável)</span>
               </div>
             </div>

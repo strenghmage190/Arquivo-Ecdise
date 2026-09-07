@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -104,7 +105,7 @@ export default function InvitePage() {
         {status === 'loading' && <h1>VERIFICANDO CREDENCIAL...</h1>}
         {status === 'invalid' && (
            <>
-             <h1>❌ CONVITE INVÁLIDO</h1>
+             <h1><X className="lucide-icon inline-icon" size={16} /> CONVITE INVÁLIDO</h1>
              <p>Este link pode ter expirado ou não existe. Peça um novo convite ao Mestre.</p>
              <button onClick={() => navigate('/')}>VOLTAR PARA ARQUIVOS</button>
            </>

@@ -12,6 +12,55 @@ export interface CoreState {
   isHidden: boolean;
 }
 
+export interface FilterConfig {
+  brightness: number;
+  contrast: number;
+  saturate: number;
+}
+
+export interface ThermalConfig {
+  enabled: boolean;
+  secretText: string;
+  keyword: string;
+  fontSize: number;
+  positionY: number;
+}
+
+export interface ChatEntry {
+  sender: 'me' | 'them' | 'system';
+  type: 'text' | 'image';
+  text: string;
+  image_url?: string;
+}
+
+export interface PhoneState {
+  hasKeypad: boolean;
+  password: string;
+  lockType: 'pin' | 'pattern';
+  contactName: string;
+  chatList: ChatEntry[];
+}
+
+export interface PersonState {
+  isPerson: boolean;
+  name: string;
+  age: string;
+  profession: string;
+  status: string;
+  details: string;
+}
+
+export interface MetadataState {
+  fakeDate: string;
+  fakeLocation: string;
+  technicalNote: string;
+  fakeMetaCam: string;
+  fakeMetaGps: string;
+  fakeMetaOwner: string;
+  stamp: string;
+  externalLink: string;
+}
+
 export interface EditorState {
   editorMode: 'uv' | 'filter' | 'rgb' | null;
   uvEditorBaseUrl: string | null;
@@ -29,6 +78,11 @@ export interface SecurityState {
   lockPass: string;
   lockPasses: string[];
   securityLayerEnabled: boolean;
+  revealLogicMode: 'always_visible' | 'aligned_only' | 'aligned_keyword';
+  signalTargets: { visual: boolean; audio: boolean };
+  hidePreviewOnBoard: boolean;
+  audioStaticSync: boolean;
+  narrativeLinks: { audioHintsVisual: boolean; visualHintsCode: boolean; hintNote: string };
 }
 
 export interface MediaState {
@@ -47,6 +101,7 @@ export interface MediaState {
   audioHiddenPreview: string | null;
   megaImagePreview: string | null;
   videoUrl: string | null;
+  videoUrlInput: string;
   audioHiddenUploadedUrl: string | null;
 }
 
@@ -56,6 +111,9 @@ export interface CipherState {
   shredCols: number;
   realText: string;
   cipherText: string;
+  hexCode: string;
+  hexEncodingMethod: 'plain' | 'utf8hex' | 'xor' | 'enigma';
+  hexEncodingKey: string;
 }
 
 export interface GlitchState {
@@ -154,6 +212,21 @@ export interface ClueModalContextType {
   editorState: EditorState;
   setEditorState: React.Dispatch<React.SetStateAction<EditorState>>;
 
+  filterConfig: FilterConfig;
+  setFilterConfig: React.Dispatch<React.SetStateAction<FilterConfig>>;
+
+  thermalConfig: ThermalConfig;
+  setThermalConfig: React.Dispatch<React.SetStateAction<ThermalConfig>>;
+
+  phoneState: PhoneState;
+  setPhoneState: React.Dispatch<React.SetStateAction<PhoneState>>;
+
+  personState: PersonState;
+  setPersonState: React.Dispatch<React.SetStateAction<PersonState>>;
+
+  metadataState: MetadataState;
+  setMetadataState: React.Dispatch<React.SetStateAction<MetadataState>>;
+
   fieldVisibilityConfig: FieldVisibilityConfig;
   setFieldVisibilityConfig: React.Dispatch<React.SetStateAction<FieldVisibilityConfig>>;
 
@@ -192,12 +265,20 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lockPass: '',
     lockPasses: [],
     securityLayerEnabled: false,
+    revealLogicMode: 'aligned_only',
+    signalTargets: { visual: true, audio: false },
+    hidePreviewOnBoard: false,
+    audioStaticSync: false,
+    narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' },
   });
 
   const [mediaState, setMediaState] = useState<MediaState>({
     imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null,
-    previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null,
-    videoUrl: null, audioHiddenUploadedUrl: null
+    previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null,    audioHiddenPreview: null,
+    megaImagePreview: null,
+    videoUrl: null,
+    videoUrlInput: '',
+    audioHiddenUploadedUrl: null,
   });
 
   const [cipherState, setCipherState] = useState<CipherState>({
@@ -206,6 +287,9 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     shredCols: 8,
     realText: '',
     cipherText: '',
+    hexCode: '',
+    hexEncodingMethod: 'plain',
+    hexEncodingKey: ''
   });
 
   const [glitchState, setGlitchState] = useState<GlitchState>({
@@ -251,6 +335,48 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showThermalEditor: false,
   });
 
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>({
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+  });
+
+  const [thermalConfig, setThermalConfig] = useState<ThermalConfig>({
+    enabled: false,
+    secretText: '',
+    keyword: '',
+    fontSize: 24,
+    positionY: 50,
+  });
+
+  const [phoneState, setPhoneState] = useState<PhoneState>({
+    hasKeypad: false,
+    password: '',
+    lockType: 'pin',
+    contactName: 'Desconhecido',
+    chatList: [],
+  });
+
+  const [personState, setPersonState] = useState<PersonState>({
+    isPerson: false,
+    name: '',
+    age: '',
+    profession: '',
+    status: '',
+    details: '',
+  });
+
+  const [metadataState, setMetadataState] = useState<MetadataState>({
+    fakeDate: '',
+    fakeLocation: '',
+    technicalNote: '',
+    fakeMetaCam: '',
+    fakeMetaGps: '',
+    fakeMetaOwner: '',
+    stamp: '',
+    externalLink: '',
+  });
+
   const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
   const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(defaultDisplayConfig);
   const [mediaVisibility, setMediaVisibility] = useState<MediaVisibility>(defaultMediaVisibility);
@@ -281,65 +407,198 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const resetForm = () => {
     setCoreState({ title: '', descPublic: '', descHidden: '', tags: '', discoveryCode: '', evidenceType: 'document', isHidden: false });
-    setSecurityState({ isLocked: false, lockPass: '', lockPasses: [], securityLayerEnabled: false });
-    setMediaState({ imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null, previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null, videoUrl: null, audioHiddenUploadedUrl: null });
-    setCipherState({ isShredded: false, shredRows: 1, shredCols: 8, realText: '', cipherText: '' });
+    setSecurityState({ isLocked: false, lockPass: '', lockPasses: [], securityLayerEnabled: false, revealLogicMode: 'aligned_only', signalTargets: { visual: true, audio: false }, hidePreviewOnBoard: false, audioStaticSync: false, narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' } });
+    setMediaState({
+      imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null,
+      previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null,
+      videoUrl: null, videoUrlInput: '', audioHiddenUploadedUrl: null
+    });
+    setCipherState({ isShredded: false, shredRows: 1, shredCols: 8, realText: '', cipherText: '', hexCode: '', hexEncodingMethod: 'plain', hexEncodingKey: '' });
     setGlitchState({ glitchCorrectFrequency: 17, glitchCorrectShift: 33, glitchCorrectChromatic: 12, glitchRewardCode: 'ALPHA-01', glitchKeyword: '', glitchRequireKeyword: false, glitchUnlockMode: 'code', glitchDifficulty: 'hard', glitchToleranceFreq: 1, glitchToleranceShift: 2, glitchToleranceChroma: 2, glitchFocusedImageFile: null, glitchFocusedImagePreview: null, showGlitchDesigner: false, glitchHiddenAudioUrl: '', glitchHiddenVideoUrl: '', glitchHint: '', glitchAccessInstructions: '', glitchStartFrequency: 12, glitchStartShift: 20, glitchStartChromatic: 8 });
     setMegaClueState({ megaFinalTruthText: '', megaImageFile: null, megaImagePreview: null, megaRequiredPuzzleIds: [] });
+    setPersonState({ isPerson: false, name: '', age: '', profession: '', status: '', details: '' });
+    setMetadataState({ fakeDate: '', fakeLocation: '', technicalNote: '', fakeMetaCam: '', fakeMetaGps: '', fakeMetaOwner: '', stamp: '', externalLink: '' });
+    setPhoneState({ hasKeypad: false, password: '', lockType: 'pin', contactName: 'Desconhecido', chatList: [] });
+    setThermalConfig({ enabled: false, secretText: '', keyword: '', fontSize: 24, positionY: 50 });
+    setFilterConfig({ brightness: 100, contrast: 100, saturate: 100 });
+    setEditorState({ editorMode: null, uvEditorBaseUrl: null, uvEditorPurpose: null, filterInitialImage: null, showAudioForgeFor: null, showGlitchDesigner: false, showKeypadEditor: false, showForensicEditor: false, showThermalEditor: false });
     setFieldVisibilityConfig(defaultFieldVisibility);
     setDisplayConfig(defaultDisplayConfig);
     setMediaVisibility(defaultMediaVisibility);
   };
 
   const loadExistingCard = (card: any) => {
-    // Basic loading logic based on existingCard
-    setCoreState(prev => ({
-      ...prev,
+    let m: any = {};
+    try {
+      m = typeof card.metadata === 'object' ? card.metadata : (typeof card.metadata === 'string' ? JSON.parse(card.metadata) : {});
+    } catch (e) { m = {}; }
+
+    // Core
+    setCoreState({
       title: card.title || '',
       descPublic: card.description_public || '',
       descHidden: card.description_hidden || '',
-      tags: card.tags || '',
+      tags: Array.isArray(card.tags) ? card.tags.join(', ') : (card.tags || ''),
       discoveryCode: card.discovery_code || '',
       isHidden: card.is_hidden || false,
       evidenceType: card.type || 'document'
-    }));
-    
-    setSecurityState(prev => ({
-      ...prev,
+    });
+
+    // Security
+    const sl = m.security_layer || {};
+    setSecurityState({
       isLocked: card.is_locked || false,
-      lockPass: card.lock_password || ''
-    }));
+      lockPass: card.lock_password || '',
+      lockPasses: m.mega_clue?.required_codes || [],
+      securityLayerEnabled: !!m.security_layer || !!m.glitch_puzzle,
+      revealLogicMode: sl.reveal_logic || 'aligned_only',
+      signalTargets: sl.signal_targets || { visual: true, audio: false },
+      hidePreviewOnBoard: !!m.masked_preview,
+      audioStaticSync: !!m.audio_static_sync,
+      narrativeLinks: {
+        audioHintsVisual: m.narrative_hints?.audio_guides_visual || false,
+        visualHintsCode: m.narrative_hints?.visual_guides_code || false,
+        hintNote: m.narrative_hints?.hint_note || ''
+      }
+    });
 
-    let parsedMeta: any = {};
-    try {
-      parsedMeta = typeof card.metadata === 'object' 
-        ? card.metadata 
-        : (typeof card.metadata === 'string' ? JSON.parse(card.metadata) : {});
-    } catch (e) {
-      parsedMeta = {};
-    }
-
-    const cardIsShredded = card.is_shredded || parsedMeta?.is_shredded || (parsedMeta?.shred_rows && parsedMeta?.shred_cols);
-    setCipherState(prev => ({
+    // Media URLs (no Files when loading existing)
+    const imgUrl = card.image_url || m.original_image_url || m.base_media_url;
+    const vidUrl = card.video_url || m.videoUrl;
+    const audUrl = card.audio_url;
+    const audHidUrl = m.audio_hidden_url;
+    setMediaState(prev => ({
       ...prev,
-      isShredded: !!cardIsShredded,
-      shredRows: parsedMeta?.shred_rows || 1,
-      shredCols: parsedMeta?.shred_cols || 8,
+      previewUrl: imgUrl || null,
+      videoUrl: vidUrl || null,
+      videoUrlInput: vidUrl || '',
+      videoPreviewUrl: vidUrl || null,
+      audioBasePreview: audUrl || null,
+      audioHiddenPreview: audHidUrl || null,
+      audioHiddenUploadedUrl: audHidUrl || null,
+      uvPreviewUrl: card.image_uv_url || m.uv_layer_url || m.hidden_uv_url || null,
     }));
+    if (imgUrl) registerUrl(imgUrl);
+    if (vidUrl) registerUrl(vidUrl);
+    if (audUrl) registerUrl(audUrl);
 
-    if (parsedMeta.glitch_puzzle) {
+    // Cipher
+    const isShredded = card.is_shredded || m.is_shredded || (m.shred_rows && m.shred_cols);
+    setCipherState({
+      isShredded: !!isShredded,
+      shredRows: m.shred_rows || 1,
+      shredCols: m.shred_cols || 8,
+      realText: card.real_text || m.real_text || '',
+      cipherText: card.cipher_text || m.cipher_text || '',
+      hexCode: m.hex_code || m.hexCode || '',
+      hexEncodingMethod: m.hexEncodingMethod || 'plain',
+      hexEncodingKey: m.hexEncodingKey || ''
+    });
+
+    // Glitch
+    if (m.glitch_puzzle) {
+      const gp = m.glitch_puzzle;
       setGlitchState(prev => ({
         ...prev,
-        ...parsedMeta.glitch_puzzle,
-        glitchKeyword: parsedMeta.glitch_puzzle.unlock_keyword || prev.glitchKeyword
+        glitchCorrectFrequency: gp.correct_frequency ?? prev.glitchCorrectFrequency,
+        glitchCorrectShift: gp.correct_shift ?? prev.glitchCorrectShift,
+        glitchCorrectChromatic: gp.correct_chromatic ?? prev.glitchCorrectChromatic,
+        glitchDifficulty: gp.difficulty ?? prev.glitchDifficulty,
+        glitchToleranceFreq: gp.tolerance_frequency ?? prev.glitchToleranceFreq,
+        glitchToleranceShift: gp.tolerance_shift ?? prev.glitchToleranceShift,
+        glitchToleranceChroma: gp.tolerance_chromatic ?? prev.glitchToleranceChroma,
+        glitchStartFrequency: gp.start_frequency ?? prev.glitchStartFrequency,
+        glitchStartShift: gp.start_shift ?? prev.glitchStartShift,
+        glitchStartChromatic: gp.start_chromatic ?? prev.glitchStartChromatic,
+        glitchAccessInstructions: gp.access_instructions || '',
+        glitchHint: gp.hint || '',
+        glitchKeyword: gp.correct_keyword || sl.keyword || '',
+        glitchRequireKeyword: !!gp.require_keyword_validation,
+        glitchUnlockMode: gp.unlock_mode || 'code',
+        glitchRewardCode: gp.reward_code || 'ALPHA-01',
+        glitchHiddenAudioUrl: gp.hidden_audio_url || '',
+        glitchHiddenVideoUrl: gp.hidden_video_url || '',
+        glitchFocusedImagePreview: gp.focused_image_url || null,
       }));
     }
 
-    // For URLs, we register them so they don't leak, but we don't revoke existing ones
-    const imgUrl = card.image_url;
-    if (imgUrl) {
-      setMediaState(prev => ({ ...prev, previewUrl: imgUrl }));
-      registerUrl(imgUrl);
+    // Mega Clue
+    if (m.mega_clue) {
+      setMegaClueState(prev => ({
+        ...prev,
+        megaFinalTruthText: m.mega_clue.final_truth_text || '',
+        megaRequiredPuzzleIds: m.mega_clue.required_puzzle_ids || [],
+      }));
+    }
+
+    // Thermal
+    if (m.thermal) {
+      setThermalConfig({
+        enabled: true,
+        secretText: m.thermal_secret_text || '',
+        keyword: m.thermal_keyword || '',
+        fontSize: m.thermal_font_size || 24,
+        positionY: m.thermal_position_y || 50
+      });
+    }
+
+    // Filter
+    if (m.image_filter_reveal) {
+      setFilterConfig({
+        brightness: m.image_filter_reveal.brightness || 100,
+        contrast: m.image_filter_reveal.contrast || 100,
+        saturate: m.image_filter_reveal.saturate || 100
+      });
+    }
+
+    // Phone
+    if (m.phone_locked || m.phone_has_keypad || m.chat_data) {
+      setPhoneState({
+        hasKeypad: !!m.phone_locked || !!m.phone_has_keypad,
+        password: m.phone_password || '',
+        lockType: m.phone_lock_type || 'pin',
+        contactName: m.chat_contact_name || 'Desconhecido',
+        chatList: m.chat_data || []
+      });
+    }
+
+    // Person
+    if (m.person || m.is_person) {
+      const p = m.person || m.person_info || {};
+      setPersonState({
+        isPerson: true,
+        name: p.name || '',
+        age: p.dob || p.age || '',
+        profession: p.occupation || p.profession || '',
+        status: p.status || '',
+        details: p.details || ''
+      });
+    }
+
+    // Fake EXIF metadata
+    const fv = m.field_values || {};
+    setMetadataState({
+      fakeDate: fv.date_created || m.fakeDate || '',
+      fakeLocation: fv.gps_coords || m.fakeLocation || '',
+      technicalNote: fv.technical_note || m.technicalNote || '',
+      fakeMetaCam: fv.camera_model || '',
+      fakeMetaGps: fv.gps_coords || '',
+      fakeMetaOwner: fv.device_owner || '',
+      stamp: fv.stamp || m.stamp || '',
+      externalLink: fv.external_link || m.externalLink || m.external_link || ''
+    });
+
+    // Display config
+    if (m.display_config) setDisplayConfig(m.display_config);
+    if (m.field_visibility) setFieldVisibilityConfig(m.field_visibility);
+    if (m.media_visibility) {
+      const mv = m.media_visibility;
+      setMediaVisibility({
+        audioBase: mv.audio_base || 'always',
+        audioHidden: mv.audio_hidden || 'post_solve',
+        visual: mv.visual || 'glitch_active',
+        uvLayer: mv.uv_layer || 'post_keyword'
+      });
     }
   };
 
@@ -352,6 +611,11 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       glitchState, setGlitchState,
       megaClueState, setMegaClueState,
       editorState, setEditorState,
+      filterConfig, setFilterConfig,
+      thermalConfig, setThermalConfig,
+      phoneState, setPhoneState,
+      personState, setPersonState,
+      metadataState, setMetadataState,
       fieldVisibilityConfig, setFieldVisibilityConfig,
       displayConfig, setDisplayConfig,
       mediaVisibility, setMediaVisibility,

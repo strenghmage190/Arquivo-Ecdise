@@ -1,3 +1,4 @@
+import { Check, X, Edit3, Settings, Save, Lock } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchCards, updateInvestigationCard } from '../../api/investigations';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
@@ -76,7 +77,7 @@ export default function MegaClueCard({
   const [showPrompt, setShowPrompt] = useState(false);
   const [hasPrompted, setHasPrompted] = useState(false);
 
-  // ✅ EDIÇÃO DE MEGA-PISTA - Estados de Edição
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE MEGA-PISTA - Estados de Edição
   const [isEditing, setIsEditing] = useState(false);
   const [editedMetadata, setEditedMetadata] = useState<any>({
     finalTruthText: finalTruthText || '',
@@ -220,7 +221,7 @@ export default function MegaClueCard({
     }
   };
 
-  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para atualizar campos editados
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE MEGA-PISTA - Handler para atualizar campos editados
   const handleEditChange = (field: string, value: any) => {
     setEditedMetadata((prev: any) => ({
       ...prev,
@@ -228,7 +229,7 @@ export default function MegaClueCard({
     }));
   };
 
-  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para adicionar/remover puzzle
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE MEGA-PISTA - Handler para adicionar/remover puzzle
   const handleTogglePuzzle = (puzzleId: string) => {
     setEditedMetadata((prev: any) => {
       const currentIds = prev.requiredPuzzleIds || [];
@@ -246,7 +247,7 @@ export default function MegaClueCard({
     });
   };
 
-  // ✅ EDIÇÃO DE MEGA-PISTA - Handler para salvar mudanças
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE MEGA-PISTA - Handler para salvar mudanças
   const handleSaveChanges = async () => {
     setSubmitting(true);
     try {
@@ -256,7 +257,7 @@ export default function MegaClueCard({
         required_puzzle_ids: editedMetadata.requiredPuzzleIds || [],
       };
 
-      // ✅ Validação com Zod
+      // <Check className="lucide-icon inline-icon" size={16} /> Validação com Zod
       const validation = validateMegaClueData(megaClueData);
       if (!validation.success) {
         const errorMsg = (validation.errors || []).join('\n');
@@ -275,10 +276,10 @@ export default function MegaClueCard({
         },
       };
 
-      // ✅ Chamada Supabase para atualizar o card
+      // <Check className="lucide-icon inline-icon" size={16} /> Chamada Supabase para atualizar o card
       await updateInvestigationCard(cardId, updates);
 
-      console.log('📝 Mudanças salvas (Mega-Pista):', updates);
+      console.log(' Mudanças salvas (Mega-Pista):', updates);
       alert('✅ Configurações da Mega-Pista salvas com sucesso!');
       setIsEditing(false);
       onRefresh?.();
@@ -312,7 +313,7 @@ export default function MegaClueCard({
           <div className="mega-header">
             <h2>{title}</h2>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {/* ✅ Botão de Edição - Visível apenas para GMs */}
+              {/* <Check className="lucide-icon inline-icon" size={16} /> Botão de Edição - Visível apenas para GMs */}
               {isGameMaster && (
                 <button 
                   className="btn-edit" 
@@ -328,7 +329,7 @@ export default function MegaClueCard({
                   }}
                   title="Editar configurações da mega-pista"
                 >
-                  ⚙️ Editar
+                  <Settings className="lucide-icon inline-icon" size={16} /> Editar
                 </button>
               )}
               {onClose && (
@@ -338,7 +339,7 @@ export default function MegaClueCard({
           </div>
 
           <div className="mega-content unlocked">
-            {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+            {/* <Check className="lucide-icon inline-icon" size={16} /> MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
             {isEditing && (
               <div style={{
                 background: 'rgba(0, 150, 136, 0.05)',
@@ -347,7 +348,7 @@ export default function MegaClueCard({
                 padding: '16px',
                 marginBottom: '16px',
               }}>
-                <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR MEGA-PISTA</h3>
+                <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}><Settings className="lucide-icon inline-icon" size={16} /> EDITAR MEGA-PISTA</h3>
                 
                 {/* Texto da Verdade Final */}
                 <div style={{ marginBottom: '16px' }}>
@@ -445,7 +446,7 @@ export default function MegaClueCard({
                     }}
                     disabled={submitting}
                   >
-                    💾 Salvar Mudanças
+                    <Save className="lucide-icon inline-icon" size={16} /> Salvar Mudanças
                   </button>
                 </div>
               </div>
@@ -503,7 +504,7 @@ export default function MegaClueCard({
         <div className="mega-header">
           <h2>{title}</h2>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* ✅ Botão de Edição - Visível apenas para GMs */}
+            {/* <Check className="lucide-icon inline-icon" size={16} /> Botão de Edição - Visível apenas para GMs */}
             {isGameMaster && (
               <button 
                 className="btn-edit" 
@@ -519,7 +520,7 @@ export default function MegaClueCard({
                 }}
                 title="Editar configurações da mega-pista"
               >
-                ⚙️ Editar
+                <Settings className="lucide-icon inline-icon" size={16} /> Editar
               </button>
             )}
             {onClose && (
@@ -529,7 +530,7 @@ export default function MegaClueCard({
         </div>
 
         <div className="mega-content locked">
-          {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+          {/* <Check className="lucide-icon inline-icon" size={16} /> MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
           {isEditing && (
             <div style={{
               background: 'rgba(0, 150, 136, 0.05)',
@@ -538,7 +539,7 @@ export default function MegaClueCard({
               padding: '16px',
               marginBottom: '16px',
             }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR MEGA-PISTA</h3>
+              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}><Settings className="lucide-icon inline-icon" size={16} /> EDITAR MEGA-PISTA</h3>
               
               {/* Texto da Verdade Final */}
               <div style={{ marginBottom: '16px' }}>
@@ -636,14 +637,14 @@ export default function MegaClueCard({
                   }}
                   disabled={submitting}
                 >
-                  💾 Salvar Mudanças
+                  <Save className="lucide-icon inline-icon" size={16} /> Salvar Mudanças
                 </button>
               </div>
             </div>
           )}
 
           <div className="lock-banner">
-            <div className="lock-icon">🔐</div>
+            <div className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></div>
             <div className="lock-text">MEGA-PISTA PROTEGIDA</div>
             <div className="lock-boot-lines">
               <div className="boot-line">&gt; FIREWALL: ATIVO</div>

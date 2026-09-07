@@ -1,3 +1,4 @@
+import { Gamepad2, Check, Eye, Lock, Edit3 } from 'lucide-react';
 /**
  * DEBUG: EvidenceCard Glitch Effects Test
  * Use this para testar se os efeitos estão funcionando
@@ -244,7 +245,7 @@ Esperado: ${
       </div>
 
       <div style={{ marginBottom: 30, padding: 20, backgroundColor: '#0a0a0a', border: '1px solid #ffd700' }}>
-        <h2>🎮 Teste Interativo:</h2>
+        <h2><Gamepad2 className="lucide-icon inline-icon" size={16} /> Teste Interativo:</h2>
         <p>Use os controles acima para alternar entre GM e Player</p>
         <div style={{ width: 350, height: 250, margin: '20px auto', border: '3px solid #ffd700' }}>
           <EvidenceCard
@@ -260,12 +261,12 @@ Esperado: ${
         <p style={{ textAlign: 'center', fontSize: 12, opacity: 0.7 }}>
           {isGameMaster ? '✅ Você está como MESTRE DE JOGO (vê tudo)' : '👁️ Você está como JOGADOR'}
           {playerView ? ' | 🎮 Modo Jogo Ativo' : ' | 🛠️ Modo Edição'}
-          {locked ? ' | 🔐 Conteúdo Bloqueado' : ' | 🔓 Desbloqueado'}
+          {locked ? ' | 🔒 Conteúdo Bloqueado' : ' | 🔓 Desbloqueado'}
         </p>
       </div>
 
       <div style={{ marginTop: 40, padding: 20, backgroundColor: '#1a0a0a', border: '1px solid #ff003c' }}>
-        <h2>📝 Como Usar:</h2>
+        <h2><Edit3 className="lucide-icon inline-icon" size={16} /> Como Usar:</h2>
         <ol>
           <li>Abra o console (F12 - Dev Tools)</li>
           <li>Use os controles acima para testar diferentes combinações</li>
@@ -276,9 +277,9 @@ Esperado: ${
       </div>
 
       <div style={{ marginTop: 20, padding: 20, backgroundColor: '#0a1a0a', border: '1px solid #00ff41' }}>
-        <h2>✅ Checklist Visual:</h2>
+        <h2><Check className="lucide-icon inline-icon" size={16} /> Checklist Visual:</h2>
         <ul style={{ listStyle: 'none', padding: 0 }}>
-          <li>☐ Locked View mostra "ACESSO NEGADO" com 🔐</li>
+          <li>☐ Locked View mostra "ACESSO NEGADO" com <Lock className="lucide-icon inline-icon" size={16} /></li>
           <li>☐ Locked View tem grid vermelha pulsante</li>
           <li>☐ Locked View mostra código RND-XXXXX</li>
           <li>☐ Glitch View mostra "DATA CØRRÜPT LOCKED"</li>

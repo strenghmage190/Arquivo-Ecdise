@@ -1,3 +1,4 @@
+import { Lock, Zap } from 'lucide-react';
 import React from 'react'
 import EvidenceCard from './EvidenceCard'
 
@@ -38,7 +39,7 @@ export const EvidenceCardTest: React.FC = () => {
 
       {/* Card Locked */}
       <div>
-        <h3 style={{ color: '#00f3ff', marginBottom: 10 }}>🔐 Card Locked (playerView=true)</h3>
+        <h3 style={{ color: '#00f3ff', marginBottom: 10 }}><Lock className="lucide-icon inline-icon" size={16} /> Card Locked (playerView=true)</h3>
         <EvidenceCard
           id="test-2"
           image="https://via.placeholder.com/220x150?text=Locked"
@@ -60,7 +61,7 @@ export const EvidenceCardTest: React.FC = () => {
 
       {/* Card Glitch */}
       <div>
-        <h3 style={{ color: '#00f3ff', marginBottom: 10 }}>⚡ Card Glitch (playerView=true)</h3>
+        <h3 style={{ color: '#00f3ff', marginBottom: 10 }}><Zap className="lucide-icon inline-icon" size={16} /> Card Glitch (playerView=true)</h3>
         <EvidenceCard
           id="test-3"
           image="https://via.placeholder.com/220x150?text=Glitch"

@@ -1,3 +1,4 @@
+import { Settings, Lock, Check, Gamepad2, Clapperboard } from 'lucide-react';
 /**
  * 📊 ClueConfigTab.tsx
  * Tab para configurações avançadas
@@ -88,7 +89,7 @@ export default function ClueConfigTab({
 
   return (
     <div className="field-block createclue-config createclue-tab-section">
-      <span className="field-title">⚙️ CONFIGURAÇÃO AVANÇADA</span>
+      <span className="field-title"><Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO AVANÇADA</span>
 
       {/* PRESETS RÁPIDOS */}
       <div style={{ marginBottom: 20 }}>
@@ -108,7 +109,7 @@ export default function ClueConfigTab({
               fontWeight: 'bold',
             }}
           >
-            🔒 MÍNIMO
+            <Lock className="lucide-icon inline-icon" size={16} /> MÍNIMO
           </button>
           <button
             onClick={() => onApplyPreset('DEFAULT')}
@@ -124,7 +125,7 @@ export default function ClueConfigTab({
               fontWeight: 'bold',
             }}
           >
-            ✅ PADRÃO
+            <Check className="lucide-icon inline-icon" size={16} /> PADRÃO
           </button>
           <button
             onClick={() => onApplyPreset('FULL')}
@@ -152,7 +153,7 @@ export default function ClueConfigTab({
           {/* PUZZLE */}
           <div style={{ padding: 10, background: 'rgba(231,76,60,0.05)', borderRadius: 6 }}>
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#e74c3c' }}>
-              🎮 Puzzle
+              <Gamepad2 className="lucide-icon inline-icon" size={16} /> Puzzle
             </div>
             {Object.entries(puzzleSection).map(([key, value]) => (
               <label
@@ -181,7 +182,7 @@ export default function ClueConfigTab({
           {/* MEDIA */}
           <div style={{ padding: 10, background: 'rgba(52,152,219,0.05)', borderRadius: 6 }}>
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#3498db' }}>
-              🎬 Mídia
+              <Clapperboard className="lucide-icon inline-icon" size={16} /> Mídia
             </div>
             {Object.entries(mediaSection).map(([key, value]) => (
               <label
@@ -210,7 +211,7 @@ export default function ClueConfigTab({
           {/* CIPHER */}
           <div style={{ padding: 10, background: 'rgba(155,89,182,0.05)', borderRadius: 6 }}>
             <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: '#9b59b6' }}>
-              🔐 Cipher
+              <Lock className="lucide-icon inline-icon" size={16} /> Cipher
             </div>
             {Object.entries(cipherSection).map(([key, value]) => (
               <label

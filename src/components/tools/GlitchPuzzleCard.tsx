@@ -1,3 +1,4 @@
+import { Check, X, Edit3, Settings, Save, Lightbulb, Lock } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { playLockIn } from '../../utils/sound';
 import { updateInvestigationCard } from '../../api/investigations';
@@ -73,7 +74,7 @@ export default function GlitchPuzzleCard({
     setIsAligned(false);
   }, [cardId, puzzleData.id]);
   
-  // ✅ EDIÇÃO DE PUZZLE - Estados de Edição
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE PUZZLE - Estados de Edição
   const [isEditing, setIsEditing] = useState(false);
   const [editedMetadata, setEditedMetadata] = useState<any>({
     correct_frequency: puzzleData.correct_frequency,
@@ -212,7 +213,7 @@ export default function GlitchPuzzleCard({
     }
   };
 
-  // ✅ EDIÇÃO DE PUZZLE - Handler para atualizar campos editados
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE PUZZLE - Handler para atualizar campos editados
   const handleEditChange = (field: string, value: any) => {
     setEditedMetadata((prev: any) => ({
       ...prev,
@@ -220,7 +221,7 @@ export default function GlitchPuzzleCard({
     }));
   };
 
-  // ✅ EDIÇÃO DE PUZZLE - Handler para salvar mudanças
+  // <Check className="lucide-icon inline-icon" size={16} /> EDIÇÃO DE PUZZLE - Handler para salvar mudanças
   const handleSaveChanges = async () => {
     setLoading(true);
     try {
@@ -236,7 +237,7 @@ export default function GlitchPuzzleCard({
         access_instructions: editedMetadata.access_instructions,
       };
 
-      // ✅ Validação com Zod
+      // <Check className="lucide-icon inline-icon" size={16} /> Validação com Zod
       const validation = validateGlitchPuzzleData(glitchData);
       if (!validation.success) {
         const errorMsg = (validation.errors || []).join('\n');
@@ -262,10 +263,10 @@ export default function GlitchPuzzleCard({
         },
       };
 
-      // ✅ Chamada Supabase para atualizar o card
+      // <Check className="lucide-icon inline-icon" size={16} /> Chamada Supabase para atualizar o card
       await updateInvestigationCard(cardId, updates);
       
-      console.log('📝 Mudanças salvas:', updates);
+      console.log(' Mudanças salvas:', updates);
       alert('✅ Configurações salvas com sucesso!');
       setIsEditing(false);
     } catch (err) {
@@ -282,7 +283,7 @@ export default function GlitchPuzzleCard({
         <div className="puzzle-header">
           <h2>{puzzleData.title}</h2>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* ✅ Botão de Edição - Visível apenas para GMs */}
+            {/* <Check className="lucide-icon inline-icon" size={16} /> Botão de Edição - Visível apenas para GMs */}
             {isGameMaster && (
               <button 
                 className="btn-edit" 
@@ -298,7 +299,7 @@ export default function GlitchPuzzleCard({
                 }}
                 title="Editar configurações do puzzle"
               >
-                ⚙️ Editar
+                <Settings className="lucide-icon inline-icon" size={16} /> Editar
               </button>
             )}
             {onClose && (
@@ -308,7 +309,7 @@ export default function GlitchPuzzleCard({
         </div>
 
         <div className="puzzle-content solved">
-          {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+          {/* <Check className="lucide-icon inline-icon" size={16} /> MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
           {isEditing && (
             <div style={{
               background: 'rgba(0, 150, 136, 0.05)',
@@ -317,7 +318,7 @@ export default function GlitchPuzzleCard({
               padding: '16px',
               marginBottom: '16px',
             }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR CONFIGURAÇÕES</h3>
+              <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}><Settings className="lucide-icon inline-icon" size={16} /> EDITAR CONFIGURAÇÕES</h3>
               
               {/* Parâmetros Corretos */}
               <div style={{ marginBottom: '16px' }}>
@@ -512,7 +513,7 @@ export default function GlitchPuzzleCard({
                   }}
                   disabled={loading}
                 >
-                  💾 Salvar Mudanças
+                  <Save className="lucide-icon inline-icon" size={16} /> Salvar Mudanças
                 </button>
               </div>
             </div>
@@ -540,7 +541,7 @@ export default function GlitchPuzzleCard({
 
           {displayConfig.puzzle.showCorrectAnswerWhenSolved && (
             <div className="solution-display">
-              <h3>⚙️ PARÂMETROS QUE FUNCIONARAM:</h3>
+              <h3><Settings className="lucide-icon inline-icon" size={16} /> PARÂMETROS QUE FUNCIONARAM:</h3>
               <div className="params-grid">
                 <div className="param-item">
                   <div className="param-label">Frequência</div>
@@ -573,7 +574,7 @@ export default function GlitchPuzzleCard({
       <div className="puzzle-header">
         <h2>{puzzleData.title}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* ✅ Botão de Edição - Visível apenas para GMs */}
+          {/* <Check className="lucide-icon inline-icon" size={16} /> Botão de Edição - Visível apenas para GMs */}
           {isGameMaster && (
             <button 
               className="btn-edit" 
@@ -589,7 +590,7 @@ export default function GlitchPuzzleCard({
               }}
               title="Editar configurações do puzzle"
             >
-              ⚙️ Editar
+              <Settings className="lucide-icon inline-icon" size={16} /> Editar
             </button>
           )}
           {onClose && (
@@ -601,7 +602,7 @@ export default function GlitchPuzzleCard({
       <div className="puzzle-content">
         <p className="puzzle-description">{puzzleData.description}</p>
 
-        {/* ✅ MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
+        {/* <Check className="lucide-icon inline-icon" size={16} /> MODO DE EDIÇÃO - Renderizado quando isEditing === true */}
         {isEditing && (
           <div style={{
             background: 'rgba(0, 150, 136, 0.05)',
@@ -610,7 +611,7 @@ export default function GlitchPuzzleCard({
             padding: '16px',
             marginBottom: '16px',
           }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}>⚙️ EDITAR CONFIGURAÇÕES</h3>
+            <h3 style={{ margin: '0 0 16px 0', color: '#00ff88' }}><Settings className="lucide-icon inline-icon" size={16} /> EDITAR CONFIGURAÇÕES</h3>
             
             {/* Parâmetros Corretos */}
             <div style={{ marginBottom: '16px' }}>
@@ -805,7 +806,7 @@ export default function GlitchPuzzleCard({
                 }}
                 disabled={loading}
               >
-                💾 Salvar Mudanças
+                <Save className="lucide-icon inline-icon" size={16} /> Salvar Mudanças
               </button>
             </div>
           </div>
@@ -852,13 +853,13 @@ export default function GlitchPuzzleCard({
         {/* Dica */}
         {displayConfig.puzzle.showHint && puzzleData.hint && (
           <div className="hint-section">
-            <div className="hint-title">💡 DICA:</div>
+            <div className="hint-title"><Lightbulb className="lucide-icon inline-icon" size={16} /> DICA:</div>
             <div className="hint-text">{puzzleData.hint}</div>
           </div>
         )}
 
         <div className="controls-section">
-          <h3>⚙️ CALIBRAÇÃO DO DECODIFICADOR</h3>
+          <h3><Settings className="lucide-icon inline-icon" size={16} /> CALIBRAÇÃO DO DECODIFICADOR</h3>
           <p className="calibration-hint">Ajuste os controles até a imagem estabilizar. Quando os valores coincidirem com os da transmissão original, o sistema será restaurado.</p>
 
           <div className="param-control">
@@ -929,7 +930,7 @@ export default function GlitchPuzzleCard({
                 <div key={`${line}-${idx}`} className="terminal-line">{line}</div>
               ))
             ) : (
-              <div className="terminal-line" style={{color:'#888'}}>🔒 Logs escondidos</div>
+              <div className="terminal-line" style={{color:'#888'}}><Lock className="lucide-icon inline-icon" size={16} /> Logs escondidos</div>
             )}
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { Volume2, Zap, TrendingUp, TrendingDown, RefreshCw, Save } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import AudioForge from './AudioForge';
 import './AudioMixer.css';
@@ -461,7 +462,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             {/* Volume */}
             <div className="effect-group">
               <label className="effect-label">
-                🔊 VOLUME
+                <Volume2 className="lucide-icon inline-icon" size={16} /> VOLUME
                 <span className="effect-value">{Math.round(volume * 100)}%</span>
               </label>
               <input 
@@ -478,7 +479,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             {/* Speed */}
             <div className="effect-group">
               <label className="effect-label">
-                ⚡ VELOCIDADE
+                <Zap className="lucide-icon inline-icon" size={16} /> VELOCIDADE
                 <span className="effect-value">{speed.toFixed(2)}x</span>
               </label>
               <input 
@@ -495,7 +496,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             {/* Fade In */}
             <div className="effect-group">
               <label className="effect-label">
-                📈 FADE IN
+                <TrendingUp className="lucide-icon inline-icon" size={16} /> FADE IN
                 <span className="effect-value">{fadeIn.toFixed(1)}s</span>
               </label>
               <input 
@@ -512,7 +513,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             {/* Fade Out */}
             <div className="effect-group">
               <label className="effect-label">
-                📉 FADE OUT
+                <TrendingDown className="lucide-icon inline-icon" size={16} /> FADE OUT
                 <span className="effect-value">{fadeOut.toFixed(1)}s</span>
               </label>
               <input 
@@ -534,7 +535,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
               className={`btn-toggle ${reverse ? 'active' : ''}`}
               onClick={() => setReverse(!reverse)}
             >
-              🔄 REVERSO
+              <RefreshCw className="lucide-icon inline-icon" size={16} /> REVERSO
             </button>
             <button 
               className={`btn-toggle ${normalize ? 'active' : ''}`}
@@ -580,7 +581,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             Cancelar
           </button>
           <button className="btn-save-mixer" onClick={handleSave}>
-            💾 Exportar Áudio Processado
+            <Save className="lucide-icon inline-icon" size={16} /> Exportar Áudio Processado
           </button>
         </div>
 

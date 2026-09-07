@@ -1,13 +1,24 @@
 import React from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
-import { TriangleAlert, Info } from 'lucide-react';
+import { TriangleAlert, Info, Image as ImageIcon } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 
 export default function TabGlitch() {
-  const { glitchState, setGlitchState } = useClueModal();
+  const { glitchState, setGlitchState, setEditorState, registerUrl, revokeUrl } = useClueModal();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleUpdate = (updates: Partial<typeof glitchState>) => {
     setGlitchState(s => ({ ...s, ...updates }));
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      if (glitchState.glitchFocusedImagePreview) revokeUrl(glitchState.glitchFocusedImagePreview);
+      registerUrl(url);
+      setGlitchState(s => ({ ...s, glitchFocusedImageFile: file, glitchFocusedImagePreview: url }));
+    }
   };
 
   const hasMediaHiding = glitchState.glitchHiddenAudioUrl || glitchState.glitchHiddenVideoUrl;
@@ -117,6 +128,32 @@ export default function TabGlitch() {
           onChange={(e) => handleUpdate({ glitchHint: e.target.value })}
           placeholder="Dica que aparecerá na UI de sintonia..."
         />
+      </div>
+
+      <div style={{ marginTop: 24, padding: 16, border: '1px solid rgba(0,255,255,0.2)', borderRadius: 8, background: 'rgba(0,0,0,0.3)' }}>
+        <h4 style={{ color: 'var(--nexus-neon)', marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ImageIcon size={16} /> IMAGEM FOCADA (GLITCH REVELADO)
+        </h4>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+          Esta imagem aparecerá quando o puzzle for resolvido. Você pode selecioná-la do computador ou desenhá-la sobre a imagem base.
+        </p>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input type="file" accept="image/*" hidden ref={fileInputRef} onChange={handleImageSelect} />
+          <button className="cc-btn cc-btn-save" style={{ flex: 1, justifyContent: 'center' }} onClick={() => fileInputRef.current?.click()}>
+            📂 Selecionar Imagem
+          </button>
+          <button className="cc-btn cc-btn-cancel" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setEditorState(s => ({ ...s, showGlitchDesigner: true }))}>
+            🖌️ Desenhar no Editor
+          </button>
+        </div>
+
+        {glitchState.glitchFocusedImagePreview && (
+          <div style={{ marginTop: 16, padding: 10, background: 'rgba(0,0,0,0.5)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+             <div style={{ color: '#888', fontSize: 11, marginBottom: 8 }}>✓ Imagem Focada: {glitchState.glitchFocusedImageFile?.name}</div>
+             <img src={glitchState.glitchFocusedImagePreview} alt="Glitch Focused" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 4 }} />
+          </div>
+        )}
       </div>
     </div>
   );

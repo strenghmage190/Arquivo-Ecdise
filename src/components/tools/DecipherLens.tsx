@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react';
 import React, { useState, useRef, MouseEvent, useEffect } from 'react';
 import './DecipherLens.css';
 

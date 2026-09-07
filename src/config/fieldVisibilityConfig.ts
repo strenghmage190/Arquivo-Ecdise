@@ -1,3 +1,4 @@
+import { Check, Gamepad2, AlertTriangle, X } from 'lucide-react';
 /**
  * 🎯 FIELD VISIBILITY CONFIG
  * 
@@ -58,7 +59,7 @@ export interface FieldVisibilityConfig {
 }
 
 /**
- * ✅ CONFIGURAÇÃO PADRÃO - Mostra tudo que é importante
+ * <Check className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO PADRÃO - Mostra tudo que é importante
  */
 export const defaultFieldVisibility: FieldVisibilityConfig = {
   fileProperties: {
@@ -109,7 +110,7 @@ export const defaultFieldVisibility: FieldVisibilityConfig = {
 };
 
 /**
- * 🎮 PRESETS - Configurações pré-feitas
+ * <Gamepad2 className="lucide-icon inline-icon" size={16} /> PRESETS - Configurações pré-feitas
  */
 export const fieldVisibilityPresets = {
   // Modo SEGURO - Mostra o mínimo
@@ -144,14 +145,14 @@ export const fieldVisibilityPresets = {
         'calibrationControls',
         'logs',
         'rewardCode',
-        'correctAnswerWhenSolved', // ⚠️ Mostra resposta
+        'correctAnswerWhenSolved', // <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Mostra resposta
       ],
     },
     megaClue: {
       visibleSections: [
         'hints',
         'progress',
-        'answer', // ⚠️ Mostra resposta
+        'answer', // <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Mostra resposta
         'requiredPuzzles',
       ],
     },

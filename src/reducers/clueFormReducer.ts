@@ -1,5 +1,6 @@
+import { RefreshCw } from 'lucide-react';
 /**
- * 🔄 clueFormReducer.ts
+ * <RefreshCw className="lucide-icon inline-icon" size={16} /> clueFormReducer.ts
  * Reducer para consolidar estados relacionados do formulário de pistas
  */
 

@@ -1,3 +1,4 @@
+import { Music, Palette } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
@@ -193,7 +194,7 @@ export default function AudioViewerModal({
       <div className="audio-viewer-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="audio-viewer-header">
-          <div className="audio-viewer-title">🎵 {title}</div>
+          <div className="audio-viewer-title"><Music className="lucide-icon inline-icon" size={16} /> {title}</div>
           <button 
             className="audio-viewer-close" 
             onClick={onClose}
@@ -283,7 +284,7 @@ export default function AudioViewerModal({
           </div>
 
           <div className="spectrum-control-group">
-            <label>🎨 Cores:</label>
+            <label><Palette className="lucide-icon inline-icon" size={16} /> Cores:</label>
             <div className="spectrum-color-row">
               <button 
                 className={`spectrum-color-btn ${colorScheme === 'hot' ? 'active hot' : ''}`}

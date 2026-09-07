@@ -1,3 +1,4 @@
+import { Gamepad2, FileText, Check, AlertTriangle, Camera, Volume2, X, Eye, Lock } from 'lucide-react';
 /**
  * 📊 ClueSummary.tsx
  * Componente de resumo e validação da pista antes de salvar
@@ -54,7 +55,7 @@ export default function ClueSummary({
           fontWeight: 'bold',
         }}
       >
-        {isValid ? '✅ PRONTO PARA SALVAR' : '⚠️ CORREÇÕES NECESSÁRIAS'}
+        {isValid ? '✅ PRONTO PARA SALVAR' : '⚠️️ CORREÇÕES NECESSÁRIAS'}
       </div>
 
       {/* Info Grid */}
@@ -94,7 +95,7 @@ export default function ClueSummary({
         <div className="clue-summary__item">
           <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>Segurança</div>
           <div style={{ fontSize: '12px', color: '#fff' }}>
-            {isHidden && '👁️‍🗨️ Oculta '}
+            {isHidden && '👁️ Oculta '}
             {isLocked && '🔒 Bloqueada '}
             {!isHidden && !isLocked && '🔓 Pública'}
           </div>
@@ -114,7 +115,7 @@ export default function ClueSummary({
           }}
         >
           <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#e74c3c', marginBottom: '8px' }}>
-            ❌ Erros:
+            <X className="lucide-icon inline-icon" size={16} /> Erros:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {validationErrors.map((error, idx) => (
@@ -138,7 +139,7 @@ export default function ClueSummary({
           }}
         >
           <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#f39c12', marginBottom: '8px' }}>
-            ⚠️ Avisos:
+            <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Avisos:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {warnings.map((warning, idx) => (

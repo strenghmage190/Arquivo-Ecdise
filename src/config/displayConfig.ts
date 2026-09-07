@@ -1,5 +1,6 @@
+import { Gamepad2, AlertTriangle, Settings, Check, X } from 'lucide-react';
 /**
- * 🎮 CONFIG DE EXIBIÇÃO - PUZZLE & METADADOS
+ * <Gamepad2 className="lucide-icon inline-icon" size={16} /> CONFIG DE EXIBIÇÃO - PUZZLE & METADADOS
  * 
  * Controla o que é visível ou não no jogo/investigação.
  * Você pode mudar isso aqui para decidir o que aparece.
@@ -15,7 +16,7 @@ export interface DisplayConfig {
     showHint: boolean;
     
     // Quando resolvido, mostra os PARÂMETROS CORRETOS? 
-    // ⚠️ ATENÇÃO: Isso entrega a solução!
+    // <AlertTriangle className="lucide-icon inline-icon" size={16} />️ ATENÇÃO: Isso entrega a solução!
     showCorrectAnswerWhenSolved: boolean;
     
     // Mostra o código de recompensa?
@@ -114,7 +115,7 @@ export interface DisplayConfig {
 }
 
 /**
- * ⚙️ CONFIGURAÇÃO PADRÃO
+ * <Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO PADRÃO
  * 
  * Mude os valores aqui para:
  * - true = MOSTRA esse elemento
@@ -124,7 +125,7 @@ export const defaultDisplayConfig: DisplayConfig = {
   puzzle: {
     showAccessInstructions: true,   // Mostra "COMO ACESSAR"
     showHint: true,                  // Mostra a dica
-    showCorrectAnswerWhenSolved: false, // ⚠️ NÃO mostra os valores corretos (seguro!)
+    showCorrectAnswerWhenSolved: false, // <AlertTriangle className="lucide-icon inline-icon" size={16} />️ NÃO mostra os valores corretos (seguro!)
     showRewardCode: true,            // Mostra o código de recompensa desbloqueado
     showLogs: true,                  // Mostra o terminal de logs
   },
@@ -156,7 +157,7 @@ export const defaultDisplayConfig: DisplayConfig = {
   cipher: {
     showShredded: true,              // Mostra documentos fragmentados
     showCipherText: true,            // Mostra texto cifrado
-    showRealText: false,             // ⚠️ NÃO mostra texto real por padrão
+    showRealText: false,             // <AlertTriangle className="lucide-icon inline-icon" size={16} />️ NÃO mostra texto real por padrão
     showShredConfig: false,          // NÃO mostra config de fragmentação
   },
   

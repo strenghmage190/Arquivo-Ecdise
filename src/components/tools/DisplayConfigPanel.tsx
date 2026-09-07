@@ -1,3 +1,4 @@
+import { Check, RefreshCw, Settings, Gamepad2, Lightbulb, AlertTriangle, FileText, Palette, Lock, Sparkles, Save } from 'lucide-react';
 import React, { useState } from 'react';
 import { DisplayConfig, useDisplayConfig, saveDisplayConfig } from '../../config/displayConfig';
 import './DisplayConfigPanel.css';
@@ -89,14 +90,14 @@ export default function DisplayConfigPanel({ onClose }: Props) {
   return (
     <div className="display-config-panel">
       <div className="panel-header">
-        <h2>⚙️ CONFIGURAÇÃO DE EXIBIÇÃO</h2>
+        <h2><Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DE EXIBIÇÃO</h2>
         <button className="close-btn" onClick={onClose}>✖</button>
       </div>
 
       <div className="panel-content">
         {/* GLITCH PUZZLE */}
         <section className="config-section">
-          <h3>🎮 GLITCH PUZZLE</h3>
+          <h3><Gamepad2 className="lucide-icon inline-icon" size={16} /> GLITCH PUZZLE</h3>
           <div className="config-item">
             <label>
               <input
@@ -116,7 +117,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
                 checked={config.puzzle.showHint}
                 onChange={() => handleToggle('puzzle', 'showHint')}
               />
-              Mostra DICA (💡)
+              Mostra DICA (<Lightbulb className="lucide-icon inline-icon" size={16} />)
             </label>
             <small>Dica para resolver o puzzle</small>
           </div>
@@ -128,9 +129,9 @@ export default function DisplayConfigPanel({ onClose }: Props) {
                 checked={config.puzzle.showCorrectAnswerWhenSolved}
                 onChange={() => handleToggle('puzzle', 'showCorrectAnswerWhenSolved')}
               />
-              Mostra PARÂMETROS CORRETOS ⚠️
+              Mostra PARÂMETROS CORRETOS <AlertTriangle className="lucide-icon inline-icon" size={16} />️
             </label>
-            <small style={{color:'#d32f2f'}}>⚠️ ATENÇÃO: Entrega a solução! Deixar DESLIGADO é mais seguro.</small>
+            <small style={{color:'#d32f2f'}}><AlertTriangle className="lucide-icon inline-icon" size={16} />️ ATENÇÃO: Entrega a solução! Deixar DESLIGADO é mais seguro.</small>
           </div>
 
           <div className="config-item">
@@ -160,7 +161,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
 
         {/* FILE PROPERTIES */}
         <section className="config-section">
-          <h3>📄 METADADOS DE ARQUIVO</h3>
+          <h3><FileText className="lucide-icon inline-icon" size={16} /> METADADOS DE ARQUIVO</h3>
           <div className="config-item">
             <label>
               <input
@@ -291,7 +292,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
 
         {/* VISUAL & MEDIA */}
         <section className="config-section">
-          <h3>🎨 VISUAL & MÍDIA</h3>
+          <h3><Palette className="lucide-icon inline-icon" size={16} /> VISUAL & MÍDIA</h3>
           <div className="config-item">
             <label>
               <input
@@ -379,7 +380,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
 
         {/* CIPHER & SHREDDED */}
         <section className="config-section">
-          <h3>🔐 CIFRAS & FRAGMENTOS</h3>
+          <h3><Lock className="lucide-icon inline-icon" size={16} /> CIFRAS & FRAGMENTOS</h3>
           <div className="config-item">
             <label>
               <input
@@ -411,9 +412,9 @@ export default function DisplayConfigPanel({ onClose }: Props) {
                 checked={config.cipher.showRealText}
                 onChange={() => handleToggle('cipher', 'showRealText')}
               />
-              Texto Real (Decifrado) ⚠️
+              Texto Real (Decifrado) <AlertTriangle className="lucide-icon inline-icon" size={16} />️
             </label>
-            <small style={{color:'#d32f2f'}}>⚠️ CUIDADO: Mostra o texto verdadeiro!</small>
+            <small style={{color:'#d32f2f'}}><AlertTriangle className="lucide-icon inline-icon" size={16} />️ CUIDADO: Mostra o texto verdadeiro!</small>
           </div>
 
           <div className="config-item">
@@ -431,7 +432,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
 
         {/* MEGA CLUE */}
         <section className="config-section">
-          <h3>🔮 MEGA-PISTA</h3>
+          <h3><Sparkles className="lucide-icon inline-icon" size={16} /> MEGA-PISTA</h3>
           <div className="config-item">
             <label>
               <input
@@ -450,9 +451,9 @@ export default function DisplayConfigPanel({ onClose }: Props) {
                 checked={config.megaClue.showAnswer}
                 onChange={() => handleToggle('megaClue', 'showAnswer')}
               />
-              Mostra RESPOSTA ⚠️
+              Mostra RESPOSTA <AlertTriangle className="lucide-icon inline-icon" size={16} />️
             </label>
-            <small style={{color:'#d32f2f'}}>⚠️ ATENÇÃO: Entrega o segredo final!</small>
+            <small style={{color:'#d32f2f'}}><AlertTriangle className="lucide-icon inline-icon" size={16} />️ ATENÇÃO: Entrega o segredo final!</small>
           </div>
 
           <div className="config-item">
@@ -473,10 +474,10 @@ export default function DisplayConfigPanel({ onClose }: Props) {
         {savedMessage && <div className="saved-message">{savedMessage}</div>}
         <div className="button-group">
           <button className="btn btn-reset" onClick={handleReset}>
-            🔄 RESETAR PADRÃO
+            <RefreshCw className="lucide-icon inline-icon" size={16} /> RESETAR PADRÃO
           </button>
           <button className="btn btn-save" onClick={handleSave}>
-            💾 SALVAR CONFIGURAÇÃO
+            <Save className="lucide-icon inline-icon" size={16} /> SALVAR CONFIGURAÇÃO
           </button>
         </div>
       </div>

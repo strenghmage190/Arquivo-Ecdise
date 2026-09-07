@@ -1,3 +1,4 @@
+import { Check, X, AlertTriangle } from 'lucide-react';
 /**
  * Card Test Helper
  * 
@@ -144,7 +145,7 @@ export function addDebugPanel(): void {
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
       if (output) {
-        output.innerHTML = '⚠️ Player view toggle needs to be done via UI controls';
+        output.innerHTML = '⚠️️ Player view toggle needs to be done via UI controls';
       }
     });
   }

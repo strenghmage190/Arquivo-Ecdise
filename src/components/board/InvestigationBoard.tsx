@@ -1,3 +1,4 @@
+import { AlertTriangle, X, Search, Check, Settings, Eye, Lock, Zap, Glasses, Crown } from 'lucide-react';
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
@@ -13,7 +14,7 @@ import { playAudio } from '../../utils/audio';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import { supabase } from '../../supabaseClient';
 import Toast from '../../components/ui/Toast';
-import ConspiracyBoard from './ConspiracyBoard';
+
 import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import './EvidenceCard.css';
@@ -199,7 +200,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [editingSketchId, setEditingSketchId] = useState<string | null>(null);
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null);
   const EMBED_EXCALIDRAW_JSON_LIMIT = 8 * 1024; // 8KB
-  const [showSharedBoard, setShowSharedBoard] = useState(false);
+
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [gmOverwatchOpen, setGmOverwatchOpen] = useState(false);
   const [showHiddenClues, setShowHiddenClues] = useState(false);
@@ -390,7 +391,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
       showToast({
         id: 'decoder-unlock',
-        message: '⚠ DECODIFICADOR DE ANOMALIAS v1.7 DESBLOQUEADO',
+        message: '⚠️ DECODIFICADOR DE ANOMALIAS v1.7 DESBLOQUEADO',
       });
 
       try {
@@ -807,7 +808,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     }
   };
 
-  // ✅ MIGRADO: useGlobalMouseEvents - sem recreação de listeners
+  // <Check className="lucide-icon inline-icon" size={16} /> MIGRADO: useGlobalMouseEvents - sem recreação de listeners
   useGlobalMouseEvents({
     onMouseUp: handleGlobalMouseUp,
     onTouchEnd: handleGlobalMouseUp as any
@@ -1825,9 +1826,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         case 'terminal':
           setTerminalOpen((prev) => !prev);
           break;
-        case 'conspiracy':
-          setShowSharedBoard(true);
-          break;
+
         case 'redo':
           redo();
           break;
@@ -1953,7 +1952,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
               data-gm-only="true"
             >
-              ⚙️ HUB DE CRIAÇÃO
+              <Settings className="lucide-icon inline-icon" size={16} /> HUB DE CRIAÇÃO
             </button>
           )}
 
@@ -1978,7 +1977,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
                  data-gm-only="true"
               >
-                 {playerView ? '👁️' : '🕶️'}
+                 {playerView ? <Eye className="lucide-icon inline-icon" size={16} /> : <Glasses className="lucide-icon inline-icon" size={16} />}
               </button>
               <button 
                  className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
@@ -1986,7 +1985,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
                  data-gm-only="true"
               >
-                 👁️‍🗨️
+                 <Eye className="lucide-icon inline-icon" size={16} />
               </button>
               <button 
                  className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
@@ -1994,7 +1993,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip="GM Overwatch - Painel de Controle"
                  data-gm-only="true"
               >
-                 👑
+                 <Crown className="lucide-icon inline-icon" size={16} />
               </button>
             </>
           )}
@@ -2039,12 +2038,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             </>
           )}
 
-          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto">🔐</button>
+          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto"><Lock className="lucide-icon inline-icon" size={16} /></button>
         </div>
 
         {/* Grupo 3: Organização & Edição */}
         <div className="toolbar-group">
-          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar">🔍</button>
+          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search className="lucide-icon inline-icon" size={16} /></button>
           <div style={{ position: 'relative' }}>
             <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar">🗂️</button>
             {showOrganizeMenu && (
@@ -2076,11 +2075,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
         {/* Grupo 4: Ferramentas Avançadas */}
         <div className="toolbar-group">
-          <button className="hud-btn icon-only" onClick={() => setShowSharedBoard(true)} data-tooltip="Conspiração">🕸️</button>
+
           {/* Post-it button removed */}
           
           <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas">⚙️</button>
+            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas"><Settings className="lucide-icon inline-icon" size={16} /></button>
             {showToolsMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Ferramentas</div>
@@ -2098,7 +2097,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             onClick={togglePerformanceMode}
             data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
           >
-            ⚡
+            <Zap className="lucide-icon inline-icon" size={16} />
           </button>
         </div>
 
@@ -2518,7 +2517,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               pointerEvents: 'none',
               zIndex: 1000
             }}>
-              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}>🔍 Pinch to Zoom</div>
+              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}><Search className="lucide-icon inline-icon" size={16} /> Pinch to Zoom</div>
             </div>
           )}
         </div>
@@ -2546,14 +2545,14 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <h3>Ferramentas</h3>
             {isGameMaster && (
               <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
-                ⚙️ HUB DE CRIAÇÃO
+                <Settings className="lucide-icon inline-icon" size={16} /> HUB DE CRIAÇÃO
               </button>
             )}
             <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
               🔗 {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
             </button>
             <button onClick={() => setShowFinder(true)} className="fab-item">
-              🔍 BUSCAR
+              <Search className="lucide-icon inline-icon" size={16} /> BUSCAR
             </button>
             <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
               🔦 LUZ UV
@@ -2566,8 +2565,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               <div style={{ padding: '8px 0', color: '#888' }}>Use dois dedos para aproximar/afastar (pinch)</div>
             ) : (
               <>
-                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item">🔍 ZOOM IN</button>
-                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item">🔍 ZOOM OUT</button>
+                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item"><Search className="lucide-icon inline-icon" size={16} /> ZOOM IN</button>
+                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item"><Search className="lucide-icon inline-icon" size={16} /> ZOOM OUT</button>
                 <button onClick={() => resetZoom()} className="fab-item">🎯 RESET ZOOM</button>
               </>
             )}
@@ -2660,9 +2659,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           }}
         />
       )}
-      {showSharedBoard && (
-        <ConspiracyBoard investigationId={investigationId} onClose={() => setShowSharedBoard(false)} />
-      )}
+
       <SystemTerminal
         isOpen={terminalOpen}
         onClose={() => setTerminalOpen(false)}

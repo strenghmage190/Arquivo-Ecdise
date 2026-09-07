@@ -1,3 +1,4 @@
+import { Volume2, FileText } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Toast from '../ui/Toast';

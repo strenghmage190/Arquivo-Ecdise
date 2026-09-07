@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -8,7 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 /**
- * ✅ SINGLETON PATTERN
+ * <Check className="lucide-icon inline-icon" size={16} /> SINGLETON PATTERN
  * 
  * Ensures only ONE instance of Supabase client exists across the app.
  * This prevents state desynchronization and multiple connections.

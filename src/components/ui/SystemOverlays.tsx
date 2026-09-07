@@ -1,10 +1,11 @@
+import { Check, Folder, Skull, Radio, User } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { eventManager } from '../../utils/EventManager';
 import { audioManager } from '../../utils/AudioManager';
 import { isExtendedPerformanceMode } from '../../utils/performance';
 
-// ✅ Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
+// <Check className="lucide-icon inline-icon" size={16} /> Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
 let systemOverlaysInstanceCount = 0;
 
 export default function SystemOverlays() {
@@ -15,7 +16,7 @@ export default function SystemOverlays() {
   const [hideHeader, setHideHeader] = useState(false);
   const instanceIdRef = useRef<number>(-1);
 
-  // ✅ Registra instância única ao montar
+  // <Check className="lucide-icon inline-icon" size={16} /> Registra instância única ao montar
   useEffect(() => {
     systemOverlaysInstanceCount++;
     instanceIdRef.current = systemOverlaysInstanceCount;
@@ -26,7 +27,7 @@ export default function SystemOverlays() {
     };
   }, []);
 
-  // ✅ Listen for modal open/close events via EventManager (apenas a primeira instância)
+  // <Check className="lucide-icon inline-icon" size={16} /> Listen for modal open/close events via EventManager (apenas a primeira instância)
   useEffect(() => {
     const isFirstInstance = instanceIdRef.current === 1;
     if (!isFirstInstance) return; // Evita duplicatas
@@ -73,7 +74,7 @@ export default function SystemOverlays() {
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
-  // ✅ Decode-effect delegation (com Set para cleanup correto)
+  // <Check className="lucide-icon inline-icon" size={16} /> Decode-effect delegation (com Set para cleanup correto)
   useEffect(() => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&';
     const activeIntervals = new Set<number>();
@@ -111,7 +112,7 @@ export default function SystemOverlays() {
     };
   }, []);
 
-  // ✅ AudioManager cleanup (audio permanece disabled por padrão)
+  // <Check className="lucide-icon inline-icon" size={16} /> AudioManager cleanup (audio permanece disabled por padrão)
   useEffect(() => {
     // Note: audio remains disabled by default; no UI control for sensors
     return () => {
@@ -141,16 +142,16 @@ export default function SystemOverlays() {
           {location.pathname === '/' ? (
             <>
               <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
-                <span aria-hidden>📁</span>
+                <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
               </button>
               <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
-                <span aria-hidden>💀</span>
+                <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
               </button>
               <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
-                <span aria-hidden>📡</span>
+                <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
               </button>
               <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
-                <span aria-hidden>👤</span>
+                <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
               </button>
             </>
           ) : (

@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
@@ -84,7 +85,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
                   navigate(`/case/${String(c.id).split(':')[0]}`);
                 }}>
                   {status === 'open' && <img className="file-thumb" src={`https://picsum.photos/seed/${String(c.id)}/320/160`} alt="thumb" loading="lazy" />}
-                  {status === 'locked' && <div className="lock-icon">🔒</div>}
+                  {status === 'locked' && <div className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></div>}
                   {status === 'corrupted' && <div className="glitch-overlay" />}
                   <div className="file-info">
                     <h3>{status === 'locked' ? 'ARQUIVO CRIPTOGRAFADO' : (status === 'corrupted' ? 'DADOS_NÃO_EUCLIDIANOS' : String(c.title || 'SEM_NOME'))}</h3>

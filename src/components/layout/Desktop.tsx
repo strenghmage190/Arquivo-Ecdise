@@ -3,7 +3,7 @@ import './Desktop.css';
 import SystemTerminal from '../tools/SystemTerminal';
 import FileExplorer from '../tools/FileExplorer';
 import NetUplink from '../tools/NetUplink';
-import AgentProfileConfig from '../modals/AgentProfileConfig';
+
 
 export default function Desktop({ cases }: { cases: any[] }) {
   const [openWindow, setOpenWindow] = React.useState<string | null>(null);
@@ -43,7 +43,7 @@ export default function Desktop({ cases }: { cases: any[] }) {
           onOpenCard={(c: any) => { if (c && c.id) navigateToCase(c.id); }}
         />
       )}
-      {openWindow === 'profile' && <AgentProfileConfig onClose={() => setOpenWindow(null)} />}
+
     </div>
   );
 }

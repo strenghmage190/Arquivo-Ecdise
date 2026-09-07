@@ -1,3 +1,4 @@
+import { Check, Lock } from 'lucide-react';
 import React, { useMemo } from 'react'
 import MysteryImage from './MysteryImage'
 import './EvidenceCardContent.css'
@@ -45,7 +46,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   performanceMode = false,
   blurred = false
 }) => {
-  // ✅ LÓGICA CORRIGIDA: Ordem de precedência clara
+  // <Check className="lucide-icon inline-icon" size={16} /> LÓGICA CORRIGIDA: Ordem de precedência clara
   // 1. Se é Game Master E não está em modo player view, mostra tudo
   const isGMViewFull = isGameMaster && !playerView;
   
@@ -71,7 +72,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
         <>
           <div className="lock-overlay encrypted-full">
             <div className="encryption-text-wrapper">
-              <span className="lock-icon">🔐</span>
+              <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
               <div className="access-denied">ACESSO NEGADO</div>
               <div className="encryption-code">MODO ECONÔMICO</div>
             </div>
@@ -84,7 +85,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
         <div className="encryption-grid" />
         <div className="lock-overlay encrypted-full">
           <div className="encryption-text-wrapper">
-            <span className="lock-icon">🔐</span>
+            <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
             <div className="access-denied">ACESSO NEGADO</div>
             <div className="encryption-code">{encryptionCode}</div>
           </div>
@@ -159,7 +160,7 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   }
 
   // =======================================================================
-  //  ✅ LÓGICA DE RENDERIZAÇÃO ATUALIZADA PARA MODO PERFORMANCE
+  //  <Check className="lucide-icon inline-icon" size={16} /> LÓGICA DE RENDERIZAÇÃO ATUALIZADA PARA MODO PERFORMANCE
   // =======================================================================
   return (
     <>

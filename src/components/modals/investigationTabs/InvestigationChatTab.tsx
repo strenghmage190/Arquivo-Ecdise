@@ -1,3 +1,4 @@
+import { Edit3, User, Users } from 'lucide-react';
 import React from 'react';
 
 interface InvestigationChatTabProps {
@@ -36,7 +37,7 @@ export default function InvestigationChatTab({
       {/* Messages Preview */}
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 8 }}>
-          📝 Mensagens Existentes ({chatMessages?.length || 0})
+          <Edit3 className="lucide-icon inline-icon" size={16} /> Mensagens Existentes ({chatMessages?.length || 0})
         </label>
         <div
           style={{
@@ -124,8 +125,8 @@ export default function InvestigationChatTab({
               borderRadius: 4,
             }}
           >
-            <option value="them">👥 Contato</option>
-            <option value="me">👤 Você</option>
+            <option value="them"><Users className="lucide-icon inline-icon" size={16} /> Contato</option>
+            <option value="me"><User className="lucide-icon inline-icon" size={16} /> Você</option>
           </select>
         </div>
 

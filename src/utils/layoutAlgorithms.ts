@@ -1,3 +1,4 @@
+import { X, Check, FileText, Search, Droplet, Skull, Eye, Zap, Camera, Music, Clapperboard } from 'lucide-react';
 const CARD_WIDTH = 240;
 const CARD_HEIGHT = 180; // Aumentado para evitar sobreposição
 const GAP_X = 80; // Mais espaço entre colunas
@@ -68,10 +69,10 @@ export function organizeByElement(cards: any[]) {
     const title = (card.title || '').toLowerCase();
     
     // Elementos místicos
-    if (tags.includes('sangue') || title.includes('sangue')) return '1_Sangue 🩸';
-    if (tags.includes('morte') || title.includes('morte') || title.includes('cadáver')) return '2_Morte 💀';
+    if (tags.includes('sangue') || title.includes('sangue')) return '1_Sangue ';
+    if (tags.includes('morte') || title.includes('morte') || title.includes('cadáver')) return '2_Morte ';
     if (tags.includes('conhecimento') || title.includes('livro') || title.includes('texto')) return '3_Conhecimento 👁️';
-    if (tags.includes('energia') || title.includes('energia')) return '4_Energia ⚡';
+    if (tags.includes('energia') || title.includes('energia')) return '4_Energia ';
     if (tags.includes('medo') || title.includes('medo')) return '5_Medo ∞';
     
     // Tipo de evidência

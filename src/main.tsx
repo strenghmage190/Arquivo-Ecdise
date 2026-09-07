@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import './polyfills/process-shim';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -37,7 +38,7 @@ requestAnimationFrame(() => {
     if (!polyfillValidation.success) {
       logValidationResults(polyfillValidation);
       if (typeof window !== 'undefined') {
-        console.error('⚠️ Some polyfills failed validation - app may not work correctly');
+        console.error('⚠️️ Some polyfills failed validation - app may not work correctly');
       }
     }
   } catch (e) {

@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 import React from 'react';
 
 interface InvestigationStatusTabProps {
@@ -46,7 +47,7 @@ export default function InvestigationStatusTab({
                 }
               }}
             >
-              ✅ Confirmado
+              <Check className="lucide-icon inline-icon" size={16} /> Confirmado
             </button>
             <button
               type="button"
@@ -102,7 +103,7 @@ export default function InvestigationStatusTab({
                 }
               }}
             >
-              ❌ Falso
+              <X className="lucide-icon inline-icon" size={16} /> Falso
             </button>
             <button
               type="button"
@@ -157,7 +158,7 @@ export default function InvestigationStatusTab({
         <strong style={{ display: 'block', marginBottom: 12 }}>📋 Legenda de Status</strong>
         <div style={{ fontSize: 12, color: '#aaa' }}>
           <div style={{ marginBottom: 10 }}>
-            <span style={{ color: '#27ae60', fontWeight: 'bold' }}>✅ Confirmado</span> - Informação
+            <span style={{ color: '#27ae60', fontWeight: 'bold' }}><Check className="lucide-icon inline-icon" size={16} /> Confirmado</span> - Informação
             verificada e corrreta
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -165,7 +166,7 @@ export default function InvestigationStatusTab({
             investigada
           </div>
           <div>
-            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>❌ Falso</span> - Informação
+            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}><X className="lucide-icon inline-icon" size={16} /> Falso</span> - Informação
             comprovadamente falsa
           </div>
         </div>

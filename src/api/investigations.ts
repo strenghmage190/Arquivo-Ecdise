@@ -4,7 +4,7 @@ import { isValidId } from '../utils/supabaseHelpers';
 
 // --- Allowlists para Mass Assignment ---
 const INVESTIGATION_UPDATABLE_FIELDS = [
-  'title', 'description', 'cover_url', 'whiteboard_data', 'conspiracy_board_data',
+  'title', 'description', 'cover_url', 'whiteboard_data',
 ] as const;
 type InvestigationUpdatableKey = typeof INVESTIGATION_UPDATABLE_FIELDS[number];
 
@@ -64,7 +64,7 @@ export interface InvestigationCard {
 export async function fetchInvestigationById(id: string) {
   const { data, error } = await supabase
     .from('investigations')
-    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data')
+    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data')
     .eq('id', id)
     .maybeSingle();
 
@@ -86,7 +86,7 @@ export async function updateInvestigation(id: string, updates: Record<string, un
     .from('investigations')
     .update(safe)
     .eq('id', id)
-    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data, conspiracy_board_data')
+    .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data')
     .single();
   if (error) {
     console.error('updateInvestigation error', error);

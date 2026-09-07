@@ -1,3 +1,4 @@
+import { Save, Edit3 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import RealTimeSpectrogram from './RealTimeSpectrogram';
 
@@ -218,13 +219,13 @@ export default function SpectrogramCreator({ onGenerated }: Props) {
                   onClick={download}
                   className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded transition-all"
                 >
-                  💾 Baixar WAV
+                  <Save className="lucide-icon inline-icon" size={16} /> Baixar WAV
                 </button>
               </div>
             </div>
           ) : (
             <div className="h-40 flex flex-col items-center justify-center text-gray-500 text-sm">
-              <div className="text-4xl mb-2">📝</div>
+              <div className="text-4xl mb-2"><Edit3 className="lucide-icon inline-icon" size={16} /></div>
               <p>Digite um texto e clique em Gerar</p>
               <p className="text-xs text-gray-600 mt-1">O texto aparecerá como imagem no espectrograma</p>
             </div>

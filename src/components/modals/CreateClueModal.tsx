@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Info } from 'lucide-react';
+import { Lock, Check, Camera, Clapperboard, Palette, Lightbulb, Pen, Search, Settings, Music, AlertTriangle, FileText, Gamepad2, Users, Eye, Sparkles, Thermometer, Square, Info , Save, Volume2 } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 import 'react-tooltip/dist/react-tooltip.css';
 import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
@@ -75,7 +75,7 @@ interface EditingChatMessage {
 export default function CreateClueModal({ isOpen, onClose, investigationId, initialX, initialY, onSaved, existingCard }: Props) {
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
 
-  // ✅ MOUNTED FLAG: prevent setState calls after unmount
+  // <Check className="lucide-icon inline-icon" size={16} /> MOUNTED FLAG: prevent setState calls after unmount
   const mountedRef = React.useRef(true);
 
   const [title, setTitle] = useState('');
@@ -307,7 +307,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
    const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-   // ✅ MOVE HOOKS BEFORE CONDITIONAL RETURN - MUST BE BEFORE if (!isOpen)
+   // <Check className="lucide-icon inline-icon" size={16} /> MOVE HOOKS BEFORE CONDITIONAL RETURN - MUST BE BEFORE if (!isOpen)
    // Fetch available glitch puzzles when modal opens or evidenceType changes
    useEffect(() => {
       if (isOpen && evidenceType === 'mega_clue') {
@@ -398,7 +398,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       }
    }, [isOpen, existingCard]);
 
-   // ✅ CLEANUP AND URL MANAGEMENT
+   // <Check className="lucide-icon inline-icon" size={16} /> CLEANUP AND URL MANAGEMENT
    const urlsRef = React.useRef<Set<string>>(new Set());
    
    /**
@@ -1485,7 +1485,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
       // Verificar se há erros críticos
       if (errors.length > 0) {
-         const errorMsg = `⚠️ Erros durante upload:\n${errors.join('\n')}\n\nDeseja continuar mesmo assim?`;
+         const errorMsg = `⚠️️ Erros durante upload:\n${errors.join('\n')}\n\nDeseja continuar mesmo assim?`;
          const shouldContinue = window.confirm(errorMsg);
          if (!shouldContinue) {
             setLoading(false);
@@ -1535,7 +1535,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
            return evidenceType === 'document' ? null : evidenceType;
          })();
 
-         // ✅ FIX: Glitch puzzles need the real image URL, not a placeholder
+         // <Check className="lucide-icon inline-icon" size={16} /> FIX: Glitch puzzles need the real image URL, not a placeholder
          // The glitch effect is applied in the frontend when viewing, not when saving
          const boardImageUrl = (wantsSecurityLayer || hidePreviewOnBoard) && evidenceType !== 'glitch_puzzle' 
            ? LOCKED_PLACEHOLDER_IMG 
@@ -1800,7 +1800,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               }
             });
          } else if (isShredded) {
-            console.warn('⚠️ [Shredder] Puzzle marcado mas evidenceType não é "document":', evidenceType);
+            console.warn('⚠️️ [Shredder] Puzzle marcado mas evidenceType não é "document":', evidenceType);
          }
 
          if (evidenceType === 'document') {
@@ -2043,7 +2043,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                <span>✏️</span> Modo Edição
+                <span><Pen className="lucide-icon inline-icon" size={16} /></span> Modo Edição
               </div>
             )}
             <div className="relative">
@@ -2138,7 +2138,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 gap: '4px'
               }}
             >
-              💾
+              <Save className="lucide-icon inline-icon" size={16} />
             </button>
           </div>
         }
@@ -2146,14 +2146,14 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
             <div className="dossier-body" style={{ padding: 0, pointerEvents: overlayActive ? 'none' : 'auto' }}>
 
           <div className="tabs-header">
-            <button className={`tab-btn ${activeTab==='geral'?'active':''}`} onClick={()=>setActiveTab('geral')}>📄 GERAL</button>
-            <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}>👁️ VISUAL</button>
-            <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}>🔊 ÁUDIO</button>
+            <button className={`tab-btn ${activeTab==='geral'?'active':''}`} onClick={()=>setActiveTab('geral')}><FileText className="lucide-icon inline-icon" size={16} /> GERAL</button>
+            <button className={`tab-btn ${activeTab==='visual'?'active':''}`} onClick={()=>setActiveTab('visual')}><Eye className="lucide-icon inline-icon" size={16} /> VISUAL</button>
+            <button className={`tab-btn ${activeTab==='audio'?'active':''}`} onClick={()=>setActiveTab('audio')}><Volume2 className="lucide-icon inline-icon" size={16} /> ÁUDIO</button>
             <button className={`tab-btn ${activeTab==='cifra'?'active':''}`} onClick={()=>setActiveTab('cifra')}>🧩 CIFRAS</button>
-            <button className={`tab-btn ${activeTab==='campos'?'active':''}`} onClick={()=>setActiveTab('campos')}>👁️ CAMPOS</button>
-            <button className={`tab-btn ${activeTab==='display'?'active':''}`} onClick={()=>setActiveTab('display')}>⚙️ CONFIG</button>
-                  {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}>🎮 GLITCH</button>}
-            {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}>🔐 MEGA</button>}
+            <button className={`tab-btn ${activeTab==='campos'?'active':''}`} onClick={()=>setActiveTab('campos')}><Eye className="lucide-icon inline-icon" size={16} /> CAMPOS</button>
+            <button className={`tab-btn ${activeTab==='display'?'active':''}`} onClick={()=>setActiveTab('display')}><Settings className="lucide-icon inline-icon" size={16} /> CONFIG</button>
+                  {(securityLayerEnabled || evidenceType === 'glitch_puzzle') && <button className={`tab-btn ${activeTab==='glitch'?'active':''}`} onClick={()=>setActiveTab('glitch' as any)}><Gamepad2 className="lucide-icon inline-icon" size={16} /> GLITCH</button>}
+            {evidenceType === 'mega_clue' && <button className={`tab-btn ${activeTab==='mega'?'active':''}`} onClick={()=>setActiveTab('mega' as any)}><Lock className="lucide-icon inline-icon" size={16} /> MEGA</button>}
           </div>
 
           <div className="tab-content">
@@ -2180,7 +2180,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                          }}
                          style={{flex:1, background: evidenceType === 'document' ? 'rgba(198,164,95,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'document' ? '#c6a45f' : '#888'}}
                       >
-                         📄 Documento Padrão
+                         <FileText className="lucide-icon inline-icon" size={16} /> Documento Padrão
                       </button>
                       <button 
                          className={`upload-btn ${evidenceType === 'glitch_puzzle' ? 'active' : ''}`}
@@ -2194,7 +2194,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                          onClick={() => setEvidenceType('mega_clue')}
                          style={{flex:1, background: evidenceType === 'mega_clue' ? 'rgba(255,100,0,0.3)' : 'rgba(100,100,100,0.1)', color: evidenceType === 'mega_clue' ? '#ff6400' : '#888'}}
                       >
-                         🔐 Mega-Pista Final
+                         <Lock className="lucide-icon inline-icon" size={16} /> Mega-Pista Final
                       </button>
                    </div>
                 </div>
@@ -2267,7 +2267,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 </div>
 
                 <div className="field-block">
-                   <span className="field-title">🔒 CAMADA DE SEGURANÇA UNIVERSAL</span>
+                   <span className="field-title"><Lock className="lucide-icon inline-icon" size={16} /> CAMADA DE SEGURANÇA UNIVERSAL</span>
                    <p style={{fontSize:11, color:'#888', marginBottom:10}}>
                       Transforme qualquer mídia (imagem, vídeo ou áudio) em um artefato com camada de sinal/glitch e senha. Use os sliders na aba Glitch para calibrar quando ativado.
                    </p>
@@ -2324,13 +2324,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                 <div className="auto-style-54 auto-style-55">
                    <div className="field-block auto-style-56">
-                      <span className="field-title">🔐 CRIPTOGRAFIA / BLOQUEIO</span>
+                      <span className="field-title"><Lock className="lucide-icon inline-icon" size={16} /> CRIPTOGRAFIA / BLOQUEIO</span>
                       
                       {/* SENHA DA PISTA */}
                       <div style={{marginBottom: 15, paddingBottom: 15, borderBottom: '1px solid #333'}}>
                          <div className="auto-style-57 auto-style-58 auto-style-59 auto-style-60">
                             <input type="checkbox" checked={isLocked} onChange={e=>setIsLocked(e.target.checked)} />
-                            <label className="font-bold">🔒 ATIVAR SENHA DE ACESSO (Pista)</label>
+                            <label className="font-bold"><Lock className="lucide-icon inline-icon" size={16} /> ATIVAR SENHA DE ACESSO (Pista)</label>
                          </div>
                          {isLocked && (
                             evidenceType === 'mega_clue' ? (
@@ -2415,7 +2415,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                <button className="upload-btn" onClick={() => { setEditingChatList([...editingChatList, { sender:'me', type:'text', text:'' }]); }} style={{marginTop:10, width:'100%', background:'rgba(100,150,255,0.2)', border:'1px solid rgba(100,150,255,0.5)'}}>➕ Adicionar Mensagem</button>
 
                                <div className="auto-style-81 auto-style-82 auto-style-83">
-                                  <button className="btn-save" onClick={() => { setChatData(editingChatList); setShowChatEditor(false); }}>✅ Salvar</button>
+                                  <button className="btn-save" onClick={() => { setChatData(editingChatList); setShowChatEditor(false); }}><Check className="lucide-icon inline-icon" size={16} /> Salvar</button>
                                   <button className="btn-cancel" onClick={() => { setChatJson(''); setShowChatEditor(false); }}>Cancelar</button>
                                </div>
 
@@ -2652,7 +2652,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                      </p>
                      <div className="auto-style-139 auto-style-140 auto-style-141 auto-style-142 auto-style-143">
                         <button className="upload-btn" onClick={() => setShowGlitchDesigner(true)}>
-                           🎨 DESIGNER DA CAMADA FOCO
+                           <Palette className="lucide-icon inline-icon" size={16} /> DESIGNER DA CAMADA FOCO
                         </button>
                         {glitchFocusedImagePreview && (
                            <span style={{fontSize:11, color:'#7bd7ff'}}>Camada salva — será exibida após alinhar.</span>
@@ -2725,7 +2725,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                       <div>
                         <div style={{padding:10, background:'rgba(100,150,255,0.08)', border:'1px solid rgba(100,150,255,0.2)', borderRadius:6, color:'#9fb9ff', fontSize:11}}>
-                           💡 <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
+                           <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong style={{color:'#64b5ff'}}>Memorize ou anote estes valores!</strong> Você precisará deles para verificar a solução.
                         </div>
 
                         <div style={{marginTop:12, padding:'10px', background:'rgba(100,150,255,0.05)', border:'1px solid rgba(100,150,255,0.15)', borderRadius:6}}>
@@ -2814,7 +2814,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                         } else {
                                           setEditorMode('uv');
                                         }
-                                      }}>✏️ EDITAR {forensicHiddenPreview ? 'FORENSE (RGB)' : 'UV'}</button>
+                                      }}><Pen className="lucide-icon inline-icon" size={16} /> EDITAR {forensicHiddenPreview ? 'FORENSE (RGB)' : 'UV'}</button>
                                       <button className="upload-btn" onClick={() => { try { revokeUrl(uvPreviewUrl || forensicHiddenPreview); } catch(e){}; setUvPreviewUrl(null); setForensicHiddenPreview(null); setUvFile(null); setReplaceUv(true); }}>🗑️ REMOVER {forensicHiddenPreview ? 'FORENSE' : 'UV'}</button>
                                    </div>
                                 </div>
@@ -2829,7 +2829,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         {/* FILTRO DE REVELAÇÃO */}
                         <div style={{marginBottom:15, padding:12, background:'rgba(52,152,219,0.05)', borderRadius:6, border:'1px solid rgba(52,152,219,0.2)'}}>
                            <div className="auto-style-167 auto-style-168 auto-style-169 auto-style-170">
-                              <span style={{fontSize:11, fontWeight:'bold', color:'#3498db'}}>🔍 FILTRO DE REVELAÇÃO</span>
+                              <span style={{fontSize:11, fontWeight:'bold', color:'#3498db'}}><Search className="lucide-icon inline-icon" size={16} /> FILTRO DE REVELAÇÃO</span>
                            </div>
                            <p style={{fontSize:9, color:'#777', marginBottom:8}}>Desenhe segredos que aparecem ao ajustar brilho/contraste</p>
                            <button onClick={()=>setEditorMode('filter')} className="upload-btn auto-style-171 auto-style-172">
@@ -2855,7 +2855,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     alignItems: 'center'
                                  }}
                               >
-                                 <span>⚙️ Configurações Avançadas</span>
+                                 <span><Settings className="lucide-icon inline-icon" size={16} /> Configurações Avançadas</span>
                                  <span className="auto-style-174">{showAdvancedFilterSettings ? '▼' : '▶'}</span>
                               </button>
                               
@@ -2903,7 +2903,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                        </div>
                                     </div>
                                     <div style={{fontSize:8, color:'#555', fontStyle:'italic'}}>
-                                       💡 Valores mais altos = mais difícil revelar
+                                       <Lightbulb className="lucide-icon inline-icon" size={16} /> Valores mais altos = mais difícil revelar
                                     </div>
                                  </div>
                               )}
@@ -2913,7 +2913,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         {/* TERMAL */}
                         <div style={{marginBottom:0, padding:12, background:'rgba(255,100,0,0.05)', borderRadius:6, border:'1px solid rgba(255,100,0,0.2)'}}>
                            <div className="auto-style-181 auto-style-182 auto-style-183 auto-style-184">
-                              <span style={{fontSize:11, fontWeight:'bold', color:'#ff6400'}}>🌡️ VISÃO TÉRMICA</span>
+                              <span style={{fontSize:11, fontWeight:'bold', color:'#ff6400'}}><Thermometer className="lucide-icon inline-icon" size={16} /> VISÃO TÉRMICA</span>
                            </div>
                            <p style={{fontSize:9, color:'#777', marginBottom:8}}>Simula câmera termográfica ao inspecionar</p>
                            <label style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer', padding:'8px', background:'rgba(0,0,0,0.3)', borderRadius:4, marginBottom:8}}>
@@ -2970,7 +2970,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                           onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 0 15px rgba(255,100,0,0.6)'}
                                           onMouseOut={(e) => e.currentTarget.style.boxShadow = 'none'}
                                        >
-                                          🎨 ABRIR EDITOR DE POSIÇÃO
+                                          <Palette className="lucide-icon inline-icon" size={16} /> ABRIR EDITOR DE POSIÇÃO
                                        </button>
                                     </div>
                                  )}
@@ -2999,7 +2999,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         <div className="col">
                            {/* CAMADA A - ÁUDIO AMBIENTE */}
                            <div className="evidence-group" style={{borderColor: audioBase ? 'rgba(0,243,255,0.3)' : 'rgba(0,243,255,0.08)'}}>
-                              <span className="group-title">🎵 CAMADA A: ÁUDIO AMBIENTE</span>
+                              <span className="group-title"><Music className="lucide-icon inline-icon" size={16} /> CAMADA A: ÁUDIO AMBIENTE</span>
                               <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
                                  Som principal que o jogador ouve ao reproduzir a evidência (ex: música, conversa, ruído branco).
                               </p>
@@ -3072,7 +3072,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                            {/* CONFIGURAÇÃO DO ENIGMA */}
                            {audioBase && audioHidden && (
                               <div className="evidence-group" style={{borderColor:'rgba(179,51,51,0.4)', background:'linear-gradient(145deg, rgba(179,51,51,0.05), rgba(0,0,0,0.3))'}}>
-                                 <span className="group-title" style={{color:'#ff003c'}}>⚙️ CONFIGURAÇÃO DO ENIGMA</span>
+                                 <span className="group-title" style={{color:'#ff003c'}}><Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DO ENIGMA</span>
                                  <p style={{fontSize:11, color:'#888', marginBottom:12, lineHeight:1.5}}>
                                     Defina a frequência que o jogador precisa sintonizar para revelar o sinal oculto.
                                  </p>
@@ -3090,7 +3090,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                  </div>
                                  <div style={{marginTop:10, padding:'10px', background:'rgba(0,0,0,0.3)', borderRadius:'6px', border:'1px solid rgba(179,51,51,0.2)'}}>
                                     <small style={{fontSize:10, color:'#888', display:'block', lineHeight:1.4}}>
-                                       💡 <strong style={{color:'#ff003c'}}>Dica:</strong> O jogador precisará mover o dial de sintonia até <strong>{freq} Hz</strong> para ouvir/visualizar o Sinal Oculto. Valores mais altos = mais difícil de encontrar.
+                                       <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong style={{color:'#ff003c'}}>Dica:</strong> O jogador precisará mover o dial de sintonia até <strong>{freq} Hz</strong> para ouvir/visualizar o Sinal Oculto. Valores mais altos = mais difícil de encontrar.
                                     </small>
                                  </div>
                               </div>
@@ -3144,7 +3144,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                     border:'1px dashed rgba(255,255,255,0.05)'
                                  }}>
                                     <div>
-                                       <div className="auto-style-211 auto-style-212 auto-style-213">🎵</div>
+                                       <div className="auto-style-211 auto-style-212 auto-style-213"><Music className="lucide-icon inline-icon" size={16} /></div>
                                        <p style={{fontSize:13, color:'#666', lineHeight:1.6}}>
                                           Selecione um áudio ambiente<br/>
                                           <span className="auto-style-214">(Camada A) para iniciar o teste</span>
@@ -3163,7 +3163,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  
                  {/* Shredder Puzzle Configuration */}
                  
-                 {/* ⚠️ Aviso se evidenceType não for 'document' */}
+                 {/* <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Aviso se evidenceType não for 'document' */}
                  {isShredded && evidenceType !== 'document' && (
                    <div style={{
                      padding: '10px 14px',
@@ -3175,7 +3175,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                      color: '#faa',
                      fontWeight: 'bold'
                    }}>
-                     ⚠️ <strong>ATENÇÃO:</strong> O puzzle triturado só funciona com evidências do tipo "document". 
+                     <AlertTriangle className="lucide-icon inline-icon" size={16} />️ <strong>ATENÇÃO:</strong> O puzzle triturado só funciona com evidências do tipo "document". 
                      Atualmente o tipo está como "{evidenceType}". 
                      <button 
                        onClick={() => setEvidenceType('document')}
@@ -3231,11 +3231,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         fontWeight: isShredded ? 'bold' : 'normal' 
                       }}
                     >
-                      📄 Documento Triturado (Puzzle)
+                      <FileText className="lucide-icon inline-icon" size={16} /> Documento Triturado (Puzzle)
                     </label>
                     {(!previewUrl && !imgFile && !existingCard?.image_url) && (
                       <span className="shredder-warning">
-                        ⚠️ Envie uma imagem primeiro
+                        <AlertTriangle className="lucide-icon inline-icon" size={16} />️ Envie uma imagem primeiro
                       </span>
                     )}
                  </div>
@@ -3255,7 +3255,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                                  className={`btn-stamp shredder-format-btn ${shredRows === 4 && shredCols === 4 ? 'active' : ''}`} 
                                  onClick={() => { setShredRows(4); setShredCols(4); }}
                                >
-                                 🔲 Grade (4x4)
+                                 <Square className="lucide-icon inline-icon" size={16} /> Grade (4x4)
                                </button>
                                <button 
                                  className={`btn-stamp shredder-format-btn ${shredRows === 8 && shredCols === 1 ? 'active' : ''}`} 
@@ -3351,8 +3351,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           borderLeft: '2px solid rgba(100, 150, 255, 0.4)'
                         }}>
                           <strong>📋 Formato:</strong> {shredRows === 1 ? `Tiras horizontais (${shredCols} peças)` : shredCols === 1 ? `Tiras verticais (${shredRows} peças)` : `Grade ${shredRows}x${shredCols} (${shredRows * shredCols} peças)`}<br />
-                          <strong>🎮 GM Controles:</strong> Revelar gradualmente, Ctrl+Click individual, Preview da imagem<br />
-                          <strong>👥 Jogadores:</strong> Só veem e manipulam peças reveladas pelo GM
+                          <strong><Gamepad2 className="lucide-icon inline-icon" size={16} /> GM Controles:</strong> Revelar gradualmente, Ctrl+Click individual, Preview da imagem<br />
+                          <strong><Users className="lucide-icon inline-icon" size={16} /> Jogadores:</strong> Só veem e manipulam peças reveladas pelo GM
                         </div>
                       </div>
                     </>
@@ -3360,7 +3360,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                  
                  {!isShredded && (previewUrl || imgFile || existingCard?.image_url) && (
                    <div className="shredder-hint">
-                     💡 <strong>Dica:</strong> Marque a opção acima para transformar a imagem em um puzzle triturado. 
+                     <Lightbulb className="lucide-icon inline-icon" size={16} /> <strong>Dica:</strong> Marque a opção acima para transformar a imagem em um puzzle triturado. 
                      Os jogadores precisarão reconstruir o documento conforme você revela as peças.
                    </div>
                  )}
@@ -3451,7 +3451,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 </div>
 
                 <div style={{marginBottom:20, padding:'12px', background:'rgba(18,24,40,0.7)', border:'1px solid rgba(100,150,255,0.25)', borderRadius:8}}>
-                   <h4 style={{color:'#64b5ff', marginTop:0}}>🔒 CONTROLE DE LIBERAÇÃO</h4>
+                   <h4 style={{color:'#64b5ff', marginTop:0}}><Lock className="lucide-icon inline-icon" size={16} /> CONTROLE DE LIBERAÇÃO</h4>
                    <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10}}>
                       <label style={{fontSize:12, color:'#ccc', display:'flex', flexDirection:'column', gap:6}}>
                          Áudio base
@@ -3600,7 +3600,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
             {activeTab === 'mega' && (
               <div className="field-block">
-                 <span className="field-title">🔐 CONFIGURAÇÃO DA MEGA-PISTA (VERDADE FINAL)</span>
+                 <span className="field-title"><Lock className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DA MEGA-PISTA (VERDADE FINAL)</span>
                  
                  {/* Seção: Verdade Final */}
                  <div className="auto-style-244">
@@ -3706,7 +3706,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
             {activeTab === 'campos' && (
               <div className="field-block config-visibility-tab">
-                <span className="field-title">👁️ CONFIGURAÇÃO DE PRIVACIDADE DA EVIDÊNCIA</span>
+                <span className="field-title"><Eye className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DE PRIVACIDADE DA EVIDÊNCIA</span>
                 <p style={{ fontSize: 11, color: '#888', marginBottom: 15 }}>
                   Determine quais informações o C.R.I.S. revelará ao jogador quando ele inspecionar esta pista.
                 </p>
@@ -3714,8 +3714,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 {/* SEÇÃO DE PRESETS RÁPIDOS */}
                 <div className="presets-row" style={{ display: 'flex', gap: 8, marginBottom: 20, padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
                   <span style={{ fontSize: 10, color: '#aaa', alignSelf: 'center', marginRight: 5 }}>🚀 PRESETS:</span>
-                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.MINIMAL as any)}>🔒 MÍNIMO</button>
-                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.DEFAULT as any)}>✅ PADRÃO</button>
+                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.MINIMAL as any)}><Lock className="lucide-icon inline-icon" size={16} /> MÍNIMO</button>
+                  <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.DEFAULT as any)}><Check className="lucide-icon inline-icon" size={16} /> PADRÃO</button>
                   <button className="upload-btn" onClick={() => setFieldVisibilityConfig(VISIBILITY_PRESETS.FULL as any)} style={{ color: '#ff6464' }}>🔓 TUDO (CUIDADO)</button>
                 </div>
 
@@ -3724,7 +3724,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   
                   {/* COLUNA 1: PROPRIEDADES DO ARQUIVO */}
                   <div className="config-group">
-                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 PROPRIEDADES DO ARQUIVO</h4>
+                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}><FileText className="lucide-icon inline-icon" size={16} /> PROPRIEDADES DO ARQUIVO</h4>
                     <div className="flex flex-col auto-style-267">
                       {[
                         { id: 'fileType', label: '📄 Tipo de Arquivo' },
@@ -3734,7 +3734,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                         { id: 'gpsCoords', label: '🗺️ Coordenadas GPS' },
                         { id: 'ownerName', label: '👤 Proprietário do Arquivo' },
                         { id: 'hexComment', label: '🔧 Comentários HEX' },
-                        { id: 'technicalNote', label: '📝 Notas Técnicas' },
+                        { id: 'technicalNote', label: ' Notas Técnicas' },
                         { id: 'stamp', label: '🔖 Carimbo/Stamp' },
                         { id: 'externalLink', label: '🔗 Link Externo' },
                         { id: 'fakeLocation', label: '📍 Localização Falsa' },
@@ -3766,7 +3766,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   <div className="config-group">
                     {evidenceType === 'glitch_puzzle' && (
                       <>
-                        <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 ELEMENTOS DO PUZZLE</h4>
+                        <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}><Gamepad2 className="lucide-icon inline-icon" size={16} /> ELEMENTOS DO PUZZLE</h4>
                         <div className="flex flex-col auto-style-270 auto-style-271">
                           {[
                             { id: 'accessInstructions', label: '▶️ Instruções de Acesso' },
@@ -3774,7 +3774,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                             { id: 'calibrationControls', label: '⚙️ Controles de Calibração' },
                             { id: 'logs', label: '📜 Terminal de Logs' },
                             { id: 'rewardCode', label: '🎁 Código de Recompensa' },
-                            { id: 'correctAnswerWhenSolved', label: '⚠️ Resposta Correta', warn: true },
+                            { id: 'correctAnswerWhenSolved', label: '⚠️️ Resposta Correta', warn: true },
                             { id: 'keyword', label: '🔑 Palavra-chave' },
                             { id: 'focusedImage', label: '🖼️ Imagem Focada' },
                             { id: 'hiddenAudioUrl', label: '🎵 Áudio Oculto' },
@@ -3804,12 +3804,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                     {evidenceType === 'mega_clue' && (
                       <>
-                        <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 SEÇÕES DA MEGA-PISTA</h4>
+                        <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}><Lock className="lucide-icon inline-icon" size={16} /> SEÇÕES DA MEGA-PISTA</h4>
                         <div className="flex flex-col auto-style-272">
                           {[
                             { id: 'hints', label: 'Lista de Dicas' },
                             { id: 'progress', label: 'Barra de Progresso' },
-                            { id: 'answer', label: '⚠️ Resposta Final (Verdade)', warn: true },
+                            { id: 'answer', label: '⚠️️ Resposta Final (Verdade)', warn: true },
                             { id: 'requiredPuzzles', label: 'Puzzles Obrigatórios' },
                           ].map(f => (
                             <label key={f.id} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
@@ -3840,7 +3840,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           customMetadata: { ...fieldVisibilityConfig.customMetadata, enableCustomFields: e.target.checked }
                         })}
                       />
-                      <strong>✅ Ativar Metadados Customizados</strong>
+                      <strong><Check className="lucide-icon inline-icon" size={16} /> Ativar Metadados Customizados</strong>
                     </label>
 
                     {fieldVisibilityConfig.customMetadata.enableCustomFields && (
@@ -3859,15 +3859,15 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                           { id: 'uv_layer', label: '💡 Camada UV' },
                           { id: 'is_shredded', label: '📃 Fragmentado' },
                           { id: 'shred_config', label: '✂️ Config de Fragmentação' },
-                          { id: 'real_text', label: '📝 Texto Real' },
-                          { id: 'cipher_text', label: '🔐 Texto Cifrado' },
+                          { id: 'real_text', label: ' Texto Real' },
+                          { id: 'cipher_text', label: '🔒 Texto Cifrado' },
                           { id: 'chat_data', label: '💬 Dados de Chat' },
                           { id: 'chat_contact_name', label: '👤 Nome do Contato' },
                           { id: 'video_url', label: '🎬 URL de Vídeo' },
                           { id: 'media_visibility', label: '👁️ Visibilidade de Mídia' },
                           { id: 'security_layer', label: '🔒 Camada de Segurança' },
                           { id: 'reveal_logic', label: '🔓 Lógica de Revelação' },
-                          { id: 'signal_targets', label: '📡 Alvos de Sinal' },
+                          { id: 'signal_targets', label: ' Alvos de Sinal' },
                           { id: 'audio_static_sync', label: '📻 Sincronização Estática' },
                           { id: 'narrative_links', label: '📖 Links Narrativos' },
                           { id: 'hide_preview_board', label: '🙈 Ocultar Preview' },
@@ -3898,7 +3898,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
             {activeTab === 'display' && (
               <div className="field-block config-display-tab">
-                <span className="field-title">⚙️ CONFIGURAÇÃO DE EXIBIÇÃO</span>
+                <span className="field-title"><Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DE EXIBIÇÃO</span>
                 <p style={{ fontSize: 11, color: '#888', marginBottom: 15 }}>
                   Controla O QUE É VISÍVEL quando o jogador inspecionar esta pista. Similar aos campos visíveis, mas com foco em ELEMENTOS DE UI.
                 </p>
@@ -3909,12 +3909,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {/* COLUNA 1: PUZZLE */}
                   {evidenceType === 'glitch_puzzle' && (
                     <div className="config-group">
-                      <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}>🎮 GLITCH PUZZLE</h4>
+                      <h4 style={{ fontSize: 12, color: '#64b5ff', marginBottom: 10, borderBottom: '1px solid #333' }}><Gamepad2 className="lucide-icon inline-icon" size={16} /> GLITCH PUZZLE</h4>
                       <div className="flex flex-col auto-style-282">
                         {[
                           { id: 'showAccessInstructions', label: '▶️ Como Acessar' },
                           { id: 'showHint', label: '💡 Dica' },
-                          { id: 'showCorrectAnswerWhenSolved', label: '⚠️ Parâmetros Corretos', warn: true },
+                          { id: 'showCorrectAnswerWhenSolved', label: '⚠️️ Parâmetros Corretos', warn: true },
                           { id: 'showRewardCode', label: '🎁 Código de Recompensa' },
                           { id: 'showLogs', label: '📜 Logs/Terminal' },
                         ].map(f => (
@@ -3936,7 +3936,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                   {/* COLUNA 1/2: FILE PROPERTIES */}
                   <div className="config-group">
-                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}>📄 METADADOS DE ARQUIVO</h4>
+                    <h4 style={{ fontSize: 12, color: '#c6a45f', marginBottom: 10, borderBottom: '1px solid #333' }}><FileText className="lucide-icon inline-icon" size={16} /> METADADOS DE ARQUIVO</h4>
                     <div className="flex flex-col auto-style-283">
                       {[
                         { id: 'showFileType', label: '📄 Tipo de arquivo' },
@@ -3968,7 +3968,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
 
                   {/* COLUNA 2: VISUAL & MÍDIA */}
                   <div className="config-group">
-                    <h4 style={{ fontSize: 12, color: '#ff6db3', marginBottom: 10, borderBottom: '1px solid #333' }}>🎨 VISUAL & MÍDIA</h4>
+                    <h4 style={{ fontSize: 12, color: '#ff6db3', marginBottom: 10, borderBottom: '1px solid #333' }}><Palette className="lucide-icon inline-icon" size={16} /> VISUAL & MÍDIA</h4>
                     <div className="flex flex-col auto-style-286">
                       {[
                         { id: 'showThermalData', label: '🔥 Dados Térmicos' },
@@ -3994,12 +3994,12 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                     </div>
 
                     {/* CIFRAS & FRAGMENTOS */}
-                    <h4 style={{ fontSize: 12, color: '#a366ff', marginTop: 15, marginBottom: 10, borderBottom: '1px solid #333' }}>🔐 CIFRAS & FRAGMENTOS</h4>
+                    <h4 style={{ fontSize: 12, color: '#a366ff', marginTop: 15, marginBottom: 10, borderBottom: '1px solid #333' }}><Lock className="lucide-icon inline-icon" size={16} /> CIFRAS & FRAGMENTOS</h4>
                     <div className="flex flex-col auto-style-289">
                       {[
                         { id: 'showShredded', label: '📃 Documentos Fragmentados' },
-                        { id: 'showCipherText', label: '🔐 Texto Cifrado' },
-                        { id: 'showRealText', label: '⚠️ Texto Real', warn: true },
+                        { id: 'showCipherText', label: '🔒 Texto Cifrado' },
+                        { id: 'showRealText', label: '⚠️️ Texto Real', warn: true },
                         { id: 'showShredConfig', label: '✂️ Config de Fragmentação' },
                       ].map(f => (
                         <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
@@ -4020,11 +4020,11 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                   {/* COLUNA 3: MEGA CLUE */}
                   {evidenceType === 'mega_clue' && (
                     <div className="config-group">
-                      <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}>🔮 MEGA-PISTA</h4>
+                      <h4 style={{ fontSize: 12, color: '#ff6400', marginBottom: 10, borderBottom: '1px solid #333' }}><Sparkles className="lucide-icon inline-icon" size={16} /> MEGA-PISTA</h4>
                       <div className="flex flex-col auto-style-290">
                         {[
                           { id: 'showHints', label: '💡 Dicas' },
-                          { id: 'showAnswer', label: '⚠️ Resposta', warn: true },
+                          { id: 'showAnswer', label: '⚠️️ Resposta', warn: true },
                           { id: 'showProgress', label: '📊 Progresso' },
                         ].map(f => (
                           <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, cursor: 'pointer', color: f.warn ? '#ff6464' : 'inherit' }}>
@@ -4062,7 +4062,7 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
                 boxShadow: '0 0 15px rgba(139, 92, 246, 0.3)'
               } : undefined}
            >
-              {videoUploading ? '⏳ Aguardando upload de vídeo...' : loading ? '💾 Salvando...' : (existingCard ? '✏️ Salvar Alterações' : '📝 REGISTRAR EVIDÊNCIA')}
+              {videoUploading ? '⏳ Aguardando upload de vídeo...' : loading ? '💾 Salvando...' : (existingCard ? '✏️ Salvar Alterações' : ' REGISTRAR EVIDÊNCIA')}
            </button>
         </div>
         

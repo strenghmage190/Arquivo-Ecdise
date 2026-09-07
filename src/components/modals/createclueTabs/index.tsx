@@ -1,3 +1,4 @@
+import { FileText, Gamepad2, Lock, Palette } from 'lucide-react';
 // Placeholder tab components - to be imported by CreateClueModal_Refactored
 // These will be properly implemented in separate files
 
@@ -61,9 +62,9 @@ export const ClueGeneralTab = (props: any) => {
       <div className="form-group">
         <label>Tipo de Evidência</label>
         <select value={evidenceType} onChange={(e) => setEvidenceType(e.target.value as any)}>
-          <option value="document">📄 Documento</option>
-          <option value="glitch_puzzle">🎮 Puzzle Glitch</option>
-          <option value="mega_clue">🔐 Mega Pista</option>
+          <option value="document"><FileText className="lucide-icon inline-icon" size={16} /> Documento</option>
+          <option value="glitch_puzzle"><Gamepad2 className="lucide-icon inline-icon" size={16} /> Puzzle Glitch</option>
+          <option value="mega_clue"><Lock className="lucide-icon inline-icon" size={16} /> Mega Pista</option>
         </select>
       </div>
 
@@ -74,7 +75,7 @@ export const ClueGeneralTab = (props: any) => {
             checked={isHidden}
             onChange={(e) => setIsHidden(e.target.checked)}
           />
-          🔒 Iniciar como Oculto
+          <Lock className="lucide-icon inline-icon" size={16} /> Iniciar como Oculto
         </label>
         <small style={{ color: '#888', fontSize: '12px' }}>
           A pista será invisível até descoberta via busca por código
@@ -257,7 +258,7 @@ export const ClueForensicTab = (props: any) => {
               )}
             </div>
             <div style={{ marginTop: 8 }}>
-              <button onClick={() => setShowForensicEditor(true)} style={{ padding: '8px 12px' }}>🎨 ABRIR EDITOR INTERATIVO (RECOMENDADO)</button>
+              <button onClick={() => setShowForensicEditor(true)} style={{ padding: '8px 12px' }}><Palette className="lucide-icon inline-icon" size={16} /> ABRIR EDITOR INTERATIVO (RECOMENDADO)</button>
             </div>
           </div>
         </div>

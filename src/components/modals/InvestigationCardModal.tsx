@@ -1,3 +1,4 @@
+import { Check, X, Lock, RefreshCw, Thermometer } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
@@ -57,12 +58,12 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
     trackMouse: false,
   });
   
-  // ✅ Registra modal no ModalManager
+  // <Check className="lucide-icon inline-icon" size={16} /> Registra modal no ModalManager
   useEffect(() => {
     modalManager.register('investigation-card-modal', 5);
   }, []);
 
-  // ✅ Usa ModalManager para controle de abertura/fechamento
+  // <Check className="lucide-icon inline-icon" size={16} /> Usa ModalManager para controle de abertura/fechamento
   useEffect(() => {
     if (open) {
       modalManager.open('investigation-card-modal', () => {
@@ -136,7 +137,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         required_puzzle_ids: tempMegaClueData.required_puzzle_ids,
       };
 
-      // ✅ Validação com Zod
+      // <Check className="lucide-icon inline-icon" size={16} /> Validação com Zod
       const validation = validateMegaClueData(megaClueData);
       if (!validation.success) {
         const errorMsg = (validation.errors || []).join('\n');
@@ -468,7 +469,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
             {isGameMaster && (existing as any)?.metadata?.mega_clue && (
               <div style={{ marginTop: 12, borderTop: '1px solid #222', paddingTop: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <strong>🔐 Mega-Pista</strong>
+                  <strong><Lock className="lucide-icon inline-icon" size={16} /> Mega-Pista</strong>
                   <button type="button" onClick={() => { if (isEditingMegaClue) handleCancelMegaClueEdit(); else initializeMegaClueEdit(); }} style={{ padding: '4px 8px' }}>{isEditingMegaClue ? 'Cancelar' : 'Editar'}</button>
                 </div>
                 {!isEditingMegaClue ? (
@@ -568,7 +569,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                   </label>
                   {uvUrl ? (
                     <div style={{ fontSize: 12, color: '#aaa' }}>
-                      ✅ Camada UV carregada
+                      <Check className="lucide-icon inline-icon" size={16} /> Camada UV carregada
                       <button
                         type="button"
                         onClick={() => {
@@ -584,7 +585,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         disabled={layerUploading === 'uv'}
                         style={{ marginLeft: 8, padding: '4px 8px', fontSize: 12, background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
                       >
-                        🔄 Substituir
+                        <RefreshCw className="lucide-icon inline-icon" size={16} /> Substituir
                       </button>
                     </div>
                   ) : (
@@ -611,7 +612,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                 {/* Thermal Layer */}
                 <div style={{ marginTop: 12 }}>
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span>🌡️ Camada Térmica (opcional)</span>
+                    <span><Thermometer className="lucide-icon inline-icon" size={16} /> Camada Térmica (opcional)</span>
                     {thermalUrl && (
                       <button
                         type="button"
@@ -624,7 +625,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                   </label>
                   {thermalUrl ? (
                     <div style={{ fontSize: 12, color: '#aaa' }}>
-                      ✅ Camada Térmica carregada
+                      <Check className="lucide-icon inline-icon" size={16} /> Camada Térmica carregada
                       <button
                         type="button"
                         onClick={() => {
@@ -640,7 +641,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         disabled={layerUploading === 'thermal'}
                         style={{ marginLeft: 8, padding: '4px 8px', fontSize: 12, background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
                       >
-                        🔄 Substituir
+                        <RefreshCw className="lucide-icon inline-icon" size={16} /> Substituir
                       </button>
                     </div>
                   ) : (

@@ -1,3 +1,4 @@
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -856,7 +857,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       const metadataObj = parsedMetadata;
       const isGlitchPuzzle = isGlitchPuzzleGlobal;
 
-      // 🔍 DEBUG: Log completo da evidência para diagnóstico
+      // <Search className="lucide-icon inline-icon" size={16} /> DEBUG: Log completo da evidência para diagnóstico
       console.log('🔍 [InspectionModal] Card Debug:', {
         id: currentCard.id,
         title: currentCard.title,
@@ -883,7 +884,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       }
 
       // If shredded, show puzzle
-      // 🔍 Verificação robusta de is_shredded (aceita boolean, number, string)
+      // <Search className="lucide-icon inline-icon" size={16} /> Verificação robusta de is_shredded (aceita boolean, number, string)
       // 🔥 FALLBACK: Se não existir a coluna is_shredded, usa metadata.is_shredded
       const isShredded = Boolean(
         currentCard.is_shredded === true || 
@@ -958,7 +959,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   fontSize: '12px',
                   color: '#aaf'
                 }}>
-                  🎮 <strong>MODO GM ATIVO</strong><br />
+                  <Gamepad2 className="lucide-icon inline-icon" size={16} /> <strong>MODO GM ATIVO</strong><br />
                   Você terá controle total sobre as peças reveladas
                 </div>
               )}
@@ -1126,7 +1127,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             </div>
 
             <div style={{ color: '#777', fontSize: '11px' }}>
-              Dica: clique em <span role="img" aria-label="musical note">🎵</span> EXPANDIR para usar espectrograma e controles completos.
+              Dica: clique em <span role="img" aria-label="musical note"><Music className="lucide-icon inline-icon" size={16} /></span> EXPANDIR para usar espectrograma e controles completos.
             </div>
           </div>
         );
@@ -1474,7 +1475,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
                 )}
                 {hasAudio && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}>🎵 ÁUDIO</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO</button>
                 )}
                 {hasChat && (
                   <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
@@ -1506,14 +1507,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       }}
                       title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
                     >
-                      🌡️ TERMAL {isLocked ? '🔒' : ''}
+                      <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL {isLocked ? '🔒' : ''}
                     </button>
                   );
                 })()}
 
                 <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
                 <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}>🔐 DECODIFICADOR</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}><Lock className="lucide-icon inline-icon" size={16} /> DECODIFICADOR</button>
                 <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
               </>
             )
@@ -1536,7 +1537,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               <div className="meta-info">
                 <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
                 {cardLocked && (
-                  <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}>🔒</span>
+                  <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}><Lock className="lucide-icon inline-icon" size={16} /></span>
                 )}
                 {hasRecord && (
                   <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
@@ -1572,7 +1573,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('audio'); }}
                     >
-                      🎵 ÁUDIO
+                      <Music className="lucide-icon inline-icon" size={16} /> ÁUDIO
                     </button>
                   )}
                   {hasChat && (
@@ -1818,7 +1819,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
               {isGameMaster && card.description_hidden && (
                  <div className="gm-note">
-                    <strong style={{color:'#c6a45f'}}>🔒 NOTAS DO MESTRE:</strong><br/>
+                    <strong style={{color:'#c6a45f'}}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br/>
                     {card.description_hidden}
                  </div>
               )}
@@ -1942,7 +1943,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                       {isGameMaster && card.description_hidden && (
                         <div className="gm-note">
-                          <strong style={{color:'#c6a45f'}}>🔒 NOTAS DO MESTRE:</strong><br/>
+                          <strong style={{color:'#c6a45f'}}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br/>
                           {card.description_hidden}
                         </div>
                       )}
@@ -2133,7 +2134,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </button>
                 
                 <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setLocalThermal(!localThermal)}}>
-                  🌡️ TERMAL
+                  <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL
                 </button>
 
                 <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel')}}>

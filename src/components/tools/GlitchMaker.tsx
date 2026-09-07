@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import './GlitchMaker.css';
 
@@ -112,7 +113,7 @@ export default function GlitchMaker({ onSave, onClose }: GlitchMakerProps): Reac
 
   return (
     <div className="glitch-maker-container">
-      <h3>⚠ DECODIFICADOR DE ANOMALIAS v1.7</h3>
+      <h3><AlertTriangle className="lucide-icon inline-icon" size={16} /> DECODIFICADOR DE ANOMALIAS v1.7</h3>
       <div className="glitch-maker-input-group">
         <input type="file" accept="image/*" onChange={handleFile} />
       </div>

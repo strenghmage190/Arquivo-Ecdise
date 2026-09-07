@@ -1,3 +1,4 @@
+import { Lock, FileText, AlertTriangle, Search, Thermometer } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import './SystemTerminal.css';
@@ -86,7 +87,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
               finalHistory.push(`STATUS: MODO TERMOGRÁFICO ATIVO`);
               finalHistory.push('═══════════════════════════════════');
             } else {
-              finalHistory.push('⚠️  ACESSO NEGADO');
+              finalHistory.push('⚠️️  ACESSO NEGADO');
               finalHistory.push(result.message);
             }
             setHistory(finalHistory);
@@ -123,7 +124,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
               finalHistory.push('DECRYPTING ON BOARD...');
               finalHistory.push('═══════════════════════════════════');
             } else {
-              finalHistory.push('⚠️  ARQUIVO NÃO LOCALIZADO');
+              finalHistory.push('⚠️️  ARQUIVO NÃO LOCALIZADO');
               finalHistory.push(result.message);
             }
             setHistory(finalHistory);
