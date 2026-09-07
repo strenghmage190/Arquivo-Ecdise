@@ -604,7 +604,7 @@ export function MysteryImage({
         />
       )}
 
-      {!isUVMode && hasSecret && fit !== 'contain' && <div style={{ position: 'absolute', bottom: 2, right: 4, opacity: 0.6, fontSize: 12 }}>🟣</div>}
+      {!isUVMode && hasSecret && fit !== 'contain' && <CircleDot size={12} aria-label="Camada oculta disponível" style={{ position: 'absolute', bottom: 3, right: 4, opacity: 0.6 }} />}
     </div>
   );
 }

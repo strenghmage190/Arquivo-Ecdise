@@ -82,7 +82,7 @@ export default function TerminalSearch({ onSearch, onClose }: Props) {
     <div className="terminal-search">
       <div className="terminal-header">
         <div className="term-title">C.R.I.S. // BUSCA DE ARQUIVOS</div>
-        <button className="term-close" onClick={onClose}>✕</button>
+        <button className="term-close" onClick={onClose} aria-label="Fechar busca"><X size={15} /></button>
       </div>
       <form onSubmit={submit} className="term-form">
         <label className="term-label">&gt; digite palavra-chave:</label>

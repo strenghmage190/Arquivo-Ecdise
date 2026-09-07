@@ -1,4 +1,5 @@
 import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -32,7 +33,7 @@ export interface EvidenceCardProps {
   element?: string | null
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null }) => {
   // DEBUG: Log de props importantes
   if (cardType !== 'normal' || locked || isUV) {
     console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
@@ -138,12 +139,12 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
         <div className="badges-container" aria-hidden>
           <div className={`type-badge small ${locked ? 'locked' : fileType}`} title={locked ? 'Protegido' : fileType}>{getTypeIcon(locked ? 'locked' : fileType)}</div>
           {hasUV && <div className="type-badge small uv" title="Camada UV">UV</div>}
-          {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto"><Volume2 className="lucide-icon inline-icon" size={16} /></div>}
+          {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto"><Volume2 size={14} /></div>}
           {hasChat && <div className="type-badge small chat" title="Chat/Conversas"><MessageSquare size={14} /></div>}
           {hasThermal && <div className="type-badge small thermal" title="Termal"><Thermometer size={14} /></div>}
           {hasStamp && <div className="type-badge small stamp" title="Carimbo"><Check size={14} /></div>}
           {hasExternalLink && <div className="type-badge small link" title="Link Externo"><Link2 size={14} /></div>}
-          {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye className="lucide-icon inline-icon" size={16} /></div>}
+          {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye size={14} /></div>}
         </div>
 
         {/* <Check className="lucide-icon inline-icon" size={16} /> Content container with view classes - NO NESTING */}

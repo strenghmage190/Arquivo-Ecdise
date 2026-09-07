@@ -2,6 +2,7 @@ import { AlertTriangle, X, Search, Check, Settings, Eye, Lock, Zap, Glasses, Cro
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   CalendarDays,
   Check,
@@ -1886,7 +1887,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
       <header className="investigation-header">
         <div className="header-left">
-          <button className="board-back-btn" onClick={() => navigate('/')}>← ARQUIVOS</button>
+          <button className="board-back-btn" onClick={() => navigate('/')}><ArrowLeft size={14} /> ARQUIVOS</button>
         </div>
         <div className="header-center">
           <div className="case-meta">CASO // CONFIDENCIAL</div>
@@ -2003,7 +2004,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                    alert('Falha ao gerar link de convite');
                  }
                  setInviteOpen(true);
-              }} data-tooltip="Convidar jogadores" data-gm-only="true">✉️</button>
+              }} data-tooltip="Convidar jogadores" data-gm-only="true"><Mail size={16} /></button>
               <button 
                  className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
                  onClick={() => setPlayerView(!playerView)}
@@ -2039,7 +2040,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             onClick={() => setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; })} 
             data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
           >
-            🔗
+            <Link2 size={16} />
           </button>
 
           {connectionMode && (
@@ -2078,7 +2079,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         <div className="toolbar-group">
           <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search className="lucide-icon inline-icon" size={16} /></button>
           <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar">🗂️</button>
+            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar"><Layers2 size={16} /></button>
             {showOrganizeMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Organizar</div>
@@ -2102,8 +2103,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             )}
           </div>
 
-          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer">↩</button>
-          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer">↪</button>
+          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer"><Undo2 size={16} /></button>
+          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer"><Redo2 size={16} /></button>
         </div>
 
         {/* Grupo 4: Ferramentas Avançadas */}
@@ -2117,10 +2118,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               <div className="dropdown-menu">
                 <div className="dropdown-header">Ferramentas</div>
                 <button onClick={() => { setIsUV(!isUV); setShowToolsMenu(false); }} className={isUV ? 'active-uv' : ''}>
-                  🔦 Luz UV {isUV ? '(Ativa)' : ''}
+                  <Flashlight size={15} /> Luz UV {isUV ? '(Ativa)' : ''}
                 </button>
                 <button onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}>
-                  ⌨️ Terminal C.R.I.S.
+                  <Terminal size={15} /> Terminal C.R.I.S.
                 </button>
               </div>
             )}
@@ -2136,10 +2137,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
         {/* Grupo 5: Zoom */}
         <div className="toolbar-group" style={{ marginLeft: 'auto', padding: '0 8px', minWidth: 120, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
-          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir">−</button>
-          <span style={{ fontSize: 11, color: '#666', minWidth: 50, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
-          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar">+</button>
-          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset">⟲</button>
+          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir"><ZoomOut size={16} /></button>
+          <span className="toolbar-zoom-value">{(zoom * 100).toFixed(0)}%</span>
+          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar"><ZoomIn size={16} /></button>
+          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset"><RotateCcw size={16} /></button>
         </div>
         </div>
       )}
