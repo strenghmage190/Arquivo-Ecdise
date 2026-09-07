@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
+import ordoCrest from '../../assets/ordem/Simbolo da Ordem.png';
 import Desktop from '../components/layout/Desktop';
 import Button from '../components/ui/Button';
 import { createInvestigation, deleteInvestigation } from '../api/investigations';
@@ -83,13 +84,11 @@ export default function Home() {
   return (
     <div className={`${styles['home-screen']} nexus-page`}>
       <Desktop cases={cases} />
-      <div className="nexus-header">
-        <div className={styles['nexus-title-wrap']}>
-          <div className={styles['title-badge']}>HQ</div>
-          <h1 className="nexus-title">ARQUIVOS DA ORDEM</h1>
-        </div>
-        <div className={styles['action-bar']}>
-          {/* Botões removidos */}
+      <div className={styles['ordo-header']}>
+        <img src={ordoCrest} alt="Ordo Realitas" className={styles['ordo-crest']} />
+        <div className={styles['ordo-title-group']}>
+          <h1 className="font-oculto">ARQUIVOS</h1>
+          <h2 className="font-terminal text-secondary">// DIVISÃO FORENSE</h2>
         </div>
       </div>
 
@@ -158,6 +157,14 @@ export default function Home() {
         </div>
       )}
       {/* more-menu removed */}
+
+      <div className={styles['telemetry-footer']}>
+        <div className={styles['ticker-wrap']}>
+          <div className={`font-terminal ${styles['ticker-content']}`}>
+            SISTEMA ONLINE... SINCRONIZANDO EVIDÊNCIAS... STATUS DA MEMBRANA: ESTÁVEL... ACESSO RESTRITO...
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

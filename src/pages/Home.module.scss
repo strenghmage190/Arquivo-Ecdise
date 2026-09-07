@@ -2,11 +2,9 @@
 .home-screen {
   position: relative;
   padding: 20px;
+  padding-bottom: 60px; /* space for ticker */
   font-size: 16px;
-  background:
-    radial-gradient(circle at 20% 20%, rgb(0 243 255 / 8%), transparent 35%),
-    radial-gradient(circle at 80% 0%, rgb(255 0 60 / 10%), transparent 30%),
-    var(--nexus-dark);
+  background: var(--bg);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -22,40 +20,71 @@
   opacity: 0.3;
 }
 
-.home-screen::after {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border: 1px solid rgb(0 243 255 / 5%);
-  border-radius: 12px;
-  pointer-events: none;
-  box-shadow: 0 0 40px rgb(0 243 255 / 6%);
-  z-index: 0;
-}
-
-.nexus-title-wrap {
+/* Header Styles */
+.ordo-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
-.action-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-around;
+.ordo-crest {
+  max-width: 90px;
+  margin-bottom: 12px;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.05));
 }
 
-.title-badge {
-  padding: 6px 10px;
-  border: 1px solid rgb(0 243 255 / 30%);
-  border-radius: 6px;
-  color: var(--nexus-blue);
+.ordo-title-group h1 {
+  font-size: 1.5rem;
   font-weight: 800;
-  font-size: 12px;
-  background: rgb(0 243 255 / 8%);
-  box-shadow: 0 0 12px rgb(0 243 255 / 12%);
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.ordo-title-group h2 {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.7;
+  letter-spacing: 0.1em;
+}
+
+/* Footer Ticker Styles */
+.telemetry-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.ticker-wrap {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ticker-content {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  padding-left: 100%;
+  animation: ticker 25s linear infinite;
+}
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
 }
 
 .nexus-ghost {
