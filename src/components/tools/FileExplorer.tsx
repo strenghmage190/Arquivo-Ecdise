@@ -1,105 +1,118 @@
-import { Lock } from 'lucide-react';
+import { AlertTriangle, FolderOpen, LockKeyhole, Plus, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { createInvestigation } from '../../api/investigations';
+
+type CaseStatus = 'active' | 'locked' | 'corrupted';
 
 export default function FileExplorer({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [cases, setCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadCases = async () => {
+    const { data } = await supabase
+      .from('investigations')
+      .select('id, title, description, cover_url, created_at, owner_id')
+      .order('created_at', { ascending: false });
+    setCases(data || []);
+  };
+
   useEffect(() => {
     let mounted = true;
-    async function load() {
-      try {
-        const { data } = await supabase
-          .from('investigations')
-          .select('id, title, description, cover_url, created_at, owner_id')
-          .order('created_at', { ascending: false });
-        if (!mounted) return;
-        setCases(data || []);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('FileExplorer load error', e);
-      } finally {
+    loadCases()
+      .catch((error) => console.error('FileExplorer load error', error))
+      .finally(() => {
         if (mounted) setLoading(false);
-      }
-    }
-    load();
+      });
     return () => { mounted = false; };
   }, []);
 
   const handleCreate = async () => {
-    const name = prompt('NOME DO NOVO CASO:');
-    if (!name) return;
+    const name = prompt('Nome do novo caso:');
+    if (!name?.trim()) return;
     try {
-      const created = await createInvestigation(name);
-      // refresh list
-      const { data } = await supabase
-        .from('investigations')
-        .select('id, title, description, cover_url, created_at, owner_id')
-        .order('created_at', { ascending: false });
-      setCases(data || []);
-      // navigate to new case
-      if (created && created.id) navigate(`/case/${String(created.id).split(':')[0]}`);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('createInvestigation failed', e);
-      alert('Falha ao criar caso. Veja o console para detalhes.');
+      const created = await createInvestigation(name.trim());
+      await loadCases();
+      if (created?.id) navigate(`/case/${String(created.id).split(':')[0]}`);
+    } catch (error) {
+      console.error('createInvestigation failed', error);
+      alert('Não foi possível criar o caso.');
     }
   };
 
+  const getStatus = (item: any): CaseStatus => {
+    if (item?.is_corrupted || item?.status === 'corrupted') return 'corrupted';
+    if (item?.is_locked || item?.status === 'locked') return 'locked';
+    return 'active';
+  };
+
+  const openCase = (item: any, status: CaseStatus) => {
+    if (status === 'locked') {
+      const password = prompt('Insira a senha de desbloqueio:');
+      if (password !== 'NEXUS') alert('Acesso negado.');
+      else navigate(`/case/${String(item.id).split(':')[0]}`);
+      return;
+    }
+    if (status === 'corrupted') {
+      alert('Dados corrompidos — operação não permitida.');
+      return;
+    }
+    navigate(`/case/${String(item.id).split(':')[0]}`);
+  };
+
   return (
-    <div className="os-window">
-      <div className="os-titlebar">
-        <span>C:\ARCHIVES\CASES</span>
-        <button className="os-btn-close" onClick={onClose}>X</button>
-      </div>
-      <div className="os-content">
-        <div style={{display:'flex', gap:10, alignItems:'center', marginBottom:12}}>
-          <button onClick={handleCreate} className="cris-button">[ MKDIR ] NOVO ARQUIVO</button>
-          <div style={{flex:1}} />
-          <div style={{color:'var(--muted)'}}>{cases.length} OBJETOS ENCONTRADOS</div>
+    <section className="os-window assets-window" aria-label="Arquivo de casos">
+      <header className="os-titlebar">
+        <div className="assets-window-heading">
+          <span className="assets-kicker">ARQUIVO / CASOS</span>
+          <strong>ASSETS</strong>
+        </div>
+        <button className="os-btn-close" onClick={onClose} aria-label="Fechar Assets"><X size={16} /></button>
+      </header>
+
+      <div className="os-content assets-content">
+        <div className="assets-toolbar">
+          <div>
+            <p className="assets-eyebrow">REPOSITÓRIO DE EVIDÊNCIAS</p>
+            <p className="assets-count">{cases.length} {cases.length === 1 ? 'CASO INDEXADO' : 'CASOS INDEXADOS'}</p>
+          </div>
+          <button onClick={handleCreate} className="cris-button"><Plus size={15} /> NOVO CASO</button>
         </div>
 
-        {loading ? <div>LENDO DISCO...</div> : (
+        {loading ? (
+          <div className="assets-state">LENDO ARQUIVO<span className="assets-cursor">_</span></div>
+        ) : cases.length === 0 ? (
+          <div className="assets-state assets-empty">
+            <FolderOpen size={24} strokeWidth={1.5} />
+            <strong>NENHUM CASO INDEXADO</strong>
+            <span>Crie um caso para iniciar uma nova investigação.</span>
+          </div>
+        ) : (
           <div className="files-grid">
-            {cases.map((c, idx) => {
-              // demo status: cycle by index
-              const status = idx % 3 === 0 ? 'open' : (idx % 3 === 1 ? 'locked' : 'corrupted');
+            {cases.map((item) => {
+              const status = getStatus(item);
+              const title = status === 'locked' ? 'ARQUIVO RESTRITO' : status === 'corrupted' ? 'DADOS CORROMPIDOS' : String(item.title || 'CASO SEM NOME');
+              const statusLabel = status === 'locked' ? 'ACESSO RESTRITO' : status === 'corrupted' ? 'INTEGRIDADE FALHA' : 'ATIVO';
               return (
-                <div key={c.id} className={`file-card ${status}`} onClick={() => {
-                  // open preview modal instead of navigating directly
-                  // if locked, request password
-                  if (status === 'locked') {
-                    const pass = prompt('INSIRA SENHA DE DESBLOQUEIO:');
-                    if (pass === 'NEXUS') navigate(`/case/${String(c.id).split(':')[0]}`);
-                    else alert('ACESSO NEGADO');
-                    return;
-                  }
-                  if (status === 'corrupted') {
-                    alert('DADOS CORROMPIDOS — OPERACAO NAO PERMITIDA');
-                    return;
-                  }
-                  navigate(`/case/${String(c.id).split(':')[0]}`);
-                }}>
-                  {status === 'open' && <img className="file-thumb" src={`https://picsum.photos/seed/${String(c.id)}/320/160`} alt="thumb" loading="lazy" />}
-                  {status === 'locked' && <div className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></div>}
-                  {status === 'corrupted' && <div className="glitch-overlay" />}
-                  <div className="file-info">
-                    <h3>{status === 'locked' ? 'ARQUIVO CRIPTOGRAFADO' : (status === 'corrupted' ? 'DADOS_NÃO_EUCLIDIANOS' : String(c.title || 'SEM_NOME'))}</h3>
-                    <div style={{marginTop:6}}>
-                      <span className={`tag ${status==='corrupted'?'red':''}`}>{status === 'open' ? 'NEX '+(Math.floor(Math.random()*100))+'%' : (status==='locked' ? 'SIGILO MÁXIMO' : 'CORROMPIDO')}</span>
-                    </div>
+                <button key={item.id} className={`file-card ${status}`} onClick={() => openCase(item, status)} aria-label={`Abrir ${title}`}>
+                  <div className="file-card-topline"><span>CASO / {String(item.id).slice(0, 8).toUpperCase()}</span><span>{statusLabel}</span></div>
+                  <div className="file-card-icon" aria-hidden="true">
+                    {status === 'locked' ? <LockKeyhole size={24} /> : status === 'corrupted' ? <AlertTriangle size={24} /> : <FolderOpen size={24} />}
                   </div>
-                </div>
+                  <div className="file-info">
+                    <h3>{title}</h3>
+                    <p>{item.description || 'Sem descrição registrada.'}</p>
+                  </div>
+                  <div className={`tag ${status === 'corrupted' ? 'red' : ''}`}>{statusLabel}</div>
+                </button>
               );
             })}
           </div>
         )}
       </div>
-      <div className="os-statusbar">DISK FREE: 64KB | MEM: 4096</div>
-    </div>
+      <footer className="os-statusbar"><span>ORDEM: MAIS RECENTES</span><span>ACESSO: AUTORIZADO</span></footer>
+    </section>
   );
 }
