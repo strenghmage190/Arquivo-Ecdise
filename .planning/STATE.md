@@ -22,10 +22,10 @@ progress:
 
 ## Current Position
 
-Phase: 8 (Header & Home Layout Redesign)
-Plan: .planning/phases/08-header-home-layout/PLAN.md
-Status: Completed
-Last activity: 2026-09-07 — Phase 8 completed
+Phase: 10 (Case Cards Layout & Metadata)
+Plan: .planning/phases/10-case-cards-layout/PLAN.md
+Status: Executing
+Last activity: 2026-09-07 — Phase 10 planned
 
 ## Milestones Overview
 
