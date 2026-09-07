@@ -1,5 +1,15 @@
 # Project Milestones
 
+## v1.2 CreateClueModal Refactoring & Cyberpunk UX (Shipped: 2026-09-07)
+
+**Phases completed:** 6 phases, 7 plans, 9 tasks
+
+**Key accomplishments:**
+
+- Executed:
+
+---
+
 ## v1.1 Audio Lab & Spectrogram Steganography Suite (Shipped: 2026-08-18)
 
 **Phases completed:** 5 phases, 4 plans, 0 tasks

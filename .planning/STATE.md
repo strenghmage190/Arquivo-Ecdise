@@ -2,30 +2,30 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: CreateClueModal Refactoring & Cyberpunk UX
-status: executing
-last_updated: "2026-08-18T19:46:33.436Z"
-last_activity: 2026-08-18 -- Phase 14 execution started
+status: completed
+last_updated: "2026-09-07T00:22:24.338Z"
+last_activity: 2026-09-07 — Milestone v1.2 completed and archived
 progress:
-  total_phases: 5
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 2
-  percent: 20
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 5
+  percent: 67
 ---
 
 # Project State
 
 **Project:** Arquivo Ecdise
 **Milestone:** v1.1 — Audio Lab & Spectrogram Steganography Suite
-**Status:** Executing Phase 14
+**Status:** v1.2 milestone complete
 **Date:** 2026-08-15
 
 ## Current Position
 
-Phase: 14 (complex-tabs-extraction-ux-warnings) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 14
-Last activity: 2026-08-18 -- Phase 14 execution started
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-07 — Milestone v1.2 completed and archived
 
 ## Milestones Overview
 
@@ -34,6 +34,15 @@ Last activity: 2026-08-18 -- Phase 14 execution started
 
 ---
 *State updated: 2026-08-15*
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-09-06:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gaps | Phase 12 (12-UAT.md) | partial |
+| uat_gaps | Phase 14 (14-UAT.md) | unknown |
 
 ## Operator Next Steps
 
