@@ -31,14 +31,14 @@ A highly maintainable, organized codebase for clue creation that simultaneously 
 - ✓ Audio Editing & Filtering: Waveform trimming, pitch shifting, speed modulation, bandpass/notch filtering, and audio export. — v1.1
 - ✓ Real-time Spectrogram & Waveform Visualizer: High-FPS WebAudio-powered real-time spectrogram and spectrum analyzer. — v1.1
 - ✓ Modal UX & Performance: Clean integration into `CreateClueModal` with lazy loading and responsive full-screen capability. — v1.1
+- ✓ **CreateClueModal Modularization**: Monolithic CreateClueModal.tsx broken down into tab-specific components with Context orchestration — v1.2
+- ✓ **State Management Consolidation**: Refactored isolated state variables into cohesive logical groups — v1.2
+- ✓ **Cyberpunk UX Polish**: framer-motion and contextual Neon UI implemented for fluid modal transitions — v1.2
+- ✓ **In-App Mini-Tutorials**: Contextual info tooltips and help blocks inside complex tabs like Glitch Calibration and Shredder added — v1.2
 
 ### Active
 
-- [ ] **CreateClueModal Modularization**: Break down the monolithic CreateClueModal.tsx into tab-specific components (`TabGeneral`, `TabVisual`, etc.) and establish a strong Context/Prop orchestration.
-- [ ] **State Management Consolidation**: Refactor dozens of isolated state variables into cohesive logical groups (`clueData`, `mediaState`, `glitchConfig`).
-- [ ] **Interactive Onboarding Tour**: Implement a first-time user tour via `driver.js` with custom Cyberpunk CSS and `localStorage` tracking.
-- [ ] **Cyberpunk UX Polish**: Integrate `framer-motion` for fluid modal/tab transitions, `sonner` for neon toast notifications, and `use-sound` for mechanical/holographic UI sound effects.
-- [ ] **In-App Mini-Tutorials**: Add contextual Lucide React `Info` tooltips and help blocks inside complex tabs like Glitch Calibration and Shredder.
+- [ ] (No active requirements. Start new milestone to define next goals.)
 
 ### Out of Scope
 
@@ -69,4 +69,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-18 for v1.2 milestone*
+*Last updated: 2026-09-06 for v1.2 milestone completion*
