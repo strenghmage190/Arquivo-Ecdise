@@ -193,6 +193,12 @@
 }
 
 .clue-card.status-theory .evidence-state-stamp {
+  font-size: 0;
+}
+
+.clue-card.status-theory .evidence-state-stamp::before {
+  content: "[VALIDADO]";
+  font-size: 8px;
   animation: contested-stamp 1.1s steps(1, end) infinite;
 }
 

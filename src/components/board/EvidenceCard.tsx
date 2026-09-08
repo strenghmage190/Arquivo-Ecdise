@@ -1,5 +1,4 @@
 import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
-import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -174,7 +173,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
         <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
-        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : '[VALIDADO]'}</span>}
+        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
       </div>
 
       <div className="decision-bar">

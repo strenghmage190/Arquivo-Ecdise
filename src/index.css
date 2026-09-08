@@ -13,9 +13,25 @@
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-family: "JetBrains Mono", "Space Mono", monospace;
   background: var(--bg);
   color: var(--fg);
+}
+
+input,
+textarea,
+select {
+  border-radius: 0;
+  border-color: var(--border, #2A2A2C);
+  background: var(--surface, #131315);
+  color: var(--text-primary, #E8E8EA);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 1px solid var(--institutional-red, #8B1414);
+  outline-offset: 1px;
 }
 
 .container {
