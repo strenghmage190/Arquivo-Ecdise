@@ -27,6 +27,7 @@
   min-width: 1em;
   color: var(--sigil-color);
   font-size: var(--sigil-size);
+  text-shadow: 0 0 8px var(--sigil-color);
   line-height: .86;
   opacity: 0;
   white-space: pre;
@@ -44,27 +45,27 @@
 }
 
 .falling-sigil-sangue {
-  --sigil-color: #8B1414;
+  --sigil-color: #e63946;
   --sigil-rotation: -14deg;
 }
 
 .falling-sigil-morte {
-  --sigil-color: #6A6A6E;
+  --sigil-color: #64748b;
   --sigil-rotation: 10deg;
 }
 
 .falling-sigil-conhecimento {
-  --sigil-color: #B08D2E;
+  --sigil-color: #eab308;
   --sigil-rotation: -8deg;
 }
 
 .falling-sigil-energia {
-  --sigil-color: #6951B5;
+  --sigil-color: #a855f7;
   --sigil-rotation: 16deg;
 }
 
 .falling-sigil-medo {
-  --sigil-color: #C8C8CE;
+  --sigil-color: #f8fafc;
   --sigil-rotation: -5deg;
 }
 
@@ -75,11 +76,11 @@
   }
 
   8% {
-    opacity: .24;
+    opacity: .28;
   }
 
   42% {
-    opacity: .17;
+    opacity: .2;
   }
 
   78% {

@@ -2064,8 +2064,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             {showOrganizeMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Organizar</div>
-                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}>📅 Por Data</button>
-                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}>🧭 Por Elemento</button>
+                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><CalendarDays size={15} /> Por Data</button>
+                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
                 <button onClick={() => {
                   const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
                   cards.forEach((c, i) => {
@@ -2321,7 +2321,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               className="connection-context-menu"
               style={{ top: connectionContextMenu.y, left: connectionContextMenu.x }}
             >
-              <button onClick={handleDeleteConnection}>🗑️ Apagar Conexão</button>
+              <button onClick={handleDeleteConnection}><Trash2 size={15} /> Apagar Conexão</button>
             </div>
           )}
 

@@ -93,6 +93,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     specialType,
     hasScanned ? 'scanned' : '',
     status ? `status-${(status === 'verified' ? 'true' : status)}` : '',
+    isUV ? 'is-uv' : '',
     locked ? 'is-locked' : '',
     performanceMode ? 'performance-mode' : ''
   ].filter(Boolean).join(' ');

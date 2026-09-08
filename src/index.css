@@ -1,5 +1,5 @@
 /* stylelint-disable at-rule-no-unknown */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
 
 @font-face {
   font-family: "Sinais Estrangeiro";
@@ -17,25 +17,37 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0A0A0B;
-  --surface: #131315;
-  --border: #2A2A2C;
-  --text-primary: #E8E8EA;
-  --text-secondary: #8A8A8C;
-  --fg: #E8E8EA;
-  --institutional-red: #8B1414;
-  --nexus-dark: #0A0A0B;
-  --nexus-blue: #E8E8EA;
-  --nexus-glitch: #8B1414;
-  --ordo-red: #8B1414;
-  --muted: #8A8A8C;
-  --font-system: "JetBrains Mono", monospace;
-  --font-case: "Rajdhani", sans-serif;
+  --bg: #0b0c10;
+  --surface: #11141b;
+  --border: #29313d;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --fg: #f1f5f9;
+  --institutional-red: #e63946;
+  --nexus-dark: #0b0c10;
+  --nexus-blue: #cbd5e1;
+  --nexus-glitch: #e63946;
+  --ordo-red: #e63946;
+  --muted: #94a3b8;
+  --el-sangue: #e63946;
+  --el-sangue-hot: #ff1e27;
+  --el-energia: #a855f7;
+  --el-energia-soft: #c084fc;
+  --el-morte: #1f2933;
+  --el-morte-border: #64748b;
+  --el-conhecimento: #eab308;
+  --el-conhecimento-deep: #ca8a04;
+  --el-medo: #f8fafc;
+  --font-system: "JetBrains Mono", "Space Mono", monospace;
+  --font-hud: "Chakra Petch", "Rajdhani", sans-serif;
+  --font-case: "Rajdhani", "Chakra Petch", sans-serif;
+  --font-terminal: "Share Tech Mono", "JetBrains Mono", monospace;
 }
 
 body {
+  min-width: 320px;
   margin: 0;
-  font-family: "JetBrains Mono", "Space Mono", monospace;
+  font-family: var(--font-system);
   background: var(--bg);
   color: var(--fg);
 }
@@ -114,6 +126,17 @@ select:focus {
 @keyframes blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.3; }
+}
+
+@keyframes membrane-pulse {
+  0%, 100% { opacity: .78; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes led-flicker {
+  0%, 100% { opacity: .82; }
+  48% { opacity: 1; }
+  52% { opacity: .56; }
 }
 
 /* --- MOBILE HELPERS: regras responsivas básicas --- */

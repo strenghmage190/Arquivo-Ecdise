@@ -5,6 +5,7 @@
 .clue-card,
 .card-node {
   --evidence-accent: var(--border);
+  --evidence-glow: rgb(148 163 184 / 18%);
   position: relative;
   box-sizing: border-box;
   width: var(--evidence-card-width);
@@ -14,7 +15,11 @@
   overflow: visible;
   border: 1px solid var(--evidence-accent);
   border-radius: 0;
-  background: var(--surface);
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(rgb(148 163 184 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 3%) 1px, transparent 1px);
+  background-size: 20px 20px;
   box-shadow: 0 10px 22px rgb(0 0 0 / 44%);
   color: var(--text-primary);
   font-family: var(--font-system);
@@ -35,7 +40,29 @@
 
 .card-node:hover {
   z-index: 100;
-  border-color: #545458;
+  border-color: #64748b;
+}
+
+.clue-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top left / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top left / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top right / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top right / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom left / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom left / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom right / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom right / 2px 16px no-repeat;
+  opacity: .72;
+}
+
+.clue-card:hover {
+  box-shadow: 0 0 20px var(--evidence-glow), 0 10px 22px rgb(0 0 0 / 44%);
 }
 
 .card-node.selected {
@@ -53,10 +80,11 @@
   border-color: var(--text-primary);
 }
 
-.clue-card[data-element="sangue"] { --evidence-accent: var(--el-sangue); }
-.clue-card[data-element="morte"] { --evidence-accent: var(--el-morte-border); }
-.clue-card[data-element="energia"] { --evidence-accent: var(--el-energia); }
-.clue-card[data-element="conhecimento"] { --evidence-accent: var(--el-conhecimento); }
+.clue-card[data-element="sangue"] { --evidence-accent: #e63946; --evidence-glow: rgb(230 57 70 / 24%); }
+.clue-card[data-element="morte"] { --evidence-accent: #64748b; --evidence-glow: rgb(100 116 139 / 18%); }
+.clue-card[data-element="energia"] { --evidence-accent: #a855f7; --evidence-glow: rgb(168 85 247 / 25%); }
+.clue-card[data-element="conhecimento"] { --evidence-accent: #eab308; --evidence-glow: rgb(234 179 8 / 20%); }
+.clue-card[data-element="medo"] { --evidence-accent: #f8fafc; --evidence-glow: rgb(248 250 252 / 16%); }
 
 .clue-card[data-element="metamorfose"],
 .clue-card[data-element="encarnacao"],
@@ -179,13 +207,15 @@
   right: 10px;
   bottom: 10px;
   padding: 3px 5px;
-  border: 1px solid var(--border);
+  border: 2px dashed currentColor;
   color: var(--text-secondary);
-  font-family: var(--font-system);
+  font-family: var(--font-hud);
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .12em;
   line-height: 1;
+  opacity: .85;
+  transform: rotate(-4deg);
 }
 
 .clue-card.status-theory {
@@ -219,7 +249,8 @@
 
 .clue-card.status-false .evidence-state-stamp {
   border-color: var(--institutional-red);
-  color: #C45757;
+  color: #ff6672;
+  opacity: .9;
   transform: rotate(-4deg);
 }
 
@@ -238,6 +269,15 @@
 
 .clue-card.is-locked {
   border-style: dashed;
+}
+
+.clue-card.is-uv .clue-image-container {
+  box-shadow: inset 0 0 0 1px #a855f7, 0 0 16px rgb(124 58 237 / 24%);
+}
+
+.clue-card.is-uv .clue-image-container img,
+.clue-card.is-uv .clue-image-container canvas {
+  filter: drop-shadow(0 0 10px #7c3aed);
 }
 
 .decision-bar {

@@ -76,16 +76,19 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
               <span className="indicator"><span className="dot pulse"></span> enlace estável</span>
             </div>
             <div className="terminal-lines">
-              {lines.map((l, i) => (
-                <div key={i} className="line">
-                  <span className="caret">&gt;</span>
-                  <span className="text">{l}</span>
-                </div>
-              ))}
+              {lines.map((l, i) => {
+                const lineClass = l.includes('[OK]') ? 'line ok' : l.startsWith('ALERTA') ? 'line alert' : 'line';
+                return (
+                  <div key={i} className={lineClass}>
+                    <span className="caret">&gt;</span>
+                    <span className="text">{l}</span>
+                  </div>
+                );
+              })}
               {loading && (
                 <div className="line typing">
                   <span className="caret">&gt;</span>
-                  <span className="text">_</span>
+                  <span className="text"><span className="terminal-cursor" aria-hidden="true" /></span>
                 </div>
               )}
             </div>

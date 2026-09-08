@@ -3,14 +3,14 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #000;
+  background: #0b0c10;
 }
 
 .card-content-container.gm-view,
 .card-content-container.player-view,
 .card-content-container.locked-view,
 .card-content-container.glitch-view {
-  background: #000;
+  background: #0b0c10;
 }
 
 .card-content-container img,
@@ -48,9 +48,18 @@
 
 .encryption-grid,
 .glitch-corruption,
-.data-corruption-overlay,
-.scanlines {
+.data-corruption-overlay {
   display: none;
+}
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  display: block;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, transparent 0 2px, rgb(255 255 255 / 3%) 3px);
+  opacity: .34;
 }
 
 .encryption-text-wrapper,

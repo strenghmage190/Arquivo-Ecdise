@@ -160,7 +160,7 @@ export default function SystemOverlays() {
         </div>
 
         <div className="hud-right">
-          <div className="system-monitor" aria-hidden>
+          <div className="system-monitor" role="status" aria-live="polite">
             <div className="label">MEMBRANA LOCAL</div>
             <div className="bar-container">
               <div className="fill" id="integrity-bar" ref={integrityRef}></div>

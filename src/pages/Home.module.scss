@@ -1,22 +1,29 @@
 .home-screen {
-  --home-bg: #0a0a0b;
-  --home-surface: #131315;
-  --home-border: #2a2a2c;
-  --home-text: #e8e8ea;
-  --home-muted: #8a8a8c;
-  --home-red: #8b1414;
-  --home-sangue: #8b1414;
-  --home-morte: #3a3a3c;
-  --home-energia: #3d2e7c;
-  --home-conhecimento: #b08d2e;
+  --home-bg: #0b0c10;
+  --home-surface: #11141b;
+  --home-border: #29313d;
+  --home-text: #f1f5f9;
+  --home-muted: #94a3b8;
+  --home-red: #e63946;
+  --home-sangue: #e63946;
+  --home-sangue-hot: #ff1e27;
+  --home-morte: #64748b;
+  --home-energia: #a855f7;
+  --home-energia-soft: #c084fc;
+  --home-conhecimento: #eab308;
+  --home-conhecimento-deep: #ca8a04;
+  --home-medo: #f8fafc;
   position: relative;
   min-height: 100vh;
   padding: 42px 6vw 80px;
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--home-bg);
+  background:
+    radial-gradient(circle at 52% -12%, #1a2432 0, transparent 42%),
+    radial-gradient(circle at 82% 68%, #181122 0, transparent 32%),
+    var(--home-bg);
   color: var(--home-text);
-  font-family: "JetBrains Mono", "Space Mono", monospace;
+  font-family: var(--font-system);
 }
 
 .home-screen::before {
@@ -25,9 +32,23 @@
   z-index: 0;
   content: "";
   pointer-events: none;
-  background-image: radial-gradient(circle, #2a2a2c 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: .28;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: .55;
+}
+
+.home-screen::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  pointer-events: none;
+  background-image: repeating-radial-gradient(circle at 18% 24%, rgb(255 255 255 / 5%) 0 1px, transparent 1px 5px);
+  background-size: 11px 11px;
+  mix-blend-mode: screen;
+  opacity: .05;
 }
 
 .home-shell {
@@ -79,9 +100,10 @@
 .quick-modal-card h2 {
   margin: 0;
   color: var(--home-text);
-  font-family: "Rajdhani", "Arial Narrow", sans-serif;
+  font-family: var(--font-hud);
   font-weight: 600;
-  letter-spacing: .06em;
+  letter-spacing: .15em;
+  text-shadow: 0 0 8px rgb(255 255 255 / 20%);
   text-transform: uppercase;
 }
 
@@ -121,10 +143,15 @@
 }
 
 .radar-node[data-spectrum="sangue"] { color: var(--home-sangue); }
-.radar-node[data-spectrum="morte"] { color: #6a6a6e; }
+.radar-node[data-spectrum="morte"] { color: var(--home-morte); }
 .radar-node[data-spectrum="conhecimento"] { color: var(--home-conhecimento); }
-.radar-node[data-spectrum="energia"] { color: #6951b5; }
-.radar-node[data-spectrum="medo"] { color: #c8c8ce; }
+.radar-node[data-spectrum="energia"] { color: var(--home-energia); }
+.radar-node[data-spectrum="medo"] { color: var(--home-medo); }
+
+.radar-node svg {
+  filter: drop-shadow(0 0 6px currentColor);
+  animation: led-flicker 3.6s steps(2, end) infinite;
+}
 
 .membrane-readout {
   display: flex;
@@ -146,6 +173,7 @@
   font-size: 16px;
   font-weight: 500;
   letter-spacing: .06em;
+  animation: membrane-pulse 2s ease-in-out infinite;
 }
 
 .archive-readout-meta {
@@ -212,7 +240,7 @@
   position: relative;
   min-height: 380px;
   overflow: hidden;
-  background: #0d0d0f;
+  background: #0b0c10;
 }
 
 .hero-art::before {
@@ -229,6 +257,8 @@
   min-height: 380px;
   object-fit: contain;
   object-position: center;
+  mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
 }
 
 .hero-art-label {
@@ -262,8 +292,8 @@
   padding: 0 16px;
   border: 1px solid var(--home-border);
   border-radius: 0;
-  font: 600 10px "JetBrains Mono", "Space Mono", monospace;
-  letter-spacing: .1em;
+  font: 600 10px var(--font-terminal);
+  letter-spacing: .15em;
   cursor: pointer;
   transition: color 150ms, border-color 150ms, background-color 150ms;
 }
@@ -333,10 +363,15 @@
   box-sizing: border-box;
   border: 1px solid var(--home-border);
   border-radius: 0;
-  background: var(--home-surface);
+  background-color: var(--home-surface);
+  background-image:
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
 
 .case-new-card {
+  --case-accent: var(--home-conhecimento);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -380,14 +415,18 @@
   justify-content: space-between;
   padding: 16px;
   cursor: pointer;
-  transition: color 150ms, border-color 150ms, background-color 150ms;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
+  background-size: 24px 24px;
+  transition: color 150ms, border-color 150ms, background-color 150ms, box-shadow 180ms;
 }
 
-.case-card[data-spectrum="sangue"] { border-top: 2px solid var(--home-sangue); }
-.case-card[data-spectrum="morte"] { border-top: 2px solid var(--home-morte); }
-.case-card[data-spectrum="energia"] { border-top: 2px solid var(--home-energia); }
-.case-card[data-spectrum="conhecimento"] { border-top: 2px solid var(--home-conhecimento); }
-.case-card[data-spectrum="medo"] { border-top: 2px solid var(--home-text); }
+.case-card[data-spectrum="sangue"] { --case-accent: var(--home-sangue); border-top: 2px solid var(--home-sangue); }
+.case-card[data-spectrum="morte"] { --case-accent: var(--home-morte); border-top: 2px solid var(--home-morte); }
+.case-card[data-spectrum="energia"] { --case-accent: var(--home-energia); border-top: 2px solid var(--home-energia); }
+.case-card[data-spectrum="conhecimento"] { --case-accent: var(--home-conhecimento); border-top: 2px solid var(--home-conhecimento); }
+.case-card[data-spectrum="medo"] { --case-accent: var(--home-medo); border-top: 2px solid var(--home-text); }
 
 .case-card[data-spectrum="sangue"]::before,
 .case-card[data-spectrum="morte"]::before,
@@ -405,16 +444,41 @@
   pointer-events: none;
 }
 
+.case-card::after,
+.case-new-card::after {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) top left / 18px 2px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) top left / 2px 18px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) top right / 18px 2px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) top right / 2px 18px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) bottom left / 18px 2px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) bottom left / 2px 18px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) bottom right / 18px 2px no-repeat,
+    linear-gradient(var(--case-accent, var(--home-conhecimento)), var(--case-accent, var(--home-conhecimento))) bottom right / 2px 18px no-repeat;
+  opacity: .72;
+}
+
 .case-card[data-spectrum="sangue"]::before { content: "// FLUXO VITAL"; color: var(--home-sangue); }
-.case-card[data-spectrum="morte"]::before { content: "// DEGRADAÇÃO"; color: #8a8a8c; }
+.case-card[data-spectrum="morte"]::before { content: "// DEGRADAÇÃO"; color: var(--home-muted); }
 .case-card[data-spectrum="conhecimento"]::before { content: "// SIGILO ATIVO"; color: var(--home-conhecimento); }
-.case-card[data-spectrum="energia"]::before { content: "// INTERFERÊNCIA"; color: #6951b5; }
-.case-card[data-spectrum="medo"]::before { content: "// CONVERGÊNCIA"; color: #c8c8ce; }
+.case-card[data-spectrum="energia"]::before { content: "// INTERFERÊNCIA"; color: var(--home-energia); }
+.case-card[data-spectrum="medo"]::before { content: "// CONVERGÊNCIA"; color: var(--home-medo); }
 
 .case-card:hover {
   border-color: var(--home-text);
-  background: #1a1a1c;
+  background-color: #151923;
 }
+
+.case-card[data-spectrum="sangue"]:hover { box-shadow: 0 0 20px rgb(230 57 70 / 25%); }
+.case-card[data-spectrum="energia"]:hover { box-shadow: 0 0 20px rgb(168 85 247 / 25%); }
+.case-card[data-spectrum="morte"]:hover { box-shadow: 0 0 20px rgb(100 116 139 / 18%); }
+.case-card[data-spectrum="conhecimento"]:hover { box-shadow: 0 0 20px rgb(234 179 8 / 20%); }
+.case-card[data-spectrum="medo"]:hover { box-shadow: 0 0 20px rgb(248 250 252 / 16%); }
 
 .case-art {
   position: absolute;
@@ -503,10 +567,10 @@
 }
 
 .case-card[data-spectrum="sangue"] .case-element { color: var(--home-sangue); }
-.case-card[data-spectrum="morte"] .case-element { color: #8a8a8c; }
-.case-card[data-spectrum="energia"] .case-element { color: #6951b5; }
+.case-card[data-spectrum="morte"] .case-element { color: var(--home-muted); }
+.case-card[data-spectrum="energia"] .case-element { color: var(--home-energia); }
 .case-card[data-spectrum="conhecimento"] .case-element { color: var(--home-conhecimento); }
-.case-card[data-spectrum="medo"] .case-element { color: #c8c8ce; }
+.case-card[data-spectrum="medo"] .case-element { color: var(--home-medo); }
 
 .case-evolution {
   display: block;
@@ -521,7 +585,7 @@
   max-width: 90%;
   margin: 9px 0 0;
   color: var(--home-text);
-  font-family: "Rajdhani", "Arial Narrow", sans-serif;
+  font-family: var(--font-hud);
   font-size: 24px;
   font-weight: 600;
   letter-spacing: .04em;
@@ -712,6 +776,7 @@
   display: flex;
   gap: 56px;
   min-width: max-content;
+  font-family: var(--font-terminal);
   animation: telemetry-scroll 32s linear infinite;
 }
 
@@ -764,6 +829,10 @@
     justify-content: flex-start;
     overflow-x: auto;
     text-align: left;
+  }
+
+  .radar-node svg {
+    filter: drop-shadow(0 0 5px currentColor);
   }
 
   .membrane-readout,

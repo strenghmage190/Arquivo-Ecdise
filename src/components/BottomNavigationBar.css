@@ -16,8 +16,9 @@
     justify-content: space-around;
     height: 60px;
     padding-bottom: env(safe-area-inset-bottom);
-    border-top: 1px solid var(--border);
-    background: var(--surface);
+    border-top: 1px solid #64748b;
+    background: rgb(15 17 23 / 85%);
+    backdrop-filter: blur(16px);
   }
 
   .nav-item {
@@ -64,8 +65,9 @@
     padding: 14px;
     border-top: 1px solid var(--border);
     border-radius: 0;
-    background: var(--surface);
+    background: rgb(15 17 23 / 90%);
     box-shadow: 0 -12px 26px rgb(0 0 0 / 48%);
+    backdrop-filter: blur(16px);
     opacity: 0;
     pointer-events: none;
     transform: translateY(110%);
@@ -125,14 +127,15 @@
     background: var(--bg);
     color: var(--text-secondary);
     font-family: var(--font-system);
-    transition: border-color 150ms, background-color 150ms, color 150ms;
+    transition: border-color 150ms, background-color 150ms, color 150ms, box-shadow 150ms;
   }
 
   .mobile-tool-btn:active,
   .mobile-tool-btn:hover {
-    border-color: #545458;
-    background: #1B1B1E;
+    border-color: #64748b;
+    background: #1b2330;
     color: var(--text-primary);
+    box-shadow: 0 0 9px rgb(148 163 184 / 16%);
   }
 
   .tool-icon {

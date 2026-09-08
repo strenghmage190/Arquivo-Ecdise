@@ -26,13 +26,29 @@
   opacity: .18;
 }
 
-.boot-glow,
+.boot-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 48%, rgb(30 41 59 / 32%), transparent 58%);
+}
+
 .scanline {
-  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+  background:
+    linear-gradient(rgb(18 16 16 / 0%) 50%, rgb(0 0 0 / 25%) 50%),
+    linear-gradient(90deg, rgb(255 0 0 / 3%), rgb(0 255 0 / 1%), rgb(0 0 255 / 3%));
+  background-size: 100% 3px, 6px 100%;
+  opacity: .34;
 }
 
 .boot-frame {
   position: relative;
+  z-index: 3;
   width: min(1040px, 92vw);
   box-sizing: border-box;
   padding: 26px;
@@ -126,6 +142,7 @@
 }
 
 .terminal {
+  position: relative;
   display: flex;
   min-height: 320px;
   flex-direction: column;
@@ -157,7 +174,22 @@
   background: #E8E8EA;
 }
 
+.dot.pulse {
+  animation: membrane-pulse 2s ease-in-out infinite;
+}
+
+.terminal::after {
+  position: absolute;
+  inset: 39px 0 0;
+  z-index: 2;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, transparent 0 2px, rgb(255 255 255 / 3%) 3px);
+  content: "";
+}
+
 .terminal-lines {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -183,8 +215,25 @@
   color: #E8E8EA;
 }
 
+.line.ok .text {
+  color: #22c55e;
+}
+
+.line.alert .text {
+  color: #e63946;
+}
+
 .typing .text {
   color: #8A8A8C;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  border-right: 2px solid #e63946;
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
 }
 
 .telemetry {

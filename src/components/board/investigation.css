@@ -1,17 +1,17 @@
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap");
 
 :root {
-  --bg: #0A0A0B;
-  --surface: #131315;
-  --border: #2A2A2C;
-  --text-primary: #E8E8EA;
-  --text-secondary: #8A8A8C;
-  --institutional-red: #8B1414;
-  --el-sangue: #8B1414;
-  --el-morte: #1C1C1E;
-  --el-morte-border: #3A3A3C;
-  --el-energia: #3D2E7C;
-  --el-conhecimento: #B08D2E;
+  --bg: #0b0c10;
+  --surface: #11141b;
+  --border: #29313d;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --institutional-red: #e63946;
+  --el-sangue: #e63946;
+  --el-morte: #1f2933;
+  --el-morte-border: #64748b;
+  --el-energia: #a855f7;
+  --el-conhecimento: #eab308;
   --ev-metamorfose-a: #1C1C1E;
   --ev-metamorfose-b: #00C2D1;
   --ev-encarnacao-a: #8B1414;
@@ -23,7 +23,8 @@
   --ev-quimera-a: #D1204A;
   --ev-quimera-b: #3D2E7C;
   --ev-singularidade-a: #0A0A0B;
-  --ev-singularidade-b: #B08D2E;
+  --ev-singularidade-b: #ca8a04;
+  --el-medo: #f8fafc;
   --font-system: "JetBrains Mono", "Space Mono", monospace;
   --font-case: "Rajdhani", sans-serif;
   --header-height: 78px;
@@ -37,7 +38,9 @@
   z-index: 2000;
   display: flex;
   overflow: hidden;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 50% 42%, #161d28 0, transparent 52%),
+    var(--bg);
   color: var(--text-primary);
   font-family: var(--font-system);
 }
@@ -48,8 +51,11 @@
   cursor: grab;
   touch-action: none;
   background-color: var(--bg);
-  background-image: radial-gradient(circle, rgb(232 232 234 / 11%) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image:
+    radial-gradient(ellipse at center, transparent 20%, rgb(0 0 0 / 34%) 100%),
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
 }
 
 .corkboard-canvas:active,
@@ -98,7 +104,7 @@ body.space-panning .corkboard-canvas:active {
   align-items: center;
   min-height: var(--header-height);
   padding: 0 20px;
-  background: var(--surface);
+  background: #11141b;
   border-bottom: 1px solid var(--border);
 }
 
@@ -118,10 +124,11 @@ body.space-panning .corkboard-canvas:active {
 .case-title {
   margin: 0;
   color: var(--text-primary);
-  font-family: var(--font-case);
+  font-family: var(--font-hud, var(--font-case));
   font-size: clamp(21px, 2vw, 30px);
   font-weight: 700;
-  letter-spacing: .07em;
+  letter-spacing: .15em;
+  text-shadow: 0 0 8px rgb(255 255 255 / 20%);
   line-height: .95;
   text-transform: uppercase;
 }
@@ -161,12 +168,27 @@ body.space-panning .corkboard-canvas:active {
   max-width: calc(100vw - 32px);
   overflow-x: auto;
   padding: 6px 8px;
-  background: var(--surface);
+  position: relative;
+  background: rgb(15 17 23 / 85%);
   border: 1px solid var(--border);
   border-radius: 999px;
-  box-shadow: 0 12px 28px rgb(0 0 0 / 42%);
+  box-shadow: 0 16px 44px rgb(0 0 0 / 52%);
+  backdrop-filter: blur(16px);
   transform: translateX(-50%);
   scrollbar-width: none;
+}
+
+.investigation-toolbar::before {
+  position: absolute;
+  top: -1px;
+  right: 18px;
+  left: 18px;
+  height: 1px;
+  content: "";
+  pointer-events: none;
+  background: #64748b;
+  clip-path: polygon(0 0, 97% 0, 100% 100%, 3% 100%);
+  opacity: .72;
 }
 
 .investigation-toolbar::-webkit-scrollbar {
@@ -188,7 +210,7 @@ body.space-panning .corkboard-canvas:active {
 }
 
 .toolbar-group + .toolbar-group {
-  border-left: 1px solid var(--border);
+  border-left: 1px solid #45515f;
 }
 
 .toolbar-zoom {
@@ -227,9 +249,10 @@ body.space-panning .corkboard-canvas:active {
 
 .board-button:hover,
 .hud-btn:hover {
-  border-color: #545458;
-  background: #1B1B1E;
+  border-color: #64748b;
+  background: #1b2330;
   color: var(--text-primary);
+  box-shadow: 0 0 9px rgb(148 163 184 / 16%);
 }
 
 .board-button:focus-visible,
@@ -261,9 +284,10 @@ body.space-panning .corkboard-canvas:active {
 }
 
 .hud-btn.active-uv {
-  border-color: #545458;
-  background: #1B1B1E;
-  color: var(--text-primary);
+  border-color: #a855f7;
+  background: #21162f;
+  color: #c084fc;
+  box-shadow: 0 0 12px rgb(168 85 247 / 24%);
 }
 
 .hud-btn::after,
