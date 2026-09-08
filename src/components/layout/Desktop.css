@@ -20,15 +20,17 @@
 
 .falling-sigil {
   position: absolute;
-  top: -12vh;
+  top: var(--sigil-top);
   left: var(--sigil-left);
   z-index: 0;
   display: block;
+  min-width: 1em;
   color: var(--sigil-color);
   font-size: var(--sigil-size);
-  line-height: 1;
+  line-height: .86;
   opacity: 0;
-  transform: translate3d(0, -12vh, 0) rotate(var(--sigil-rotation, 0deg));
+  white-space: pre;
+  transform: translate3d(0, -35vh, 0) rotate(var(--sigil-rotation, 0deg));
   animation: falling-sigil var(--sigil-duration) linear var(--sigil-delay) infinite;
   user-select: none;
 }
@@ -69,20 +71,24 @@
 @keyframes falling-sigil {
   0% {
     opacity: 0;
-    transform: translate3d(0, -12vh, 0) rotate(var(--sigil-rotation));
+    transform: translate3d(0, -35vh, 0) rotate(var(--sigil-rotation));
   }
 
-  12% {
-    opacity: .2;
+  8% {
+    opacity: .24;
   }
 
-  70% {
-    opacity: .12;
+  42% {
+    opacity: .17;
+  }
+
+  78% {
+    opacity: .11;
   }
 
   100% {
     opacity: 0;
-    transform: translate3d(var(--sigil-drift), 122vh, 0) rotate(calc(var(--sigil-rotation) + 80deg));
+    transform: translate3d(var(--sigil-drift), 145vh, 0) rotate(calc(var(--sigil-rotation) + 64deg));
   }
 }
 
@@ -95,7 +101,7 @@
 }
 
 @media (max-width: 768px) {
-  .falling-sigil:nth-child(even) {
+  .falling-sigil:nth-child(3n) {
     display: none;
   }
 }

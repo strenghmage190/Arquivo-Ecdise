@@ -6,15 +6,16 @@ import NetUplink from '../tools/NetUplink';
 
 const SIGIL_ELEMENTS = ['sangue', 'morte', 'conhecimento', 'energia', 'medo'] as const;
 const SIGIL_GLYPHS = ['A', 'S', 'R', 'N', 'V', 'O', 'X', 'E', 'K', 'M', 'T', 'C'];
-const FALLING_SIGILS = Array.from({ length: 38 }, (_, index) => ({
+const FALLING_SIGILS = Array.from({ length: 64 }, (_, index) => ({
   id: `sigil-${index}`,
   element: SIGIL_ELEMENTS[index % SIGIL_ELEMENTS.length],
-  glyph: SIGIL_GLYPHS[index % SIGIL_GLYPHS.length],
-  left: `${(index * 29 + 7) % 100}%`,
-  delay: `${-((index * 1.7) % 18)}s`,
-  duration: `${14 + (index % 7) * 1.8}s`,
-  drift: `${(index % 2 === 0 ? 1 : -1) * (16 + (index % 5) * 9)}px`,
-  size: `${18 + (index % 4) * 7}px`,
+  glyph: Array.from({ length: 5 + (index % 8) }, (_, glyphIndex) => SIGIL_GLYPHS[(index + glyphIndex * 3) % SIGIL_GLYPHS.length]).join('\n'),
+  left: `${(index * 37 + 5) % 100}%`,
+  top: `${-18 + ((index * 23) % 118)}vh`,
+  delay: `${-((index * 2.1) % 24)}s`,
+  duration: `${9 + (index % 9) * 1.15}s`,
+  drift: `${(index % 2 === 0 ? 1 : -1) * (12 + (index % 6) * 8)}px`,
+  size: `${14 + (index % 4) * 5}px`,
   font: index % 3 === 0 ? 'sigil-sinais' : 'sigil-estrangeiro',
 }));
 
@@ -51,6 +52,7 @@ export default function Desktop({ cases }: { cases: any[] }) {
             className={`falling-sigil falling-sigil-${sigil.element} ${sigil.font}`}
             style={{
               '--sigil-left': sigil.left,
+              '--sigil-top': sigil.top,
               '--sigil-delay': sigil.delay,
               '--sigil-duration': sigil.duration,
               '--sigil-drift': sigil.drift,
