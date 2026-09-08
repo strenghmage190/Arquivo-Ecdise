@@ -1022,3 +1022,55 @@ select {
     padding-top: 62px;
   }
 }
+
+.sigil-rail {
+  position: fixed;
+  top: 116px;
+  right: 10px;
+  bottom: 84px;
+  z-index: 0;
+  display: flex;
+  width: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  overflow: hidden;
+  pointer-events: none;
+  color: #E8E8EA;
+}
+
+.sigil-rail::before,
+.sigil-rail::after {
+  width: 1px;
+  height: 18%;
+  background: #2A2A2C;
+  content: "";
+}
+
+.sigil-rail-mark {
+  display: block;
+  max-height: 180px;
+  overflow: hidden;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: .08em;
+  text-align: center;
+  writing-mode: vertical-rl;
+  opacity: .23;
+}
+
+.sigil-sinais {
+  font-family: "Sinais Estrangeiro", sans-serif;
+}
+
+.sigil-sigilos {
+  font-family: "Sigilos", sans-serif;
+  font-size: 30px;
+  opacity: .18;
+}
+
+@media (max-width: 768px) {
+  .sigil-rail {
+    display: none;
+  }
+}

@@ -1,5 +1,17 @@
 /* stylelint-disable at-rule-no-unknown */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap');
+
+@font-face {
+  font-family: "Sinais Estrangeiro";
+  src: url("https://cdn.builder.io/o/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F0fa2c20dcc684c73b8bc28fb9ea3d842?alt=media&token=e7b3fc02-282a-44bf-b774-8043dd7ae5ef&apiKey=b4bc12b65d81467ebb24dfe4e4692469") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sigilos";
+  src: url("https://cdn.builder.io/o/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F322319c5ed2c40469fe2589b75e71835?alt=media&token=2ed55d33-f004-4edc-bfd5-379928a3fd15&apiKey=b4bc12b65d81467ebb24dfe4e4692469") format("truetype");
+  font-display: swap;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

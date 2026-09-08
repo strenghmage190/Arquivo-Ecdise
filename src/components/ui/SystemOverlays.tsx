@@ -174,7 +174,16 @@ export default function SystemOverlays() {
       </header>
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
-      <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      {location.pathname !== '/' && (
+        <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      )}
+      {location.pathname === '/' && (
+        <aside className="sigil-rail" aria-hidden="true">
+          <span className="sigil-rail-mark sigil-sinais">A R C H I V O</span>
+          <span className="sigil-rail-mark sigil-sigilos">S I G I L O S</span>
+          <span className="sigil-rail-mark sigil-sinais">O U T R O L A D O</span>
+        </aside>
+      )}
     </>
   );
 }

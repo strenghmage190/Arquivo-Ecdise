@@ -4,6 +4,19 @@ import SystemTerminal from '../tools/SystemTerminal';
 import FileExplorer from '../tools/FileExplorer';
 import NetUplink from '../tools/NetUplink';
 
+const SIGIL_ELEMENTS = ['sangue', 'morte', 'conhecimento', 'energia', 'medo'] as const;
+const SIGIL_GLYPHS = ['A', 'S', 'R', 'N', 'V', 'O', 'X', 'E', 'K', 'M', 'T', 'C'];
+const FALLING_SIGILS = Array.from({ length: 38 }, (_, index) => ({
+  id: `sigil-${index}`,
+  element: SIGIL_ELEMENTS[index % SIGIL_ELEMENTS.length],
+  glyph: SIGIL_GLYPHS[index % SIGIL_GLYPHS.length],
+  left: `${(index * 29 + 7) % 100}%`,
+  delay: `${-((index * 1.7) % 18)}s`,
+  duration: `${14 + (index % 7) * 1.8}s`,
+  drift: `${(index % 2 === 0 ? 1 : -1) * (16 + (index % 5) * 9)}px`,
+  size: `${18 + (index % 4) * 7}px`,
+  font: index % 3 === 0 ? 'sigil-sinais' : 'sigil-estrangeiro',
+}));
 
 export default function Desktop({ cases }: { cases: any[] }) {
   const [openWindow, setOpenWindow] = React.useState<string | null>(null);
@@ -31,7 +44,23 @@ export default function Desktop({ cases }: { cases: any[] }) {
 
   return (
     <div className="desktop-root">
-      {/* Desktop icons moved to HUD for compactness */}
+      <div className="falling-sigils" aria-hidden="true">
+        {FALLING_SIGILS.map((sigil) => (
+          <span
+            key={sigil.id}
+            className={`falling-sigil falling-sigil-${sigil.element} ${sigil.font}`}
+            style={{
+              '--sigil-left': sigil.left,
+              '--sigil-delay': sigil.delay,
+              '--sigil-duration': sigil.duration,
+              '--sigil-drift': sigil.drift,
+              '--sigil-size': sigil.size,
+            } as React.CSSProperties}
+          >
+            {sigil.glyph}
+          </span>
+        ))}
+      </div>
 
       {openWindow === 'files' && <FileExplorer onClose={() => setOpenWindow(null)} />}
       {openWindow === 'net' && <NetUplink onClose={() => setOpenWindow(null)} />}
