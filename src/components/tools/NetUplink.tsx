@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { Radio, X } from 'lucide-react';
 import { createInviteLink } from '../../api/investigations';
 
 const PingGraph = () => (
-  <div style={{height:60, background:'rgba(0,0,0,0.2)', border:'1px solid rgba(0,243,255,0.04)', position:'relative', overflow:'hidden', marginTop:10}}>
-    <div style={{width:'200%', height:'100%', backgroundImage:'linear-gradient(90deg, transparent 50%, rgba(0,243,255,0.06) 50%)', backgroundSize:'20px 100%', animation:'scrollGrid 1s linear infinite'}} />
-    <div style={{position:'absolute', bottom:6, left:8, color:'var(--nexus-blue)', fontSize:11}}>UPLINK: STABLE (32ms)</div>
+  <div className="ping-graph">
+    <div className="ping-grid" />
+    <div className="ping-label">UPLINK: STABLE (32ms)</div>
   </div>
 );
 
@@ -27,23 +28,23 @@ export default function NetUplink({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="os-window" style={{height:360}}>
-      <div className="os-titlebar" style={{background:'linear-gradient(90deg,#001a12,#003322)'}}>
+    <div className="os-window os-window-compact">
+      <div className="os-titlebar">
         <span>NETWORK MANAGER v2.0</span>
-        <button className="os-btn-close" onClick={onClose}>X</button>
+        <button className="os-btn-close" onClick={onClose} aria-label="Fechar conexão"><X size={16} /></button>
       </div>
 
-      <div className="os-content" style={{display:'flex', gap:16}}>
-        <div style={{width:260, borderRight:'1px solid rgba(0,243,255,0.03)', paddingRight:8}}>
-          <button onClick={() => setActiveTab('status')} style={{display:'block', width:'100%', marginBottom:6, background:'transparent', border:'none', color: activeTab==='status' ? 'var(--nexus-blue)' : 'var(--muted)', textAlign:'left', cursor:'pointer'}}>› STATUS</button>
-          <button onClick={() => setActiveTab('invite')} style={{display:'block', width:'100%', marginBottom:6, background:'transparent', border:'none', color: activeTab==='invite' ? 'var(--nexus-blue)' : 'var(--muted)', textAlign:'left', cursor:'pointer'}}>› CONVIDAR</button>
+      <div className="os-content os-content-split">
+        <div className="uplink-tabs">
+          <button onClick={() => setActiveTab('status')} className={activeTab === 'status' ? 'uplink-tab active' : 'uplink-tab'}>› STATUS</button>
+          <button onClick={() => setActiveTab('invite')} className={activeTab === 'invite' ? 'uplink-tab active' : 'uplink-tab'}>› CONVIDAR</button>
         </div>
 
         <div style={{flex:1}}>
           {activeTab === 'status' && (
             <div className="remote-dashboard">
               <div className="map-panel">
-                <h3>RASTREAMENTO GLOBAL</h3>
+                <h3 className="panel-heading">RASTREAMENTO GLOBAL</h3>
                 <div className="map-container">
                   <div className={`world-map ${jump? 'jump-scare':''}`}>
                     {/* pins */}
@@ -56,18 +57,18 @@ export default function NetUplink({ onClose }: { onClose: () => void }) {
               </div>
 
               <div className="cctv-panel">
-                <h3>FEEDS DE SEGURANÇA</h3>
+                <h3 className="panel-heading">FEEDS DE SEGURANÇA</h3>
                 <div className="camera-feed">
                   <div className="cam-label">CAM_04: CORREDOR B</div>
                   <div className="cam-image" />
                   <div className="static-overlay" />
-                  <div className="rec-dot">🔴 REC</div>
+                  <div className="rec-dot"><Radio size={12} /> REC</div>
                 </div>
                 <div className="camera-feed">
                   <div className="cam-label">CAM_09: CELA DE CONTENÇÃO</div>
                   <div className="cam-image" />
                   <div className="static-overlay" />
-                  <div className="rec-dot">🔴 REC</div>
+                  <div className="rec-dot"><Radio size={12} /> REC</div>
                 </div>
               </div>
 
@@ -77,9 +78,9 @@ export default function NetUplink({ onClose }: { onClose: () => void }) {
 
           {activeTab === 'invite' && (
             <div>
-              <h3 style={{marginTop:0, color:'var(--nexus-blue)'}}>GERAR CHAVE DE ACESSO</h3>
-              <p style={{color:'var(--muted)'}}>Abra um caso específico e gere um link seguro para convidar agentes.</p>
-              <button onClick={handleGenerate} style={{background:'transparent', border:'1px solid rgba(0,243,255,0.06)', color:'var(--nexus-blue)', padding:8, width:'100%', cursor:'pointer'}} disabled={generating}>{generating ? 'GERANDO...' : '[ INICIAR PROTOCOLO HANDSHAKE ]'}</button>
+              <h3 className="panel-heading">GERAR CHAVE DE ACESSO</h3>
+              <p className="uplink-description">Abra um caso específico e gere um link seguro para convidar agentes.</p>
+              <button onClick={handleGenerate} className="uplink-action" disabled={generating}>{generating ? 'GERANDO...' : '[ INICIAR PROTOCOLO HANDSHAKE ]'}</button>
             </div>
           )}
         </div>

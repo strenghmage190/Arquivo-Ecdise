@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, FolderOpen, Image, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
 import Desktop from '../components/layout/Desktop';
@@ -16,14 +16,40 @@ const ARCHIVE_ART = {
 } as const;
 
 const CASE_ART = [
-  { key: 'sangue', label: 'SANGUE', src: ARCHIVE_ART.sangue },
-  { key: 'morte', label: 'MORTE', src: ARCHIVE_ART.morte },
-  { key: 'conhecimento', label: 'CONHECIMENTO', src: ARCHIVE_ART.conhecimento },
-  { key: 'energia', label: 'ENERGIA', src: ARCHIVE_ART.energia },
-  { key: 'medo', label: 'MEDO', src: ARCHIVE_ART.medo },
+  { key: 'sangue', label: 'SANGUE', short: 'SAN', src: ARCHIVE_ART.sangue },
+  { key: 'morte', label: 'MORTE', short: 'MOR', src: ARCHIVE_ART.morte },
+  { key: 'conhecimento', label: 'CONHECIMENTO', short: 'CON', src: ARCHIVE_ART.conhecimento },
+  { key: 'energia', label: 'ENERGIA', short: 'ENE', src: ARCHIVE_ART.energia },
+  { key: 'medo', label: 'MEDO', short: 'MED', src: ARCHIVE_ART.medo },
 ] as const;
 
-function getCaseArt(id: unknown) {
+const CASE_EVOLUTIONS = [
+  'METAMORFOSE',
+  'ENCARNAÇÃO',
+  'APOTEOSE',
+  'SÍNTESE',
+  'QUIMERA',
+  'SINGULARIDADE',
+] as const;
+
+type CaseElement = (typeof CASE_ART)[number]['key'];
+type CaseEvolution = (typeof CASE_EVOLUTIONS)[number];
+type CaseClassification = { element: CaseElement; evolution?: CaseEvolution };
+
+const CLASSIFICATIONS_STORAGE_KEY = 'cris-case-classifications';
+
+function readCaseClassifications(): Record<string, CaseClassification> {
+  try {
+    return JSON.parse(window.localStorage.getItem(CLASSIFICATIONS_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getCaseArt(id: unknown, element?: string | null) {
+  const elementalArt = CASE_ART.find((art) => art.key === element);
+  if (elementalArt) return elementalArt;
+
   const source = String(id ?? '');
   const index = [...source].reduce((sum, character) => sum + character.charCodeAt(0), 0) % CASE_ART.length;
   return CASE_ART[index];
@@ -36,6 +62,8 @@ export default function Home() {
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [newElement, setNewElement] = useState<CaseElement | ''>('');
+  const [newEvolution, setNewEvolution] = useState<CaseEvolution | ''>('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -51,22 +79,34 @@ export default function Home() {
     if (res.error) {
       setCases([]);
     } else {
-      setCases(res.data || []);
+      const classifications = readCaseClassifications();
+      setCases((res.data || []).map((currentCase) => ({
+        ...currentCase,
+        ...(classifications[String(currentCase.id)] || {}),
+      })));
     }
   }
 
   async function handleCreate() {
     const title = newTitle.trim();
-    if (!title) return;
+    if (!title || !newElement) return;
     setCreating(true);
     try {
       const created = await createInvestigation(title, newDescription.trim() || undefined, coverUrl.trim() || undefined);
       if (created?.id) {
         const newId = String(created.id).split(':')[0];
+        const classifications = readCaseClassifications();
+        classifications[newId] = {
+          element: newElement,
+          ...(newEvolution ? { evolution: newEvolution } : {}),
+        };
+        window.localStorage.setItem(CLASSIFICATIONS_STORAGE_KEY, JSON.stringify(classifications));
         setShowCreateModal(false);
         setNewTitle('');
         setNewDescription('');
         setCoverUrl('');
+        setNewElement('');
+        setNewEvolution('');
         await fetchCases();
         navigate(`/case/${newId}`);
       }
@@ -81,6 +121,9 @@ export default function Home() {
     if (!confirm('Apagar este caso? Essa ação é irreversível.')) return;
     try {
       await deleteInvestigation(id);
+      const classifications = readCaseClassifications();
+      delete classifications[String(id).split(':')[0]];
+      window.localStorage.setItem(CLASSIFICATIONS_STORAGE_KEY, JSON.stringify(classifications));
       await fetchCases();
     } catch (error) {
       alert('Erro ao apagar caso. Verifique permissões.');
@@ -95,6 +138,8 @@ export default function Home() {
     setNewTitle('');
     setNewDescription('');
     setCoverUrl('');
+    setNewElement('');
+    setNewEvolution('');
     setShowCreateModal(true);
   }
 
@@ -107,13 +152,27 @@ export default function Home() {
           <div className={styles['brand-lockup']}>
             <div className={styles['title-badge']}>C.R.I.S</div>
             <div>
-              <div className={styles['eyebrow']}>ORDEM // ARQUIVO CENTRAL</div>
+              <div className={styles['eyebrow']}>ARQUIVOS // DIVISÃO FORENSE</div>
               <h1>ARQUIVOS DA ORDEM</h1>
             </div>
           </div>
           <div className={styles['header-readout']} aria-label="Estado do arquivo">
-            <span><ShieldCheck size={13} /> ACESSO INSTITUCIONAL</span>
-            <span>{String(cases.length).padStart(2, '0')} REGISTROS ATIVOS</span>
+            <div className={styles['element-radar']} aria-label="Radar elemental">
+              {CASE_ART.map((element) => (
+                <span key={element.key} className={styles['radar-node']} data-spectrum={element.key} title={element.label}>
+                  <Circle size={10} />
+                  <span>{element.short}</span>
+                </span>
+              ))}
+            </div>
+            <div className={styles['membrane-readout']}>
+              <span>MEMBRANA LOCAL</span>
+              <strong>99.4%</strong>
+            </div>
+            <div className={styles['archive-readout-meta']}>
+              <span><ShieldCheck size={13} /> ACESSO INSTITUCIONAL</span>
+              <span>{String(cases.length).padStart(2, '0')} REGISTROS ATIVOS</span>
+            </div>
           </div>
         </header>
 
@@ -152,7 +211,7 @@ export default function Home() {
             </button>
 
             {cases.map((currentCase, index) => {
-              const art = getCaseArt(currentCase.id || index);
+              const art = getCaseArt(currentCase.id || index, currentCase.element);
               const cleanId = String(currentCase.id).split(':')[0];
               return (
                 <article
@@ -161,7 +220,10 @@ export default function Home() {
                   data-spectrum={art.key}
                   onClick={() => openCase(currentCase.id)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') openCase(currentCase.id);
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openCase(currentCase.id);
+                    }
                   }}
                   role="button"
                   tabIndex={0}
@@ -188,6 +250,7 @@ export default function Home() {
                   </div>
                   <div className={styles['case-card-body']}>
                     <span className={styles['case-element']}><Image size={12} /> {art.label}</span>
+                    {currentCase.evolution && <span className={styles['case-evolution']}>{currentCase.evolution}</span>}
                     <h3>{currentCase.title}</h3>
                     {currentCase.description && <p>{currentCase.description}</p>}
                   </div>
@@ -208,6 +271,15 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        <footer className={styles['telemetry-ticker']} aria-label="Telemetria da Ordem">
+          <span className={styles['telemetry-label']}>LOG DO OUTRO LADO</span>
+          <div className={styles['telemetry-track']}>
+            <span>[21:44] Flutuação paranormal detectada no Setor Leste</span>
+            <span>[21:47] Membrana local estabilizada em 99.4%</span>
+            <span>[21:52] Nenhuma autorização pendente no arquivo central</span>
+          </div>
+        </footer>
       </main>
 
       {showCreateModal && (
@@ -232,6 +304,27 @@ export default function Home() {
               onKeyDown={(event) => { if (event.key === 'Enter') handleCreate(); }}
               autoFocus
             />
+            <label htmlFor="case-element">Elemento atribuído</label>
+            <select
+              id="case-element"
+              className={styles['quick-select']}
+              value={newElement}
+              onChange={(event) => setNewElement(event.target.value as CaseElement | '')}
+              required
+            >
+              <option value="">Selecionar Elemento</option>
+              {CASE_ART.map((element) => <option key={element.key} value={element.key}>{element.label}</option>)}
+            </select>
+            <label htmlFor="case-evolution">Evolução planejada <span>(opcional)</span></label>
+            <select
+              id="case-evolution"
+              className={styles['quick-select']}
+              value={newEvolution}
+              onChange={(event) => setNewEvolution(event.target.value as CaseEvolution | '')}
+            >
+              <option value="">Manter em observação</option>
+              {CASE_EVOLUTIONS.map((evolution) => <option key={evolution} value={evolution}>{evolution}</option>)}
+            </select>
             <label htmlFor="case-description">Descrição</label>
             <textarea
               id="case-description"
@@ -251,7 +344,7 @@ export default function Home() {
             />
             <div className={styles['quick-actions']}>
               <button type="button" className={styles['secondary-action']} onClick={() => setShowCreateModal(false)}>CANCELAR</button>
-              <button type="button" className={styles['primary-action']} disabled={!newTitle.trim() || creating} onClick={handleCreate}>
+              <button type="button" className={styles['primary-action']} disabled={!newTitle.trim() || !newElement || creating} onClick={handleCreate}>
                 {creating ? 'CRIANDO...' : 'INICIAR CASO'}
               </button>
             </div>

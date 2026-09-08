@@ -137,7 +137,7 @@ export default function SystemOverlays() {
 
   return (
     <>
-      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
+      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`}>
         <div className="hud-left">
           {location.pathname === '/' ? (
             <>
@@ -161,7 +161,7 @@ export default function SystemOverlays() {
 
         <div className="hud-right">
           <div className="system-monitor" aria-hidden>
-            <div className="label">INTEGRIDADE NEXUS</div>
+            <div className="label">MEMBRANA LOCAL</div>
             <div className="bar-container">
               <div className="fill" id="integrity-bar" ref={integrityRef}></div>
             </div>

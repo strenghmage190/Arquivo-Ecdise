@@ -46,7 +46,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
         break;
       case 'list':
       case 'ls':
-        const files = (cards || []).map((c: any) => `${c.is_locked ? '🔒' : '📄'} [${String(c.id || '').slice(0,4)}] ${String(c.title||'UNTITLED').toUpperCase()}`);
+        const files = (cards || []).map((c: any) => `${c.is_locked ? '[LOCKED]' : '[FILE]'} [${String(c.id || '').slice(0,4)}] ${String(c.title||'UNTITLED').toUpperCase()}`);
         newHistory.push(...files);
         break;
       case 'open':
@@ -81,13 +81,13 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
             const finalHistory = [...newHistory];
             if (result.success) {
               finalHistory.push('═══════════════════════════════════');
-              finalHistory.push('🌡️  DESBLOQUEIO TERMAL AUTORIZADO');
+              finalHistory.push('[THERMAL]  DESBLOQUEIO TERMAL AUTORIZADO');
               finalHistory.push('═══════════════════════════════════');
               finalHistory.push(`EVIDÊNCIA: ${result.card?.title || 'DESCONHECIDA'}`);
               finalHistory.push(`STATUS: MODO TERMOGRÁFICO ATIVO`);
               finalHistory.push('═══════════════════════════════════');
             } else {
-              finalHistory.push('⚠️️  ACESSO NEGADO');
+              finalHistory.push('[DENIED]  ACESSO NEGADO');
               finalHistory.push(result.message);
             }
             setHistory(finalHistory);
@@ -118,13 +118,13 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
             const finalHistory = [...newHistory];
             if (result.success) {
               finalHistory.push('═══════════════════════════════════');
-              finalHistory.push('🔍 ARQUIVO ENCONTRADO');
+              finalHistory.push('[LOCATE] ARQUIVO ENCONTRADO');
               finalHistory.push('═══════════════════════════════════');
               finalHistory.push(`ASSET: ${result.card?.title || 'DESCONHECIDA'}`);
               finalHistory.push('DECRYPTING ON BOARD...');
               finalHistory.push('═══════════════════════════════════');
             } else {
-              finalHistory.push('⚠️️  ARQUIVO NÃO LOCALIZADO');
+              finalHistory.push('[MISS]  ARQUIVO NÃO LOCALIZADO');
               finalHistory.push(result.message);
             }
             setHistory(finalHistory);
@@ -164,7 +164,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
         <div className="terminal-output">
           {history.map((line, i) => {
             // Destaque especial para linhas termais
-            const isThermalLine = line.includes('🌡️') || line.includes('TERMAL') || line.includes('TERMOGRÁFICO') || line.includes('═');
+            const isThermalLine = line.includes('[THERMAL]') || line.includes('TERMAL') || line.includes('TERMOGRÁFICO') || line.includes('═');
             const isSuccessLine = line.includes('DESBLOQUEIO') || line.includes('AUTORIZADO');
             const className = isThermalLine || isSuccessLine ? 'term-line thermal-highlight' : 'term-line';
             return <div key={i} className={className}>{line}</div>;

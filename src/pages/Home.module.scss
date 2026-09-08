@@ -93,16 +93,69 @@
 
 .header-readout {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 7px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
   color: var(--home-muted);
   font-size: 9px;
   letter-spacing: .1em;
   text-align: right;
 }
 
-.header-readout span:first-child {
+.element-radar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 18px;
+  border-right: 1px solid var(--home-border);
+}
+
+.radar-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--home-muted);
+  font-size: 7px;
+  letter-spacing: .04em;
+}
+
+.radar-node[data-spectrum="sangue"] { color: var(--home-sangue); }
+.radar-node[data-spectrum="morte"] { color: #6a6a6e; }
+.radar-node[data-spectrum="conhecimento"] { color: var(--home-conhecimento); }
+.radar-node[data-spectrum="energia"] { color: #6951b5; }
+.radar-node[data-spectrum="medo"] { color: #c8c8ce; }
+
+.membrane-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding-right: 18px;
+  border-right: 1px solid var(--home-border);
+}
+
+.membrane-readout span {
+  color: var(--home-muted);
+  font-size: 8px;
+  letter-spacing: .1em;
+}
+
+.membrane-readout strong {
+  color: var(--home-text);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: .06em;
+}
+
+.archive-readout-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.archive-readout-meta span:first-child {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -336,6 +389,28 @@
 .case-card[data-spectrum="conhecimento"] { border-top: 2px solid var(--home-conhecimento); }
 .case-card[data-spectrum="medo"] { border-top: 2px solid var(--home-text); }
 
+.case-card[data-spectrum="sangue"]::before,
+.case-card[data-spectrum="morte"]::before,
+.case-card[data-spectrum="conhecimento"]::before,
+.case-card[data-spectrum="energia"]::before,
+.case-card[data-spectrum="medo"]::before {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  z-index: 1;
+  color: currentColor;
+  font-size: 8px;
+  letter-spacing: .16em;
+  opacity: .3;
+  pointer-events: none;
+}
+
+.case-card[data-spectrum="sangue"]::before { content: "// FLUXO VITAL"; color: var(--home-sangue); }
+.case-card[data-spectrum="morte"]::before { content: "// DEGRADAÇÃO"; color: #8a8a8c; }
+.case-card[data-spectrum="conhecimento"]::before { content: "// SIGILO ATIVO"; color: var(--home-conhecimento); }
+.case-card[data-spectrum="energia"]::before { content: "// INTERFERÊNCIA"; color: #6951b5; }
+.case-card[data-spectrum="medo"]::before { content: "// CONVERGÊNCIA"; color: #c8c8ce; }
+
 .case-card:hover {
   border-color: var(--home-text);
   background: #1a1a1c;
@@ -428,8 +503,19 @@
 }
 
 .case-card[data-spectrum="sangue"] .case-element { color: var(--home-sangue); }
-.case-card[data-spectrum="energia"] .case-element { color: var(--home-energia); }
+.case-card[data-spectrum="morte"] .case-element { color: #8a8a8c; }
+.case-card[data-spectrum="energia"] .case-element { color: #6951b5; }
 .case-card[data-spectrum="conhecimento"] .case-element { color: var(--home-conhecimento); }
+.case-card[data-spectrum="medo"] .case-element { color: #c8c8ce; }
+
+.case-evolution {
+  display: block;
+  margin-top: 6px;
+  color: var(--home-text);
+  font-size: 8px;
+  letter-spacing: .14em;
+  opacity: .72;
+}
 
 .case-card h3 {
   max-width: 90%;
@@ -554,6 +640,7 @@
 }
 
 .quick-input,
+.quick-select,
 .quick-textarea {
   width: 100%;
   box-sizing: border-box;
@@ -569,14 +656,25 @@
 }
 
 .quick-input:focus,
+.quick-select:focus,
 .quick-textarea:focus {
   border-color: var(--home-red);
   outline: 1px solid var(--home-red);
   outline-offset: 1px;
 }
 
+.quick-select {
+  appearance: none;
+}
+
 .quick-textarea {
   resize: vertical;
+}
+
+.quick-modal-card label span {
+  color: var(--home-muted);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .quick-actions {
@@ -584,6 +682,46 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+
+.telemetry-ticker {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 34px;
+  margin-top: 48px;
+  overflow: hidden;
+  border-top: 1px solid var(--home-border);
+  border-bottom: 1px solid var(--home-border);
+  color: var(--home-muted);
+  font-size: 9px;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.telemetry-label {
+  flex: 0 0 auto;
+  padding: 0 14px;
+  border-right: 1px solid var(--home-border);
+  color: var(--home-text);
+  font-size: 8px;
+  letter-spacing: .14em;
+}
+
+.telemetry-track {
+  display: flex;
+  gap: 56px;
+  min-width: max-content;
+  animation: telemetry-scroll 32s linear infinite;
+}
+
+@keyframes telemetry-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-28%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telemetry-track { animation: none; }
 }
 
 @media (max-width: 900px) {
@@ -622,8 +760,15 @@
   }
 
   .header-readout {
-    align-items: flex-start;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
     text-align: left;
+  }
+
+  .membrane-readout,
+  .archive-readout-meta {
+    align-items: flex-start;
   }
 
   .archive-hero {
