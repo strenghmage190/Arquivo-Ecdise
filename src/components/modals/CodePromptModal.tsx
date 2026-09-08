@@ -1,4 +1,4 @@
-import { Lock, AlertTriangle, Lightbulb } from 'lucide-react';
+import { AlertTriangle, Lightbulb, Lock, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import './CodePromptModal.css';
 
@@ -98,7 +98,7 @@ export default function CodePromptModal({
       <div className="code-prompt-modal" onClick={(e) => e.stopPropagation()}>
         <div className="code-prompt-header">
           <h3><Lock className="lucide-icon inline-icon" size={16} /> {title}</h3>
-          <button className="code-prompt-close" onClick={onClose}>×</button>
+          <button className="code-prompt-close" onClick={onClose} aria-label="Fechar autenticação"><X size={16} /></button>
         </div>
         
         <div className="code-prompt-body">
