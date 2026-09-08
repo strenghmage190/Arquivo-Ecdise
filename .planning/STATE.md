@@ -23,9 +23,9 @@ progress:
 ## Current Position
 
 Phase: 11 (Forms Controls & Modal)
-Plan: Pending (/gsd-plan-phase 11)
-Status: Context Gathered
-Last activity: 2026-09-07 — Phase 11 context discussed
+Plan: .planning/phases/11-forms-controls-modal/PLAN.md
+Status: Planned
+Last activity: 2026-09-08 — Phase 11 plan drafted
 
 ## Milestones Overview
 

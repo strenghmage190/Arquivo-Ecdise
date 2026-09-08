@@ -1,40 +1,48 @@
-# Milestone v1.3 Roadmap
+# Milestone v2.0 Roadmap
 
-**4 phases** | **8 requirements mapped** | All covered ✓
+**5 phases** | **27 requirements mapped** | All covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | A Purga | Deletar código morto e features inúteis | PURGE-01, PURGE-02 | 2 |
-| 2 | Assets & Temas | Substituir emojis e refinar Light Mode | ASSET-01, THEME-01 | 2 |
-| 3 | Componentes e UX | Refatorar modais e tooltips | UX-01, UX-02 | 2 |
-| 4 | O "Chefão" (Home) | Redesign pontual da Home Page | HOME-01, HOME-02 | 2 |
+| 7 | Design System Tokens | Implementar paleta institucional e tipografia forense | DSYS-01 a DSYS-06, TYPO-01 a TYPO-05 | 2 |
+| 8 | Header Home Layout | Redesign do layout principal com header Ordo Realitas e footer | HEAD-01, FOOT-01 | 2 |
+| 9 | Case Cards Layout | Cards de caso paranormais com selos elementais e metadados | CARD-01 a CARD-08 | 2 |
+| 10 | Creation Modal & Toolbar | Novo Modal de Criação e unificação da Toolbar lateral | CREA-01 a CREA-03, TOOL-01 a TOOL-04 | 2 |
+| 11 | Forms Controls & Modal | Estilização padronizada de formulários e controles de input | FORM-01 a FORM-04 | 2 |
 
 ### Phase Details
 
-### Phase 1: A Purga
-Goal: Deletar código morto e features que não agregam.
-Requirements: PURGE-01, PURGE-02
+### Phase 7: Design System Tokens
+Goal: Implementar paleta institucional e tipografia forense.
+Requirements: DSYS-01 a DSYS-06, TYPO-01 a TYPO-05
 Success criteria:
-1. Página de perfil inacessível e código deletado.
-2. Nenhuma referência a "coisas de conspiração" na UI principal.
+1. Variáveis CSS atualizadas em nexus.css.
+2. Glassmorphism e cantos arredondados removidos.
 
-### Phase 2: Assets & Temas
-Goal: Deixar o sistema com cara de profissional (Lucide Icons + Light Mode).
-Requirements: ASSET-01, THEME-01
+### Phase 8: Header Home Layout
+Goal: Redesign do layout principal com header Ordo Realitas e footer.
+Requirements: HEAD-01, FOOT-01
 Success criteria:
-1. 100% dos emojis removidos e substituídos por Lucide.
-2. Light mode com contraste adequado e sem cores lavadas.
+1. Header Ordo Realitas no topo da Home.
+2. Rodapé de telemetria com ticker monoespaçado.
 
-### Phase 3: Componentes e UX
-Goal: Resolver as dores de modais e tooltips da interface.
-Requirements: UX-01, UX-02
+### Phase 9: Case Cards Layout
+Goal: Cards de caso paranormais com selos elementais e metadados.
+Requirements: CARD-01 a CARD-08
 Success criteria:
-1. Modais fecham com ESC e clique fora (overlay escuro).
-2. Tooltips não quebram a tela nem piscam (title nativo ou CSS puro).
+1. Cards reestilizados com miniatura e selo.
+2. Dados paranormais (ameaça, evidências) exibidos no card.
 
-### Phase 4: O "Chefão" (Home)
-Goal: Identificar e atacar os problemas estruturais da Home.
-Requirements: HOME-01, HOME-02
+### Phase 10: Creation Modal & Toolbar
+Goal: Novo Modal de Criação e unificação da Toolbar lateral.
+Requirements: CREA-01 a CREA-03, TOOL-01 a TOOL-04
 Success criteria:
-1. Interface limpa, com margens respiros.
-2. CTA claro e hierarquia visual resolvida.
+1. Modal '+ NOVO CASO' com visual hacker/forense.
+2. Toolbar lateral encapsulada em pílula única (rounded-full).
+
+### Phase 11: Forms Controls & Modal
+Goal: Estilização padronizada de formulários e controles de input.
+Requirements: FORM-01 a FORM-04
+Success criteria:
+1. Inputs, selects e textareas seguindo o padrão institucional (foco vermelho fino, sem glow).
+2. Checkboxes e elementos de interface limpos e monocromáticos.
