@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './BootScreen.css';
 
+const BOOT_ART = 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F83a99cbf648c481a81b23068a2c88d4b';
+
 export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   const [lines, setLines] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,9 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
           <div className="boot-brand">
             <div className="brand-mark">ORDO<span> REALITAS</span></div>
             <div className="brand-sub">C.R.I.S // canal seguro</div>
+          </div>
+          <div className="boot-art" aria-hidden="true">
+            <img src={BOOT_ART} alt="" />
           </div>
           <div className="boot-tags">
             <span className="tag tag-primary">NO CR-07</span>

@@ -3,7 +3,7 @@
 /* Base: when any filter lens is active, dim non-matching cards and connections */
 .corkboard-canvas.filtering-active .card-node {
   opacity: 0.12;
-  filter: grayscale(90%) blur(0.6px) contrast(0.8);
+  filter: grayscale(90%) contrast(0.8);
   transition:
     opacity 0.35s ease,
     filter 0.35s ease,
@@ -48,7 +48,7 @@
 .corkboard-canvas.view-occult
   .card-node:not([data-tag*="oculto"], [data-tag*="sobrenatural"]) {
   opacity: 0.08;
-  filter: grayscale(100%) blur(1px);
+  filter: grayscale(100%);
   pointer-events: none;
 }
 
@@ -90,11 +90,8 @@
   transform: translateY(12px);
   opacity: 0;
   pointer-events: none;
-  transition:
-    transform 0.18s ease,
-    opacity 0.18s ease;
+  transition: color 150ms, border-color 150ms, background-color 150ms;
   z-index: 140;
-  backdrop-filter: blur(4px);
 }
 .card-node:hover .quick-actions {
   transform: translateY(0);

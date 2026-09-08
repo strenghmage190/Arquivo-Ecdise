@@ -906,3 +906,119 @@ h2,
 }
 
 @media (prefers-color-scheme: light) { :root { --nexus-dark: #f0f4f8; --nexus-blue: #0077ff; --nexus-glass: rgb(0 119 255 / 10%); --nexus-glitch: #d30031; --muted: #5a666b; --primary: #7c3aed; --bg-0: #ffffff; --bg-1: #e2e8f0; --bg-elevated: #cbd5e1; --border-color: #94a3b8; --border-hover: #64748b; --text-color: #1e293b; --text-color-muted: #475569; } body { background: var(--nexus-dark); color: var(--text-color); } }
+
+:root {
+  --nexus-dark: #0A0A0B;
+  --nexus-blue: #E8E8EA;
+  --nexus-glitch: #8B1414;
+  --muted: #8A8A8C;
+  --bg-1: #131315;
+  --bg-elevated: #1B1B1E;
+  --border-color: #2A2A2C;
+  --border-hover: #545458;
+  --text-color: #E8E8EA;
+  --text-color-muted: #8A8A8C;
+}
+
+body {
+  background: #0A0A0B;
+  color: #E8E8EA;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.nexus-hud {
+  height: 72px;
+  padding: 0 28px;
+  background: #131315;
+  border-bottom: 1px solid #2A2A2C;
+  box-shadow: none;
+  transition: opacity 150ms;
+}
+
+.nav-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #2A2A2C;
+  border-radius: 0;
+  background: #131315;
+  color: #8A8A8C;
+  transition: color 150ms, border-color 150ms, background-color 150ms;
+}
+
+.nav-btn:hover {
+  border-color: #545458;
+  background: #1B1B1E;
+  color: #E8E8EA;
+  box-shadow: none;
+  transform: none;
+}
+
+.system-monitor .label,
+.system-monitor .value {
+  color: #8A8A8C;
+}
+
+.system-monitor .bar-container {
+  height: 3px;
+  border-radius: 0;
+  background: #2A2A2C;
+}
+
+.system-monitor .fill {
+  background: #E8E8EA;
+  box-shadow: none;
+}
+
+.btn-logout {
+  padding: 8px 14px;
+  border: 1px solid #8B1414;
+  border-radius: 0;
+  background: #0A0A0B;
+  color: #E8E8EA;
+  transition: color 150ms, border-color 150ms, background-color 150ms;
+}
+
+.btn-logout:hover {
+  background: #8B1414;
+  color: #E8E8EA;
+  box-shadow: none;
+}
+
+.background-data {
+  color: #8A8A8C;
+  opacity: .08;
+}
+
+.app-container {
+  padding-top: 72px;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: "JetBrains Mono", monospace;
+}
+
+@media (max-width: 768px) {
+  .nexus-hud {
+    height: 62px;
+    padding: 0 12px;
+  }
+
+  .nexus-hud .hud-left {
+    gap: 6px;
+  }
+
+  .nexus-hud .hud-right {
+    gap: 10px;
+  }
+
+  .system-monitor {
+    display: none;
+  }
+
+  .app-container {
+    padding-top: 62px;
+  }
+}
