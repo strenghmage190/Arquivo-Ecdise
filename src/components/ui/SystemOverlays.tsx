@@ -61,13 +61,11 @@ export default function SystemOverlays() {
 
     const tick = () => {
       if (!alive) return;
-      // small oscillation between 98 and 99.5
-      const base = 98 + Math.random() * 1.5;
+      const base = 99.2 + Math.random() * 0.2;
       setIntegrity(base, false);
-      // occasionally dip
       if (Math.random() < 0.06) {
-        setIntegrity(85 + Math.random() * 3, true);
-        setTimeout(() => { if (alive) setIntegrity(98 + Math.random() * 1.5, false); }, 900);
+        setIntegrity(42 + Math.random() * 3, true);
+        setTimeout(() => { if (alive) setIntegrity(99.2 + Math.random() * 0.2, false); }, 900);
       }
     };
     const interval = window.setInterval(tick, 1500);

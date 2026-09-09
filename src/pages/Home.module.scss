@@ -786,7 +786,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .telemetry-track { animation: none; }
+  .telemetry-track,
+  .radar-node svg,
+  .membrane-readout strong {
+    animation: none;
+  }
 }
 
 @media (max-width: 900px) {
