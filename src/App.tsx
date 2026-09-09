@@ -14,6 +14,7 @@ import SystemOverlays from './components/ui/SystemOverlays';
 import BottomNavigationBar from './components/BottomNavigationBar';
 import ForensicBenchmarkPage from './pages/__dev/ForensicBenchmarkPage';
 // ConnectionLine removed for production layout
+import { Pencil } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as SonnerToaster } from 'sonner';
 
@@ -135,7 +136,7 @@ function App() {
           className="fab-toggle-mode" 
           onClick={() => setInteractionMode(prev => prev === 'pan' ? 'edit' : 'pan')}
         >
-          {interactionMode === 'pan' ? '' : '✏️'}
+          {interactionMode === 'pan' ? '' : <Pencil size={15} />}
         </button>
       )}
     </AuthProvider>

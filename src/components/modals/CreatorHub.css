@@ -1,16 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
-  --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgb(0 243 255 / 40%);
-  --nexus-dark: #05080a;
+  --nexus-blue: #cbd5e1;
+  --nexus-blue-glow: rgb(203 213 225 / 24%);
+  --nexus-dark: #0b0c10;
 }
 
 .creator-hub-overlay {
   position: fixed;
   inset: 0;
-  background: rgb(5 8 10 / 90%);
-  backdrop-filter: blur(8px);
+  background: rgb(11 12 16 / 90%);
+  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,9 +19,9 @@
 }
 
 .creator-hub-modal {
-  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
-  border: 1px solid rgb(0 243 255 / 20%);
-  border-radius: 8px;
+  background: linear-gradient(180deg, rgb(11 12 16 / 92%), rgb(11 12 16 / 85%));
+  border: 1px solid rgb(203 213 225 / 20%);
+  border-radius: 0;
   width: 90%;
   max-width: 1200px;
   max-height: 90vh;
@@ -29,7 +29,7 @@
   flex-direction: column;
   box-shadow:
     0 20px 50px rgb(0 0 0 / 60%),
-    0 0 25px rgb(0 243 255 / 12%);
+    0 0 25px rgb(203 213 225 / 12%);
   animation: hubSlideIn 0.3s ease-out;
   position: relative;
   pointer-events: auto;
@@ -41,8 +41,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 22px 28px;
-  border-bottom: 1px solid rgb(0 243 255 / 20%);
-  background: rgb(0 243 255 / 5%);
+  border-bottom: 1px solid rgb(203 213 225 / 20%);
+  background: rgb(203 213 225 / 5%);
 }
 
 .creator-hub-header h2 {
@@ -52,13 +52,13 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow: 0 0 10px rgb(0 243 255 / 20%);
+  text-shadow: 0 0 10px rgb(203 213 225 / 20%);
 }
 
 .creator-hub-header .close-btn {
   background: transparent;
-  border: 1px solid rgb(255 0 60 / 40%);
-  color: #ff003c;
+  border: 1px solid rgb(230 57 70 / 40%);
+  color: #e63946;
   font-size: 28px;
   cursor: pointer;
   padding: 0;
@@ -67,14 +67,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all 0.3s;
 }
 
 .creator-hub-header .close-btn:hover {
-  background: rgb(255 0 60 / 15%);
-  border-color: #ff003c;
-  box-shadow: 0 0 12px rgb(255 0 60 / 30%);
+  background: rgb(230 57 70 / 15%);
+  border-color: #e63946;
+  box-shadow: 0 0 12px rgb(230 57 70 / 30%);
 }
 
 .creator-hub-body {
@@ -89,53 +89,53 @@
   gap: 16px;
   margin-bottom: 32px;
   padding: 24px;
-  background: rgb(0 243 255 / 5%);
-  border: 1px solid rgb(0 243 255 / 15%);
-  border-radius: 8px;
+  background: rgb(203 213 225 / 5%);
+  border: 1px solid rgb(203 213 225 / 15%);
+  border-radius: 0;
 }
 
 .btn-create-new {
   flex: 1;
   background: transparent;
-  color: #00f3ff;
-  border: 1px solid rgb(0 243 255 / 30%);
+  color: #cbd5e1;
+  border: 1px solid rgb(203 213 225 / 30%);
   padding: 16px 40px;
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.3s;
   box-shadow: none;
 }
 
 .btn-create-new.primary {
-  background: #00f3ff;
+  background: #cbd5e1;
   color: #000;
-  border-color: #00f3ff;
-  box-shadow: 0 0 20px rgb(0 243 255 / 30%);
+  border-color: #cbd5e1;
+  box-shadow: 0 0 20px rgb(203 213 225 / 30%);
 }
 
 /* Extra highlight for selected create option */
 .btn-create-new.selected {
-  background: linear-gradient(90deg, #00f3ff 60%, #c6a45f 100%);
+  background: linear-gradient(90deg, #cbd5e1 60%, #eab308 100%);
   color: #000;
-  border-color: #c6a45f;
+  border-color: #eab308;
   box-shadow: 0 0 24px 2px rgb(198 164 95 / 18%);
   font-weight: 900;
   letter-spacing: 2.5px;
 }
 
 .btn-create-new:hover {
-  transform: translateY(-2px);
-  border-color: #00f3ff;
-  box-shadow: 0 4px 15px rgb(0 243 255 / 20%);
+  transform: none;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 15px rgb(203 213 225 / 20%);
 }
 
 .btn-create-new.primary:hover {
-  background: #00f3ff;
-  box-shadow: 0 6px 25px rgb(0 243 255 / 40%);
+  background: #cbd5e1;
+  box-shadow: 0 6px 25px rgb(203 213 225 / 40%);
 }
 
 .btn-create-new:active {
@@ -148,7 +148,7 @@
 }
 
 .cards-list-section h3 {
-  color: #c6a45f;
+  color: #eab308;
   font-size: 18px;
   margin-bottom: 16px;
   text-transform: uppercase;
@@ -178,15 +178,15 @@
 .card-summary {
   background: #242424;
   border: 1px solid #333;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 16px;
   transition: all 0.3s;
 }
 
 .card-summary:hover {
-  border-color: #c6a45f;
+  border-color: #eab308;
   box-shadow: 0 4px 12px rgb(198 164 95 / 20%);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .card-summary-header {
@@ -220,12 +220,12 @@
 .card-type {
   display: inline-block;
   font-size: 11px;
-  color: #c6a45f;
+  color: #eab308;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   background: rgb(198 164 95 / 10%);
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .card-summary-body {
@@ -270,9 +270,9 @@
 
 .reward-code {
   background: #333;
-  color: #c6a45f;
+  color: #eab308;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-family: "Courier New", monospace;
   font-size: 12px;
   font-weight: 600;
@@ -288,14 +288,14 @@
 .hub-info {
   background: rgb(198 164 95 / 5%);
   border: 1px solid rgb(198 164 95 / 20%);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 16px 20px;
   margin-top: 24px;
 }
 
 .hub-info h4 {
   margin: 0 0 12px;
-  color: #c6a45f;
+  color: #eab308;
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -314,7 +314,7 @@
 }
 
 .hub-info strong {
-  color: #c6a45f;
+  color: #eab308;
   font-weight: 600;
 }
 
@@ -333,7 +333,7 @@
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
-  border-radius: 4px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
@@ -358,8 +358,8 @@
 }
 
 .creator-hub-body::-webkit-scrollbar-thumb {
-  background: #c6a45f;
-  border-radius: 4px;
+  background: #eab308;
+  border-radius: 0;
 }
 
 .creator-hub-body::-webkit-scrollbar-thumb:hover {
@@ -389,15 +389,15 @@
   gap: 8px;
   margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px solid rgb(0 243 255 / 10%);
+  border-top: 1px solid rgb(203 213 225 / 10%);
 }
 
 .btn-action {
   padding: 6px 10px;
-  border: 1px solid rgb(0 243 255 / 30%);
-  background: rgb(0 243 255 / 10%);
-  color: #00f3ff;
-  border-radius: 4px;
+  border: 1px solid rgb(203 213 225 / 30%);
+  background: rgb(203 213 225 / 10%);
+  color: #cbd5e1;
+  border-radius: 0;
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
@@ -409,15 +409,15 @@
 }
 
 .btn-action:hover {
-  background: rgb(0 243 255 / 20%);
-  border-color: rgb(0 243 255 / 60%);
-  transform: scale(1.05);
+  background: rgb(203 213 225 / 20%);
+  border-color: rgb(203 213 225 / 60%);
+  transform: none;
 }
 
 .btn-edit {
   background: rgb(198 164 95 / 10%);
   border-color: rgb(198 164 95 / 30%);
-  color: #c6a45f;
+  color: #eab308;
 }
 
 .btn-edit:hover {

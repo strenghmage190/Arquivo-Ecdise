@@ -61,13 +61,11 @@ export default function SystemOverlays() {
 
     const tick = () => {
       if (!alive) return;
-      // small oscillation between 98 and 99.5
-      const base = 98 + Math.random() * 1.5;
+      const base = 99.2 + Math.random() * 0.2;
       setIntegrity(base, false);
-      // occasionally dip
       if (Math.random() < 0.06) {
-        setIntegrity(85 + Math.random() * 3, true);
-        setTimeout(() => { if (alive) setIntegrity(98 + Math.random() * 1.5, false); }, 900);
+        setIntegrity(42 + Math.random() * 3, true);
+        setTimeout(() => { if (alive) setIntegrity(99.2 + Math.random() * 0.2, false); }, 900);
       }
     };
     const interval = window.setInterval(tick, 1500);
@@ -137,26 +135,53 @@ export default function SystemOverlays() {
 
   return (
     <>
-      {location.pathname !== '/' && (
-        <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
-          <div className="hud-left">
+      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`}>
+        <div className="hud-left">
+          {location.pathname === '/' ? (
+            <>
+              <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
+                <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
+              </button>
+              <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
+                <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
+              </button>
+              <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
+                <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
+              </button>
+              <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
+                <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
+              </button>
+            </>
+          ) : (
             <div style={{ width: 160, height: 1 }} aria-hidden />
-          </div>
+          )}
+        </div>
 
-          <div className="hud-right">
-            <div className="system-monitor" aria-hidden>
-              <div className="label">INTEGRIDADE NEXUS</div>
-              <div className="bar-container">
-                <div className="fill" id="integrity-bar" ref={integrityRef}></div>
-              </div>
-              <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
+        <div className="hud-right">
+          <div className="system-monitor" role="status" aria-live="polite">
+            <div className="label">MEMBRANA LOCAL</div>
+            <div className="bar-container">
+              <div className="fill" id="integrity-bar" ref={integrityRef}></div>
             </div>
+            <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
           </div>
-        </header>
-      )}
+          {location.pathname === '/' && (
+            <button className="btn-logout" onClick={() => navigate('/login')}>SAIR DO SISTEMA</button>
+          )}
+        </div>
+      </header>
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
-      <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      {location.pathname !== '/' && (
+        <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      )}
+      {location.pathname === '/' && (
+        <aside className="sigil-rail" aria-hidden="true">
+          <span className="sigil-rail-mark sigil-sinais">A R C H I V O</span>
+          <span className="sigil-rail-mark sigil-sigilos">S I G I L O S</span>
+          <span className="sigil-rail-mark sigil-sinais">O U T R O L A D O</span>
+        </aside>
+      )}
     </>
   );
 }

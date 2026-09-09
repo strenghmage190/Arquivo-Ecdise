@@ -1,4 +1,3 @@
-/* Esconder componentes mobile por padrão */
 .mobile-bottom-bar,
 .mobile-tools-sheet,
 .mobile-menu-overlay {
@@ -6,145 +5,145 @@
 }
 
 @media (max-width: 768px) {
-  /* Barra Fixa no Rodapé */
   .mobile-bottom-bar {
     position: fixed;
+    right: 0;
     bottom: 0;
     left: 0;
-    width: 100%;
-    height: 60px;
-    background: #0f0f11;
-    border-top: 1px solid #333;
+    z-index: 20001;
     display: flex;
-    justify-content: space-around;
     align-items: center;
-    z-index: 20001; /* acima do overlay, abaixo da sheet */
+    justify-content: space-around;
+    height: 60px;
     padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid #64748b;
+    background: rgb(15 17 23 / 85%);
+    backdrop-filter: blur(16px);
   }
 
   .nav-item {
-    background: none;
-    border: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #666;
-    font-size: 10px;
     gap: 4px;
-    width: 60px;
+    width: 68px;
+    min-height: 48px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-system);
+    font-size: 10px;
   }
 
-  .nav-item.active, .nav-item.active-tab {
-    color: #c6a45f; /* Cor de destaque (Gold) */
+  .nav-item.active,
+  .nav-item.active-tab {
+    color: var(--text-primary);
   }
 
   .nav-item .icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
-  /* Overlay Escuro */
   .mobile-menu-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(2px);
-    z-index: 20000; /* abaixo da bottom-bar, abaixo da sheet */
+    z-index: 20000;
     display: block;
-    animation: fadeIn 0.2s ease;
-    pointer-events: auto;
+    background: rgb(0 0 0 / 68%);
   }
 
-  /* Gaveta de Ferramentas (Sheet) */
   .mobile-tools-sheet {
-    display: block;
     position: fixed;
-    bottom: 60px; /* Acima da barra */
+    right: 0;
+    bottom: 60px;
     left: 0;
-    width: 100%;
-    background: #151518;
-    border-top: 1px solid #c6a45f;
-    border-radius: 16px 16px 0 0;
-    z-index: 20002; /* acima da overlay and barra */
-    padding: 16px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-    transform: translateY(110%);
-    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
-    /* ensure hidden when closed even if transform glitch occurs */
-    visibility: hidden;
+    z-index: 20002;
+    display: block;
+    padding: 14px;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: rgb(15 17 23 / 90%);
+    box-shadow: 0 -12px 26px rgb(0 0 0 / 48%);
+    backdrop-filter: blur(16px);
     opacity: 0;
     pointer-events: none;
+    transform: translateY(110%);
+    transition: transform 150ms, opacity 150ms;
+    visibility: hidden;
   }
 
   .mobile-tools-sheet.open {
-    transform: translateY(0);
-    visibility: visible;
     opacity: 1;
     pointer-events: auto;
+    transform: translateY(0);
+    visibility: visible;
   }
 
-  /* Header da Gaveta */
   .mobile-sheet-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    color: #c6a45f;
-    font-family: monospace;
-    font-weight: bold;
-    letter-spacing: 1px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    justify-content: space-between;
+    margin-bottom: 12px;
     padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-system);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
   }
 
   .close-btn {
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 18px;
-    padding: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-primary);
   }
 
-  /* Grid de Ícones */
   .mobile-tools-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 colunas */
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
   }
 
   .mobile-tool-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 12px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    color: #eee;
-    transition: all 0.2s;
+    gap: 6px;
+    min-height: 70px;
+    padding: 8px 3px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--bg);
+    color: var(--text-secondary);
+    font-family: var(--font-system);
+    transition: border-color 150ms, background-color 150ms, color 150ms, box-shadow 150ms;
   }
 
-  .mobile-tool-btn:active {
-    background: rgba(198, 164, 95, 0.2);
-    border-color: #c6a45f;
-    transform: scale(0.95);
+  .mobile-tool-btn:active,
+  .mobile-tool-btn:hover {
+    border-color: #64748b;
+    background: #1b2330;
+    color: var(--text-primary);
+    box-shadow: 0 0 9px rgb(148 163 184 / 16%);
   }
 
   .tool-icon {
-    font-size: 24px;
+    display: inline-flex;
   }
 
   .tool-label {
-    font-size: 10px;
+    font-size: 9px;
     text-align: center;
-    white-space: nowrap;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; } to { opacity: 1; }
   }
 }

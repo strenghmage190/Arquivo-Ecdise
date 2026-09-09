@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 
 interface BottomSheetProps {
@@ -54,7 +55,7 @@ const BottomSheet: React.FC<BottomSheetProps> = React.memo(({ isOpen, onClose, c
         <div style={{ padding: '14px 16px', height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onClick={(e) => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <h2 id="bottom-sheet-title" style={{ margin: 0, fontSize: 16 }}>{title}</h2>
-            <button aria-label="Fechar menu" onClick={onClose} className="hud-btn">✖</button>
+            <button aria-label="Fechar menu" onClick={onClose} className="hud-btn"><X size={16} /></button>
           </div>
           {children}
         </div>

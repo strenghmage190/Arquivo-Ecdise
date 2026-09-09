@@ -1,41 +1,108 @@
 .desktop-root {
-  position: relative;
-  padding: 20px;
-}
-.desktop-icons {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-}
-.desktop-icon {
-  width: 100px;
-  height: 110px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  cursor: pointer;
-  user-select: none;
-}
-.icon-emoji {
-  font-size: 36px;
-  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 60%));
-}
-.icon-label {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #dcdcdc;
-  text-align: center;
-  font-family: "Share Tech Mono", monospace;
-}
-.desktop-root::before {
-  content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  padding: 0;
   pointer-events: none;
-  background: radial-gradient(
-    circle at 10% 10%,
-    rgb(255 255 255 / 2%),
-    transparent 8%
-  );
+}
+
+.desktop-root > *:not(.falling-sigils) {
+  pointer-events: auto;
+}
+
+.falling-sigils {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.falling-sigil {
+  position: absolute;
+  top: var(--sigil-top);
+  left: var(--sigil-left);
+  z-index: 0;
+  display: block;
+  min-width: 1em;
+  color: var(--sigil-color);
+  font-size: var(--sigil-size);
+  text-shadow: 0 0 8px var(--sigil-color);
+  line-height: .86;
+  opacity: 0;
+  white-space: pre;
+  transform: translate3d(0, -35vh, 0) rotate(var(--sigil-rotation, 0deg));
+  animation: falling-sigil var(--sigil-duration) linear var(--sigil-delay) infinite;
+  user-select: none;
+}
+
+.sigil-estrangeiro {
+  font-family: "Sinais Estrangeiro", sans-serif;
+}
+
+.sigil-sinais {
+  font-family: "Sigilos", sans-serif;
+}
+
+.falling-sigil-sangue {
+  --sigil-color: #e63946;
+  --sigil-rotation: -14deg;
+}
+
+.falling-sigil-morte {
+  --sigil-color: #64748b;
+  --sigil-rotation: 10deg;
+}
+
+.falling-sigil-conhecimento {
+  --sigil-color: #eab308;
+  --sigil-rotation: -8deg;
+}
+
+.falling-sigil-energia {
+  --sigil-color: #a855f7;
+  --sigil-rotation: 16deg;
+}
+
+.falling-sigil-medo {
+  --sigil-color: #f8fafc;
+  --sigil-rotation: -5deg;
+}
+
+@keyframes falling-sigil {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -35vh, 0) rotate(var(--sigil-rotation));
+  }
+
+  8% {
+    opacity: .28;
+  }
+
+  42% {
+    opacity: .2;
+  }
+
+  78% {
+    opacity: .11;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--sigil-drift), 145vh, 0) rotate(calc(var(--sigil-rotation) + 64deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .falling-sigil {
+    animation: none;
+    opacity: .08;
+    transform: rotate(var(--sigil-rotation));
+  }
+}
+
+@media (max-width: 768px) {
+  .falling-sigil:nth-child(3n) {
+    display: none;
+  }
 }

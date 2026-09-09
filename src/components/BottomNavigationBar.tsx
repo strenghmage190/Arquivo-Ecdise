@@ -1,19 +1,19 @@
-import { Settings, Search, Lock, Monitor } from 'lucide-react';
+import { Flashlight, FolderOpen, House, LayoutPanelTop, Link2, LocateFixed, Lock, Menu, MoreHorizontal, Search, Settings, Terminal, Undo2, X } from 'lucide-react';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './BottomNavigationBar.css';
 
 // Definição clara das ferramentas disponíveis no mobile
 const MOBILE_TOOLS = [
-  { id: 'create', icon: '⚙️', label: 'Criar', gmOnly: true },
-  { id: 'connect', icon: '🔗', label: 'Conectar' },
-  { id: 'terminal', icon: '🖥️', label: 'Console' },
-  { id: 'search', icon: '🔍', label: 'Buscar' },
-  { id: 'uv', icon: '🔦', label: 'Luz UV' },
-  { id: 'organize', icon: '🗂️', label: 'Organizar' },
-  { id: 'reset-cam', icon: '🎯', label: 'Focar' },
-  { id: 'decoder', icon: '🔒', label: 'Decodificar' },
-  { id: 'undo', icon: '↩', label: 'Desfazer' },
+  { id: 'create', icon: <Settings size={20} />, label: 'Criar', gmOnly: true },
+  { id: 'connect', icon: <Link2 size={20} />, label: 'Conectar' },
+  { id: 'terminal', icon: <Terminal size={20} />, label: 'Console' },
+  { id: 'search', icon: <Search size={20} />, label: 'Buscar' },
+  { id: 'uv', icon: <Flashlight size={20} />, label: 'Luz UV' },
+  { id: 'organize', icon: <LayoutPanelTop size={20} />, label: 'Organizar' },
+  { id: 'reset-cam', icon: <LocateFixed size={20} />, label: 'Focar' },
+  { id: 'decoder', icon: <Lock size={20} />, label: 'Decodificar' },
+  { id: 'undo', icon: <Undo2 size={20} />, label: 'Desfazer' },
 ];
 
 const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaster = false }) => {
@@ -100,7 +100,7 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
       >
         <div className="mobile-sheet-header">
           <span id="mobile-tools-title">FERRAMENTAS</span>
-          <button type="button" className="close-btn" onClick={closeSheet} aria-label="Fechar ferramentas">✖</button>
+          <button type="button" className="close-btn" onClick={closeSheet} aria-label="Fechar ferramentas"><X size={16} /></button>
         </div>
 
         <div className="mobile-tools-grid">
@@ -130,12 +130,12 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
       {/* Barra de Navegação Fixa */}
       <nav className="mobile-bottom-bar">
         <button type="button" className="nav-item" onClick={() => window.location.href = '/'}>
-          <svg className="icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/></svg>
+          <House className="icon" size={20} />
           <span>Início</span>
         </button>
         
         <button type="button" className="nav-item active">
-          <svg className="icon" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.5L18.5 19H5.5L12 5.5z" fill="currentColor"/></svg>
+          <LayoutPanelTop className="icon" size={20} />
           <span>Quadro</span>
         </button>
 
@@ -146,7 +146,7 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
           onClick={() => { console.debug('BottomNav: toggle showMore ->', !showMore); setShowMore((s) => !s); }}
           aria-expanded={showMore}
         >
-          <svg className="icon" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/></svg>
+          <MoreHorizontal className="icon" size={20} />
           <span>Ferramentas</span>
         </button>
       </nav>
