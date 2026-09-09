@@ -1,12 +1,12 @@
 :root {
-  --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgb(0 243 255 / 40%);
-  --nexus-dark: #05080a;
-  --nexus-glass: rgb(5 12 15 / 85%);
-  --nexus-border: rgb(0 243 255 / 20%);
-  --nexus-glitch: #ff003c;
-  --crt-scanline: rgb(18 16 16 / 10%);
-  --muted: #8fa;
+  --nexus-blue: #cbd5e1;
+  --nexus-blue-glow: rgb(203 213 225 / 24%);
+  --nexus-dark: #0b0c10;
+  --nexus-glass: #11141b;
+  --nexus-border: #29313d;
+  --nexus-glitch: #e63946;
+  --crt-scanline: rgb(255 255 255 / 3%);
+  --muted: #94a3b8;
   --z-modal-top: 30000;
 }
 
@@ -36,7 +36,7 @@
   position: fixed;
   inset: 0;
   background: rgb(5 8 10 / 75%);
-  backdrop-filter: blur(6px);
+  backdrop-filter: none;
   z-index: var(--z-modal-top);
   display: flex;
   align-items: center;
@@ -62,7 +62,7 @@
   max-width: 1400px;
   max-height: 98vh;
   background: var(--nexus-glass);
-  backdrop-filter: blur(15px);
+  backdrop-filter: none;
   border: 1px solid var(--nexus-border);
   border-radius: 8px;
   box-shadow:
@@ -506,7 +506,7 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   bottom: 0;
   z-index: 10001;
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   box-shadow: 0 -2px 10px rgb(0 0 0 / 30%);
 }
 

@@ -1,7 +1,7 @@
 .terminal-overlay {
   position: fixed;
   inset: 0;
-  background: #0A0A0B;
+  background: rgb(11 12 16 / 96%);
   z-index: 30010; /* raised above mobile sheet (20002) to ensure visibility */
   display: flex;
   align-items: center;
@@ -11,15 +11,19 @@
 .terminal-window {
   width: 80%;
   height: 60%;
-  background: #131315;
-  border: 1px solid #2A2A2C;
-  box-shadow: none;
+  background:
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px),
+    #11141b;
+  background-size: 26px 26px;
+  border: 1px solid #29313d;
+  box-shadow: 0 20px 64px rgb(0 0 0 / 56%);
   display: flex;
   flex-direction: column;
   padding: 12px;
   font-family: "Share Tech Mono", monospace;
   font-size: 18px;
-  color: #E8E8EA;
+  color: #f1f5f9;
   border-radius: 0;
 }
 
@@ -36,13 +40,13 @@
 
 /* Destaque para mensagens de sucesso termal */
 .term-line.thermal-highlight {
-  color: #E8E8EA;
+  color: #f1f5f9;
   font-weight: bold;
 }
 
 .terminal-input-row {
   display: flex;
-  border-top: 1px solid #2A2A2C;
+  border-top: 1px solid #29313d;
   padding-top: 8px;
   gap: 8px;
   align-items: center;
@@ -50,7 +54,7 @@
 .terminal-input-row input {
   background: transparent;
   border: none;
-  color: #E8E8EA;
+  color: #f1f5f9;
   font-family: inherit;
   font-size: inherit;
   flex: 1;

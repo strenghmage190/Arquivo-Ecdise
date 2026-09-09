@@ -1,17 +1,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
 :root {
-  --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgb(0 243 255 / 40%);
-  --ordo-red: #b33030;
-  --ordo-red-glow: rgb(180 50 50 / 40%);
+  --nexus-blue: #cbd5e1;
+  --nexus-blue-glow: rgb(203 213 225 / 24%);
+  --ordo-red: #e63946;
+  --ordo-red-glow: rgb(230 57 70 / 30%);
 }
 
 .invite-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(5 8 10 / 85%);
-  backdrop-filter: blur(8px);
+  background: rgb(11 12 16 / 85%);
+  backdrop-filter: none;
   z-index: 15000;
   display: flex;
   align-items: center;
@@ -20,15 +20,15 @@
 
 .invite-modal {
   width: 520px;
-  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
+  background: linear-gradient(180deg, rgb(11 12 16 / 92%), rgb(11 12 16 / 85%));
   padding: 30px;
-  border: 1px solid rgb(0 243 255 / 20%);
-  color: #e9fcff;
-  border-radius: 8px;
+  border: 1px solid rgb(203 213 225 / 20%);
+  color: #f1f5f9;
+  border-radius: 0;
   font-family: "Share Tech Mono", monospace;
   box-shadow:
     0 20px 50px rgb(0 0 0 / 60%),
-    0 0 20px rgb(0 243 255 / 10%);
+    0 0 20px rgb(203 213 225 / 10%);
   position: relative;
 }
 
@@ -37,7 +37,7 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 20px;
-  text-shadow: 0 0 10px rgb(0 243 255 / 20%);
+  text-shadow: 0 0 10px rgb(203 213 225 / 20%);
 }
 
 .invite-form {
@@ -50,10 +50,10 @@
 .invite-form input {
   flex: 1;
   background: rgb(0 0 0 / 50%);
-  border: 1px solid rgb(0 243 255 / 20%);
-  color: #e9fcff;
+  border: 1px solid rgb(203 213 225 / 20%);
+  color: #f1f5f9;
   padding: 12px 14px;
-  border-radius: 6px;
+  border-radius: 0;
   font-family: inherit;
   font-size: 13px;
   transition: all 0.3s ease;
@@ -62,7 +62,7 @@
 .invite-form input:focus {
   outline: none;
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgb(0 243 255 / 20%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 20%);
 }
 
 .invite-form button {
@@ -71,7 +71,7 @@
   border: 1px solid var(--ordo-red);
   padding: 12px 20px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 0;
   font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -88,7 +88,7 @@
 .members-list {
   margin-top: 25px;
   padding-top: 20px;
-  border-top: 1px solid rgb(0 243 255 / 10%);
+  border-top: 1px solid rgb(203 213 225 / 10%);
 }
 
 .members-list h3 {
@@ -101,8 +101,8 @@
 
 .member-item {
   padding: 10px 0;
-  border-top: 1px dashed rgb(0 243 255 / 15%);
-  color: rgb(233 252 255 / 80%);
+  border-top: 1px dashed rgb(203 213 225 / 15%);
+  color: rgb(241 245 249 / 80%);
   font-size: 13px;
   display: flex;
   align-items: center;
