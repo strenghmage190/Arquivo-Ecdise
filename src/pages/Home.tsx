@@ -114,10 +114,17 @@ export default function Home() {
       setCases([]);
     } else {
       const classifications = readCaseClassifications();
-      setCases(((res.data as any[]) || []).map((currentCase: any) => ({
-        ...currentCase,
-        ...(classifications[String(currentCase.id)] || {}),
-      })));
+      setCases(((res.data as any[]) || []).map((currentCase: any) => {
+        let coverUrl = currentCase.cover_url;
+        if (coverUrl && coverUrl.includes('cdn.builder.io')) {
+          coverUrl = null;
+        }
+        return {
+          ...currentCase,
+          cover_url: coverUrl,
+          ...(classifications[String(currentCase.id)] || {}),
+        };
+      }));
     }
   }
 
