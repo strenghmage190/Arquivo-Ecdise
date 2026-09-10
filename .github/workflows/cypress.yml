@@ -2,6 +2,9 @@ name: Cypress Tests
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   install:
     runs-on: ubuntu-24.04
