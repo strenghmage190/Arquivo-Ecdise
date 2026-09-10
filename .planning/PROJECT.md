@@ -8,7 +8,23 @@ Uma ferramenta de investigação forense sobrenatural para o RPG Ordem Paranorma
 
 Um sistema forense imersivo onde o chrome é invisível (monocromático) e a única cor que o jogador vê vem dos dados do caso — tornando cada Elemento sobrenatural instantaneamente legível e cinematográfico.
 
-## Current Milestone: v2.0 Terminal Ordo Realitas
+## Current State
+
+**v2.0 Terminal Ordo Realitas** (Concluído)
+- Sistema de cores institucional monocromático
+- Tipografia forense (JetBrains Mono/Space Mono, Rajdhani, Special Elite)
+- Header e layout da Home com temática Ordo Realitas (Radar Elemental, Membrana)
+- Cards de caso paranormais com miniatura, selo elemental e metadados
+- Modal de criação com suporte a escolha de imagem, upload ao Supabase e alteração de elemento
+- Toolbar flutuante unificada (cápsula)
+- Formulários padronizados
+
+## Next Milestone Goals
+
+(A definir via `/gsd-new-milestone`)
+
+<details>
+<summary>Archived Milestone v2.0</summary>
 
 **Goal:** Redesign visual completo da Home e sistema de design — substituir a estética "hacker genérico" por um terminal institucional da Ordo Realitas com paleta monocromática no chrome e cor exclusivamente nos dados do caso.
 
@@ -21,6 +37,7 @@ Um sistema forense imersivo onde o chrome é invisível (monocromático) e a ún
 6. **Toolbar Flutuante Unificada:** Cápsula única (999px radius), divisores finos, zero cor nos botões
 7. **Formulários Reestilizados:** Inputs/selects/checkboxes com padrão do sistema
 8. **Rodapé de Telemetria:** Ticker monoespaçado com transmissões da Ordem
+</details>
 
 ## Requirements
 
@@ -42,14 +59,7 @@ Um sistema forense imersivo onde o chrome é invisível (monocromático) e a ún
 
 ### Active
 
-- [ ] Sistema de cores institucional monocromático com Elementos como única fonte de cor
-- [ ] Tipografia forense (JetBrains Mono + Rajdhani)
-- [ ] Header Ordo Realitas com Radar Elemental e Membrana
-- [ ] Cards de caso com selo elemental, miniatura e metadados paranormais
-- [ ] Card de novo caso "Ritual de Abertura"
-- [ ] Toolbar flutuante unificada (cápsula)
-- [ ] Formulários reestilizados (inputs/selects/checkboxes)
-- [ ] Rodapé de telemetria com ticker
+- (A definir no próximo milestone)
 
 ### Out of Scope
 
@@ -126,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-07 for v2.0 milestone start*
+*Last updated: 2026-09-10 (Milestone v2.0 completed)*
