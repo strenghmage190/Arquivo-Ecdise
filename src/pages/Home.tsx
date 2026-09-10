@@ -110,7 +110,7 @@ export default function Home() {
       setCases([]);
     } else {
       const classifications = readCaseClassifications();
-      setCases((res.data || []).map((currentCase) => ({
+      setCases(((res.data as any[]) || []).map((currentCase: any) => ({
         ...currentCase,
         ...(classifications[String(currentCase.id)] || {}),
       })));

@@ -93,6 +93,10 @@ export interface MediaState {
   audioBase: File | null;
   audioHidden: File | null;
   megaImageFile: File | null;
+  thermalFile: File | null;
+  forensicFile: File | null;
+  forensicPreviewUrl: string | null;
+  forensicTargetChannel: 'R' | 'G' | 'B' | null;
   previewUrl: string | null;
   videoPreviewUrl: string | null;
   uvPreviewUrl: string | null;
@@ -100,6 +104,7 @@ export interface MediaState {
   audioBasePreview: string | null;
   audioHiddenPreview: string | null;
   megaImagePreview: string | null;
+  thermalPreviewUrl: string | null;
   videoUrl: string | null;
   videoUrlInput: string;
   audioHiddenUploadedUrl: string | null;
@@ -273,9 +278,9 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [mediaState, setMediaState] = useState<MediaState>({
-    imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null,
-    previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null,    audioHiddenPreview: null,
-    megaImagePreview: null,
+    imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null, thermalFile: null,
+    forensicFile: null, forensicPreviewUrl: null, forensicTargetChannel: null,
+    previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null, thermalPreviewUrl: null,
     videoUrl: null,
     videoUrlInput: '',
     audioHiddenUploadedUrl: null,
@@ -409,8 +414,9 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCoreState({ title: '', descPublic: '', descHidden: '', tags: '', discoveryCode: '', evidenceType: 'document', isHidden: false });
     setSecurityState({ isLocked: false, lockPass: '', lockPasses: [], securityLayerEnabled: false, revealLogicMode: 'aligned_only', signalTargets: { visual: true, audio: false }, hidePreviewOnBoard: false, audioStaticSync: false, narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' } });
     setMediaState({
-      imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null,
-      previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null,
+      imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null, thermalFile: null,
+      forensicFile: null, forensicPreviewUrl: null, forensicTargetChannel: null,
+      previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null, thermalPreviewUrl: null,
       videoUrl: null, videoUrlInput: '', audioHiddenUploadedUrl: null
     });
     setCipherState({ isShredded: false, shredRows: 1, shredCols: 8, realText: '', cipherText: '', hexCode: '', hexEncodingMethod: 'plain', hexEncodingKey: '' });

@@ -5,7 +5,7 @@ import { Tooltip } from 'react-tooltip';
 import FakePhoneChatBuilder from './FakePhoneChatBuilder';
 
 export default function TabVisual() {
-  const { mediaState, setMediaState, setEditorState, filterConfig, setFilterConfig } = useClueModal();
+  const { mediaState, setMediaState, setEditorState, filterConfig, setFilterConfig, thermalConfig, setThermalConfig } = useClueModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
@@ -156,6 +156,95 @@ export default function TabVisual() {
           <ImageIcon size={16} /> 🖌️ Desenhar Efeito UV
         </button>
       </div>
+
+      <hr className="cc-divider" />
+
+      <div className="cc-section-header">
+        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Camada Térmica
+          <span data-tooltip-id="thermal-tip" style={{ display: 'flex', cursor: 'help' }}>
+            <Info size={16} color="var(--nexus-neon, #00ffff)" />
+          </span>
+        </h3>
+        <Tooltip id="thermal-tip" className="cyber-tooltip">
+          <span className="cyber-tooltip-title">[ TÉRMICA ]</span>
+          Texto oculto que só é revelado ao usar a ferramenta de visão térmica, caso o jogador informe a senha correta.
+        </Tooltip>
+      </div>
+      
+      <div style={{ marginBottom: 16, display: 'flex', gap: '10px' }}>
+        <button
+          className="cc-btn cc-btn-save"
+          style={{ 
+             flex: 1, 
+             justifyContent: 'center', 
+             opacity: mediaState.previewUrl ? 1 : 0.5,
+             background: thermalConfig?.enabled ? 'var(--nexus-neon, #00ffff)' : '',
+             color: thermalConfig?.enabled ? '#000' : '',
+             border: thermalConfig?.enabled ? 'none' : ''
+          }}
+          disabled={!mediaState.previewUrl}
+          onClick={() => setThermalConfig((s: any) => ({ ...s, enabled: !s.enabled }))}
+        >
+          <Info size={16} /> {thermalConfig?.enabled ? 'Térmica: ON' : 'Ativar Térmica'}
+        </button>
+
+        {thermalConfig?.enabled && (
+          <button
+            className="cc-btn cc-btn-cancel"
+            style={{ flex: 1, justifyContent: 'center' }}
+            disabled={!mediaState.previewUrl}
+            onClick={() => setEditorState(s => ({ ...s, showThermalEditor: true }))}
+          >
+            <ImageIcon size={16} /> 🌡️ Abrir Editor Térmico
+          </button>
+        )}
+      </div>
+
+      {thermalConfig?.enabled && (
+        <div style={{ padding: 12, background: 'rgba(255, 100, 0, 0.05)', borderRadius: 6, border: '1px solid rgba(255, 100, 0, 0.2)', marginBottom: 16 }}>
+          <div className="cc-field" style={{ marginBottom: 10 }}>
+            <label className="cc-label">Texto Oculto</label>
+            <textarea
+              className="cc-input"
+              rows={3}
+              value={thermalConfig.secretText}
+              onChange={(e) => setThermalConfig((s: any) => ({ ...s, secretText: e.target.value }))}
+              placeholder="Ex: COORDENADAS: 45.123, -12.456"
+            />
+          </div>
+          <div className="cc-field" style={{ marginBottom: 10 }}>
+            <label className="cc-label">Senha / Keyword (Opcional)</label>
+            <input
+              type="text"
+              className="cc-input"
+              value={thermalConfig.keyword}
+              onChange={(e) => setThermalConfig((s: any) => ({ ...s, keyword: e.target.value.toUpperCase() }))}
+              placeholder="Deixe em branco para revelar automaticamente"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="cc-field" style={{ flex: 1 }}>
+              <label className="cc-label">Tamanho da Fonte</label>
+              <input
+                type="number"
+                className="cc-input"
+                value={thermalConfig.fontSize}
+                onChange={(e) => setThermalConfig((s: any) => ({ ...s, fontSize: parseInt(e.target.value) || 24 }))}
+              />
+            </div>
+            <div className="cc-field" style={{ flex: 1 }}>
+              <label className="cc-label">Posição Y (%)</label>
+              <input
+                type="number"
+                className="cc-input"
+                value={thermalConfig.positionY}
+                onChange={(e) => setThermalConfig((s: any) => ({ ...s, positionY: parseInt(e.target.value) || 50 }))}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <hr className="cc-divider" />
 

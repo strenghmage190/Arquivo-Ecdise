@@ -9,7 +9,7 @@ interface UVEditorProps {
   baseImageUrl: string;
   onSave: (file: File, meta?: { targetChannel?: 'R' | 'G' | 'B' }) => void;
   onClose: () => void;
-  mode?: 'uv' | 'filter' | 'rgb';
+  mode?: 'uv' | 'filter' | 'rgb' | 'thermal';
   initialImageFile?: File | null;
   showForensicControls?: boolean;
 }

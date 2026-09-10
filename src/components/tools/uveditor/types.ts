@@ -27,4 +27,4 @@ export interface Layer {
 
 export type UVTool = 'select' | 'draw' | 'erase' | 'placeImage' | 'placeText';
 export type UVMaskMode = 'hide' | 'reveal';
-export type UVMode = 'uv' | 'filter' | 'rgb';
+export type UVMode = 'uv' | 'filter' | 'rgb' | 'thermal';

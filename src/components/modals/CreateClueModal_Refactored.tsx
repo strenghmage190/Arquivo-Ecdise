@@ -159,6 +159,21 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
         filterUrl = await uploadInvestigationImage(mediaState.filterFile, investigationId);
       }
 
+      // Thermal upload
+      let thermalUrl: string | null = null;
+      if (mediaState.thermalFile) {
+        const { uploadInvestigationImage } = await import('../../utils/storage');
+        thermalUrl = await uploadInvestigationImage(mediaState.thermalFile, investigationId);
+      }
+
+      // Forensic RGB layer upload (separate from main image)
+      let forensicUrl: string | null = null;
+      if (mediaState.forensicFile) {
+        const { uploadInvestigationImage } = await import('../../utils/storage');
+        forensicUrl = await uploadInvestigationImage(mediaState.forensicFile, investigationId);
+      }
+
+
       // Video upload (prefer URL input, then file upload)
       finalVideoUrl = mediaState.videoUrlInput || mediaState.videoUrl || null;
       if (!finalVideoUrl && mediaState.videoFile) {
@@ -345,12 +360,16 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
           base_media_url: baseMediaUrl,
           uv_layer_url: uvUrl || null,
           filter_layer_url: filterUrl || null,
+          thermal_layer_url: thermalUrl || null,
+          forensic_layer_url: forensicUrl || null,
+          forensic_channel: mediaState.forensicTargetChannel || null,
           hidden_layer_url: glitchFocusedUrl || null,
           video_url: finalVideoUrl || null,
           audio_base_url: audUrl || null,
           audio_hidden_url: audHidUrl || null,
           hide_preview_on_board: securityState.hidePreviewOnBoard,
         };
+
         metadata.masked_preview = securityState.hidePreviewOnBoard;
         metadata.security_layer = securityLayer;
         metadata.glitch_puzzle = glitchPuzzleMeta;
@@ -647,20 +666,43 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
       {editorState.showForensicEditor && mediaState.previewUrl && createPortal(
          <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
             <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-               <ForensicChannelEditor
+               <UVEditor
                   baseImageUrl={mediaState.previewUrl}
-                  onSave={(compositeImageBlob, config) => {
-                     const timestamp = Date.now();
-                     const newFile = new File([compositeImageBlob], `forensic_${config.targetChannel}_${timestamp}.png`, { type: 'image/png' });
-                     setMediaState(prev => ({ ...prev, imgFile: newFile }));
-                     const newUrl = URL.createObjectURL(newFile);
+                  mode="rgb"
+                  onSave={(file, meta) => {
+                     // Salva como camada forense SEPARADA — não toca na imagem principal!
+                     const newUrl = URL.createObjectURL(file);
                      registerUrl(newUrl);
-                     revokeUrl(mediaState.previewUrl);
-                     setMediaState(prev => ({ ...prev, previewUrl: newUrl }));
+                     revokeUrl(mediaState.forensicPreviewUrl);
+                     setMediaState(prev => ({
+                        ...prev,
+                        forensicFile: file,
+                        forensicPreviewUrl: newUrl,
+                        forensicTargetChannel: (meta?.targetChannel ?? null) as 'R' | 'G' | 'B' | null,
+                     }));
                      setEditorState(prev => ({ ...prev, showForensicEditor: false }));
-                     alert('✅ Imagem forense usada como imagem principal!');
                   }}
                   onClose={() => setEditorState(prev => ({ ...prev, showForensicEditor: false }))}
+               />
+            </div>
+         </div>, document.body
+      )}
+
+      {editorState.showThermalEditor && mediaState.previewUrl && createPortal(
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+               <UVEditor
+                  baseImageUrl={mediaState.previewUrl}
+                  mode="thermal"
+                  onSave={(file, meta) => {
+                     setMediaState(prev => ({ ...prev, thermalFile: file }));
+                     const newUrl = URL.createObjectURL(file);
+                     registerUrl(newUrl);
+                     revokeUrl(mediaState.thermalPreviewUrl);
+                     setMediaState(prev => ({ ...prev, thermalPreviewUrl: newUrl }));
+                     setEditorState(prev => ({ ...prev, showThermalEditor: false }));
+                  }}
+                  onClose={() => setEditorState(prev => ({ ...prev, showThermalEditor: false }))}
                />
             </div>
          </div>, document.body
@@ -683,6 +725,8 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
            </div>
         </div>, document.body
       )}
+
+
 
       {editorState.showAudioForgeFor && createPortal(
         <AudioLab
