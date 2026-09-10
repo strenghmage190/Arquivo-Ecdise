@@ -57,7 +57,7 @@ export default function Sketchpad({ initialData, onSaveImage, onClose, backgroun
     <div className="sketchpad-overlay">
       <div className="sketchpad-container">
         <div className="sketch-header">
-           <h3 style={{color: '#daceaa'}}>RASCUNHO PARANORMAL</h3>
+           <h3 style={{color: 'var(--text-primary)'}}>RASCUNHO PARANORMAL</h3>
            <div style={{display:'flex', gap: 10}}>
              <button className="btn-save-sketch" onClick={handleSave}>SALVAR NO ARQUIVO</button>
              <button className="btn-close-sketch" onClick={onClose}>FECHAR</button>

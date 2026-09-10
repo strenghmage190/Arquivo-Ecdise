@@ -11,21 +11,21 @@
 .sketchpad-container {
   width: 95vw;
   height: 95vh;
-  border: 2px solid #b33;
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  background: #111;
-  box-shadow: 0 0 30px rgb(180 50 50 / 30%);
+  background: var(--surface);
+  box-shadow: 0 8px 40px rgb(0 0 0 / 80%);
 }
 
 .sketch-header {
   height: 50px;
-  background: #1a1a1a;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border);
 }
 
 .excalidraw-wrapper {
@@ -36,24 +36,42 @@
 }
 
 .excalidraw {
-  --color-primary: #b33 !important;
-  --color-primary-dark: #900 !important;
+  --color-primary: var(--text-primary) !important;
+  --color-primary-dark: var(--text-secondary) !important;
 }
 
 .btn-save-sketch {
-  background: #daceaa;
-  color: #000;
-  border: none;
-  font-weight: bold;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hover);
+  font-weight: 700;
   padding: 8px 16px;
   cursor: pointer;
-  font-family: "Share Tech Mono";
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
+  transition: border-color 150ms ease;
+}
+
+.btn-save-sketch:hover {
+  border-color: var(--text-primary);
 }
 
 .btn-close-sketch {
   background: transparent;
-  color: #fff;
-  border: 1px solid #555;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
   padding: 8px 16px;
   cursor: pointer;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
+  transition: border-color 150ms ease;
+}
+
+.btn-close-sketch:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
