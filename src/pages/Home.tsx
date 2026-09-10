@@ -12,13 +12,17 @@ import artConhecimento from '../../assets/ordem/Altera3Fes_de_Conhecimento_em_So
 import artEnergia from '../../assets/ordem/Altera3Fes_de_Energia_em_Sobrevivendo_ao_Horror.webp';
 import artMedo from '../../assets/ordem/Medo.webp';
 import artMedoAlt from '../../assets/ordem/Medo_alt.webp';
+import baseSangue from '../../assets/ordem/Sangue.webp';
+import baseMorte from '../../assets/ordem/Morte.webp';
+import baseConhecimento from '../../assets/ordem/Conhecimento.webp';
+import baseEnergia from '../../assets/ordem/Energia.webp';
 
 const ARCHIVE_ART = {
-  hero: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2Fe7ef5a85ce2149138f7aa6359c8c6e6e',
-  sangue: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2Fbd1b1e72ab334e99ac89d4f65041a129',
-  morte: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F5b95b382ddba400285c5133f82db3d2e',
-  conhecimento: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F7cfe432a926148baa1f91932bfa4ee8b',
-  energia: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F83a99cbf648c481a81b23068a2c88d4b',
+  hero: baseSangue,
+  sangue: baseSangue,
+  morte: baseMorte,
+  conhecimento: baseConhecimento,
+  energia: baseEnergia,
   medo: artMedo,
   medo_alt: artMedoAlt,
   sangue_alt: artSangue,
@@ -110,10 +114,17 @@ export default function Home() {
       setCases([]);
     } else {
       const classifications = readCaseClassifications();
-      setCases(((res.data as any[]) || []).map((currentCase: any) => ({
-        ...currentCase,
-        ...(classifications[String(currentCase.id)] || {}),
-      })));
+      setCases(((res.data as any[]) || []).map((currentCase: any) => {
+        let coverUrl = currentCase.cover_url;
+        if (coverUrl && coverUrl.includes('cdn.builder.io')) {
+          coverUrl = null;
+        }
+        return {
+          ...currentCase,
+          cover_url: coverUrl,
+          ...(classifications[String(currentCase.id)] || {}),
+        };
+      }));
     }
   }
 
