@@ -1,59 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&display=swap');
+/* stylelint-disable at-rule-no-unknown */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
+
+@font-face {
+  font-family: "Sinais Estrangeiro";
+  src: url("https://cdn.builder.io/o/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F0fa2c20dcc684c73b8bc28fb9ea3d842?alt=media&token=e7b3fc02-282a-44bf-b774-8043dd7ae5ef&apiKey=b4bc12b65d81467ebb24dfe4e4692469") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sigilos";
+  src: url("https://cdn.builder.io/o/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F322319c5ed2c40469fe2589b75e71835?alt=media&token=2ed55d33-f004-4edc-bfd5-379928a3fd15&apiKey=b4bc12b65d81467ebb24dfe4e4692469") format("truetype");
+  font-display: swap;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* ===== CHROME — MONOCROMÁTICO ===== */
-  --bg: #0A0A0B;
-  --surface: #131315;
-  --border: #2A2A2C;
-  --border-hover: #3D3D40;
-  --text-primary: #E8E8EA;
-  --text-secondary: #8A8A8C;
-
-  /* Único vermelho vivo do chrome — carimbo institucional */
-  --institutional-red: #8B1414;
-
-  /* ===== DADOS DO CASO — ELEMENTOS ESTRUTURAIS ===== */
-  --el-sangue: #8B1414;
-  --el-morte: #1C1C1E;
-  --el-morte-border: #3A3A3C;
-  --el-energia: #3D2E7C;
-  --el-conhecimento: #B08D2E;
-
-  /* ===== DADOS DO CASO — ELEMENTOS EVOLUCIONAIS (par dividido) ===== */
-  --ev-metamorfose-a: #1C1C1E;
-  --ev-metamorfose-b: #00C2D1;
-  --ev-encarnacao-a: #8B1414;
-  --ev-encarnacao-b: #C9A227;
-  --ev-apoteose-a: #E4D9C8;
-  --ev-apoteose-b: #5A1010;
-  --ev-sintese-a: #B08D2E;
-  --ev-sintese-b: #00C2D1;
-  --ev-quimera-a: #D1204A;
-  --ev-quimera-b: #3D2E7C;
-  --ev-singularidade-a: #0A0A0B;
-  --ev-singularidade-b: #B08D2E;
-
-  /* ===== TIPOGRAFIA ===== */
-  --font-mono: "JetBrains Mono", "Courier New", monospace;
-  --font-stamp: "Rajdhani", sans-serif;
-
-  /* ===== Z-INDEX ===== */
-  --z-base: 1;
-  --z-card: 10;
-  --z-card-hover: 100;
-  --z-dropdown: 5000;
-  --z-modal: 10000;
-  --z-toast: 13000;
+  --bg: #0b0c10;
+  --surface: #11141b;
+  --border: #29313d;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --fg: #f1f5f9;
+  --institutional-red: #e63946;
+  --nexus-dark: #0b0c10;
+  --nexus-blue: #cbd5e1;
+  --nexus-glitch: #e63946;
+  --ordo-red: #e63946;
+  --muted: #94a3b8;
+  --el-sangue: #e63946;
+  --el-sangue-hot: #ff1e27;
+  --el-energia: #a855f7;
+  --el-energia-soft: #c084fc;
+  --el-morte: #1f2933;
+  --el-morte-border: #64748b;
+  --el-conhecimento: #eab308;
+  --el-conhecimento-deep: #ca8a04;
+  --el-medo: #f8fafc;
+  --font-system: "JetBrains Mono", "Space Mono", monospace;
+  --font-hud: "Chakra Petch", "Rajdhani", sans-serif;
+  --font-case: "Rajdhani", "Chakra Petch", sans-serif;
+  --font-terminal: "Share Tech Mono", "JetBrains Mono", monospace;
 }
 
 body {
+  min-width: 320px;
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-system);
   background: var(--bg);
-  color: var(--text-primary);
+  color: var(--fg);
+}
+
+input,
+textarea,
+select {
+  border-radius: 0;
+  border-color: var(--border, #2A2A2C);
+  background: var(--surface, #131315);
+  color: var(--text-primary, #E8E8EA);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 1px solid var(--institutional-red, #8B1414);
+  outline-offset: 1px;
 }
 
 .container {
@@ -62,37 +74,76 @@ body {
   margin: 0 auto;
 }
 
-/* ===== LOADING SPINNER — MONOCROMÁTICO ===== */
 .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 2px solid var(--border);
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border: 3px solid var(--border);
   border-top-color: var(--text-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  position: relative;
+  animation: spin 1.2s linear infinite;
+}
+
+.loading-spinner::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px solid var(--border);
+  border-top-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite reverse;
 }
 
 .loading-spinner::after {
   content: "CARREGANDO";
   position: absolute;
-  top: 56px;
+  top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: var(--font-mono);
-  font-size: 9px;
+  font-family: var(--font-system);
+  font-size: 10px;
   letter-spacing: 3px;
   color: var(--text-secondary);
   white-space: nowrap;
+  animation: blink 1.5s infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* ===== MOBILE HELPERS ===== */
+@keyframes pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.2);
+  }
+}
 
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+@keyframes membrane-pulse {
+  0%, 100% { opacity: .78; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes led-flicker {
+  0%, 100% { opacity: .82; }
+  48% { opacity: 1; }
+  52% { opacity: .56; }
+}
+
+/* --- MOBILE HELPERS: regras responsivas básicas --- */
+
+/* Aplicar essas regras para telas menores que 768px */
 @media (width <= 768px) {
+  /* Layout containers devem ocupar toda a largura */
   .container,
   .main-content {
     width: 100%;
@@ -100,12 +151,14 @@ body {
     box-sizing: border-box;
   }
 
+  /* Evitar imagens vazando horizontalmente */
   img {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
+  /* Tornar colunas em pilha vertical */
   .flex-container,
   .columns {
     display: flex;
@@ -113,6 +166,7 @@ body {
     gap: 12px;
   }
 
+  /* Menu de navegação: empilhar itens e centralizar */
   nav ul {
     display: flex;
     flex-direction: column;
@@ -125,6 +179,7 @@ body {
     margin: 8px 0;
   }
 
+  /* Ajustes específicos do quadro de investigação */
   .mobile-hud {
     position: fixed;
     bottom: 10px;
@@ -141,12 +196,15 @@ body {
   .mobile-modes .mode-btn {
     font-size: 18px;
     padding: 8px;
+    border-radius: 8px;
   }
 
+  /* Hide explicit mode icons on touch devices — pan is always enabled */
   .mobile-hud .mobile-modes {
     display: none !important;
   }
 
+  /* Bottom sheet children spacing */
   .bottom-sheet .fab-item {
     width: 100%;
     box-sizing: border-box;
@@ -156,16 +214,17 @@ body {
   }
 }
 
-/* ===== TOUCH / MOBILE UX ===== */
+/* --- TOUCH / MOBILE UX IMPROVEMENTS --- */
 
+/* 1) Avoid hover styles on touch-only devices (prevents "ghost touch") */
 @media (hover: hover) and (pointer: fine) {
   a:hover,
   button:hover {
-    filter: brightness(1.05);
-    transition: filter 120ms ease;
+    transition: color 150ms, border-color 150ms, background-color 150ms;
   }
 }
 
+/* 2) Touch target sizing and tap affordances for coarse pointers (fingers) */
 @media (pointer: coarse) {
   .hud-btn,
   .board-button,
@@ -176,31 +235,37 @@ body {
     min-width: 44px;
     min-height: 44px;
     padding: 10px 12px;
+    border-radius: 0;
     touch-action: manipulation;
   }
 
+  /* Make inputs comfortable for typing on iOS (avoid auto-zoom) */
   input,
   textarea,
   select {
     font-size: 16px;
   }
 
+  /* Active feedback for touch interactions */
   button:active {
     transform: translateY(1px);
     opacity: 0.98;
   }
 
+  /* Remove tap highlight color for a cleaner look */
   button,
   a {
     -webkit-tap-highlight-color: rgb(0 0 0 / 0%);
   }
 }
 
+/* 3) Full-screen sections: prefer dynamic viewport unit with fallback */
 .full-vh {
   height: 100dvh;
-  min-height: 100vh;
+  min-height: 100vh; /* fallback for browsers that don't support dvh */
 }
 
+/* Corkboard canvas: handle touch-based panning ourselves and show grab cursor */
 body.mobile-mode .corkboard-canvas {
   touch-action: none;
   -webkit-touch-callout: none;
@@ -211,6 +276,7 @@ body.mobile-mode .corkboard-canvas {
   cursor: grabbing;
 }
 
+/* 4) Readability: slightly larger line-height on small screens */
 @media (width <= 768px) {
   body {
     line-height: 1.6;
@@ -220,115 +286,6 @@ body.mobile-mode .corkboard-canvas {
   }
 }
 
-/* ===== FORM CONTROLS — PADRÃO DO SISTEMA ===== */
+/* 5) Image performance hint: encourage using responsive images via picture/srcset */
 
-input[type="checkbox"],
-input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: border-color 150ms ease;
-  flex-shrink: 0;
-}
-
-input[type="checkbox"] {
-  border-radius: 0;
-}
-
-input[type="radio"] {
-  border-radius: 50%;
-}
-
-input[type="checkbox"]:checked,
-input[type="radio"]:checked {
-  background: var(--surface);
-  border-color: var(--institutional-red);
-}
-
-input[type="checkbox"]:checked::after {
-  content: "";
-  display: block;
-  width: 8px;
-  height: 4px;
-  border: 2px solid var(--institutional-red);
-  border-top: 0;
-  border-right: 0;
-  transform: rotate(-45deg) translate(2px, -1px);
-}
-
-input[type="radio"]:checked::after {
-  content: "";
-  display: block;
-  width: 6px;
-  height: 6px;
-  background: var(--institutional-red);
-  border-radius: 50%;
-  margin: 4px auto;
-}
-
-input[type="checkbox"]:focus-visible,
-input[type="radio"]:focus-visible {
-  outline: 2px solid var(--institutional-red);
-  outline-offset: 1px;
-}
-
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  padding: 8px 12px;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 150ms ease;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8A8C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 32px;
-}
-
-select:focus-visible {
-  outline: 2px solid var(--institutional-red);
-  outline-offset: 1px;
-}
-
-select:hover {
-  border-color: var(--border-hover);
-}
-
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="search"],
-textarea {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  padding: 8px 12px;
-  transition: border-color 150ms ease;
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="email"]:focus,
-input[type="search"]:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--institutional-red);
-}
-
-input[type="text"]:hover,
-input[type="password"]:hover,
-input[type="email"]:hover,
-input[type="search"]:hover,
-textarea:hover {
-  border-color: var(--border-hover);
-}
+/* Global guard for large images already handled above (max-width:100%). */

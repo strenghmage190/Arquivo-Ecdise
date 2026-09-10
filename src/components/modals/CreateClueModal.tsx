@@ -267,6 +267,8 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
    const [thermalPositionY, setThermalPositionY] = useState(50);
    const [thermalKeyword, setThermalKeyword] = useState('');
    const [showThermalEditor, setShowThermalEditor] = useState(false);
+   const [thermalFile, setThermalFile] = useState<File | null>(null);
+   const [thermalPreviewUrl, setThermalPreviewUrl] = useState<string | null>(null);
 
    // SHREDDED / CIPHER
    const [isShredded, setIsShredded] = useState(false);
@@ -1504,7 +1506,13 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
          }
 
          // Upload glitch puzzle focused/hidden layer if provided
-         let glitchFocusedUrl = null;
+         let thermalUrl: string | null = null;
+      if (thermalFile) {
+        const { uploadInvestigationImage } = await import('../../utils/storage');
+        thermalUrl = await uploadInvestigationImage(thermalFile, investigationId);
+      }
+
+      let glitchFocusedUrl: string | null = null;
          if (glitchFocusedImageFile) {
             glitchFocusedUrl = await uploadInvestigationImage(glitchFocusedImageFile, investigationId);
          }
@@ -1547,6 +1555,9 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
               contrast: filterRevealContrast,
               saturate: filterRevealSaturate
          };
+         if (uvUrl) metadata.uv_layer_url = uvUrl;
+         if (filterUrl) metadata.filter_layer_url = filterUrl;
+         if (thermalUrl) metadata.thermal_layer_url = thermalUrl;
          // NOTE: Field values (date, location, owner, etc.) are now stored in metadata.field_values below
          // Do NOT add them here - they should only appear in field_values
          
@@ -4200,51 +4211,46 @@ export default function CreateClueModal({ isOpen, onClose, investigationId, init
       )}
 
       {showThermalEditor && imgFile && (
-         <ThermalEditor
-            baseImageUrl={previewUrl}
-            thermalText={thermalSecretText}
-            initialFontSize={thermalFontSize}
-            initialPositionY={thermalPositionY}
-            onSave={(config) => {
-               setThermalFontSize(config.fontSize);
-               setThermalPositionY(config.positionY);
-               setShowThermalEditor(false);
-            }}
-            onClose={() => setShowThermalEditor(false)}
-         />
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+               <UVEditor
+                  baseImageUrl={previewUrl || ''}
+                  mode="thermal"
+                  onSave={(file, meta) => {
+                     setThermalFile(file);
+                     const newUrl = createAndRegisterBlobUrl(file);
+                     if (newUrl) {
+                        revokeUrl(thermalPreviewUrl);
+                        setThermalPreviewUrl(newUrl);
+                     }
+                     setShowThermalEditor(false);
+                  }}
+                  onClose={() => setShowThermalEditor(false)}
+               />
+            </div>
+         </div>
       )}
 
       {showForensicEditor && (imgFile || forensicBaseImage) && (
-         <ForensicChannelEditor
-            baseImageUrl={forensicBasePreview || previewUrl}
-            initialConfig={forensicConfig || undefined}
-            onSave={async (compositeBlob, config) => {
-               // Save the composite image
-               const file = new File([compositeBlob], 'forensic_composite.png', { type: 'image/png' });
-               
-               // Revoke previous URLs
-               revokeUrl(previewUrl);
-               revokeUrl(forensicResultPreview);
-               
-               // Create new preview URLs
-               const newPreviewUrl = createAndRegisterBlobUrl(file);
-               const newResultUrl = createAndRegisterBlobUrl(compositeBlob as any);
-               
-               if (newPreviewUrl && newResultUrl) {
-                  // Update image file
-                  setImgFile(file);
-                  setPreviewUrl(newPreviewUrl);
-                  
-                  // Update forensic result
-                  setForensicResultPreview(newResultUrl);
-                  setForensicConfig(config);
-                  setForensicTargetChannel(config.targetChannel);
-               }
-               
-               setShowForensicEditor(false);
-            }}
-            onClose={() => setShowForensicEditor(false)}
-         />
+         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 2147483647, backgroundColor: '#000', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+               <UVEditor
+                  baseImageUrl={forensicBasePreview || previewUrl || ''}
+                  mode="rgb"
+                  onSave={async (file, meta) => {
+                     const newPreviewUrl = createAndRegisterBlobUrl(file);
+                     if (newPreviewUrl) {
+                        revokeUrl(previewUrl);
+                        setImgFile(file);
+                        setPreviewUrl(newPreviewUrl);
+                        if (meta?.targetChannel) setForensicTargetChannel(meta.targetChannel);
+                     }
+                     setShowForensicEditor(false);
+                  }}
+                  onClose={() => setShowForensicEditor(false)}
+               />
+            </div>
+         </div>
       )}
 
       </DiegeticWindow>

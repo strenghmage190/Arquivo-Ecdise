@@ -14,7 +14,7 @@
 /* Custom scrollbar for the modal to match app visual (dark theme) */
 .inspect-file {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgb(0 243 255 / 40%) rgb(0 0 0 / 30%);
+  scrollbar-color: rgb(203 213 225 / 40%) rgb(0 0 0 / 30%);
 }
 .inspect-file::-webkit-scrollbar {
   width: 12px;
@@ -22,28 +22,28 @@
 
 .inspect-file::-webkit-scrollbar-track {
   background: rgb(0 0 0 / 30%);
-  border-radius: 6px;
+  border-radius: 0;
 }
 
 .inspect-file::-webkit-scrollbar-thumb {
   background: linear-gradient(
     180deg,
-    rgb(0 243 255 / 30%),
-    rgb(0 243 255 / 50%)
+    rgb(203 213 225 / 30%),
+    rgb(203 213 225 / 50%)
   );
-  border-radius: 8px;
+  border-radius: 0;
   border: 3px solid transparent; /* spacing to create inset effect */
   background-clip: padding-box;
-  box-shadow: 0 0 10px rgb(0 243 255 / 30%);
+  box-shadow: 0 0 10px rgb(203 213 225 / 30%);
 }
 
 .inspect-file::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     180deg,
-    rgb(0 243 255 / 50%),
-    rgb(0 243 255 / 70%)
+    rgb(203 213 225 / 50%),
+    rgb(203 213 225 / 70%)
   );
-  box-shadow: 0 0 16px rgb(0 243 255 / 50%);
+  box-shadow: 0 0 16px rgb(203 213 225 / 50%);
 }
 
 /* Visual area: center content and prevent sliders/images from overflowing */
@@ -68,7 +68,7 @@
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 82%);
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   z-index: 40000;
   display: flex;
   align-items: center;
@@ -79,7 +79,7 @@
 .glitch-solver-modal {
   width: min(1100px, 95vw);
   height: min(760px, 92vh);
-  background: #05080a;
+  background: #0b0c10;
   border: 1px solid #0f0;
   box-shadow:
     0 0 28px rgb(0 255 0 / 25%),
@@ -104,7 +104,7 @@
   padding: 4px 8px;
   background: rgb(0 255 0 / 15%);
   border: 1px solid rgb(0 255 0 / 40%);
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
   margin-right: 8px;
   letter-spacing: 1px;
@@ -151,7 +151,7 @@
   position: absolute;
   width: 40px;
   height: 40px;
-  border: 2px solid rgb(0 243 255 / 40%);
+  border: 2px solid rgb(203 213 225 / 40%);
 }
 
 .ui-corners::before {
@@ -159,7 +159,7 @@
   left: 10px;
   border-right: none;
   border-bottom: none;
-  box-shadow: -2px -2px 12px rgb(0 243 255 / 30%);
+  box-shadow: -2px -2px 12px rgb(203 213 225 / 30%);
 }
 
 .ui-corners::after {
@@ -167,7 +167,7 @@
   right: 10px;
   border-left: none;
   border-top: none;
-  box-shadow: 2px 2px 12px rgb(0 243 255 / 30%);
+  box-shadow: 2px 2px 12px rgb(203 213 225 / 30%);
 }
 
 /* Grid overlay - efeito de grade tecnológica */
@@ -175,8 +175,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgb(0 243 255 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(0 243 255 / 2%) 1px, transparent 1px);
+    linear-gradient(rgb(203 213 225 / 2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(203 213 225 / 2%) 1px, transparent 1px);
   background-size: 50px 50px;
   pointer-events: none;
   z-index: 2;
@@ -196,11 +196,11 @@
   padding: 12px 8px;
   background: rgb(0 0 0 / 70%);
   border: 1px solid rgb(255 120 60 / 40%);
-  border-radius: 6px;
+  border-radius: 0;
   font-family: "Share Tech Mono", monospace;
   font-size: 11px;
   z-index: 25;
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   box-shadow: 0 0 20px rgb(255 120 60 / 30%);
 }
 
@@ -228,7 +228,7 @@
     #808 100%
   );
   border: 1px solid rgb(255 255 255 / 30%);
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow:
     inset 0 0 10px rgb(0 0 0 / 50%),
     0 0 12px rgb(255 120 60 / 40%);
@@ -275,7 +275,7 @@
 .ev-id {
   font-size: 14px;
   font-weight: bold;
-  color: var(--nexus-glitch, #ff003c);
+  color: var(--nexus-glitch, #e63946);
   letter-spacing: 2px;
 }
 
@@ -283,7 +283,7 @@
   background: rgb(255 255 255 / 2%);
   color: #9ee7c8;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
   font-weight: 700;
   flex: 0 0 auto;
@@ -294,8 +294,8 @@
 .inspect-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgb(5 8 10 / 95%);
-  backdrop-filter: blur(12px);
+  background-color: rgb(11 12 16 / 95%);
+  backdrop-filter: none;
   z-index: 25000;
   display: flex;
   align-items: center;
@@ -317,14 +317,14 @@
   height: 88vh;
   max-width: 1400px;
   max-height: 95vh;
-  background-color: var(--nexus-dark, #05080a);
-  border: 1px solid rgb(0 243 255 / 15%);
+  background-color: var(--nexus-dark, #0b0c10);
+  border: 1px solid rgb(203 213 225 / 15%);
   box-shadow:
     0 0 80px rgb(0 0 0 / 95%),
-    0 0 40px rgb(0 243 255 / 8%);
+    0 0 40px rgb(203 213 225 / 8%);
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden; /* nothing may escape the modal bounds */
   -webkit-overflow-scrolling: touch;
   font-family: "Share Tech Mono", "Roboto Mono", monospace;
@@ -347,8 +347,8 @@
 .inspect-header {
   min-height: 54px;
   height: auto;
-  background: linear-gradient(180deg, rgb(0 20 30 / 80%), rgb(5 8 10 / 95%));
-  border-bottom: 1px solid rgb(0 243 255 / 12%);
+  background: linear-gradient(180deg, rgb(0 20 30 / 80%), rgb(11 12 16 / 95%));
+  border-bottom: 1px solid rgb(203 213 225 / 12%);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -412,14 +412,14 @@
 
 /* Menu de Botões */
 .btn-tool-tab {
-  background: rgb(0 243 255 / 4%);
-  border: 1px solid rgb(0 243 255 / 12%);
-  color: var(--nexus-blue, #00f3ff);
+  background: rgb(203 213 225 / 4%);
+  border: 1px solid rgb(203 213 225 / 12%);
+  color: var(--nexus-blue, #cbd5e1);
   padding: 10px 14px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 0;
   transition: all 0.2s ease;
   text-transform: uppercase;
   font-family: "Share Tech Mono", "Roboto Mono", monospace;
@@ -430,17 +430,17 @@
   justify-content: center;
   gap: 8px;
   letter-spacing: 0.5px;
-  text-shadow: 0 0 6px rgb(0 243 255 / 30%);
+  text-shadow: 0 0 6px rgb(203 213 225 / 30%);
 }
 
 .btn-tool-tab:hover {
   color: #fff;
-  background: rgb(0 243 255 / 10%);
-  border-color: rgb(0 243 255 / 30%);
-  transform: translateY(-2px);
+  background: rgb(203 213 225 / 10%);
+  border-color: rgb(203 213 225 / 30%);
+  transform: none;
   box-shadow:
-    0 4px 16px rgb(0 243 255 / 25%),
-    0 0 20px rgb(0 243 255 / 15%);
+    0 4px 16px rgb(203 213 225 / 25%),
+    0 0 20px rgb(203 213 225 / 15%);
 }
 
 /* Dropdown helper styles */
@@ -454,7 +454,7 @@
 .inspect-file .divider {
   border: none;
   height: 1px;
-  background: rgba(0, 243, 255, 0.12);
+  background: rgb(203 213 225 / 0.12);
   margin: 4px 0;
 }
 
@@ -486,11 +486,11 @@
 }
 
 .btn-highlight {
-  background-color: rgba(0, 243, 255, 0.06);
-  color: #00f3ff;
+  background-color: rgb(203 213 225 / 0.06);
+  color: #cbd5e1;
   font-weight: 700;
-  border: 1px solid rgba(0, 243, 255, 0.2);
-  border-radius: 6px;
+  border: 1px solid rgb(203 213 225 / 0.2);
+  border-radius: 0;
   padding: 8px 10px;
   text-align: left;
   width: 100%;
@@ -544,7 +544,7 @@
   padding: 5px 9px;
   font-size: 10px;
   min-width: auto;
-  border-radius: 5px;
+  border-radius: 0;
 }
 
 @media (max-width: 768px) {
@@ -592,7 +592,7 @@
 
 /* Cores de Ativo */
 .btn-tool-tab.active-green {
-  color: #0fa;
+  color: #22c55e;
   background: rgb(0 255 170 / 15%);
   border-color: rgb(0 255 170 / 40%);
   box-shadow:
@@ -612,7 +612,7 @@
 }
 
 .btn-tool-tab.active-blue {
-  color: #0cf;
+  color: #cbd5e1;
   background: rgb(0 204 255 / 15%);
   border-color: rgb(0 204 255 / 40%);
   box-shadow:
@@ -623,14 +623,14 @@
 
 .btn-close-modal {
   /* This class is only used in mobile media queries */
-  background: rgb(255 0 60 / 8%);
-  border: 1px solid rgb(255 0 60 / 20%);
-  color: var(--nexus-glitch, #ff003c);
+  background: rgb(230 57 70 / 8%);
+  border: 1px solid rgb(230 57 70 / 20%);
+  color: var(--nexus-glitch, #e63946);
   font-size: 22px;
   cursor: pointer;
   margin-left: 8px;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 0;
   transition: all 0.2s ease;
   font-weight: bold;
   width: 36px;
@@ -642,10 +642,10 @@
 
 .btn-close-modal:hover {
   color: #fff;
-  background: rgb(255 0 60 / 20%);
-  border-color: rgb(255 0 60 / 50%);
-  box-shadow: 0 0 20px rgb(255 0 60 / 40%);
-  transform: scale(1.05);
+  background: rgb(230 57 70 / 20%);
+  border-color: rgb(230 57 70 / 50%);
+  box-shadow: 0 0 20px rgb(230 57 70 / 40%);
+  transform: none;
 }
 
 /* --- ÁREA VISUAL PRINCIPAL --- */
@@ -653,7 +653,7 @@
 .inspect-visual-area {
   flex: 1 1 auto; /* Ocupa todo o espaço sobrando */
   position: relative; /* Para os HUDs flutuarem aqui dentro */
-  background: linear-gradient(180deg, #000 0%, #05080a 100%);
+  background: linear-gradient(180deg, #000 0%, #0b0c10 100%);
   overflow: auto; /* Allow scrolling for large content */
   display: flex;
   align-items: center;
@@ -666,8 +666,8 @@
   /* Sutil efeito grid Nexus */
 
   background-image:
-    linear-gradient(rgb(0 243 255 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(0 243 255 / 2%) 1px, transparent 1px);
+    linear-gradient(rgb(203 213 225 / 2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(203 213 225 / 2%) 1px, transparent 1px);
   background-size: 50px 50px;
 }
 
@@ -687,9 +687,9 @@
   max-height: 72vh;
   background-color: #000; /* Fundo base */
   background-image:
-    linear-gradient(rgb(0 243 255 / 3%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(0 243 255 / 3%) 1px, transparent 1px),
-    radial-gradient(ellipse at center, rgb(0 243 255 / 2%), transparent 70%);
+    linear-gradient(rgb(203 213 225 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(203 213 225 / 3%) 1px, transparent 1px),
+    radial-gradient(ellipse at center, rgb(203 213 225 / 2%), transparent 70%);
   background-size:
     60px 60px,
     60px 60px,
@@ -699,7 +699,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden; /* prevent images from breaking layout */
-  box-shadow: inset 0 0 60px rgb(0 243 255 / 5%);
+  box-shadow: inset 0 0 60px rgb(203 213 225 / 5%);
 }
 
 .evidence-display-area img,
@@ -771,7 +771,7 @@
   position: absolute;
   width: 20px;
   height: 20px;
-  border-color: rgb(0 243 255 / 45%);
+  border-color: rgb(203 213 225 / 45%);
   border-style: solid;
   transition: all 0.3s;
 }
@@ -823,18 +823,18 @@
   max-width: 38%;
   max-height: calc(100% - 32px);
   overflow: hidden auto;
-  background: linear-gradient(145deg, rgb(5 8 10 / 98%), rgb(10 15 20 / 98%));
-  border: 1px solid rgb(0 243 255 / 25%);
+  background: linear-gradient(145deg, rgb(11 12 16 / 98%), rgb(10 15 20 / 98%));
+  border: 1px solid rgb(203 213 225 / 25%);
   box-shadow:
     0 20px 60px rgb(0 0 0 / 90%),
-    0 0 40px rgb(0 243 255 / 12%);
+    0 0 40px rgb(203 213 225 / 12%);
   padding: 18px;
-  border-radius: 8px;
+  border-radius: 0;
   z-index: 520; /* sit above image but below modals */
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   scrollbar-width: thin;
-  scrollbar-color: rgb(0 243 255 / 30%) rgb(0 0 0 / 30%);
+  scrollbar-color: rgb(203 213 225 / 30%) rgb(0 0 0 / 30%);
 }
 
 .tools-hud-panel::-webkit-scrollbar {
@@ -842,17 +842,17 @@
 }
 .tools-hud-panel::-webkit-scrollbar-track {
   background: rgb(0 0 0 / 30%);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .tools-hud-panel::-webkit-scrollbar-thumb {
-  background: rgb(0 243 255 / 30%);
-  border-radius: 4px;
+  background: rgb(203 213 225 / 30%);
+  border-radius: 0;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 .tools-hud-panel::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 243 255 / 50%);
+  background: rgb(203 213 225 / 50%);
 }
 
 @keyframes slideInRight {
@@ -867,15 +867,15 @@
 }
 
 .hud-title {
-  color: var(--nexus-blue, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
   font-size: 12px;
   font-weight: bold;
-  border-bottom: 2px solid rgb(0 243 255 / 30%);
+  border-bottom: 2px solid rgb(203 213 225 / 30%);
   padding-bottom: 10px;
   margin-bottom: 18px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  text-shadow: 0 0 12px rgb(0 243 255 / 60%);
+  text-shadow: 0 0 12px rgb(203 213 225 / 60%);
   font-family: "Share Tech Mono", monospace;
 }
 
@@ -1010,7 +1010,7 @@
   font-weight: 700;
   border-radius: 999px;
   cursor: pointer;
-  backdrop-filter: blur(6px);
+  backdrop-filter: none;
   box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
 
@@ -1052,7 +1052,7 @@
 
 /* Small compact controls for fullscreen (use HUD styling) */
 .fullscreen-stage .image-controls { right: 28px; bottom: 80px; }
-.fullscreen-stage .img-zoom-btn { background: rgba(0,243,255,0.08); border:1px solid rgba(0,243,255,0.12); color:#00f3ff; }
+.fullscreen-stage .img-zoom-btn { background: rgba(0,243,255,0.08); border:1px solid rgba(0,243,255,0.12); color:#cbd5e1; }
 
 /* Optional small zoom level indicator */
 .zoom-level-indicator {
@@ -1062,7 +1062,7 @@
   background: rgba(0,0,0,0.45);
   color: #fff;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   font-size: 12px;
   z-index: 120;
   pointer-events: none;
@@ -1110,23 +1110,23 @@
 
 /* Botões do HUD mais bonitos e translúcidos */
 .btn-hud {
-  background: rgba(0, 243, 255, 0.1);
-  border: 1px solid rgba(0, 243, 255, 0.3);
-  color: #00f3ff;
+  background: rgb(203 213 225 / 0.1);
+  border: 1px solid rgb(203 213 225 / 0.3);
+  color: #cbd5e1;
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   text-transform: uppercase;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .btn-hud.active {
-  background: rgba(0, 243, 255, 0.25);
-  border-color: #00f3ff;
+  background: rgb(203 213 225 / 0.25);
+  border-color: #cbd5e1;
   color: #fff;
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 15px rgb(203 213 225 / 0.4);
 }
 
 .btn-hud-close {
@@ -1196,31 +1196,31 @@
   appearance: none;
   width: 100%;
   height: 8px;
-  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(0 243 255 / 10%));
-  border: 1px solid rgb(0 243 255 / 15%);
-  border-radius: 6px;
+  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(203 213 225 / 10%));
+  border: 1px solid rgb(203 213 225 / 15%);
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .filter-range:hover {
-  box-shadow: 0 0 12px rgb(0 243 255 / 20%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 20%);
 }
 .filter-range:focus {
   outline: none;
-  box-shadow: 0 0 16px rgb(0 243 255 / 30%);
+  box-shadow: 0 0 16px rgb(203 213 225 / 30%);
 }
 
 .filter-range::-webkit-slider-runnable-track {
   height: 8px;
-  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(0 243 255 / 10%));
-  border-radius: 6px;
+  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(203 213 225 / 10%));
+  border-radius: 0;
 }
 
 .filter-range::-moz-range-track {
   height: 8px;
-  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(0 243 255 / 10%));
-  border-radius: 6px;
+  background: linear-gradient(90deg, rgb(0 0 0 / 60%), rgb(203 213 225 / 10%));
+  border-radius: 0;
 }
 
 .filter-range::-webkit-slider-thumb {
@@ -1230,13 +1230,13 @@
   border-radius: 50%;
   background: linear-gradient(
     135deg,
-    var(--nexus-blue, #00f3ff),
-    rgb(0 243 255 / 60%)
+    var(--nexus-blue, #cbd5e1),
+    rgb(203 213 225 / 60%)
   );
   margin-top: -5px;
   box-shadow:
-    0 0 12px rgb(0 243 255 / 60%),
-    0 0 20px rgb(0 243 255 / 30%);
+    0 0 12px rgb(203 213 225 / 60%),
+    0 0 20px rgb(203 213 225 / 30%);
   border: 2px solid rgb(0 0 0 / 30%);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1245,8 +1245,8 @@
 .filter-range::-webkit-slider-thumb:hover {
   transform: scale(1.15);
   box-shadow:
-    0 0 20px rgb(0 243 255 / 80%),
-    0 0 30px rgb(0 243 255 / 40%);
+    0 0 20px rgb(203 213 225 / 80%),
+    0 0 30px rgb(203 213 225 / 40%);
 }
 
 .filter-range::-moz-range-thumb {
@@ -1255,39 +1255,39 @@
   border-radius: 50%;
   background: linear-gradient(
     135deg,
-    var(--nexus-blue, #00f3ff),
-    rgb(0 243 255 / 60%)
+    var(--nexus-blue, #cbd5e1),
+    rgb(203 213 225 / 60%)
   );
   border: 2px solid rgb(0 0 0 / 30%);
-  box-shadow: 0 0 12px rgb(0 243 255 / 60%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 60%);
   cursor: pointer;
 }
 
 .filter-number {
   width: 70px;
-  background: rgb(0 243 255 / 5%);
-  color: var(--nexus-blue, #00f3ff);
-  border: 1px solid rgb(0 243 255 / 20%);
+  background: rgb(203 213 225 / 5%);
+  color: var(--nexus-blue, #cbd5e1);
+  border: 1px solid rgb(203 213 225 / 20%);
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   text-align: center;
   font-size: 12px;
   font-family: "Share Tech Mono", monospace;
   font-weight: 600;
   transition: all 0.2s ease;
-  text-shadow: 0 0 6px rgb(0 243 255 / 30%);
+  text-shadow: 0 0 6px rgb(203 213 225 / 30%);
 }
 
 .filter-number:hover {
-  border-color: rgb(0 243 255 / 40%);
-  box-shadow: 0 0 12px rgb(0 243 255 / 15%);
+  border-color: rgb(203 213 225 / 40%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 15%);
 }
 
 .filter-number:focus {
   outline: none;
-  border-color: rgb(0 243 255 / 60%);
-  box-shadow: 0 0 20px rgb(0 243 255 / 25%);
-  background: rgb(0 243 255 / 8%);
+  border-color: rgb(203 213 225 / 60%);
+  box-shadow: 0 0 20px rgb(203 213 225 / 25%);
+  background: rgb(203 213 225 / 8%);
 }
 
 /* remove number input spinners */
@@ -1305,29 +1305,29 @@ input[type="number"].filter-number {
 .btn-reset,
 .btn-reset-filters {
   display: inline-block;
-  background: rgb(255 0 60 / 8%);
-  border: 1px solid rgb(255 0 60 / 20%);
-  color: var(--nexus-glitch, #ff003c);
+  background: rgb(230 57 70 / 8%);
+  border: 1px solid rgb(230 57 70 / 20%);
+  color: var(--nexus-glitch, #e63946);
   padding: 8px 14px;
   font-size: 11px;
   cursor: pointer;
   font-weight: 700;
   text-transform: uppercase;
   margin-top: 10px;
-  border-radius: 6px;
+  border-radius: 0;
   transition: all 0.2s ease;
-  box-shadow: 0 0 12px rgb(255 0 60 / 15%);
+  box-shadow: 0 0 12px rgb(230 57 70 / 15%);
   letter-spacing: 0.8px;
-  text-shadow: 0 0 8px rgb(255 0 60 / 40%);
+  text-shadow: 0 0 8px rgb(230 57 70 / 40%);
 }
 
 .btn-reset:hover,
 .btn-reset-filters:hover {
-  background: rgb(255 0 60 / 15%);
-  border-color: rgb(255 0 60 / 50%);
+  background: rgb(230 57 70 / 15%);
+  border-color: rgb(230 57 70 / 50%);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 0 24px rgb(255 0 60 / 40%);
+  transform: none;
+  box-shadow: 0 0 24px rgb(230 57 70 / 40%);
 }
 
 /* Thermal overlay styling: canvas-based mapping rendered into .thermal-canvas */
@@ -1392,29 +1392,29 @@ input[type="number"].filter-number {
 .btn-channel {
   flex: 1;
   min-width: 60px;
-  background: rgb(0 243 255 / 4%);
-  border: 1px solid rgb(0 243 255 / 15%);
+  background: rgb(203 213 225 / 4%);
+  border: 1px solid rgb(203 213 225 / 15%);
   color: var(--muted, #9aa6ab);
   padding: 10px 8px;
   font-size: 11px;
   cursor: pointer;
   font-weight: bold;
-  border-radius: 6px;
+  border-radius: 0;
   transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .btn-channel:hover {
-  background: rgb(0 243 255 / 8%);
-  border-color: rgb(0 243 255 / 30%);
+  background: rgb(203 213 225 / 8%);
+  border-color: rgb(203 213 225 / 30%);
 }
 
 /* Cores Ativas */
 .btn-channel.active {
   color: #fff;
-  border-color: rgb(0 243 255 / 50%);
-  box-shadow: 0 0 16px rgb(0 243 255 / 30%);
+  border-color: rgb(203 213 225 / 50%);
+  box-shadow: 0 0 16px rgb(203 213 225 / 30%);
 }
 
 .btn-channel.red.active {
@@ -1449,8 +1449,8 @@ input[type="number"].filter-number {
   height: auto;
   min-height: 80px;
   max-height: 24vh; /* smaller than before to prioritize the video */
-  background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(10 15 20 / 98%));
-  border-top: 2px solid rgb(0 243 255 / 15%);
+  background: linear-gradient(180deg, rgb(11 12 16 / 95%), rgb(10 15 20 / 98%));
+  border-top: 2px solid rgb(203 213 225 / 15%);
   padding: 16px; /* slightly reduced padding */
   display: flex;
   gap: 16px;
@@ -1465,7 +1465,7 @@ input[type="number"].filter-number {
   overflow-y: auto;
   padding-right: 15px;
   scrollbar-width: thin;
-  scrollbar-color: rgb(0 243 255 / 30%) rgb(0 0 0 / 30%);
+  scrollbar-color: rgb(203 213 225 / 30%) rgb(0 0 0 / 30%);
 }
 .text-col::-webkit-scrollbar {
   width: 8px;
@@ -1473,52 +1473,52 @@ input[type="number"].filter-number {
 
 .text-col::-webkit-scrollbar-track {
   background: rgb(0 0 0 / 30%);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .text-col::-webkit-scrollbar-thumb {
-  background: rgb(0 243 255 / 30%);
-  border-radius: 4px;
-  box-shadow: 0 0 8px rgb(0 243 255 / 20%);
+  background: rgb(203 213 225 / 30%);
+  border-radius: 0;
+  box-shadow: 0 0 8px rgb(203 213 225 / 20%);
 }
 
 .text-col::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 243 255 / 50%);
-  box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+  background: rgb(203 213 225 / 50%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 30%);
 }
 
 .metadata-box {
   margin-top: 20px;
-  background: rgb(0 243 255 / 2%);
-  border: 1px solid rgb(0 243 255 / 15%);
+  background: rgb(203 213 225 / 2%);
+  border: 1px solid rgb(203 213 225 / 15%);
   padding: 14px;
-  border-radius: 6px;
+  border-radius: 0;
   font-family: "Share Tech Mono", "Roboto Mono", monospace;
   font-size: 11px;
   color: var(--muted, #9aa6ab);
-  box-shadow: inset 0 0 20px rgb(0 243 255 / 3%);
+  box-shadow: inset 0 0 20px rgb(203 213 225 / 3%);
 }
 
 .metadata-box h4 {
-  color: var(--nexus-blue, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
   margin: 0 0 10px;
-  border-bottom: 2px solid rgb(0 243 255 / 20%);
+  border-bottom: 2px solid rgb(203 213 225 / 20%);
   padding-bottom: 6px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  text-shadow: 0 0 8px rgb(0 243 255 / 40%);
+  text-shadow: 0 0 8px rgb(203 213 225 / 40%);
 }
 
 .desc-title {
-  color: var(--nexus-blue, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
   font-weight: bold;
   font-size: 11px;
   letter-spacing: 1.5px;
   margin-bottom: 8px;
   display: block;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgb(0 243 255 / 40%);
+  text-shadow: 0 0 8px rgb(203 213 225 / 40%);
 }
 
 .text-col h2 {
@@ -1527,7 +1527,7 @@ input[type="number"].filter-number {
   font-family: "Share Tech Mono", "Special Elite", monospace;
   font-size: 20px;
   letter-spacing: 1px;
-  text-shadow: 0 0 10px rgb(0 243 255 / 30%);
+  text-shadow: 0 0 10px rgb(203 213 225 / 30%);
 }
 
 .public-desc {
@@ -1538,28 +1538,28 @@ input[type="number"].filter-number {
 }
 
 .btn-edit-ref {
-  background: rgb(0 243 255 / 5%);
-  border: 1px solid rgb(0 243 255 / 20%);
-  color: var(--nexus-blue, #00f3ff);
+  background: rgb(203 213 225 / 5%);
+  border: 1px solid rgb(203 213 225 / 20%);
+  color: var(--nexus-blue, #cbd5e1);
   padding: 10px 18px;
   cursor: pointer;
   font-size: 12px;
   height: fit-content;
-  border-radius: 6px;
+  border-radius: 0;
   font-family: "Share Tech Mono", monospace;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all 0.2s ease;
   font-weight: 600;
-  text-shadow: 0 0 6px rgb(0 243 255 / 30%);
+  text-shadow: 0 0 6px rgb(203 213 225 / 30%);
 }
 
 .btn-edit-ref:hover {
   color: #fff;
-  background: rgb(0 243 255 / 12%);
-  border-color: rgb(0 243 255 / 40%);
-  box-shadow: 0 0 20px rgb(0 243 255 / 30%);
-  transform: translateY(-2px);
+  background: rgb(203 213 225 / 12%);
+  border-color: rgb(203 213 225 / 40%);
+  box-shadow: 0 0 20px rgb(203 213 225 / 30%);
+  transform: none;
 }
 
 /* --- HEADER FLEX FIXES --- */
@@ -1597,18 +1597,18 @@ input[type="number"].filter-number {
   max-width: 35%;
   max-height: calc(100% - 32px);
   overflow-y: auto;
-  background: linear-gradient(145deg, rgb(5 8 10 / 98%), rgb(10 15 20 / 98%));
-  border: 1px solid rgb(0 243 255 / 25%);
+  background: linear-gradient(145deg, rgb(11 12 16 / 98%), rgb(10 15 20 / 98%));
+  border: 1px solid rgb(203 213 225 / 25%);
   box-shadow:
     0 20px 60px rgb(0 0 0 / 90%),
-    0 0 40px rgb(0 243 255 / 12%);
+    0 0 40px rgb(203 213 225 / 12%);
   padding: 18px;
-  border-radius: 8px;
+  border-radius: 0;
   z-index: 100;
   animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   scrollbar-width: thin;
-  scrollbar-color: rgb(0 243 255 / 30%) rgb(0 0 0 / 30%);
+  scrollbar-color: rgb(203 213 225 / 30%) rgb(0 0 0 / 30%);
 }
 
 @keyframes slideInLeft {
@@ -1627,24 +1627,24 @@ input[type="number"].filter-number {
 }
 .filters-overlay-panel::-webkit-scrollbar-track {
   background: rgb(0 0 0 / 30%);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .filters-overlay-panel::-webkit-scrollbar-thumb {
-  background: rgb(0 243 255 / 30%);
-  border-radius: 4px;
+  background: rgb(203 213 225 / 30%);
+  border-radius: 0;
 }
 
 .filters-overlay-panel label {
   display: flex;
   justify-content: space-between;
-  color: var(--nexus-blue, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
   font-size: 11px;
   margin-bottom: 8px;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgb(0 243 255 / 40%);
+  text-shadow: 0 0 8px rgb(203 213 225 / 40%);
 }
 
 /* GM note styling */
@@ -1653,7 +1653,7 @@ input[type="number"].filter-number {
   padding: 12px;
   background: rgb(198 164 95 / 8%);
   border: 1px solid rgb(198 164 95 / 30%);
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 12px;
   color: #d4af7a;
   line-height: 1.5;
@@ -1662,13 +1662,13 @@ input[type="number"].filter-number {
 
 /* Lock screen indicator */
 .btn-close {
-  background: rgb(255 0 60 / 8%);
-  border: 1px solid rgb(255 0 60 / 20%);
-  color: var(--nexus-glitch, #ff003c);
+  background: rgb(230 57 70 / 8%);
+  border: 1px solid rgb(230 57 70 / 20%);
+  color: var(--nexus-glitch, #e63946);
   font-size: 18px;
   cursor: pointer;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 0;
   transition: all 0.2s ease;
   font-weight: bold;
   flex-shrink: 0;
@@ -1683,14 +1683,14 @@ input[type="number"].filter-number {
 
 .btn-close:hover {
   color: #fff;
-  background: rgb(255 0 60 / 20%);
-  border-color: rgb(255 0 60 / 50%);
-  box-shadow: 0 0 20px rgb(255 0 60 / 40%);
+  background: rgb(230 57 70 / 20%);
+  border-color: rgb(230 57 70 / 50%);
+  box-shadow: 0 0 20px rgb(230 57 70 / 40%);
 }
 
 /* Accessibility improvements */
 .inspect-file:focus {
-  outline: 2px solid rgb(0 243 255 / 50%);
+  outline: 2px solid rgb(203 213 225 / 50%);
   outline-offset: -2px;
 }
 
@@ -1717,7 +1717,7 @@ input[type="number"].filter-number {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgb(0 243 255 / 1%) 50%,
+    rgb(203 213 225 / 1%) 50%,
     transparent 100%
   );
   background-size: 100% 4px;
@@ -1749,7 +1749,7 @@ input[type="number"].filter-number {
 .btn-tool-tab:focus-visible,
 .btn-close-modal:focus-visible,
 .btn-edit-ref:focus-visible {
-  outline: 2px solid var(--nexus-blue, #00f3ff);
+  outline: 2px solid var(--nexus-blue, #cbd5e1);
   outline-offset: 2px;
 }
 
@@ -1766,10 +1766,10 @@ input[type="number"].filter-number {
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgb(0 0 0 / 90%);
-  color: var(--nexus-blue, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
   padding: 20px 30px;
-  border-radius: 8px;
-  border: 1px solid rgb(0 243 255 / 30%);
+  border-radius: 0;
+  border: 1px solid rgb(203 213 225 / 30%);
   font-size: 14px;
   text-align: center;
   z-index: 200;
@@ -1807,10 +1807,10 @@ input[type="number"].filter-number {
 
 .waveform-controls .zoom-btn {
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(0, 243, 255, 0.16);
-  color: #00f3ff;
+  border: 1px solid rgb(203 213 225 / 0.16);
+  color: #cbd5e1;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   font-weight: 700;
   min-width: 36px;
@@ -1822,10 +1822,10 @@ input[type="number"].filter-number {
 }
 
 .waveform-controls .zoom-btn:hover {
-  background: rgba(0, 243, 255, 0.06);
+  background: rgb(203 213 225 / 0.06);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 243, 255, 0.06);
+  transform: none;
+  box-shadow: 0 10px 26px rgb(203 213 225 / 0.06);
 }
 
 /* Improved expand button styling */
@@ -1870,10 +1870,10 @@ input[type="number"].filter-number {
 
 .image-controls .img-zoom-btn {
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(0, 243, 255, 0.16);
-  color: #00f3ff;
+  border: 1px solid rgb(203 213 225 / 0.16);
+  color: #cbd5e1;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   font-weight: 700;
   min-width: 36px;
@@ -1885,10 +1885,10 @@ input[type="number"].filter-number {
 }
 
 .image-controls .img-zoom-btn:hover {
-  background: rgba(0, 243, 255, 0.06);
+  background: rgb(203 213 225 / 0.06);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 243, 255, 0.06);
+  transform: none;
+  box-shadow: 0 10px 26px rgb(203 213 225 / 0.06);
 }
 
 /* When zoomed (dataset attribute set), change cursor to indicate panning */
@@ -2020,8 +2020,8 @@ input[type="number"].filter-number {
     min-height: 40px !important;
     padding: 10px !important;
     overflow: visible !important;
-    background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(10 15 20 / 98%)) !important;
-    border-top: 2px solid rgb(0 243 255 / 15%) !important;
+    background: linear-gradient(180deg, rgb(11 12 16 / 95%), rgb(10 15 20 / 98%)) !important;
+    border-top: 2px solid rgb(203 213 225 / 15%) !important;
     border-radius: 6px !important;
     z-index: auto !important;
   }
@@ -2033,4 +2033,3 @@ input[type="number"].filter-number {
   }
 
 }
-

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './BootScreen.css';
 
+const BOOT_ART = 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F83a99cbf648c481a81b23068a2c88d4b';
+
 export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   const [lines, setLines] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,9 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
             <div className="brand-mark">ORDO<span> REALITAS</span></div>
             <div className="brand-sub">C.R.I.S // canal seguro</div>
           </div>
+          <div className="boot-art" aria-hidden="true">
+            <img src={BOOT_ART} alt="" />
+          </div>
           <div className="boot-tags">
             <span className="tag tag-primary">NO CR-07</span>
             <span className="tag tag-accent">SINCRONIA {Math.round(progress * 100)}%</span>
@@ -71,16 +76,19 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
               <span className="indicator"><span className="dot pulse"></span> enlace estável</span>
             </div>
             <div className="terminal-lines">
-              {lines.map((l, i) => (
-                <div key={i} className="line">
-                  <span className="caret">&gt;</span>
-                  <span className="text">{l}</span>
-                </div>
-              ))}
+              {lines.map((l, i) => {
+                const lineClass = l.includes('[OK]') ? 'line ok' : l.startsWith('ALERTA') ? 'line alert' : 'line';
+                return (
+                  <div key={i} className={lineClass}>
+                    <span className="caret">&gt;</span>
+                    <span className="text">{l}</span>
+                  </div>
+                );
+              })}
               {loading && (
                 <div className="line typing">
                   <span className="caret">&gt;</span>
-                  <span className="text">_</span>
+                  <span className="text"><span className="terminal-cursor" aria-hidden="true" /></span>
                 </div>
               )}
             </div>

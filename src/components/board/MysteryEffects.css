@@ -1,256 +1,63 @@
-/* Simplified UV flicker animation */
-@keyframes uv-flicker {
-  0%, 50%, 100% {
-    opacity: 0.9;
-  }
-  25% {
-    opacity: 0.8;
-  }
-  75% {
-    opacity: 1;
-  }
-}
-
-/* Reduce expensive properties for better performance */
-.uv-noise-overlay {
-  opacity: 0.1;
-  z-index: 5;
-  /* Removed redundant will-change properties */
-}
-
-/* O circulo roxo da lanterna (A Lente) */
-.flashlight-lens {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  mix-blend-mode: hard-light;
-  z-index: 10;
-}
-
-/* A Tinta Secreta em si */
-.hidden-ink-layer {
-  /* neutral amplify for any neon color */
-
-  filter: brightness(2.5) saturate(2.5) contrast(1.8);
-  mix-blend-mode: screen;
-  /* slower, less frequent flicker to reduce paint cost */
-  animation: uv-flicker 7s infinite alternate;
-  z-index: 9;
-}
-
-/* Robust container and hard flicker for better visibility */
 .uv-container {
-  width: 100%;
-  min-height: 140px; /* Allow flexible layout while keeping minimum height */
   position: relative;
-  background-color: #000;
-  border-radius: 2px;
-  overflow: hidden;
   z-index: 1;
-  contain: paint; /* limit layout/paint scope to this element for better performance */
-}
-
-/* UV ambient light effect - purple tint over entire image when UV mode active */
-.uv-container.uv-active::before {
-  content: '';
-  position: absolute;
-  inset: 0;
   width: 100%;
-  height: 100%;
-  background: radial-gradient(ellipse at center, rgba(120,60,200,0.15) 0%, rgba(80,40,160,0.25) 100%);
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  z-index: 15;
-  animation: uv-ambient-pulse 4s ease-in-out infinite alternate;
-}
-
-@keyframes uv-ambient-pulse {
-  0% {
-    opacity: 0.6;
-  }
-  100% {
-    opacity: 0.85;
-  }
-}
-
-@keyframes flicker-hard {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  32% {
-    opacity: 0.8;
-  }
-  33% {
-    opacity: 0.3;
-  }
-  34% {
-    opacity: 0.8;
-  }
-  70% {
-    opacity: 0.95;
-  }
-  72% {
-    opacity: 0.5;
-  }
-}
-
-.static-noise {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.03; /* Reduced to not interfere with UV content visibility */
-  pointer-events: none;
-  z-index: 200; /* sit above main image for UV effects */
-  will-change: opacity; /* Removed redundant will-change properties */
-}
-
-/* forensic canvas overlay for channel isolation */
-.forensic-canvas {
-  position: absolute;
-  inset: 0; /* fill the container exactly */
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  mix-blend-mode: screen; /* overlay visual */
-  opacity: 0.9;
-  z-index: 205;
-  will-change: opacity;
-  display: block;
-}
-
-.uv-lens-flare {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 210;
-  transition: opacity 0.3s ease-out; /* Slightly slower transition for smoother effect */
-  opacity: 0.5; /* Maximum opacity for UV visibility */
-  will-change: opacity, filter;
-}
-
-.secret-ink {
-  /* use neutral blend & boosts so any drawn UV color (green/purple/etc.) becomes visible */
-
-  /* Maximum filter intensity for UV editor visibility */
-  filter: brightness(2.5) contrast(2.0) saturate(2.5);
-  z-index: 220;
-  /* Longer animation reduces frame churn */
-  animation: flicker-hard 8s infinite linear;
-  pointer-events: none;
-  will-change: opacity, filter;
-}
-
-/* When UV mode is active, suppress editor selection/focus visuals inside the container
-   This prevents text added via the UV editor from showing selection outlines or
-   the native ::selection highlight which clashes with UV rendering. */
-.uv-container.uv-active,
-.uv-container.uv-active * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.uv-container.uv-active *:focus {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.uv-container.uv-active ::selection {
-  background: transparent;
-  color: inherit;
-}
-
-/* Apply mask using CSS variables set on the container. This avoids inline styles
-   and lets the browser optimize the paint. */
-.uv-container.uv-active .secret-ink,
-.uv-container.uv-active .static-noise,
-.uv-container.uv-active .uv-lens-flare {
-  mask-image: radial-gradient(circle var(--uv-radius) at var(--mouse-x) var(--mouse-y), black 0%, black 60%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle var(--uv-radius) at var(--mouse-x) var(--mouse-y), black 0%, black 60%, transparent 100%);
-}
-
-.uv-container.uv-active .uv-lens-flare {
-  /* lens flare background anchored to the pointer via CSS vars - very bright for visibility */
-  background: radial-gradient(circle var(--uv-radius) at var(--mouse-x) var(--mouse-y), rgba(200,120,255,0.7) 0%, rgba(150,60,240,0.45) 50%, rgba(80,20,160,0.15) 100%);
-}
-
-/* Visual stamp for cards (CONFIDENCIAL / ÓBITO etc.) */
-.card-stamp {
-  transform-origin: center;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Ambient Blur background and main image styles */
-.bg-blur {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* Reduced blur radius to lower heavy Gaussian blur cost */
-  filter: blur(12px) brightness(0.38);
-  transform: scale(1.03);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.main-evidence {
-  position: relative;
-  z-index: 20;
-  max-width: 95%;
-  max-height: 95%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  display: block;
-  margin: auto;
-  box-shadow: 0 0 30px rgb(0 0 0 / 50%);
-  border: 1px solid rgb(255 255 255 / 4%);
-}
-
-/* Move inline styles to CSS classes for caching */
-.uv-container {
-  cursor: default;
+  min-height: 140px;
+  overflow: hidden;
+  border-radius: 0;
+  background: #000;
+  contain: paint;
   --uv-radius: 120px;
   --mouse-x: 0px;
   --mouse-y: 0px;
 }
 
-.uv-container.uv-active {
-  cursor: none;
+.static-noise,
+.uv-lens-flare,
+.uv-container.uv-active::before {
+  display: none;
 }
 
-/* Apply expensive blend modes only when UV mode is active to reduce composition cost */
+.hidden-ink-layer,
+.secret-ink {
+  z-index: 220;
+  filter: brightness(1.7) contrast(1.25) saturate(1.35);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.forensic-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 205;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .uv-container.uv-active .secret-ink,
 .uv-container.uv-active .forensic-canvas {
-  mix-blend-mode: screen;
+  mask-image: radial-gradient(circle var(--uv-radius) at var(--mouse-x) var(--mouse-y), black 0%, black 62%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--uv-radius) at var(--mouse-x) var(--mouse-y), black 0%, black 62%, transparent 100%);
 }
 
-.uv-container.uv-active .uv-lens-flare {
-  mix-blend-mode: overlay;
+.bg-blur {
+  display: none;
 }
 
-.uv-container .bg-blur {
-  object-fit: cover;
-  filter: blur(20px) brightness(0.35);
-  transform: scale(1.06);
+.main-evidence {
+  position: relative;
+  z-index: 20;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+  border: 0;
+  box-shadow: none;
 }
 
-.uv-container .main-evidence {
-  object-fit: contain;
-  filter: brightness(1) contrast(1) saturate(1);
-  transition: filter 0.1s linear;
+.card-stamp {
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }

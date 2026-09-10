@@ -1,4 +1,4 @@
-import { Volume2, Eye, Check, Thermometer, Lock, Video, FileText, Image, Music, MessageSquare, Tag, Link as LinkIcon, HelpCircle, X, FolderOpen, Pencil } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -29,9 +29,14 @@ export interface EvidenceCardProps {
   cardType?: 'glitch' | 'mega-clue' | 'encrypted' | 'normal' | 'hidden'
   performanceMode?: boolean
   blurred?: boolean
+  element?: string | null
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null }) => {
+  // DEBUG: Log de props importantes
+  if (cardType !== 'normal' || locked || isUV) {
+    console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
+  }
   const handleToggle = (s: 'verified' | 'theory' | 'false') => {
     if (!onToggleStatus) return;
     const newStatus = status === s ? null : s;
@@ -40,6 +45,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
   const shortId = id ? (String(id).length > 10 ? `${String(id).slice(0, 8)}...` : String(id)) : '';
 
+  // Lazy render para economizar re-renders e trabalho de imagem fora da viewport
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
@@ -64,6 +70,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     return () => obs.disconnect();
   }, []);
 
+  // Determinar tipo especial baseado no fileType ou cardType
   let specialType = '';
   if (cardType === 'glitch' || fileType === 'glitch_puzzle') {
     specialType = 'type-glitch';
@@ -76,20 +83,22 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
   const getTypeIcon = (t: string) => {
     if (t === 'locked') return <Lock size={14} />;
     if (t === 'video') return <Video size={14} />;
-    if (t === 'audio') return <Music size={14} />;
+    if (t === 'audio') return <Volume2 size={14} />;
     if (t === 'text') return <FileText size={14} />;
-    return <Image size={14} />;
-  }
+    return <ImageIcon size={14} />;
+  };
 
   const rootClasses = [
     'clue-card',
     specialType,
     hasScanned ? 'scanned' : '',
     status ? `status-${(status === 'verified' ? 'true' : status)}` : '',
+    isUV ? 'is-uv' : '',
     locked ? 'is-locked' : '',
     performanceMode ? 'performance-mode' : ''
   ].filter(Boolean).join(' ');
 
+  // Determinar classe do content container de forma explícita e previsível
   let contentContainerClass = 'card-content-container';
 
   if (playerView && !isGameMaster) {
@@ -100,6 +109,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     }
   }
 
+  // placeholder enquanto a imagem não estiver visível; caso contrário, gm-view
   if (!isVisible) {
     contentContainerClass += ' loading-placeholder';
   } else {
@@ -115,6 +125,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       data-card-type={cardType}
       data-locked={locked}
       data-player-view={playerView}
+      data-element={element || undefined}
       style={{
         touchAction: 'none',
         userSelect: 'none',
@@ -127,15 +138,16 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       <div className="clue-image-container">
         <div className="badges-container" aria-hidden>
           <div className={`type-badge small ${locked ? 'locked' : fileType}`} title={locked ? 'Protegido' : fileType}>{getTypeIcon(locked ? 'locked' : fileType)}</div>
-          {hasUV && <div className="type-badge small uv" title="Camada UV"><Eye size={14} /></div>}
+          {hasUV && <div className="type-badge small uv" title="Camada UV">UV</div>}
           {hasHiddenAudio && <div className="type-badge small hidden-audio" title="Áudio oculto"><Volume2 size={14} /></div>}
           {hasChat && <div className="type-badge small chat" title="Chat/Conversas"><MessageSquare size={14} /></div>}
           {hasThermal && <div className="type-badge small thermal" title="Termal"><Thermometer size={14} /></div>}
-          {hasStamp && <div className="type-badge small stamp" title="Carimbo"><Tag size={14} /></div>}
-          {hasExternalLink && <div className="type-badge small link" title="Link Externo"><LinkIcon size={14} /></div>}
+          {hasStamp && <div className="type-badge small stamp" title="Carimbo"><Check size={14} /></div>}
+          {hasExternalLink && <div className="type-badge small link" title="Link Externo"><Link2 size={14} /></div>}
           {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye size={14} /></div>}
         </div>
 
+        {/* <Check className="lucide-icon inline-icon" size={16} /> Content container with view classes - NO NESTING */}
         <div className={contentContainerClass}>
           <EvidenceCardContent
             id={id}
@@ -158,40 +170,33 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       <div className="clue-info">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="clue-uuid">ID: {shortId}</span>
-          {locked && (
-            <span title="Evidência Protegida por Senha" style={{ color: 'var(--institutional-red)', display: 'inline-flex', alignItems: 'center' }}>
-              <Lock size={14} />
-            </span>
-          )}
-          {hasRecord && (
-            <span title="Prontuário / Ficha da vítima" style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center' }}>
-              <FileText size={14} />
-            </span>
-          )}
+          {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
+          {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
         <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
+        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
       </div>
 
       <div className="decision-bar">
         <button className={`btn-decision true ${status === 'verified' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('verified'); }} title="Confirmado" aria-label="confirm">
-          <Check size={18} />
+          <Check size={16} />
         </button>
 
         <button className={`btn-decision theory ${status === 'theory' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('theory'); }} title="Hipótese" aria-label="theory">
-          <HelpCircle size={18} />
+          <CircleHelp size={16} />
         </button>
 
         <button className={`btn-decision false ${status === 'false' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleToggle('false'); }} title="Descartado" aria-label="discard">
-          <X size={18} />
+          <X size={16} />
         </button>
 
         <div className="divider" />
         <button className="btn-decision open" onClick={(e) => { e.stopPropagation(); if (onOpen) onOpen(); }} title="Abrir Arquivo" aria-label="open">
-          <FolderOpen size={18} />
+          <FolderOpen size={16} />
         </button>
         {isGameMaster && !playerView && onEdit && (
           <button className="btn-decision edit" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Editar Pista" aria-label="edit">
-            <Pencil size={18} />
+            <Pencil size={16} />
           </button>
         )}
       </div>
@@ -201,8 +206,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element'
   ];
+  // Nota: onEdit e onOpen são funções, comparação por referência pode causar re-renders
   return keys.every((k) => prev[k] === next[k]);
 };
 

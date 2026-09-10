@@ -1,5 +1,37 @@
-import { AlertTriangle, X, Search, Check, Settings, Eye, Lock, Zap, Glasses, Crown, Mail, Link2, FolderTree, Calendar, Compass, Grid3x3, Undo2, Redo2, Flashlight, Terminal, Trash2, Flame, Menu, Crosshair, CheckCircle2, HelpCircle, FileSearch } from 'lucide-react';
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  CalendarDays,
+  Check,
+  CircleHelp,
+  Crown,
+  Eye,
+  Flashlight,
+  FolderOpen,
+  Glasses,
+  LayoutGrid,
+  Layers2,
+  Lightbulb,
+  Link2,
+  Lock,
+  LocateFixed,
+  Mail,
+  Menu,
+  Plus,
+  Redo2,
+  RotateCcw,
+  Search,
+  Settings,
+  Terminal,
+  Trash2,
+  Undo2,
+  X,
+  Zap,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
@@ -19,6 +51,7 @@ import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import './EvidenceCard.css';
 import './investigation.css';
+import './InvestigationBoard.css';
 import EvidenceCard from './EvidenceCard';
 import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
@@ -186,7 +219,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const marqueeStartRef = useRef<{ sx: number; sy: number; bx: number; by: number } | null>(null);
-  const [connectionColor, setConnectionColor] = useState<string>('#E8E8EA');
+  const [connectionColor, setConnectionColor] = useState<string>('#9a2b2b');
   const [connectionType, setConnectionType] = useState<'confirmed'|'theory'|'mystic'>('confirmed');
   const [undoStack, setUndoStack] = useState<any[]>([]);
   const [redoStack, setRedoStack] = useState<any[]>([]);
@@ -568,7 +601,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       try { playAudio('/sounds/paper_drop.mp3'); } catch {}
 
       // Show notification toast
-      showToast({ id: `discovered-${hiddenCard.id}`, message: `ARQUIVO RECUPERADO: ${hiddenCard.title || 'Documento Secreto'}` });
+      showToast({ id: `discovered-${hiddenCard.id}`, message: `🔍 ARQUIVO RECUPERADO: ${hiddenCard.title || 'Documento Secreto'}` });
 
       // Reload board to show the revealed card
       await loadBoard();
@@ -1853,7 +1886,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
       <header className="investigation-header">
         <div className="header-left">
-          <button className="board-back-btn" onClick={() => navigate('/')}>← ARQUIVOS</button>
+          <button className="board-back-btn" onClick={() => navigate('/')}><ArrowLeft size={14} /> ARQUIVOS</button>
         </div>
         <div className="header-center">
           <div className="case-meta">CASO // CONFIDENCIAL</div>
@@ -1866,36 +1899,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         const left = board ? (board.left + (contextMenu.x - origin.x) * zoom) : 120;
         const top = board ? (board.top + (contextMenu.y - origin.y) * zoom) : 120;
         return (
-         <div style={{ position: 'fixed', left, top, zIndex: 11000, background: 'var(--surface)', border: '1px solid var(--border)', padding: 8, borderRadius: 0, color: 'var(--text-primary)', minWidth: 220 }}>
+         <div className="board-context-menu" style={{ left, top }}>
           {contextMenu.type === 'card' ? (
             <>
-             <div style={{ fontWeight: 'bold', marginBottom: 6 }}>GERENCIAR EVIDÊNCIA</div>
-             <div style={{display:'flex', gap:5, padding:'4px 0 8px 0'}}>
-               <button 
-                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'verified', []); setContextMenu(null); }}
-                 style={{flex:1, textAlign:'center', border:'1px solid var(--border)', color:'var(--text-primary)', fontSize:16, background:'var(--surface)', borderRadius:0}}
-                 title="Confirmar Fato"
-               >
-                 <CheckCircle2 size={16} />
-               </button>
-               <button 
-                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'theory', []); setContextMenu(null); }}
-                 style={{flex:1, textAlign:'center', border:'1px solid var(--border)', color:'var(--text-primary)', fontSize:16, background:'var(--surface)', borderRadius:0}}
-                 title="Marcar como Teoria"
-               >
-                 <HelpCircle size={16} />
-               </button>
-               <button 
-                 onClick={() => { toggleCardStatus(contextMenu.targetId!, 'false', []); setContextMenu(null); }}
-                 style={{flex:1, textAlign:'center', border:'1px solid var(--institutional-red)', color:'var(--institutional-red)', fontSize:16, background:'var(--surface)', borderRadius:0}}
-                 title="Descartar / Falso"
-               >
-                 <X size={16} />
-               </button>
+             <div className="context-menu-title">GERENCIAR EVIDÊNCIA</div>
+             <div className="context-status-row">
+               <button className="hud-btn" onClick={() => { toggleCardStatus(contextMenu.targetId!, 'verified', []); setContextMenu(null); }} title="Confirmar Fato"><Check size={16} /></button>
+               <button className="hud-btn" onClick={() => { toggleCardStatus(contextMenu.targetId!, 'theory', []); setContextMenu(null); }} title="Marcar como Teoria"><CircleHelp size={16} /></button>
+               <button className="hud-btn" onClick={() => { toggleCardStatus(contextMenu.targetId!, 'false', []); setContextMenu(null); }} title="Descartar / Falso"><X size={16} /></button>
              </div>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
-             <button onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--text-primary)'}}>🔼 Trazer para Frente</button>
-             <button onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--text-primary)'}}>🔽 Mandar para Trás</button>
+             <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }}><ArrowUp size={15} /> Trazer para Frente</button>
+             <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }}><ArrowDown size={15} /> Mandar para Trás</button>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
              {canEdit && (
                <button 
@@ -1912,18 +1927,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                    }
                    setContextMenu(null);
                  }}
-                 style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--institutional-red)'}}
+                 className="context-danger"
                >
-                 <Flame size={14} style={{display:'inline', marginRight:6}} /> Queimar Arquivo
+                 <Trash2 size={15} /> Queimar Arquivo
                </button>
              )}
             </>
           ) : (
             <>
-             <div style={{ fontWeight: 'bold', marginBottom: 6 }}>MESA DE INVESTIGAÇÃO</div>
-             <button onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--text-primary)'}}>+ Nova Pista Aqui</button>
-             <button onClick={() => { handleAutoOrganize('timeline'); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--text-primary)'}}><Calendar size={14} style={{display:'inline', marginRight:6}} /> Organizar Timeline</button>
-             <button onClick={() => { setOrigin({x:0, y:0}); setContextMenu(null); }} style={{display:'block', width:'100%', textAlign:'left', padding:'6px 4px', background:'transparent', border:'none', color:'var(--text-primary)'}}><Crosshair size={14} style={{display:'inline', marginRight:6}} /> Resetar Câmera</button>
+             <div className="context-menu-title">MESA DE INVESTIGAÇÃO</div>
+             <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }}><Plus size={15} /> Nova Pista Aqui</button>
+             <button className="hud-btn" onClick={() => { handleAutoOrganize('timeline'); setContextMenu(null); }}><CalendarDays size={15} /> Organizar Timeline</button>
+             <button className="hud-btn" onClick={() => { setOrigin({x:0, y:0}); setContextMenu(null); }}><LocateFixed size={15} /> Resetar Câmera</button>
             </>
           )}
          </div>
@@ -1952,7 +1967,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
               data-gm-only="true"
             >
-              <Settings className="lucide-icon inline-icon" size={16} /> HUB DE CRIAÇÃO
+              <Settings size={16} /> HUB DE CRIAÇÃO
             </button>
           )}
 
@@ -1977,7 +1992,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
                  data-gm-only="true"
               >
-                 {playerView ? <Eye className="lucide-icon inline-icon" size={16} /> : <Glasses className="lucide-icon inline-icon" size={16} />}
+                 {playerView ? <Eye size={16} /> : <Glasses size={16} />}
               </button>
               <button 
                  className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
@@ -1985,7 +2000,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
                  data-gm-only="true"
               >
-                 <Eye className="lucide-icon inline-icon" size={16} />
+                 <Eye size={16} />
               </button>
               <button 
                  className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
@@ -1993,7 +2008,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                  data-tooltip="GM Overwatch - Painel de Controle"
                  data-gm-only="true"
               >
-                 <Crown className="lucide-icon inline-icon" size={16} />
+                 <Crown size={16} />
               </button>
             </>
           )}
@@ -2013,44 +2028,44 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <>
               <button 
                 className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('confirmed'); setConnectionColor('#E8E8EA'); }}
-                style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid var(--border-hover)':'none' }}
+                onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
+                style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid var(--border)':'none' }}
                 data-tooltip="Fato"
               >
-                <div style={{width:10, height:10, background:'var(--text-primary)', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#c62828'}} />
               </button>
               <button 
                 className="hud-btn icon-only"
-                onClick={() => { setConnectionType('theory'); setConnectionColor('#8A8A8C'); }}
-                style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid var(--border-hover)':'none' }}
+                onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
+                style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid var(--border)':'none' }}
                 data-tooltip="Teoria"
               >
-                <div style={{width:10, height:10, background:'var(--text-secondary)', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#f9a825'}} />
               </button>
               <button 
                 className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('mystic'); setConnectionColor('#8A8A8C'); }}
-                style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid var(--border-hover)':'none' }}
+                onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
+                style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid var(--border)':'none' }}
                 data-tooltip="Sobrenatural"
               >
-                <div style={{width:10, height:10, background:'var(--text-secondary)', borderRadius: '50%'}} />
+                <div style={{width:10, height:10, background:'#7e57c2'}} />
               </button>
             </>
           )}
 
-          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto"><Lock className="lucide-icon inline-icon" size={16} /></button>
+          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto"><Lock size={16} /></button>
         </div>
 
         {/* Grupo 3: Organização & Edição */}
         <div className="toolbar-group">
-          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search className="lucide-icon inline-icon" size={16} /></button>
+          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search size={16} /></button>
           <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar"><FolderTree size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar"><Layers2 size={16} /></button>
             {showOrganizeMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Organizar</div>
-                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><Calendar size={14} style={{display:'inline', marginRight:6}} /> Por Data</button>
-                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><Compass size={14} style={{display:'inline', marginRight:6}} /> Por Elemento</button>
+                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><CalendarDays size={15} /> Por Data</button>
+                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
                 <button onClick={() => {
                   const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
                   cards.forEach((c, i) => {
@@ -2064,7 +2079,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   setLocalPositions(newPos);
                   setOrigin({ x: -50, y: -50 });
                   setShowOrganizeMenu(false);
-                }}><Grid3x3 size={14} style={{display:'inline', marginRight:6}} /> Desempilhar</button>
+                }}><Layers2 size={15} /> Desempilhar</button>
               </div>
             )}
           </div>
@@ -2079,15 +2094,15 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           {/* Post-it button removed */}
           
           <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas"><Settings className="lucide-icon inline-icon" size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas"><Settings size={16} /></button>
             {showToolsMenu && (
               <div className="dropdown-menu">
                 <div className="dropdown-header">Ferramentas</div>
                 <button onClick={() => { setIsUV(!isUV); setShowToolsMenu(false); }} className={isUV ? 'active-uv' : ''}>
-                  <Flashlight size={14} style={{display:'inline', marginRight:6}} /> Luz UV {isUV ? '(Ativa)' : ''}
+                  <Flashlight size={15} /> Luz UV {isUV ? '(Ativa)' : ''}
                 </button>
                 <button onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}>
-                  <Terminal size={14} style={{display:'inline', marginRight:6}} /> Terminal C.R.I.S.
+                  <Terminal size={15} /> Terminal C.R.I.S.
                 </button>
               </div>
             )}
@@ -2097,16 +2112,16 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             onClick={togglePerformanceMode}
             data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
           >
-            <Zap className="lucide-icon inline-icon" size={16} />
+            <Zap size={16} />
           </button>
         </div>
 
         {/* Grupo 5: Zoom */}
         <div className="toolbar-group" style={{ marginLeft: 'auto', padding: '0 8px', minWidth: 120, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
-          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir">−</button>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', minWidth: 50, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
-          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar">+</button>
-          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset">⟲</button>
+          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir"><ZoomOut size={16} /></button>
+          <span className="toolbar-zoom-value">{(zoom * 100).toFixed(0)}%</span>
+          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar"><ZoomIn size={16} /></button>
+          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset"><RotateCcw size={16} /></button>
         </div>
         </div>
       )}
@@ -2233,7 +2248,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     width: 220,
                     height: 220,
                     borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(232, 232, 234, 0.15) 0%, rgba(232, 232, 234, 0) 68%)',
+                    background: 'radial-gradient(circle, rgba(179, 102, 255, 0.48) 0%, rgba(179, 102, 255, 0) 68%)',
                     pointerEvents: 'none',
                     mixBlendMode: 'screen'
                   }} />
@@ -2246,7 +2261,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     width: 72,
                     height: 72,
                     borderRadius: '50%',
-                    background: 'rgba(232,232,234,0.06)',
+                    background: 'rgba(200,140,255,0.18)',
                     pointerEvents: 'none',
                     mixBlendMode: 'screen'
                   }} />
@@ -2257,8 +2272,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             // Full effect when not in performance mode
             return (
               <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
-                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(232,232,234,0.12)' }} />
-                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(232,232,234,0.06) 40%, rgba(42,42,44,0.3) 80%, transparent 100%)`, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
+                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(180,102,255,0.18) 40%, rgba(80,10,120,0.5) 80%, transparent 100%)`, pointerEvents: 'none' }} />
               </div>
             );
           })()}
@@ -2271,7 +2286,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               // prefer explicit saved color, otherwise derive from metadata.type
               const savedColor = (conn.color || (conn.metadata && conn.metadata.color) || null) as string | null;
               const type = (conn.metadata && conn.metadata.type) || 'confirmed';
-              const stroke = savedColor || (type === 'theory' ? '#8A8A8C' : type === 'mystic' ? '#8A8A8C' : '#E8E8EA');
+              const stroke = savedColor || (type === 'theory' ? '#f9a825' : type === 'mystic' ? '#7e57c2' : '#c62828');
               const dash = type === 'theory' ? '6 6' : type === 'mystic' ? '2 6' : undefined;
               const width = type === 'mystic' ? 2.5 : 3;
               const cls = `connection-line type-${type}`;
@@ -2306,7 +2321,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               className="connection-context-menu"
               style={{ top: connectionContextMenu.y, left: connectionContextMenu.x }}
             >
-              <button onClick={handleDeleteConnection}><Trash2 size={14} style={{display:'inline', marginRight:6}} /> Apagar Conexão</button>
+              <button onClick={handleDeleteConnection}><Trash2 size={15} /> Apagar Conexão</button>
             </div>
           )}
 
@@ -2459,6 +2474,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     image={displayImage}
                     hiddenSrc={card.image_uv_url}
                     title={card.title}
+                    element={metadata?.element || metadata?.elemento || card?.element || null}
                     isUV={isUV}
                     status={(card?.metadata || {})?.status || null}
                     locked={Boolean(
@@ -2517,7 +2533,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               pointerEvents: 'none',
               zIndex: 1000
             }}>
-              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}><Search className="lucide-icon inline-icon" size={16} /> Pinch to Zoom</div>
+              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}><LocateFixed size={16} /> Pinch to Zoom</div>
             </div>
           )}
         </div>
@@ -2534,8 +2550,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 <button 
                   className="main-fab-trigger" 
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Abrir ferramentas"
                 >
-                  <Menu size={20} />
+                  <Menu size={19} />
                 </button>
               </div>
             </div>
@@ -2545,34 +2562,34 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <h3>Ferramentas</h3>
             {isGameMaster && (
               <button onClick={() => {setCreateModalOpen(true); setMobileMenuOpen(false)}} className="fab-item primary">
-                <Settings className="lucide-icon inline-icon" size={16} /> HUB DE CRIAÇÃO
+                <Settings size={16} /> HUB DE CRIAÇÃO
               </button>
             )}
             <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
-              <Link2 size={14} style={{display:'inline', marginRight:6}} /> {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
+              <Link2 size={16} /> {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
             </button>
             <button onClick={() => setShowFinder(true)} className="fab-item">
-              <Search className="lucide-icon inline-icon" size={16} /> BUSCAR
+              <Search size={16} /> BUSCAR
             </button>
             <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
-              <Flashlight size={14} style={{display:'inline', marginRight:6}} /> LUZ UV
+              <Flashlight size={16} /> LUZ UV
             </button>
             <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
-              <Crosshair size={14} style={{display:'inline', marginRight:6}} /> LOCALIZAR
+              <LocateFixed size={16} /> LOCALIZAR
             </button>
             <h3>Zoom</h3>
             {isMobileDevice ? (
-              <div style={{ padding: '8px 0', color: 'var(--text-secondary)' }}>Use dois dedos para aproximar/afastar (pinch)</div>
+              <div style={{ padding: '8px 0', color: '#888' }}>Use dois dedos para aproximar/afastar (pinch)</div>
             ) : (
               <>
-                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item"><Search className="lucide-icon inline-icon" size={16} /> ZOOM IN</button>
-                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item"><Search className="lucide-icon inline-icon" size={16} /> ZOOM OUT</button>
-                <button onClick={() => resetZoom()} className="fab-item"><Crosshair size={14} style={{display:'inline', marginRight:6}} /> RESET ZOOM</button>
+                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item"><ZoomIn size={16} /> ZOOM IN</button>
+                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item"><ZoomOut size={16} /> ZOOM OUT</button>
+                <button onClick={() => resetZoom()} className="fab-item"><RotateCcw size={16} /> RESET ZOOM</button>
               </>
             )}
           </BottomSheet>
 
-          <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--text-primary)',fontSize:18}}>CARREGANDO...</div>}>
+          <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
             <CreatorHub
               isOpen={createModalOpen}
               onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
@@ -2689,7 +2706,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         <div className="decoder-overlay-wrapper">
           <div className="decoder-header-mobile">
             <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>DECODIFICADOR</div>
-            <button className="hud-btn" onClick={() => setDecoderOpen(false)}><X size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => setDecoderOpen(false)} aria-label="Fechar decodificador"><X size={16} /></button>
           </div>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <UniversalDecoder />

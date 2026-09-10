@@ -1,81 +1,119 @@
-/* =========================================
-   CRIS EVIDENCE CARD — SISTEMA MONOCROMÁTICO
-   "Sistema em P&B, Evidência em cor"
-   ========================================= */
-
-/* === CSS Variables (herdadas de :root no index.css) === */
-
-/* === CARD BASE === */
-.clue-card,
-.card-node {
-  width: 220px;
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  position: relative;
-  overflow: visible;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  padding: 0;
+:root {
+  --evidence-card-width: 244px;
 }
 
-/* Borda superior — 2px no cinza padrão */
-.clue-card::before {
-  content: "";
+.clue-card,
+.card-node {
+  --evidence-accent: var(--border);
+  --evidence-glow: rgb(148 163 184 / 18%);
+  position: relative;
+  box-sizing: border-box;
+  width: var(--evidence-card-width);
+  min-height: 286px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--evidence-accent);
+  border-radius: 0;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(rgb(148 163 184 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 3%) 1px, transparent 1px);
+  background-size: 20px 20px;
+  box-shadow: 0 10px 22px rgb(0 0 0 / 44%);
+  color: var(--text-primary);
+  font-family: var(--font-system);
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.card-node {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--border);
+  z-index: 10;
+  padding: 0 !important;
+  cursor: grab;
+  touch-action: none;
+}
+
+.card-node:active {
+  cursor: grabbing;
+}
+
+.card-node:hover {
+  z-index: 100;
+  border-color: #64748b;
+}
+
+.clue-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  content: "";
   pointer-events: none;
+  background:
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top left / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top left / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top right / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) top right / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom left / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom left / 2px 16px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom right / 16px 2px no-repeat,
+    linear-gradient(var(--evidence-accent), var(--evidence-accent)) bottom right / 2px 16px no-repeat;
+  opacity: .72;
 }
 
 .clue-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 4px 20px rgb(0 0 0 / 50%);
+  box-shadow: 0 0 20px var(--evidence-glow), 0 10px 22px rgb(0 0 0 / 44%);
 }
 
-/* === HIDDEN CLUES (GM SPECTER MODE) === */
+.card-node.selected {
+  outline: 1px solid var(--text-primary);
+  outline-offset: 3px;
+  z-index: 101;
+}
+
 .card-node.hidden-clue {
-  opacity: 0.6;
   border-style: dashed;
-  border-color: var(--border-hover);
+  opacity: .74;
 }
 
-.card-node.hidden-clue:hover {
-  opacity: 0.8;
-  border-color: var(--text-secondary);
+.card-node.newly-created {
+  border-color: var(--text-primary);
 }
 
-/* === SCANNER LINE — desativada por padrão === */
+.clue-card[data-element="sangue"] { --evidence-accent: #e63946; --evidence-glow: rgb(230 57 70 / 24%); }
+.clue-card[data-element="morte"] { --evidence-accent: #64748b; --evidence-glow: rgb(100 116 139 / 18%); }
+.clue-card[data-element="energia"] { --evidence-accent: #a855f7; --evidence-glow: rgb(168 85 247 / 25%); }
+.clue-card[data-element="conhecimento"] { --evidence-accent: #eab308; --evidence-glow: rgb(234 179 8 / 20%); }
+.clue-card[data-element="medo"] { --evidence-accent: #f8fafc; --evidence-glow: rgb(248 250 252 / 16%); }
+
+.clue-card[data-element="metamorfose"],
+.clue-card[data-element="encarnacao"],
+.clue-card[data-element="apoteose"],
+.clue-card[data-element="sintese"],
+.clue-card[data-element="quimera"],
+.clue-card[data-element="singularidade"] {
+  border-color: transparent;
+  border-image-slice: 1;
+}
+
+.clue-card[data-element="metamorfose"] { border-image-source: linear-gradient(90deg, var(--ev-metamorfose-a) 50%, var(--ev-metamorfose-b) 50%); }
+.clue-card[data-element="encarnacao"] { border-image-source: linear-gradient(90deg, var(--ev-encarnacao-a) 50%, var(--ev-encarnacao-b) 50%); }
+.clue-card[data-element="apoteose"] { border-image-source: linear-gradient(90deg, var(--ev-apoteose-a) 50%, var(--ev-apoteose-b) 50%); }
+.clue-card[data-element="sintese"] { border-image-source: linear-gradient(90deg, var(--ev-sintese-a) 50%, var(--ev-sintese-b) 50%); }
+.clue-card[data-element="quimera"] { border-image-source: linear-gradient(90deg, var(--ev-quimera-a) 50%, var(--ev-quimera-b) 50%); }
+.clue-card[data-element="singularidade"] { border-image-source: linear-gradient(90deg, var(--ev-singularidade-a) 50%, var(--ev-singularidade-b) 50%); }
+
 .scanner-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--border);
-  z-index: 100;
-  pointer-events: none;
-  opacity: 0;
   display: none;
 }
 
-/* === IMAGE CONTAINER === */
 .clue-image-container {
+  position: relative;
   width: 100%;
   height: 150px;
-  position: relative;
-  background: #000;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  background: #000;
 }
 
 .clue-image-container img,
@@ -85,529 +123,232 @@
   position: absolute !important;
   top: 0;
   left: 0;
+  display: block !important;
   width: 100% !important;
   height: 100% !important;
+  border: 0 !important;
   object-fit: cover !important;
-  display: block !important;
-  border: none !important;
 }
 
-.clue-image-container img {
-  filter: grayscale(40%) contrast(110%) brightness(0.9);
-  transition: filter 150ms ease;
+.overlay-scan {
+  display: none;
 }
 
-.clue-card:hover .clue-image-container img {
-  filter: grayscale(0%) contrast(100%) brightness(1);
-}
-
-/* === BADGES CONTAINER === */
 .badges-container {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 7px;
+  right: 7px;
+  z-index: 110;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  z-index: 110;
+  gap: 4px;
 }
 
-.type-badge {
-  width: 32px;
-  height: 32px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0;
+.type-badge,
+.type-badge.small {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  transition: border-color 150ms ease;
-  color: var(--text-secondary);
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 10px;
 }
 
-.type-badge.small {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-}
-
-.type-badge:hover {
-  border-color: var(--border-hover);
-}
-
-/* Todas as cores de badge vêm dos dados do caso, não do chrome */
-.type-badge.video,
-.type-badge.audio,
-.type-badge.image,
-.type-badge.text,
 .type-badge.uv,
+.type-badge.hidden,
+.type-badge.locked,
 .type-badge.hidden-audio,
 .type-badge.chat,
 .type-badge.thermal,
 .type-badge.stamp,
 .type-badge.link,
-.type-badge.hidden {
+.type-badge.video,
+.type-badge.audio,
+.type-badge.image,
+.type-badge.text {
   border-color: var(--border);
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
-/* Locked — vermelho institucional (carimbo) */
-.type-badge.locked {
-  border-color: var(--institutional-red);
-  color: var(--institutional-red);
-}
-
-/* === LOCK OVERLAY === */
-.clue-card.is-locked {
-  border-color: var(--institutional-red);
-}
-
-.lock-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 105;
-  border-bottom: 1px solid var(--border);
-}
-
-.lock-overlay::after {
-  content: "ACESSO RESTRITO";
-  position: absolute;
-  bottom: 12px;
-  font-size: 8px;
-  color: var(--institutional-red);
-  letter-spacing: 3px;
-  font-family: var(--font-mono);
-}
-
-.lock-icon {
-  font-size: 32px;
-  color: var(--institutional-red);
-  margin-bottom: 10px;
-}
-
-.lock-text {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--institutional-red);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.clue-card.is-locked .clue-info h3 {
-  color: var(--text-secondary);
-  letter-spacing: 4px;
-}
-
-/* === INFO SECTION === */
 .clue-info {
-  padding: 14px 12px;
-  text-align: center;
-  flex-grow: 1;
+  position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  color: var(--text-primary);
-  min-height: 0;
-  overflow: visible;
-}
-
-.clue-info h3 {
-  font-size: 12px;
-  line-height: 1.5;
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin: 0;
-  font-weight: 600;
-  letter-spacing: 1px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  max-width: 100%;
+  min-height: 80px;
+  padding: 14px;
+  text-align: left;
 }
 
 .clue-uuid {
-  display: block;
+  color: var(--text-secondary);
   font-size: 9px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  font-family: var(--font-mono);
-  letter-spacing: 1px;
-  opacity: 0.7;
+  letter-spacing: .1em;
 }
 
-/* === DECISION BAR === */
-.decision-bar {
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: 8px 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  z-index: 200;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
-  margin: 0 6px;
-}
-
-.btn-decision {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  width: 40px;
-  height: 40px;
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease;
-  position: relative;
-}
-
-.btn-decision:hover {
+.clue-info h3 {
+  margin: 6px 0 0;
   color: var(--text-primary);
-  border-color: var(--border-hover);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .045em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
-.btn-decision svg,
-.btn-decision i {
-  font-size: 18px;
-  pointer-events: none;
-  fill: currentColor;
-  stroke: currentColor;
-}
-
-/* === ACTIVE STATES (BOTÕES) — monocromático === */
-.btn-decision.true.active {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
-  background: rgb(255 255 255 / 5%);
-}
-
-.btn-decision.theory.active {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
-  background: rgb(255 255 255 / 5%);
-}
-
-.btn-decision.false.active {
-  color: var(--institutional-red);
-  border-color: var(--institutional-red);
-  background: rgb(139 20 20 / 8%);
-}
-
-/* === EVIDENCE STATES — 3 ESTADOS VISUAIS === */
-
-/* 1. VERIFICADA — selo [VALIDADO] discreto, borda cinza padrão */
-.clue-card.status-true {
-  border-color: var(--border);
-}
-
-.clue-card.status-true::after {
-  content: "[VALIDADO]";
+.evidence-state-stamp {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 2px;
+  right: 10px;
+  bottom: 10px;
+  padding: 3px 5px;
+  border: 2px dashed currentColor;
   color: var(--text-secondary);
-  background: var(--bg);
-  padding: 2px 6px;
-  border: 1px solid var(--border);
-  z-index: 120;
-  pointer-events: none;
+  font-family: var(--font-hud);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  line-height: 1;
+  opacity: .85;
+  transform: rotate(-4deg);
 }
 
-/* 2. CONTESTADA — selo pisca entre [VALIDADO] e [REVISAR], leve deslocamento na borda */
 .clue-card.status-theory {
-  border-color: var(--border);
-  animation: contestada-shift 2s ease-in-out infinite;
+  transform: translateX(1px);
 }
 
-.clue-card.status-theory::after {
+.clue-card.status-theory .evidence-state-stamp {
+  font-size: 0;
+}
+
+.clue-card.status-theory .evidence-state-stamp::before {
   content: "[VALIDADO]";
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  font-family: var(--font-mono);
   font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--text-secondary);
-  background: var(--bg);
-  padding: 2px 6px;
-  border: 1px solid var(--border);
-  z-index: 120;
-  pointer-events: none;
-  animation: contestada-stamp 2s ease-in-out infinite;
+  animation: contested-stamp 1.1s steps(1, end) infinite;
 }
 
-@keyframes contestada-stamp {
-  0%, 45% {
-    content: "[VALIDADO]";
-    color: var(--text-secondary);
-  }
-  50%, 95% {
-    content: "[REVISAR]";
-    color: var(--institutional-red);
-  }
-  100% {
-    content: "[VALIDADO]";
-    color: var(--text-secondary);
-  }
-}
-
-@keyframes contestada-shift {
-  0%, 100% {
-    border-color: var(--border);
-  }
-  50% {
-    border-color: var(--border-hover);
-  }
-}
-
-/* 3. REESCRITA — selo vermelho [ASSIGNED] carimbado, borda com rasgo visual */
 .clue-card.status-false {
   border-color: var(--institutional-red);
 }
 
 .clue-card.status-false::after {
-  content: "[ASSIGNED]";
   position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-8deg);
-  font-family: var(--font-stamp);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--institutional-red);
-  background: var(--bg);
-  padding: 3px 10px;
-  border: 1px solid var(--institutional-red);
-  z-index: 120;
-  pointer-events: none;
-  opacity: 0.85;
-}
-
-/* Rasgo visual sutil na borda inferior */
-.clue-card.status-false::before {
-  background: var(--institutional-red);
+  right: -1px;
+  bottom: 51px;
+  width: 36px;
   height: 1px;
-  clip-path: polygon(0 0, 15% 0, 18% 50%, 30% 0, 50% 0, 53% 50%, 65% 0, 100% 0);
-}
-
-/* === SPECIAL CARD TYPES — cor vem dos dados, não do chrome === */
-
-/* GLITCH PUZZLE — borda tracejada, sem cor decorativa */
-.clue-card.type-glitch {
-  border-style: dashed;
-  border-color: var(--border-hover);
-  position: relative;
-}
-
-.clue-card.type-glitch::before {
-  background: var(--border-hover);
-}
-
-.clue-card.type-glitch .clue-image-container::after {
-  content: "GLITCH PUZZLE";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 8px;
-  color: var(--text-secondary);
   background: var(--bg);
-  padding: 3px 6px;
-  border: 1px solid var(--border);
-  letter-spacing: 2px;
-  font-family: var(--font-mono);
-  z-index: 100;
-}
-
-/* MEGA CLUE — borda mais espessa, sem cor dourada */
-.clue-card.type-mega-clue {
-  border-width: 2px;
-  border-color: var(--border-hover);
-}
-
-.clue-card.type-mega-clue::before {
-  background: var(--border-hover);
-  height: 3px;
-}
-
-.clue-card.type-mega-clue .clue-image-container::after {
-  content: "MEGA-PISTA";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 9px;
-  color: var(--text-primary);
-  background: var(--bg);
-  padding: 4px 8px;
-  border: 1px solid var(--border-hover);
-  letter-spacing: 2px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  z-index: 100;
-}
-
-/* ENCRYPTED/PASSWORD */
-.clue-card.type-encrypted {
-  border-color: var(--institutional-red);
-}
-
-.clue-card.type-encrypted .clue-image-container::before {
   content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 10px,
-      rgb(139 20 20 / 4%) 10px,
-      rgb(139 20 20 / 4%) 11px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 10px,
-      rgb(139 20 20 / 4%) 10px,
-      rgb(139 20 20 / 4%) 11px
-    );
-  z-index: 2;
-  pointer-events: none;
+  transform: rotate(-16deg);
 }
 
-/* === RESPONSIVE === */
-@media (max-width: 360px) {
-  .clue-card {
-    width: 100% !important;
+.clue-card.status-false .evidence-state-stamp {
+  border-color: var(--institutional-red);
+  color: #ff6672;
+  opacity: .9;
+  transform: rotate(-4deg);
+}
+
+@keyframes contested-stamp {
+  0%, 49% {
+    border-color: var(--border);
+    color: var(--text-secondary);
+    content: "[VALIDADO]";
+  }
+  50%, 100% {
+    border-color: #545458;
+    color: var(--text-primary);
+    content: "[REVISAR]";
   }
 }
 
-@media (pointer: coarse) {
-  .btn-decision {
-    width: 48px;
-    height: 48px;
-  }
-
-  .btn-decision svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .type-badge {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-  }
-
-  .type-badge.small {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
+.clue-card.is-locked {
+  border-style: dashed;
 }
 
-/* === ACCESSIBILITY === */
+.clue-card.is-uv .clue-image-container {
+  box-shadow: inset 0 0 0 1px #a855f7, 0 0 16px rgb(124 58 237 / 24%);
+}
+
+.clue-card.is-uv .clue-image-container img,
+.clue-card.is-uv .clue-image-container canvas {
+  filter: drop-shadow(0 0 10px #7c3aed);
+}
+
+.decision-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 9px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.btn-decision {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 150ms, background-color 150ms, color 150ms;
+}
+
+.btn-decision:hover,
+.btn-decision.active {
+  border-color: #545458;
+  background: #1B1B1E;
+  color: var(--text-primary);
+}
+
+.btn-decision svg {
+  width: 15px;
+  height: 15px;
+}
+
 .btn-decision:focus-visible {
-  outline: 2px solid var(--institutional-red);
-  outline-offset: 1px;
+  outline: 1px solid var(--institutional-red);
+  outline-offset: 2px;
+}
+
+.loading-placeholder-content {
+  width: 100%;
+  height: 100%;
+  background: #1B1B1E;
+}
+
+@media (max-width: 768px) {
+  .clue-card,
+  .card-node {
+    width: 218px;
+    min-height: 260px;
+  }
+
+  .clue-image-container {
+    height: 132px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .clue-card,
-  .btn-decision,
-  .type-badge,
-  .scanner-line,
-  .lock-icon {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  .clue-card:hover {
-    transform: none;
+  .clue-card.status-theory .evidence-state-stamp {
+    animation: none;
   }
 }
-
-/* === RESPONSIVE BREAKPOINTS === */
-@media (max-width: 768px) {
-  .clue-card {
-    width: 180px;
-    min-height: 240px;
-  }
-
-  .btn-decision {
-    width: 36px;
-    height: 36px;
-  }
-
-  .btn-decision svg {
-    font-size: 16px;
-  }
-
-  .type-badge {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
-  }
-
-  .clue-info h3 {
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 480px) {
-  .clue-card {
-    width: 100%;
-    min-height: 200px;
-  }
-
-  .clue-info h3 {
-    font-size: 10px;
-    letter-spacing: 0.5px;
-  }
-
-  .btn-decision {
-    width: 32px;
-    height: 32px;
-  }
-
-  .btn-decision svg {
-    font-size: 14px;
-  }
-
-  .type-badge {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-
-  .decision-bar {
-    padding: 6px;
-  }
-}
-
-/* === UTILITY === */
-.text-center { text-align: center; }
-.flex-center { display: flex; justify-content: center; align-items: center; }
-.hidden { display: none !important; }
-.visible { display: block !important; }

@@ -61,13 +61,11 @@ export default function SystemOverlays() {
 
     const tick = () => {
       if (!alive) return;
-      // small oscillation between 98 and 99.5
-      const base = 98 + Math.random() * 1.5;
+      const base = 99.2 + Math.random() * 0.2;
       setIntegrity(base, false);
-      // occasionally dip
       if (Math.random() < 0.06) {
-        setIntegrity(85 + Math.random() * 3, true);
-        setTimeout(() => { if (alive) setIntegrity(98 + Math.random() * 1.5, false); }, 900);
+        setIntegrity(42 + Math.random() * 3, true);
+        setTimeout(() => { if (alive) setIntegrity(99.2 + Math.random() * 0.2, false); }, 900);
       }
     };
     const interval = window.setInterval(tick, 1500);
@@ -137,7 +135,7 @@ export default function SystemOverlays() {
 
   return (
     <>
-      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} aria-hidden>
+      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`}>
         <div className="hud-left">
           {location.pathname === '/' ? (
             <>
@@ -160,8 +158,8 @@ export default function SystemOverlays() {
         </div>
 
         <div className="hud-right">
-          <div className="system-monitor" aria-hidden>
-            <div className="label">INTEGRIDADE NEXUS</div>
+          <div className="system-monitor" role="status" aria-live="polite">
+            <div className="label">MEMBRANA LOCAL</div>
             <div className="bar-container">
               <div className="fill" id="integrity-bar" ref={integrityRef}></div>
             </div>
@@ -174,7 +172,16 @@ export default function SystemOverlays() {
       </header>
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
-      <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      {location.pathname !== '/' && (
+        <div className="background-data" style={{right:8, left:'auto'}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
+      )}
+      {location.pathname === '/' && (
+        <aside className="sigil-rail" aria-hidden="true">
+          <span className="sigil-rail-mark sigil-sinais">A R C H I V O</span>
+          <span className="sigil-rail-mark sigil-sigilos">S I G I L O S</span>
+          <span className="sigil-rail-mark sigil-sinais">O U T R O L A D O</span>
+        </aside>
+      )}
     </>
   );
 }

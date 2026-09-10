@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
@@ -54,7 +54,7 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
     <div className="os-window">
       <div className="os-titlebar">
         <span>C:\ARCHIVES\CASES</span>
-        <button className="os-btn-close" onClick={onClose}>X</button>
+        <button className="os-btn-close" onClick={onClose} aria-label="Fechar arquivos"><X size={16} /></button>
       </div>
       <div className="os-content">
         <div style={{display:'flex', gap:10, alignItems:'center', marginBottom:12}}>

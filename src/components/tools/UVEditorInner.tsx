@@ -28,7 +28,7 @@ interface UVEditorProps {
   baseImageUrl: string;
   onSave: (file: File, meta?: { targetChannel?: 'R' | 'G' | 'B' }) => void;
   onClose: () => void;
-  mode?: 'uv' | 'filter' | 'rgb';
+  mode?: 'uv' | 'filter' | 'rgb' | 'thermal';
   initialImageFile?: File | null;
   showForensicControls?: boolean;
 }
@@ -49,6 +49,15 @@ const COLOR_PALETTES = {
     { label: 'Cinza', hex: '#cccccc', glow: '0 0 8px #ccc' },
     { label: 'Branco Transparente', hex: 'rgba(255,255,255,0.5)', glow: '0 0 5px rgba(255,255,255,0.5)' },
     { label: 'Cinza Escuro', hex: '#888888', glow: '0 0 5px #888' },
+  ],
+  thermal: [
+    { label: 'Branco Quente (Mais Frio)', hex: '#ffffff', glow: '0 0 10px #fff' },
+    { label: 'Amarelo Quente', hex: '#ffe600', glow: '0 0 10px #ffe600' },
+    { label: 'Laranja Quente', hex: '#ff6600', glow: '0 0 10px #ff6600' },
+    { label: 'Vermelho Quente', hex: '#ff0000', glow: '0 0 10px #ff0000' },
+    { label: 'Roxo Frio', hex: '#800080', glow: '0 0 10px #800080' },
+    { label: 'Azul Frio', hex: '#0000ff', glow: '0 0 10px #0000ff' },
+    { label: 'Preto (Fundo)', hex: '#000000', glow: '0 0 10px rgba(0,0,0,0.5)' },
   ],
 };
 
@@ -2250,21 +2259,62 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
     // ensure latest drawing + layers are rendered
     redrawAll();
     
-    // Apply hard forensic pixel isolation before export
+    // Em vez de zerar os canais, mesclamos a edição no canal alvo da imagem base!
     if (mode === 'rgb') {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         try {
+          // Pega a imagem combinada (Base + Desenho do usuário)
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imgData.data;
-          for (let i = 0; i < data.length; i += 4) {
-            if (targetChannel === 'R') { data[i + 1] = 0; data[i + 2] = 0; }
-            else if (targetChannel === 'G') { data[i] = 0; data[i + 2] = 0; }
-            else if (targetChannel === 'B') { data[i] = 0; data[i + 1] = 0; }
+
+          // Precisamos dos pixels puros da imagem base para restaurar os canais não afetados
+          const baseCanvas = document.createElement('canvas');
+          baseCanvas.width = canvas.width;
+          baseCanvas.height = canvas.height;
+          const baseCtx = baseCanvas.getContext('2d');
+          
+          if (baseCtx) {
+            const dpr = dprRef.current || 1;
+            const p = panRef.current || { x: 0, y: 0 };
+            const zoom = scaleRef.current || 1;
+            baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            baseCtx.translate(p.x, p.y);
+            baseCtx.scale(zoom, zoom);
+            
+            const baseLayer = layers.find(l => l.id === '__base_image');
+            if (baseLayer && baseLayer.img) {
+              const w = (baseLayer.img.naturalWidth || baseLayer.img.width) * (baseLayer.scale || 1);
+              const h = (baseLayer.img.naturalHeight || baseLayer.img.height) * (baseLayer.scale || 1);
+              baseCtx.drawImage(baseLayer.img, (baseLayer.x || 0) - w / 2, (baseLayer.y || 0) - h / 2, w, h);
+            }
+            
+            const baseData = baseCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const bData = baseData.data;
+
+            // Transfere os canais intocados da imagem base para a imagem final, 
+            // mantendo as edições feitas apenas no canal alvo.
+            for (let i = 0; i < data.length; i += 4) {
+              if (targetChannel === 'R') { 
+                data[i + 1] = bData[i + 1]; // restaura Green
+                data[i + 2] = bData[i + 2]; // restaura Blue
+              }
+              else if (targetChannel === 'G') { 
+                data[i] = bData[i];         // restaura Red
+                data[i + 2] = bData[i + 2]; // restaura Blue
+              }
+              else if (targetChannel === 'B') { 
+                data[i] = bData[i];         // restaura Red
+                data[i + 1] = bData[i + 1]; // restaura Green
+              }
+              // O canal Alpha original do baseLayer pode ser mantido ou podemos deixar o atual. 
+              // Melhor manter o original para não sumir o fundo.
+              data[i + 3] = bData[i + 3];
+            }
+            ctx.putImageData(imgData, 0, 0);
           }
-          ctx.putImageData(imgData, 0, 0);
         } catch (e) {
-          console.error("Error applying forensic RGB isolation", e);
+          console.error("Error applying forensic RGB merge", e);
         }
       }
     }
@@ -2272,7 +2322,7 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
     canvas.toBlob((blob) => {
       if (!blob) return;
       const timestamp = Date.now();
-      const prefix = mode === 'rgb' ? 'forensic_rgb' : mode === 'filter' ? 'filter' : 'uv';
+      const prefix = mode === 'rgb' ? 'forensic_rgb' : mode === 'filter' ? 'filter' : mode === 'thermal' ? 'thermal' : 'uv';
       const suffix = mode === 'rgb' ? `_${targetChannel}` : '';
       const filename = `${prefix}_layer${suffix}_${timestamp}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
@@ -3061,6 +3111,8 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
             <><Radio size={18} className="header-icon icon-rgb" /> <span>Editor RGB Forense</span></>
           ) : mode === 'filter' ? (
             <><Palette size={18} className="header-icon icon-filter" /> <span>Editor de Filtros</span></>
+          ) : mode === 'thermal' ? (
+            <><Sparkles size={18} className="header-icon icon-thermal" /> <span>Editor Termal</span></>
           ) : (
             <><Eye size={18} className="header-icon icon-uv" /> <span>Editor UV</span></>
           )}

@@ -50,7 +50,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
     setShowGlitchSolver(false);
-    
+
     // Carregar estado de puzzle resolvido do localStorage
     if (card?.investigation_id && card?.id) {
       const solvedKey = `shredder_solved_${card.investigation_id}_${card.id}`;
@@ -73,7 +73,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [showFilters, setShowFilters] = useState(false);
   const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
-  
+
   const disableAllBut = (mode: string) => {
     // filters
     if (mode === 'filters') setShowFilters(prev => !prev);
@@ -95,7 +95,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
   const [puzzleSolved, setPuzzleSolved] = useState(false);
   const [shredderModalOpen, setShredderModalOpen] = useState(false);
-  
+
   // Salvar estado de puzzle resolvido no localStorage
   useEffect(() => {
     if (card?.investigation_id && card?.id) {
@@ -113,11 +113,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const cleans: Array<() => void> = [];
     try {
       if (backdropRef.current) cleans.push(markPerfKeep(backdropRef.current));
-    } catch {}
+    } catch { }
     try {
       if (el) cleans.push(markPerfKeep(el));
-    } catch {}
-    return () => cleans.forEach((c) => { try { c(); } catch {} });
+    } catch { }
+    return () => cleans.forEach((c) => { try { c(); } catch { } });
   }, []);
   const [showPhoneDetails, setShowPhoneDetails] = useState(false);
   const [serverCard, setServerCard] = useState<any | null>(null);
@@ -197,19 +197,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const audioUrl = (() => {
       if (baseType === 'audio' && baseUrl) return baseUrl;
       // Check all possible audio URL locations
-      return cardObj?.audio_url || 
-             unified.audio_base_url || 
-             unified.audio_url || 
-             metadataObj?.audio_url || 
-             metadataObj?.audio ||
-             null;
+      return cardObj?.audio_url ||
+        unified.audio_base_url ||
+        unified.audio_url ||
+        metadataObj?.audio_url ||
+        metadataObj?.audio ||
+        null;
     })();
 
-    const audioHiddenUrl = cardObj?.audio_hidden_url || 
-                          unified.audio_hidden_url || 
-                          metadataObj?.audio_hidden_url ||
-                          metadataObj?.audio_hidden ||
-                          null;
+    const audioHiddenUrl = cardObj?.audio_hidden_url ||
+      unified.audio_hidden_url ||
+      metadataObj?.audio_hidden_url ||
+      metadataObj?.audio_hidden ||
+      null;
     return { baseType, baseUrl, imageUrl, videoUrl, audioUrl, audioHiddenUrl, maskedPreview };
   };
 
@@ -287,9 +287,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // Check if thermal is unlocked (no keyword or already unlocked)
       const thermalKeyword = meta?.thermal_keyword;
       const thermalUnlocked = meta?.thermal_unlocked === true;
-      const canUseThermal = hasThermal && (!thermalKeyword || thermalUnlocked);
-      setLocalThermal(canUseThermal);
-    } catch (e) {}
+      setLocalThermal(false);
+    } catch (e) { }
   }, [card]);
 
   React.useEffect(() => {
@@ -347,7 +346,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           canvas.style.left = '50%';
           canvas.style.top = '50%';
           canvas.style.transform = 'translate(-50%, -50%)';
-        } catch (e) {}
+        } catch (e) { }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -393,27 +392,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalCompositeOperation = 'source-over';
-        
+
         // Render secret thermal text if present
         try {
           const thermalText = card?.metadata?.thermal_secret_text;
           if (thermalText && typeof thermalText === 'string' && thermalText.trim()) {
             // Calculate responsive font size based on canvas dimensions
             let baseFontSize = Math.max(48, Math.min(canvas.width, canvas.height) / 12);
-            
+
             // Apply user-configured font size multiplier
             const fontSizeMultiplier = (card?.metadata?.thermal_font_size || 100) / 100;
             baseFontSize = baseFontSize * fontSizeMultiplier;
-            
+
             ctx.font = `bold ${Math.round(baseFontSize)}px 'Courier New', monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
+
             // Split text into lines if too long (wrap at ~40 chars or by newlines)
             const maxLineLength = 40;
             const lines: string[] = [];
             const paragraphs = thermalText.split('\n');
-            
+
             paragraphs.forEach(paragraph => {
               if (paragraph.length <= maxLineLength) {
                 lines.push(paragraph);
@@ -432,36 +431,36 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 if (currentLine) lines.push(currentLine);
               }
             });
-            
+
             // Position text based on user-configured vertical position
             const lineHeight = baseFontSize * 1.3;
             const totalHeight = lines.length * lineHeight;
             const positionYPercent = (card?.metadata?.thermal_position_y || 50) / 100;
             const startY = (canvas.height * positionYPercent) - (totalHeight / 2) + (lineHeight / 2);
             const centerX = canvas.width / 2;
-            
+
             lines.forEach((line, index) => {
               const y = startY + (index * lineHeight);
-              
+
               // Outer glow (multiple layers for intensity)
               ctx.shadowBlur = 30;
               ctx.shadowColor = 'rgba(255, 255, 0, 0.8)';
               ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
               ctx.fillText(line, centerX, y);
-              
+
               // Mid glow
               ctx.shadowBlur = 15;
               ctx.shadowColor = 'rgba(255, 200, 0, 1)';
               ctx.fillStyle = 'rgba(255, 220, 0, 0.6)';
               ctx.fillText(line, centerX, y);
-              
+
               // Core text (hot white)
               ctx.shadowBlur = 5;
               ctx.shadowColor = 'rgba(255, 255, 255, 1)';
               ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
               ctx.fillText(line, centerX, y);
             });
-            
+
             // Reset shadow
             ctx.shadowBlur = 0;
           }
@@ -488,779 +487,804 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return () => { document.body.style.overflow = prevOverflow; };
   }, [isOpen]);
 
-    if (!isOpen || !(card || serverCard)) return null;
+  if (!isOpen || !(card || serverCard)) return null;
 
-    const currentCard = serverCard || card;
+  const currentCard = serverCard || card;
 
-    // Metadata pré-calculado para reuso
-    let parsedMetadata: any = {};
-    try {
-      parsedMetadata = currentCard?.metadata && typeof currentCard.metadata === 'object'
-        ? currentCard.metadata
-        : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
-    } catch { parsedMetadata = {}; }
-    const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || parsedMetadata?.card_type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
-    const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
-    // Mega-clue metadata (compat: mega_clue or megaClue)
-    const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
+  // Metadata pré-calculado para reuso
+  let parsedMetadata: any = {};
+  try {
+    parsedMetadata = currentCard?.metadata && typeof currentCard.metadata === 'object'
+      ? currentCard.metadata
+      : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
+  } catch { parsedMetadata = {}; }
+  const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || parsedMetadata?.card_type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
+  const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
+  // Mega-clue metadata (compat: mega_clue or megaClue)
+  const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
 
-    // Phone keypad configuration (separate from card lock)
-    const phoneIsLocked = Boolean(parsedMetadata?.phone_locked);
-    const phonePassword = parsedMetadata?.phone_password || null;
+  // Phone keypad configuration (separate from card lock)
+  const phoneIsLocked = Boolean(parsedMetadata?.phone_locked);
+  const phonePassword = parsedMetadata?.phone_password || null;
 
-    const securityLayer = parsedMetadata?.security_layer || null;
-    const securityRevealLogic = securityLayer?.reveal_logic || 'aligned_only';
-    const securityAlwaysVisible = securityRevealLogic === 'always_visible';
-    const securityLocked = Boolean(securityLayer?.enabled && !isGameMaster && !puzzleSolved && !securityAlwaysVisible);
+  const securityLayer = parsedMetadata?.security_layer || null;
+  const securityRevealLogic = securityLayer?.reveal_logic || 'aligned_only';
+  const securityAlwaysVisible = securityRevealLogic === 'always_visible';
+  const securityLocked = Boolean(securityLayer?.enabled && !isGameMaster && !puzzleSolved && !securityAlwaysVisible);
 
-    const cardLocked = isCardLocked(currentCard);
-    const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
+  const cardLocked = isCardLocked(currentCard);
+  const hasRecord = Boolean(currentCard?.metadata && (currentCard.metadata.type === 'person' || currentCard.metadata.person || currentCard.metadata.person_meta));
 
-    const audioSources = React.useMemo(() => {
-      const meta = parsedMetadata;
-      const src = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
-      const hidden = unifiedMedia.audioHiddenUrl || currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
-      const targetFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
-      return { src, hidden, targetFreq };
-    }, [currentCard, parsedMetadata, unifiedMedia]);
+  const audioSources = React.useMemo(() => {
+    const meta = parsedMetadata;
+    const src = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+    const hidden = unifiedMedia.audioHiddenUrl || currentCard.audio_hidden_url || meta?.audio_hidden_url || meta?.audio_hidden || null;
+    const targetFreq = currentCard.audio_target_freq || meta?.audio_target_freq || meta?.audio_target_freq_hz || 50;
+    return { src, hidden, targetFreq };
+  }, [currentCard, parsedMetadata, unifiedMedia]);
 
-    React.useEffect(() => {
-      const el = audioElementRef.current;
-      if (!el) return;
+  React.useEffect(() => {
+    const el = audioElementRef.current;
+    if (!el) return;
 
-      if (!audioSources.src) {
-        el.pause();
-        setAudioIsPlaying(false);
-        setAudioPosition(0);
-        setAudioDuration(0);
-        return;
-      }
-
+    if (!audioSources.src) {
       el.pause();
       setAudioIsPlaying(false);
       setAudioPosition(0);
       setAudioDuration(0);
-      el.src = audioSources.src;
-      el.load();
-    }, [audioSources.src]);
+      return;
+    }
 
-    React.useEffect(() => {
-      if (visualMode !== 'audio') {
-        const el = audioElementRef.current;
-        if (el) {
-          el.pause();
-          setAudioIsPlaying(false);
-        }
+    el.pause();
+    setAudioIsPlaying(false);
+    setAudioPosition(0);
+    setAudioDuration(0);
+    el.src = audioSources.src;
+    el.load();
+  }, [audioSources.src]);
+
+  React.useEffect(() => {
+    if (visualMode !== 'audio') {
+      const el = audioElementRef.current;
+      if (el) {
+        el.pause();
+        setAudioIsPlaying(false);
       }
-    }, [visualMode]);
+    }
+  }, [visualMode]);
 
-    // Waveform mini-visualização
-    React.useEffect(() => {
-      if (visualMode !== 'audio') {
-        if (waveSurferRef.current) {
-          waveSurferRef.current.destroy();
-          waveSurferRef.current = null;
-        }
-        return;
-      }
-
-      if (!waveformRef.current || !audioSources.src) return;
-
+  // Waveform mini-visualização
+  React.useEffect(() => {
+    if (visualMode !== 'audio') {
       if (waveSurferRef.current) {
         waveSurferRef.current.destroy();
         waveSurferRef.current = null;
       }
+      return;
+    }
 
-      const ws = WaveSurfer.create({
-        container: waveformRef.current,
-        waveColor: 'rgba(0, 243, 255, 0.4)',
-        progressColor: '#00f3ff',
-        cursorColor: '#ff0066',
-        height: 64,
-        responsive: true,
-        backend: 'MediaElement',
-        media: audioElementRef.current || undefined,
-        normalize: true,
-      });
+    if (!waveformRef.current || !audioSources.src) return;
 
-      waveSurferRef.current = ws;
-      ws.load(audioSources.src);
+    if (waveSurferRef.current) {
+      waveSurferRef.current.destroy();
+      waveSurferRef.current = null;
+    }
 
-      ws.on('ready', () => {
-        const dur = ws.getDuration() || 0;
-        setAudioDuration(dur);
-      });
+    const ws = WaveSurfer.create({
+      container: waveformRef.current,
+      waveColor: 'rgba(0, 243, 255, 0.4)',
+      progressColor: '#00f3ff',
+      cursorColor: '#ff0066',
+      height: 64,
+      responsive: true,
+      backend: 'MediaElement',
+      media: audioElementRef.current || undefined,
+      normalize: true,
+    });
 
-      ws.on('audioprocess', () => {
-        setAudioPosition(ws.getCurrentTime() || 0);
-      });
+    waveSurferRef.current = ws;
+    ws.load(audioSources.src);
 
-      ws.on('timeupdate', () => {
-        setAudioPosition(ws.getCurrentTime() || 0);
-      });
+    ws.on('ready', () => {
+      const dur = ws.getDuration() || 0;
+      setAudioDuration(dur);
+    });
 
-      ws.on('play', () => setAudioIsPlaying(true));
-      ws.on('pause', () => setAudioIsPlaying(false));
-      ws.on('finish', () => {
-        setAudioIsPlaying(false);
-        setAudioPosition(0);
-      });
+    ws.on('audioprocess', () => {
+      setAudioPosition(ws.getCurrentTime() || 0);
+    });
 
-      return () => {
-        ws.destroy();
-        waveSurferRef.current = null;
-      };
-    }, [visualMode, audioSources.src]);
+    ws.on('timeupdate', () => {
+      setAudioPosition(ws.getCurrentTime() || 0);
+    });
 
-    // Waveform zoom controls: double-click to zoom near cursor, plus/minus buttons
-    React.useEffect(() => {
-      const wf = waveformRef.current;
-      if (!wf) return;
+    ws.on('play', () => setAudioIsPlaying(true));
+    ws.on('pause', () => setAudioIsPlaying(false));
+    ws.on('finish', () => {
+      setAudioIsPlaying(false);
+      setAudioPosition(0);
+    });
 
-      const container: HTMLElement = wf;
-      container.classList.add('waveform-zoomable');
-      if (!container.style.position) container.style.position = 'relative';
+    return () => {
+      ws.destroy();
+      waveSurferRef.current = null;
+    };
+  }, [visualMode, audioSources.src]);
 
-      // create controls overlay
+  // Waveform zoom controls: double-click to zoom near cursor, plus/minus buttons
+  React.useEffect(() => {
+    const wf = waveformRef.current;
+    if (!wf) return;
+
+    const container: HTMLElement = wf;
+    container.classList.add('waveform-zoomable');
+    if (!container.style.position) container.style.position = 'relative';
+
+    // create controls overlay
+    const controls = document.createElement('div');
+    controls.className = 'waveform-controls';
+    controls.innerHTML = '<button type="button" aria-label="Zoom in" class="zoom-btn">+</button><button type="button" aria-label="Zoom out" class="zoom-btn">−</button>';
+    container.appendChild(controls);
+
+    const btns = controls.querySelectorAll('.zoom-btn');
+    let currentZoom = 1;
+
+    const setZoom = (z: number, originPercent = 50) => {
+      currentZoom = z;
+      container.style.transformOrigin = `${originPercent}% 50%`;
+      container.style.transition = 'transform 220ms ease';
+      container.style.transform = `scale(${currentZoom})`;
+      container.dataset.waveformZoom = String(currentZoom);
+    };
+
+    const handleDbl = (e: MouseEvent) => {
+      try {
+        e.stopPropagation();
+        const rect = container.getBoundingClientRect();
+        const x = (e.clientX - rect.left);
+        const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
+        const target = currentZoom === 1 ? 1.6 : 1;
+        setZoom(target, percent);
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(3, currentZoom + 0.2), 50); };
+    const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.2), 50); };
+
+    container.addEventListener('dblclick', handleDbl);
+    if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
+    if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
+
+    const keyHandler = (e: KeyboardEvent) => {
+      if (document.activeElement && (document.activeElement === wf || wf.contains(document.activeElement))) {
+        if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
+        if (e.key === '-') { handleZoomOut(e as any); }
+        if (e.key === '0') { setZoom(1, 50); }
+      }
+    };
+    window.addEventListener('keydown', keyHandler);
+
+    return () => {
+      window.removeEventListener('keydown', keyHandler);
+      container.removeEventListener('dblclick', handleDbl);
+      try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) { }
+      if (controls.parentElement === container) container.removeChild(controls);
+      container.style.transform = '';
+      container.style.transformOrigin = '';
+      delete container.dataset.waveformZoom;
+      container.classList.remove('waveform-zoomable');
+    };
+  }, [waveformRef, visualMode, audioSources.src]);
+
+  // Lógica de Zoom Otimizada (Sincroniza UV e Filtros)
+  React.useEffect(() => {
+    // Só roda se for modo imagem ou vídeo (se quiser zoom em vídeo)
+    if (visualMode !== 'image' && visualMode !== 'video') return;
+
+    // Procura o elemento correto dependendo se estamos no Fullscreen ou no Modal normal
+    const context = fullscreenOpen ? document.body : fileRef.current;
+    if (!context) return;
+
+    // O alvo é o WRAPPER que segura a imagem base e a camada UV
+    // Procuramos classes comuns de containers de imagem misteriosa
+    const container = context.querySelector('.evidence-display-area, .fullscreen-stage') as HTMLElement | null;
+    if (!container) return;
+
+    // O elemento que será transformado (Escalado/Movido)
+    // Tenta achar o container interno do MysteryImage (.uv-container ou .large-evidence-img)
+    // Se não achar, usa o próprio container.
+    const transformTarget = (container.querySelector('.image-zoom-wrapper, .uv-container, .large-evidence-img') as HTMLElement | null) ||
+      (container.querySelector('img') as HTMLElement | null);
+
+    if (!transformTarget) return;
+
+    // Prepara o elemento para aceleração de hardware.
+    // Nota: ativamos o modo de performance apenas durante o arraste (will-change = 'transform').
+    // Aqui deixamos em 'auto' para que o navegador redesenhe em alta qualidade quando não estiver arrastando.
+    transformTarget.style.willChange = 'auto';
+    transformTarget.style.transformOrigin = 'center center';
+
+    // Adiciona controles visuais se não existirem
+    if (!container.querySelector('.image-controls')) {
       const controls = document.createElement('div');
-      controls.className = 'waveform-controls';
-      controls.innerHTML = '<button type="button" aria-label="Zoom in" class="zoom-btn">+</button><button type="button" aria-label="Zoom out" class="zoom-btn">−</button>';
-      container.appendChild(controls);
+      controls.className = 'image-controls';
+      controls.innerHTML = '<button type="button" class="img-zoom-btn">+</button><button type="button" class="img-zoom-btn">−</button>';
+      // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
+      if (!fullscreenOpen) container.appendChild(controls);
+    }
 
-      const btns = controls.querySelectorAll('.zoom-btn');
-      let currentZoom = 1;
+    // Estado local do Zoom (Mutable para performance)
+    let state = {
+      scale: 1,
+      panning: false,
+      pointX: 0,
+      pointY: 0,
+      startX: 0,
+      startY: 0
+    };
 
-      const setZoom = (z: number, originPercent = 50) => {
-        currentZoom = z;
-        container.style.transformOrigin = `${originPercent}% 50%`;
-        container.style.transition = 'transform 220ms ease';
-        container.style.transform = `scale(${currentZoom})`;
-        container.dataset.waveformZoom = String(currentZoom);
-      };
+    const updateTransform = () => {
+      transformTarget.style.width = `${state.scale * 100}%`;
+      transformTarget.style.height = `${state.scale * 100}%`;
+      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px)`;
+      transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
+    };
 
-      const handleDbl = (e: MouseEvent) => {
-        try {
-          e.stopPropagation();
-          const rect = container.getBoundingClientRect();
-          const x = (e.clientX - rect.left);
-          const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
-          const target = currentZoom === 1 ? 1.6 : 1;
-          setZoom(target, percent);
-        } catch (err) {
-          // ignore
+    // --- HANDLERS DE MOUSE/TOUCH ---
+
+    const onMouseDown = (e: MouseEvent | TouchEvent) => {
+      if (state.scale <= 1) return; // Só arrasta se tiver zoom
+      e.preventDefault();
+      state.panning = true;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      state.startX = clientX - state.pointX;
+      state.startY = clientY - state.pointY;
+
+      // ATIVA modo performance durante o movimento (pode ficar levemente borrado mas melhora fluidez)
+      try {
+        transformTarget.style.willChange = 'transform';
+      } catch (err) { }
+
+      updateTransform();
+    };
+
+    const onMouseMove = (e: MouseEvent | TouchEvent) => {
+      if (!state.panning) return;
+      e.preventDefault();
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+      state.pointX = clientX - state.startX;
+      state.pointY = clientY - state.startY;
+
+      // Garante que will-change está ativo durante o movimento
+      try {
+        if (transformTarget.style.willChange !== 'transform') transformTarget.style.willChange = 'transform';
+      } catch (err) { }
+
+      updateTransform();
+    };
+
+    const onMouseUp = () => {
+      state.panning = false;
+      // DESATIVA modo performance para forçar redesenho em alta qualidade
+      try { transformTarget.style.willChange = 'auto'; } catch (err) { }
+      updateTransform();
+    };
+
+    // Zoom via Botões ou Roda do Mouse
+    const zoom = (delta: number, clientX?: number, clientY?: number) => {
+      const oldScale = state.scale;
+      const newScale = Math.max(1, Math.min(10, state.scale + delta));
+
+      if (newScale === 1) {
+        state.scale = 1;
+        state.pointX = 0;
+        state.pointY = 0;
+      } else {
+        const rect = container.getBoundingClientRect();
+        let cx, cy;
+        if (clientX !== undefined && clientY !== undefined) {
+          cx = clientX - rect.left;
+          cy = clientY - rect.top;
+        } else {
+          cx = rect.width / 2;
+          cy = rect.height / 2;
         }
-      };
 
-      const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(3, currentZoom + 0.2), 50); };
-      const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.2), 50); };
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
 
-      container.addEventListener('dblclick', handleDbl);
-      if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
-      if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
+        const mouseOffsetX = cx - centerX;
+        const mouseOffsetY = cy - centerY;
 
-      const keyHandler = (e: KeyboardEvent) => {
-        if (document.activeElement && (document.activeElement === wf || wf.contains(document.activeElement))) {
-          if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
-          if (e.key === '-') { handleZoomOut(e as any); }
-          if (e.key === '0') { setZoom(1, 50); }
-        }
-      };
-      window.addEventListener('keydown', keyHandler);
-
-      return () => {
-        window.removeEventListener('keydown', keyHandler);
-        container.removeEventListener('dblclick', handleDbl);
-        try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) {}
-        if (controls.parentElement === container) container.removeChild(controls);
-        container.style.transform = '';
-        container.style.transformOrigin = '';
-        delete container.dataset.waveformZoom;
-        container.classList.remove('waveform-zoomable');
-      };
-    }, [waveformRef, visualMode, audioSources.src]);
-
-    // Lógica de Zoom Otimizada (Sincroniza UV e Filtros)
-    React.useEffect(() => {
-      // Só roda se for modo imagem ou vídeo (se quiser zoom em vídeo)
-      if (visualMode !== 'image' && visualMode !== 'video') return;
-      
-      // Procura o elemento correto dependendo se estamos no Fullscreen ou no Modal normal
-      const context = fullscreenOpen ? document.body : fileRef.current;
-      if (!context) return;
-
-      // O alvo é o WRAPPER que segura a imagem base e a camada UV
-      // Procuramos classes comuns de containers de imagem misteriosa
-      const container = context.querySelector('.evidence-display-area, .fullscreen-stage') as HTMLElement | null;
-      if (!container) return;
-
-      // O elemento que será transformado (Escalado/Movido)
-      // Tenta achar o container interno do MysteryImage (.uv-container ou .large-evidence-img)
-      // Se não achar, usa o próprio container.
-      const transformTarget = (container.querySelector('.image-zoom-wrapper, .uv-container, .large-evidence-img') as HTMLElement | null) || 
-              (container.querySelector('img') as HTMLElement | null);
-
-      if (!transformTarget) return;
-
-      // Prepara o elemento para aceleração de hardware.
-      // Nota: ativamos o modo de performance apenas durante o arraste (will-change = 'transform').
-      // Aqui deixamos em 'auto' para que o navegador redesenhe em alta qualidade quando não estiver arrastando.
-      transformTarget.style.willChange = 'auto';
-      transformTarget.style.transformOrigin = 'center center'; // Zoom no centro facilita no mobile
-      
-      // Adiciona controles visuais se não existirem
-      if (!container.querySelector('.image-controls')) {
-        const controls = document.createElement('div');
-        controls.className = 'image-controls';
-        controls.innerHTML = '<button type="button" class="img-zoom-btn">+</button><button type="button" class="img-zoom-btn">−</button>';
-        // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
-        if (!fullscreenOpen) container.appendChild(controls);
-      }
-
-      // Estado local do Zoom (Mutable para performance)
-      let state = {
-        scale: 1,
-        panning: false,
-        pointX: 0,
-        pointY: 0,
-        startX: 0,
-        startY: 0
-      };
-
-      const updateTransform = () => {
-        transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px) scale(${state.scale})`;
-        transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
-      };
-
-      // --- HANDLERS DE MOUSE/TOUCH ---
-
-      const onMouseDown = (e: MouseEvent | TouchEvent) => {
-        if (state.scale <= 1) return; // Só arrasta se tiver zoom
-        e.preventDefault();
-        state.panning = true;
-        
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-        state.startX = clientX - state.pointX;
-        state.startY = clientY - state.pointY;
-
-        // ATIVA modo performance durante o movimento (pode ficar levemente borrado mas melhora fluidez)
-        try {
-          transformTarget.style.willChange = 'transform';
-        } catch (err) {}
-
-        updateTransform();
-      };
-
-      const onMouseMove = (e: MouseEvent | TouchEvent) => {
-        if (!state.panning) return;
-        e.preventDefault();
-
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-        state.pointX = clientX - state.startX;
-        state.pointY = clientY - state.startY;
-
-        // Garante que will-change está ativo durante o movimento
-        try {
-          if (transformTarget.style.willChange !== 'transform') transformTarget.style.willChange = 'transform';
-        } catch (err) {}
-
-        updateTransform();
-      };
-
-      const onMouseUp = () => {
-        state.panning = false;
-        // DESATIVA modo performance para forçar redesenho em alta qualidade
-        try { transformTarget.style.willChange = 'auto'; } catch (err) {}
-        updateTransform();
-      };
-
-      // Zoom via Botões ou Roda do Mouse
-      const zoom = (delta: number) => {
-        const newScale = Math.max(1, Math.min(8, state.scale + delta));
+        state.pointX -= (mouseOffsetX - state.pointX) * (newScale - oldScale) / oldScale;
+        state.pointY -= (mouseOffsetY - state.pointY) * (newScale - oldScale) / oldScale;
         state.scale = newScale;
-        if (newScale === 1) {
-          state.pointX = 0;
-          state.pointY = 0;
-        }
-        updateTransform();
-      };
-
-      // Listeners
-      const btns = container.querySelectorAll('.img-zoom-btn');
-      const btnIn = btns[0]; 
-      const btnOut = btns[1];
-
-      const handleIn = (e: Event) => { e.stopPropagation(); zoom(0.5); };
-      const handleOut = (e: Event) => { e.stopPropagation(); zoom(-0.5); };
-
-      if(btnIn) btnIn.addEventListener('click', handleIn);
-      if(btnOut) btnOut.addEventListener('click', handleOut);
-      
-      // Adiciona eventos ao container (para pegar o click em qualquer lugar)
-      container.addEventListener('mousedown', onMouseDown);
-      container.addEventListener('mousemove', onMouseMove);
-      container.addEventListener('mouseup', onMouseUp);
-      container.addEventListener('mouseleave', onMouseUp);
-      
-      // Touch events (Mobile)
-      container.addEventListener('touchstart', onMouseDown, { passive: false });
-      container.addEventListener('touchmove', onMouseMove, { passive: false });
-      container.addEventListener('touchend', onMouseUp);
-
-      // Wheel Zoom (Mouse)
-      const onWheel = (e: WheelEvent) => {
-        // Always use wheel to control zoom when pointer is over the container.
-        // Use a scaled delta so each tick feels smooth.
-        try {
-          e.preventDefault();
-        } catch (err) {}
-        const delta = -Math.sign(e.deltaY) * 0.12; // negative because wheel down usually positive deltaY
-        // apply smaller delta when scale is already high for finer control
-        const step = Math.abs(state.scale) > 2 ? delta * 0.6 : delta;
-        zoom(step);
-      };
-      container.addEventListener('wheel', onWheel, { passive: false });
-
-      // Double Click Reset
-      const onDblClick = () => {
-        state.scale = state.scale > 1 ? 1 : 2.5; // Toggle zoom
-        state.pointX = 0; state.pointY = 0;
-        updateTransform();
       }
-      container.addEventListener('dblclick', onDblClick);
+      updateTransform();
+    };
 
-      return () => {
-        if(btnIn) btnIn.removeEventListener('click', handleIn);
-        if(btnOut) btnOut.removeEventListener('click', handleOut);
-        container.removeEventListener('mousedown', onMouseDown);
-        container.removeEventListener('mousemove', onMouseMove);
-        container.removeEventListener('mouseup', onMouseUp);
-        container.removeEventListener('mouseleave', onMouseUp);
-        container.removeEventListener('touchstart', onMouseDown);
-        container.removeEventListener('touchmove', onMouseMove);
-        container.removeEventListener('touchend', onMouseUp);
-        container.removeEventListener('wheel', onWheel);
-        container.removeEventListener('dblclick', onDblClick);
-        
-        // Cleanup transform and reset will-change so browser may re-render in full quality
-        try { transformTarget.style.willChange = 'auto'; } catch (err) {}
-        transformTarget.style.transform = '';
-      };
-    }, [visualMode, fullscreenOpen, currentCard]); // Recria se abrir o fullscreen
+    // Listeners
+    const btns = container.querySelectorAll('.img-zoom-btn');
+    const btnIn = btns[0];
+    const btnOut = btns[1];
 
-    // Renderizador inteligente da Área Visual
-    const renderVisualContent = () => {
-      // Metadata seguro para detectar subtipos (ex: glitch_puzzle)
-      const metadataObj = parsedMetadata;
-      const isGlitchPuzzle = isGlitchPuzzleGlobal;
+    const handleIn = (e: Event) => { e.stopPropagation(); zoom(0.5); };
+    const handleOut = (e: Event) => { e.stopPropagation(); zoom(-0.5); };
 
-      // <Search className="lucide-icon inline-icon" size={16} /> DEBUG: Log completo da evidência para diagnóstico
-      console.log('🔍 [InspectionModal] Card Debug:', {
-        id: currentCard.id,
-        title: currentCard.title,
-        is_shredded: currentCard.is_shredded,
-        type: currentCard.type,
-        metadata: metadataObj,
-        shred_rows: metadataObj?.shred_rows,
-        shred_cols: metadataObj?.shred_cols,
-        all_keys: Object.keys(currentCard)
-      });
+    if (btnIn) btnIn.addEventListener('click', handleIn);
+    if (btnOut) btnOut.addEventListener('click', handleOut);
 
-      if (visualMode === 'phone') {
-        return (
-          <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
-            <PhoneViewer 
-              chatData={_headerChatList} 
-              contactName={currentCard.title}
-              isLocked={phoneIsLocked}
-              password={phonePassword}
-              passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
-            />
-          </div>
-        );
+    // Adiciona eventos ao container (para pegar o click em qualquer lugar)
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mousemove', onMouseMove);
+    container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('mouseleave', onMouseUp);
+
+    // Touch events (Mobile)
+    container.addEventListener('touchstart', onMouseDown, { passive: false });
+    container.addEventListener('touchmove', onMouseMove, { passive: false });
+    container.addEventListener('touchend', onMouseUp);
+
+    // Wheel Zoom (Mouse)
+    const onWheel = (e: WheelEvent) => {
+      try { e.preventDefault(); } catch (err) { }
+      const delta = -Math.sign(e.deltaY) * 0.25;
+      const step = Math.abs(state.scale) > 2 ? delta * 0.8 : delta;
+      zoom(step, e.clientX, e.clientY);
+    };
+    container.addEventListener('wheel', onWheel, { passive: false });
+
+    // Double Click Reset
+    const onDblClick = (e: MouseEvent) => {
+      if (state.scale > 1) {
+        state.scale = 1;
+        state.pointX = 0;
+        state.pointY = 0;
+        updateTransform();
+      } else {
+        zoom(1.5, e.clientX, e.clientY);
       }
+    };
+    container.addEventListener('dblclick', onDblClick);
 
-      // If shredded, show puzzle
-      // <Search className="lucide-icon inline-icon" size={16} /> Verificação robusta de is_shredded (aceita boolean, number, string)
-      // 🔥 FALLBACK: Se não existir a coluna is_shredded, usa metadata.is_shredded
-      const isShredded = Boolean(
-        currentCard.is_shredded === true || 
-        currentCard.is_shredded === 1 || 
-        currentCard.is_shredded === '1' || 
-        currentCard.is_shredded === 'true' ||
-        metadataObj?.is_shredded === true ||
-        // 🔥 Se tem shred_rows/cols no metadata, assume que é triturado
-        (metadataObj?.shred_rows && metadataObj?.shred_cols)
+    return () => {
+      if (btnIn) btnIn.removeEventListener('click', handleIn);
+      if (btnOut) btnOut.removeEventListener('click', handleOut);
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mousemove', onMouseMove);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('mouseleave', onMouseUp);
+      container.removeEventListener('touchstart', onMouseDown);
+      container.removeEventListener('touchmove', onMouseMove);
+      container.removeEventListener('touchend', onMouseUp);
+      container.removeEventListener('wheel', onWheel);
+      container.removeEventListener('dblclick', onDblClick);
+
+      // Cleanup transform and reset will-change so browser may re-render in full quality
+      try { transformTarget.style.willChange = 'auto'; } catch (err) { }
+      transformTarget.style.transform = '';
+      transformTarget.style.width = '100%';
+      transformTarget.style.height = '100%';
+    };
+  }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel]);
+
+  // Renderizador inteligente da Área Visual
+  const renderVisualContent = () => {
+    // Metadata seguro para detectar subtipos (ex: glitch_puzzle)
+    const metadataObj = parsedMetadata;
+    const isGlitchPuzzle = isGlitchPuzzleGlobal;
+
+    // <Search className="lucide-icon inline-icon" size={16} /> DEBUG: Log completo da evidência para diagnóstico
+    console.log('🔍 [InspectionModal] Card Debug:', {
+      id: currentCard.id,
+      title: currentCard.title,
+      is_shredded: currentCard.is_shredded,
+      type: currentCard.type,
+      metadata: metadataObj,
+      shred_rows: metadataObj?.shred_rows,
+      shred_cols: metadataObj?.shred_cols,
+      all_keys: Object.keys(currentCard)
+    });
+
+    if (visualMode === 'phone') {
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
+          <PhoneViewer
+            chatData={_headerChatList}
+            contactName={currentCard.title}
+            isLocked={phoneIsLocked}
+            password={phonePassword}
+            passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+          />
+        </div>
       );
-      
-      console.log('🧩 [Shredder] Check:', { 
-        raw_value: currentCard.is_shredded, 
-        type: typeof currentCard.is_shredded,
-        metadata_is_shredded: metadataObj?.is_shredded,
-        has_shred_config: !!(metadataObj?.shred_rows && metadataObj?.shred_cols),
-        isShredded,
-        rows: metadataObj?.shred_rows || 1,
-        cols: metadataObj?.shred_cols || 8
-      });
+    }
 
-      // Se o puzzle foi resolvido, mostra a imagem normal
-      if (isShredded && !puzzleSolved) {
-        console.log('%c🧩 SHREDDER PUZZLE ATIVADO!', 'background: #4a4; color: #fff; font-size: 14px; padding: 8px; border-radius: 4px;');
-        console.log(`📐 Configuração: ${parsedMetadata?.shred_rows || 1}x${parsedMetadata?.shred_cols || 8} = ${(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças`);
-        console.log(`🎮 isGameMaster: ${isGameMaster}`);
-        console.log(`🖼️ imgSrc: ${unifiedMedia.imageUrl || currentCard.image_url}`);
-        
-        return (
-          <div style={{ 
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '40px 20px',
-            gap: '20px'
+    // If shredded, show puzzle
+    // <Search className="lucide-icon inline-icon" size={16} /> Verificação robusta de is_shredded (aceita boolean, number, string)
+    // 🔥 FALLBACK: Se não existir a coluna is_shredded, usa metadata.is_shredded
+    const isShredded = Boolean(
+      currentCard.is_shredded === true ||
+      currentCard.is_shredded === 1 ||
+      currentCard.is_shredded === '1' ||
+      currentCard.is_shredded === 'true' ||
+      metadataObj?.is_shredded === true ||
+      // 🔥 Se tem shred_rows/cols no metadata, assume que é triturado
+      (metadataObj?.shred_rows && metadataObj?.shred_cols)
+    );
+
+    console.log('🧩 [Shredder] Check:', {
+      raw_value: currentCard.is_shredded,
+      type: typeof currentCard.is_shredded,
+      metadata_is_shredded: metadataObj?.is_shredded,
+      has_shred_config: !!(metadataObj?.shred_rows && metadataObj?.shred_cols),
+      isShredded,
+      rows: metadataObj?.shred_rows || 1,
+      cols: metadataObj?.shred_cols || 8
+    });
+
+    // Se o puzzle foi resolvido, mostra a imagem normal
+    if (isShredded && !puzzleSolved) {
+      console.log('%c🧩 SHREDDER PUZZLE ATIVADO!', 'background: #4a4; color: #fff; font-size: 14px; padding: 8px; border-radius: 4px;');
+      console.log(`📐 Configuração: ${parsedMetadata?.shred_rows || 1}x${parsedMetadata?.shred_cols || 8} = ${(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças`);
+      console.log(`🎮 isGameMaster: ${isGameMaster}`);
+      console.log(`🖼️ imgSrc: ${unifiedMedia.imageUrl || currentCard.image_url}`);
+
+      return (
+        <div style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px',
+          gap: '20px'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            background: 'linear-gradient(160deg, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0.02))',
+            border: '1px solid rgba(0, 243, 255, 0.25)',
+            borderRadius: '12px',
+            maxWidth: '500px'
           }}>
-            <div style={{
-              textAlign: 'center',
-              padding: '20px',
-              background: 'linear-gradient(160deg, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0.02))',
-              border: '1px solid rgba(0, 243, 255, 0.25)',
-              borderRadius: '12px',
-              maxWidth: '500px'
+            <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
+            <h3 style={{
+              margin: '0 0 8px',
+              color: '#e9fcff',
+              fontSize: '20px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              textTransform: 'uppercase'
+            }}>DOCUMENTO TRITURADO DETECTADO</h3>
+            <p style={{
+              margin: '0 0 16px',
+              color: '#9fc7d0',
+              fontSize: '14px',
+              lineHeight: '1.6'
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
-              <h3 style={{ 
-                margin: '0 0 8px',
-                color: '#e9fcff',
-                fontSize: '20px',
+              Este documento foi fragmentado em <strong style={{ color: '#aef6ff' }}>{(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças</strong>.<br />
+              Configure: <strong style={{ color: '#aef6ff' }}>{parsedMetadata?.shred_rows || 1}×{parsedMetadata?.shred_cols || 8}</strong> {parsedMetadata?.shred_rows === 1 ? 'tiras horizontais' : parsedMetadata?.shred_cols === 1 ? 'tiras verticais' : 'grade'}
+            </p>
+            {isGameMaster && (
+              <div style={{
+                padding: '12px',
+                background: 'rgba(100, 150, 255, 0.12)',
+                border: '1px solid rgba(100, 150, 255, 0.3)',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                color: '#aaf'
+              }}>
+                <Gamepad2 className="lucide-icon inline-icon" size={16} /> <strong>MODO GM ATIVO</strong><br />
+                Você terá controle total sobre as peças reveladas
+              </div>
+            )}
+            <button
+              onClick={() => setShredderModalOpen(true)}
+              style={{
+                padding: '14px 28px',
+                background: 'linear-gradient(90deg, #00f3ff, #ff003c)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#051018',
+                fontSize: '14px',
                 fontWeight: 700,
                 letterSpacing: '1px',
-                textTransform: 'uppercase'
-              }}>DOCUMENTO TRITURADO DETECTADO</h3>
-              <p style={{ 
-                margin: '0 0 16px',
-                color: '#9fc7d0',
-                fontSize: '14px',
-                lineHeight: '1.6'
-              }}>
-                Este documento foi fragmentado em <strong style={{ color: '#aef6ff' }}>{(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças</strong>.<br />
-                Configure: <strong style={{ color: '#aef6ff' }}>{parsedMetadata?.shred_rows || 1}×{parsedMetadata?.shred_cols || 8}</strong> {parsedMetadata?.shred_rows === 1 ? 'tiras horizontais' : parsedMetadata?.shred_cols === 1 ? 'tiras verticais' : 'grade'}
-              </p>
-              {isGameMaster && (
-                <div style={{
-                  padding: '12px',
-                  background: 'rgba(100, 150, 255, 0.12)',
-                  border: '1px solid rgba(100, 150, 255, 0.3)',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  fontSize: '12px',
-                  color: '#aaf'
-                }}>
-                  <Gamepad2 className="lucide-icon inline-icon" size={16} /> <strong>MODO GM ATIVO</strong><br />
-                  Você terá controle total sobre as peças reveladas
-                </div>
-              )}
-              <button
-                onClick={() => setShredderModalOpen(true)}
-                style={{
-                  padding: '14px 28px',
-                  background: 'linear-gradient(90deg, #00f3ff, #ff003c)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#051018',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 16px rgba(0, 243, 255, 0.3)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 243, 255, 0.5)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 243, 255, 0.3)';
-                }}
-              >
-                🧩 ABRIR RECONSTRUTOR
-              </button>
-            </div>
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 16px rgba(0, 243, 255, 0.3)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 243, 255, 0.5)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 243, 255, 0.3)';
+              }}
+            >
+              🧩 ABRIR RECONSTRUTOR
+            </button>
           </div>
-        );
-      }
+        </div>
+      );
+    }
 
-      // visualMode === 'image'
-      if (visualMode === 'video' && (unifiedMedia.videoUrl || currentCard.video_url)) {
-        // Handlers to replace/remove video attached to this card
-        const handleReplaceVideo = async (file: File) => {
-          try {
-            if (!currentCard || !currentCard.investigation_id) return alert('Investigation id ausente');
-            setVideoUploadingInspection(true);
-            const ext = file.name.split('.').pop() || 'mp4';
-            const publicUrl = await uploadInvestigationFile(file, currentCard.investigation_id, ext);
-            if (!publicUrl) throw new Error('Falha ao enviar vídeo');
-            const updated = await updateInvestigationCard(currentCard.id, { video_url: publicUrl });
-            setServerCard(updated);
-          } catch (err) {
-            console.error('Erro substituindo vídeo', err);
-            alert('Falha ao substituir vídeo');
-          } finally {
-            setVideoUploadingInspection(false);
-          }
-        };
-
-        const handleRemoveVideo = async () => {
-          try {
-            if (!currentCard) return;
-            if (!confirm('Remover vídeo anexado deste cartão?')) return;
-            setVideoUploadingInspection(true);
-            const updated = await updateInvestigationCard(currentCard.id, { video_url: null });
-            setServerCard(updated);
-          } catch (err) {
-            console.error('Erro removendo vídeo', err);
-            alert('Falha ao remover vídeo');
-          } finally {
-            setVideoUploadingInspection(false);
-          }
-        };
-
-        const videoSrc = unifiedMedia.videoUrl || currentCard.video_url;
-        return (
-          <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#000'}}>
-            <CCTVPlayer src={videoSrc || ''} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
-          </div>
-        );
-      }
-
-      // audio visual mode (HUD compacto)
-      if (visualMode === 'audio') {
-        const audioSrc = audioSources.src;
-
-        if (!audioSrc) {
-          return (<div style={{ color:'#ccc', padding:20 }}>Nenhum arquivo de áudio encontrado para esta evidência.</div>);
+    // visualMode === 'image'
+    if (visualMode === 'video' && (unifiedMedia.videoUrl || currentCard.video_url)) {
+      // Handlers to replace/remove video attached to this card
+      const handleReplaceVideo = async (file: File) => {
+        try {
+          if (!currentCard || !currentCard.investigation_id) return alert('Investigation id ausente');
+          setVideoUploadingInspection(true);
+          const ext = file.name.split('.').pop() || 'mp4';
+          const publicUrl = await uploadInvestigationFile(file, currentCard.investigation_id, ext);
+          if (!publicUrl) throw new Error('Falha ao enviar vídeo');
+          const updated = await updateInvestigationCard(currentCard.id, { video_url: publicUrl });
+          setServerCard(updated);
+        } catch (err) {
+          console.error('Erro substituindo vídeo', err);
+          alert('Falha ao substituir vídeo');
+        } finally {
+          setVideoUploadingInspection(false);
         }
+      };
 
-        const formatTime = (seconds: number) => {
-          if (!Number.isFinite(seconds)) return '00:00';
-          const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
-          const ss = Math.floor(seconds % 60).toString().padStart(2, '0');
-          return `${mm}:${ss}`;
-        };
+      const handleRemoveVideo = async () => {
+        try {
+          if (!currentCard) return;
+          if (!confirm('Remover vídeo anexado deste cartão?')) return;
+          setVideoUploadingInspection(true);
+          const updated = await updateInvestigationCard(currentCard.id, { video_url: null });
+          setServerCard(updated);
+        } catch (err) {
+          console.error('Erro removendo vídeo', err);
+          alert('Falha ao remover vídeo');
+        } finally {
+          setVideoUploadingInspection(false);
+        }
+      };
 
-        const handleTogglePlay = () => {
-          if (waveSurferRef.current) {
-            waveSurferRef.current.playPause();
-            return;
-          }
-          const el = audioElementRef.current;
-          if (!el) return;
-          if (audioIsPlaying) {
-            el.pause();
-            setAudioIsPlaying(false);
-          } else {
-            el.play().then(() => setAudioIsPlaying(true)).catch(err => console.warn('Audio play failed', err));
-          }
-        };
+      const videoSrc = unifiedMedia.videoUrl || currentCard.video_url;
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+          <CCTVPlayer src={videoSrc || ''} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
+        </div>
+      );
+    }
 
-        const handleSeek = (value: number) => {
-          if (waveSurferRef.current && (audioDuration || 0) > 0) {
-            const ratio = Math.min(Math.max(value / (audioDuration || 1), 0), 1);
-            waveSurferRef.current.seekTo(ratio);
-            return;
-          }
-          const el = audioElementRef.current;
-          if (!el) return;
-          el.currentTime = value;
-          setAudioPosition(value);
-        };
+    // audio visual mode (HUD compacto)
+    if (visualMode === 'audio') {
+      const audioSrc = audioSources.src;
 
-        return (
-          <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', gap:12, background:'#000', padding:'16px 18px', boxSizing:'border-box'}}>
-            <audio
-              ref={audioElementRef}
-              src={audioSrc || undefined}
-              preload="metadata"
-              style={{ display: 'none' }}
-              onEnded={() => setAudioIsPlaying(false)}
-              onTimeUpdate={(e) => setAudioPosition((e.target as HTMLAudioElement).currentTime || 0)}
-              onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
+      if (!audioSrc) {
+        return (<div style={{ color: '#ccc', padding: 20 }}>Nenhum arquivo de áudio encontrado para esta evidência.</div>);
+      }
+
+      const formatTime = (seconds: number) => {
+        if (!Number.isFinite(seconds)) return '00:00';
+        const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const ss = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mm}:${ss}`;
+      };
+
+      const handleTogglePlay = () => {
+        if (waveSurferRef.current) {
+          waveSurferRef.current.playPause();
+          return;
+        }
+        const el = audioElementRef.current;
+        if (!el) return;
+        if (audioIsPlaying) {
+          el.pause();
+          setAudioIsPlaying(false);
+        } else {
+          el.play().then(() => setAudioIsPlaying(true)).catch(err => console.warn('Audio play failed', err));
+        }
+      };
+
+      const handleSeek = (value: number) => {
+        if (waveSurferRef.current && (audioDuration || 0) > 0) {
+          const ratio = Math.min(Math.max(value / (audioDuration || 1), 0), 1);
+          waveSurferRef.current.seekTo(ratio);
+          return;
+        }
+        const el = audioElementRef.current;
+        if (!el) return;
+        el.currentTime = value;
+        setAudioPosition(value);
+      };
+
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: 12, background: '#000', padding: '16px 18px', boxSizing: 'border-box' }}>
+          <audio
+            ref={audioElementRef}
+            src={audioSrc || undefined}
+            preload="metadata"
+            style={{ display: 'none' }}
+            onEnded={() => setAudioIsPlaying(false)}
+            onTimeUpdate={(e) => setAudioPosition((e.target as HTMLAudioElement).currentTime || 0)}
+            onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ color: '#ccc', fontSize: 13 }}>Reprodutor básico. Use EXPANDIR para análise avançada.</div>
+            <a href={audioSrc} target="_blank" rel="noreferrer" style={{ color: '#00f3ff', fontSize: 12 }}>baixar</a>
+          </div>
+
+          <div style={{ width: '100%', minHeight: 70 }} ref={waveformRef} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8 }}>
+            <button
+              onClick={handleTogglePlay}
+              className="btn-tool-tab"
+              style={{ minWidth: 110 }}
+            >
+              {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
+            </button>
+
+            <input
+              type="range"
+              min={0}
+              max={audioDuration || 0}
+              step={0.1}
+              value={Math.min(audioPosition, audioDuration || 0)}
+              onChange={(e) => handleSeek(Number(e.target.value))}
+              style={{ flex: 1, accentColor: '#00f3ff' }}
+              aria-label="Linha do tempo do áudio"
             />
 
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
-              <div style={{color:'#ccc', fontSize:13}}>Reprodutor básico. Use EXPANDIR para análise avançada.</div>
-              <a href={audioSrc} target="_blank" rel="noreferrer" style={{color:'#00f3ff', fontSize:12}}>baixar</a>
-            </div>
-
-            <div style={{width:'100%', minHeight:70}} ref={waveformRef} />
-
-            <div style={{display:'flex', alignItems:'center', gap:12, background:'rgba(0,0,0,0.4)', border:'1px solid rgba(0,243,255,0.15)', padding:'10px 12px', borderRadius:8}}>
-              <button
-                onClick={handleTogglePlay}
-                className="btn-tool-tab"
-                style={{minWidth:110}}
-              >
-                {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
-              </button>
-
-              <input
-                type="range"
-                min={0}
-                max={audioDuration || 0}
-                step={0.1}
-                value={Math.min(audioPosition, audioDuration || 0)}
-                onChange={(e) => handleSeek(Number(e.target.value))}
-                style={{flex:1, accentColor:'#00f3ff'}}
-                aria-label="Linha do tempo do áudio"
-              />
-
-              <div style={{display:'flex', alignItems:'center', gap:6, color:'#00f3ff', fontFamily:'Share Tech Mono, monospace', fontSize:12}}>
-                <span>{formatTime(audioPosition)}</span>
-                <span style={{opacity:0.6}}>/</span>
-                <span>{formatTime(audioDuration)}</span>
-              </div>
-            </div>
-
-            <div style={{ color: '#777', fontSize: '11px' }}>
-              Dica: clique em <span role="img" aria-label="musical note"><Music className="lucide-icon inline-icon" size={16} /></span> EXPANDIR para usar espectrograma e controles completos.
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
+              <span>{formatTime(audioPosition)}</span>
+              <span style={{ opacity: 0.6 }}>/</span>
+              <span>{formatTime(audioDuration)}</span>
             </div>
           </div>
-        );
-      }
 
-      // INTERCEPTAR GLITCH PUZZLE - antes de renderizar imagem normal
-      if (unifiedMedia.imageUrl || currentCard.image_url) {
-        const baseImage = unifiedMedia.imageUrl || currentCard.image_url || null;
+          <div style={{ color: '#777', fontSize: '11px' }}>
+            Dica: clique em <span role="img" aria-label="musical note"><Music className="lucide-icon inline-icon" size={16} /></span> EXPANDIR para usar espectrograma e controles completos.
+          </div>
+        </div>
+      );
+    }
 
-        const renderSecurityLocked = () => {
-          return (
-            <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
-              <div className="grid-overlay" aria-hidden />
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:18, padding:24, color:'#d5d5d5', textAlign:'center', height:'100%'}}>
-                <div style={{position:'relative', width:'100%', maxWidth:640, aspectRatio:'16/9', border:'1px dashed rgba(255,255,255,0.08)', overflow:'hidden', borderRadius:8, background:'#050505'}}>
-                  {baseImage ? (
-                    <div style={{position:'absolute', inset:0, backgroundImage:`url(${baseImage})`, backgroundSize:'contain', backgroundPosition:'center', backgroundRepeat:'no-repeat', filter:'blur(14px) brightness(0.5)', transform:'scale(1.02)'}} aria-hidden />
-                  ) : (
-                    <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#777', fontSize:13}}>Pré-visualização mascarada</div>
-                  )}
-                  <div style={{position:'absolute', inset:0, background:'linear-gradient(135deg, rgba(0,255,255,0.06), rgba(255,0,150,0.08))'}} aria-hidden />
-                  <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10}}>
-                    <div style={{fontSize:18, fontWeight:700, letterSpacing:1}}>CAMADA CRIPTOGRAFADA</div>
-                    <div style={{fontSize:13, maxWidth:400, color:'#c8f7ff'}}>
-                      Resolva o painel de sincronização antes de revelar a imagem limpa.
-                    </div>
-                  </div>
-                </div>
-                <div style={{display:'flex', flexDirection:'column', gap:8, alignItems:'center'}}>
-                  <span style={{fontSize:12, color:'#9ac4ff'}}>Lógica: {securityRevealLogic === 'aligned_keyword' ? 'Alinhar sinal + validar assinatura' : securityRevealLogic === 'always_visible' ? 'Sempre visível' : 'Alinhar sinal'}</span>
-                  {securityLayer?.require_keyword && (
-                    <span style={{fontSize:12, color:'#ffc78b'}}>Assinatura digital exigida</span>
-                  )}
-                  <button
-                    className="btn-tool-tab"
-                    onClick={() => {
-                      // At click time we may or may not have a glitch config available.
-                      // If none, surface a useful message instead of doing nothing.
-                      if (!glitchSolverConfig) {
-                        console.error('[InspectionModal] Glitch puzzle sem configuração válida. Card:', {
-                          id: currentCard?.id,
-                          type: currentCard?.type,
-                          hasMetadata: !!currentCard?.metadata,
-                          metadataGlitchPuzzle: !!parsedMetadata?.glitch_puzzle
-                        });
-                        alert('❌ Este quebra-cabeça não tem configuração válida.\n\nVerifique:\n• Se a pista foi criada como "Quebra-cabeça de Glitch"\n• Se a imagem foi enviada corretamente\n• Se os metadados foram salvos');
-                        return;
-                      }
-                      console.log('[InspectionModal] Abrindo GlitchPuzzleSolver com config:', glitchSolverConfig);
-                      setShowGlitchSolver(true);
-                    }}
-                    style={{marginTop:6}}
-                  >
-                    🧩 ABRIR DECODIFICADOR
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        };
+    // INTERCEPTAR GLITCH PUZZLE - antes de renderizar imagem normal
+    if (unifiedMedia.imageUrl || currentCard.image_url) {
+      const baseImage = unifiedMedia.imageUrl || currentCard.image_url || null;
 
-        if (securityLocked) return renderSecurityLocked();
+      const renderSecurityLocked = () => {
         return (
           <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
             <div className="grid-overlay" aria-hidden />
-
-            {(() => {
-              // safe-parse metadata.image_filter_reveal which may be stored as object or JSON string
-              let reveal: any = null;
-              try {
-                const m = currentCard.metadata && typeof currentCard.metadata === 'object'
-                  ? currentCard.metadata
-                  : (typeof currentCard.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
-                reveal = m?.image_filter_reveal ?? null;
-              } catch (e) { reveal = null; }
-              return (
-                        <>
-                          <div className="image-zoom-wrapper">
-                            <MysteryImage
-                              baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                              hiddenSrc={currentCard.image_uv_url}
-                              filterLayerSrc={currentCard.image_filter_layer}
-                              filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                              revealSettings={fullscreenOnlyTreatment ? null : reveal}
-                              isUVMode={localUV}
-                              fit="contain"
-                              className="large-evidence-img"
-                                style={{ height: '100%', width: '100%' }}
-                                forensicChannel={forensicChannel}
-                                allowImageUVControl={false}
-                            />
-                          </div>
-                        </>
-                      );
-            })()}
-
-            {localThermal && !fullscreenOpen && (
-              <div className="thermal-overlay" aria-hidden="true">
-                <canvas className="thermal-canvas" ref={thermalCanvasRef} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: 24, color: '#d5d5d5', textAlign: 'center', height: '100%' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: 640, aspectRatio: '16/9', border: '1px dashed rgba(255,255,255,0.08)', overflow: 'hidden', borderRadius: 8, background: '#050505' }}>
+                {baseImage ? (
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${baseImage})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', filter: 'blur(14px) brightness(0.5)', transform: 'scale(1.02)' }} aria-hidden />
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#777', fontSize: 13 }}>Pré-visualização mascarada</div>
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,255,255,0.06), rgba(255,0,150,0.08))' }} aria-hidden />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>CAMADA CRIPTOGRAFADA</div>
+                  <div style={{ fontSize: 13, maxWidth: 400, color: '#c8f7ff' }}>
+                    Resolva o painel de sincronização antes de revelar a imagem limpa.
+                  </div>
+                </div>
               </div>
-            )}
-
-            <div className="ui-corners" aria-hidden />
-
-            {localThermal && (
-              <div className="thermal-scale" aria-hidden="true">
-                <span className="temp-high">42°C</span>
-                <div className="gradient-bar"></div>
-                <span className="temp-low">12°C</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: '#9ac4ff' }}>Lógica: {securityRevealLogic === 'aligned_keyword' ? 'Alinhar sinal + validar assinatura' : securityRevealLogic === 'always_visible' ? 'Sempre visível' : 'Alinhar sinal'}</span>
+                {securityLayer?.require_keyword && (
+                  <span style={{ fontSize: 12, color: '#ffc78b' }}>Assinatura digital exigida</span>
+                )}
+                <button
+                  className="btn-tool-tab"
+                  onClick={() => {
+                    // At click time we may or may not have a glitch config available.
+                    // If none, surface a useful message instead of doing nothing.
+                    if (!glitchSolverConfig) {
+                      console.error('[InspectionModal] Glitch puzzle sem configuração válida. Card:', {
+                        id: currentCard?.id,
+                        type: currentCard?.type,
+                        hasMetadata: !!currentCard?.metadata,
+                        metadataGlitchPuzzle: !!parsedMetadata?.glitch_puzzle
+                      });
+                      alert('❌ Este quebra-cabeça não tem configuração válida.\n\nVerifique:\n• Se a pista foi criada como "Quebra-cabeça de Glitch"\n• Se a imagem foi enviada corretamente\n• Se os metadados foram salvos');
+                      return;
+                    }
+                    console.log('[InspectionModal] Abrindo GlitchPuzzleSolver com config:', glitchSolverConfig);
+                    setShowGlitchSolver(true);
+                  }}
+                  style={{ marginTop: 6 }}
+                >
+                  🧩 ABRIR DECODIFICADOR
+                </button>
               </div>
-            )}
+            </div>
           </div>
         );
-      }
+      };
 
-      // Fallback: if no image but have chat, show phone
-      if (_headerChatList && _headerChatList.length > 0) {
-        return (
-          <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a1f'}}>
-            <PhoneViewer 
-              chatData={_headerChatList} 
-              contactName={currentCard.title}
-              isLocked={phoneIsLocked}
-              password={phonePassword}
-              passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
-            />
-          </div>
-        );
-      }
+      if (securityLocked) return renderSecurityLocked();
+      return (
+        <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
+          <div className="grid-overlay" aria-hidden />
 
-      // Nothing to show
-      return <div style={{ color: '#888', padding: 20 }}>Nenhuma mídia disponível.</div>;
-    };
+          {(() => {
+            // safe-parse metadata.image_filter_reveal which may be stored as object or JSON string
+            let reveal: any = null;
+            try {
+              const m = currentCard.metadata && typeof currentCard.metadata === 'object'
+                ? currentCard.metadata
+                : (typeof currentCard.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
+              reveal = m?.image_filter_reveal ?? null;
+            } catch (e) { reveal = null; }
+            return (
+              <>
+                <div className="image-zoom-wrapper" style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <MysteryImage
+                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                    hiddenSrc={currentCard.image_uv_url}
+                    filterLayerSrc={currentCard.image_filter_layer}
+                    filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                    revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                    isUVMode={localUV}
+                    fit="contain"
+                    className="large-evidence-img"
+                    style={{ height: '100%', width: '100%' }}
+                    forensicChannel={forensicChannel}
+                    allowImageUVControl={false}
+                  />
+                  {localThermal && !fullscreenOpen && (
+                    <div className="thermal-overlay" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
+                      <canvas className="thermal-canvas" ref={thermalCanvasRef} />
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+
+          <div className="ui-corners" aria-hidden />
+
+          {localThermal && (
+            <div className="thermal-scale" aria-hidden="true">
+              <span className="temp-high">42°C</span>
+              <div className="gradient-bar"></div>
+              <span className="temp-low">12°C</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback: if no image but have chat, show phone
+    if (_headerChatList && _headerChatList.length > 0) {
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
+          <PhoneViewer
+            chatData={_headerChatList}
+            contactName={currentCard.title}
+            isLocked={phoneIsLocked}
+            password={phonePassword}
+            passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+          />
+        </div>
+      );
+    }
+
+    // Nothing to show
+    return <div style={{ color: '#888', padding: 20 }}>Nenhuma mídia disponível.</div>;
+  };
 
   // If modal is open but card is missing, show a helpful placeholder to aid debugging
   if (!card) {
@@ -1350,7 +1374,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     if (visualMode === 'phone' && !effectiveHasChat && currentCard.image_url) {
       setVisualMode('image');
     }
-  // only run when these change
+    // only run when these change
   }, [visualMode, currentCard.image_url, effectiveHasChat]);
 
   // Listen for mobile "inspection:select-tool" events dispatched by the BottomNavigationBar
@@ -1441,10 +1465,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         <div
           ref={moreToolsDropdownRef}
           className="more-tools-dropdown"
-            style={{
+          style={{
             position: 'absolute',
             left: `${moreToolsPos.left}px`,
-              top: `${moreToolsPos.top}px`,
+            top: `${moreToolsPos.top}px`,
             background: '#111',
             border: '1px solid #222',
 
@@ -1588,30 +1612,30 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
               </div>
               <div className="actions">
-                <button 
-                  className="btn-tool-tab btn-expand" 
+                <button
+                  className="btn-tool-tab btn-expand"
                   title={visualMode === 'audio' ? 'Expandir para tela cheia' : visualMode === 'phone' ? 'Expandir celular' : 'Expandir imagem'}
-                  onClick={(e)=>{ 
+                  onClick={(e) => {
                     e.stopPropagation();
-                    
+
                     // Prevenir múltiplos cliques simultâneos
                     if (audioExpanderLockRef.current) {
                       console.warn('[InspectionModal] Clique bloqueado - já em processamento');
                       return;
                     }
-                    
+
                     audioExpanderLockRef.current = true;
                     console.log('[InspectionModal] Expandir button clicked, visualMode:', visualMode);
-                    
+
                     if (visualMode === 'audio') {
                       const meta = parsedMetadata;
                       const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
                       console.log('[InspectionModal] Audio expand - audioSrc:', audioSrc);
-                      
+
                       if (audioSrc) {
                         console.log('[InspectionModal] Setting expanderAudioSrc to:', audioSrc);
                         setExpanderAudioSrc(String(audioSrc));
-                        
+
                         setTimeout(() => {
                           setAudioExpanderOpen(true);
                           console.log('[InspectionModal] Audio modal opened');
@@ -1657,11 +1681,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       const modalEl = fileRef.current;
                       const btnRect = btn.getBoundingClientRect();
                       const modalRect = modalEl?.getBoundingClientRect();
-                                      setMoreToolsPos({
-                                        left: Math.max(8, (btnRect.left - (modalRect?.left || 0))),
-                                        top: Math.max(8, (btnRect.bottom - (modalRect?.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
-                                        width: btnRect.width,
-                                      });
+                      setMoreToolsPos({
+                        left: Math.max(8, (btnRect.left - (modalRect?.left || 0))),
+                        top: Math.max(8, (btnRect.bottom - (modalRect?.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
+                        width: btnRect.width,
+                      });
                       setShowMoreTools(s => !s);
                     }}
                     aria-expanded={showMoreTools}
@@ -1807,129 +1831,129 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
             {visualMode !== 'phone' && (
               <div className="inspect-details">
-           
-           {/* Coluna com SCROLL automático */}
-           <div className="text-col">
-              <h2>{card.title}</h2>
-              
-              <span className="desc-title">DESCRIÇÃO:</span>
-              <p className="public-desc">
-                 {card.description_public || "Nenhuma descrição fornecida."}
-              </p>
 
-              {isGameMaster && card.description_hidden && (
-                 <div className="gm-note">
-                    <strong style={{color:'#c6a45f'}}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br/>
-                    {card.description_hidden}
-                 </div>
-              )}
+                {/* Coluna com SCROLL automático */}
+                <div className="text-col">
+                  <h2>{card.title}</h2>
 
-              {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
-              {megaClueMeta && (
-                <div className="metadata-box" style={{ marginTop: 12 }}>
-                  <h4>VERDADE FINAL</h4>
-                  {((megaClueMeta.unlocked === true) || isGameMaster) ? (
-                    <div style={{ color: '#ddd', fontSize: 13 }}>
-                      {megaClueMeta.final_truth_text ? (
-                        <div style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>{megaClueMeta.final_truth_text}</div>
-                      ) : (
-                        <div style={{ color: '#888' }}>Nenhuma verdade final fornecida.</div>
-                      )}
-                      {megaClueMeta.image_url && (
-                        <div style={{ marginTop: 8 }}>
-                          <img src={megaClueMeta.image_url} alt="Verdade final" loading="lazy" style={{ maxWidth: '100%', borderRadius: 6 }} />
+                  <span className="desc-title">DESCRIÇÃO:</span>
+                  <p className="public-desc">
+                    {card.description_public || "Nenhuma descrição fornecida."}
+                  </p>
+
+                  {isGameMaster && card.description_hidden && (
+                    <div className="gm-note">
+                      <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
+                      {card.description_hidden}
+                    </div>
+                  )}
+
+                  {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
+                  {megaClueMeta && (
+                    <div className="metadata-box" style={{ marginTop: 12 }}>
+                      <h4>VERDADE FINAL</h4>
+                      {((megaClueMeta.unlocked === true) || isGameMaster) ? (
+                        <div style={{ color: '#ddd', fontSize: 13 }}>
+                          {megaClueMeta.final_truth_text ? (
+                            <div style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>{megaClueMeta.final_truth_text}</div>
+                          ) : (
+                            <div style={{ color: '#888' }}>Nenhuma verdade final fornecida.</div>
+                          )}
+                          {megaClueMeta.image_url && (
+                            <div style={{ marginTop: 8 }}>
+                              <img src={megaClueMeta.image_url} alt="Verdade final" loading="lazy" style={{ maxWidth: '100%', borderRadius: 6 }} />
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <div style={{ color: '#888' }}>Verdade final bloqueada — colecione os códigos para desbloquear.</div>
                       )}
                     </div>
-                  ) : (
-                    <div style={{ color: '#888' }}>Verdade final bloqueada — colecione os códigos para desbloquear.</div>
                   )}
-                </div>
-              )}
 
-              {/* METADADOS LIMPOS E ORGANIZADOS */}
-                {card.metadata && card.metadata.field_values && Object.keys(card.metadata.field_values).length > 0 && (
-                  <div className="metadata-box">
-                    <h4>METADADOS TÉCNICOS</h4>
-                    
-                    {/* Mostrar APENAS field_values com valores reais */}
-                    <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
-                      <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>📋 Informações do Arquivo</div>
-                      {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
-                        // Só mostra se tem valor real
-                        if (!val && val !== 0) return null;
-                        
-                        const labelMap: Record<string, string> = {
-                          date_created: '📅 Data',
-                          gps_coords: '📍 Localização',
-                          device_owner: '👤 Proprietário',
-                          camera_model: '📷 Câmera',
-                          technical_note: '🔧 Nota Técnica',
-                          chat_contact_name: '💬 Contato',
-                          stamp: '🔖 Carimbo',
-                          external_link: '🔗 Link Externo'
-                        };
-                        const label = labelMap[key] || key;
-                        return (
-                          <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #222', padding:'6px 0'}}>
-                            <span style={{color:'#c6a45f', fontSize:11}}>{label}:</span>
-                            <div style={{color:'#ddd', fontSize:12, marginTop:2}}>
-                              {key === 'gps_coords' && typeof val === 'string' ? (
-                                <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" style={{color:'#4a9eff'}}>
-                                  {val}
-                                </a>
-                              ) : (
-                                String(val)
-                              )}
+                  {/* METADADOS LIMPOS E ORGANIZADOS */}
+                  {card.metadata && card.metadata.field_values && Object.keys(card.metadata.field_values).length > 0 && (
+                    <div className="metadata-box">
+                      <h4>METADADOS TÉCNICOS</h4>
+
+                      {/* Mostrar APENAS field_values com valores reais */}
+                      <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
+                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>📋 Informações do Arquivo</div>
+                        {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
+                          // Só mostra se tem valor real
+                          if (!val && val !== 0) return null;
+
+                          const labelMap: Record<string, string> = {
+                            date_created: '📅 Data',
+                            gps_coords: '📍 Localização',
+                            device_owner: '👤 Proprietário',
+                            camera_model: '📷 Câmera',
+                            technical_note: '🔧 Nota Técnica',
+                            chat_contact_name: '💬 Contato',
+                            stamp: '🔖 Carimbo',
+                            external_link: '🔗 Link Externo'
+                          };
+                          const label = labelMap[key] || key;
+                          return (
+                            <div key={key} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid #222', padding: '6px 0' }}>
+                              <span style={{ color: '#c6a45f', fontSize: 11 }}>{label}:</span>
+                              <div style={{ color: '#ddd', fontSize: 12, marginTop: 2 }}>
+                                {key === 'gps_coords' && typeof val === 'string' ? (
+                                  <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" style={{ color: '#4a9eff' }}>
+                                    {val}
+                                  </a>
+                                ) : (
+                                  String(val)
+                                )}
+                              </div>
                             </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mostrar person/person_meta se houver */}
+                  {card.metadata && (card.metadata.person || card.metadata.person_meta) && (
+                    <div className="metadata-box" style={{ marginTop: 12 }}>
+                      <h4>PERFIL DE PESSOA</h4>
+                      {(() => {
+                        const personData = card.metadata.person || card.metadata.person_meta;
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div><strong>Nome:</strong> {personData.name || '—'}</div>
+                            <div><strong>Profissão:</strong> {personData.occupation || '—'}</div>
+                            <div><strong>Status:</strong> <span style={{ color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71' }}>{personData.status || '—'}</span></div>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
-                  </div>
-                )}
-                
-                {/* Mostrar person/person_meta se houver */}
-                {card.metadata && (card.metadata.person || card.metadata.person_meta) && (
-                  <div className="metadata-box" style={{ marginTop: 12 }}>
-                    <h4>PERFIL DE PESSOA</h4>
-                    {(() => {
-                      const personData = card.metadata.person || card.metadata.person_meta;
-                      return (
-                        <div style={{display:'flex', flexDirection:'column', gap: 8}}>
-                          <div><strong>Nome:</strong> {personData.name || '—'}</div>
-                          <div><strong>Profissão:</strong> {personData.occupation || '—'}</div>
-                          <div><strong>Status:</strong> <span style={{color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71'}}>{personData.status || '—'}</span></div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-           </div>
+                  )}
+                </div>
 
-           {/* Coluna de Botões Fixos */}
-           <div className="controls-col" style={{display:'flex', flexDirection:'column', gap:10, width: 200, flexShrink:0}}>
-              {isGameMaster && (
-                 <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                    ✎ EDITAR DADOS
-                 </button>
-              )}
-              
-              {/* Exemplo de botão extra se for pessoa */}
-              {card.metadata?.type === 'person' && (
-                 <div style={{padding:10, background:'#222', border:'1px solid #444', textAlign:'center', fontSize:10}}>
-                    STATUS: <br/>
-                    <strong style={{
-                      color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
-                      fontSize:14
-                    }}>
-                      {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
-                    </strong>
-                 </div>
-              )}
-           </div>
+                {/* Coluna de Botões Fixos */}
+                <div className="controls-col" style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 200, flexShrink: 0 }}>
+                  {isGameMaster && (
+                    <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
+                      ✎ EDITAR DADOS
+                    </button>
+                  )}
 
-        </div>
+                  {/* Exemplo de botão extra se for pessoa */}
+                  {card.metadata?.type === 'person' && (
+                    <div style={{ padding: 10, background: '#222', border: '1px solid #444', textAlign: 'center', fontSize: 10 }}>
+                      STATUS: <br />
+                      <strong style={{
+                        color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
+                        fontSize: 14
+                      }}>
+                        {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+
+              </div>
             )}
 
             {visualMode === 'phone' && showPhoneDetails && (
@@ -1943,7 +1967,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                       {isGameMaster && card.description_hidden && (
                         <div className="gm-note">
-                          <strong style={{color:'#c6a45f'}}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br/>
+                          <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
                           {card.description_hidden}
                         </div>
                       )}
@@ -1952,16 +1976,16 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         <div className="metadata-box" style={{ marginTop: 12 }}>
                           <h4>METADADOS TÉCNICOS</h4>
                           {Object.entries(card.metadata || {}).map(([key, val]: any) => {
-                            if(['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter', 'phone_password', 'phone_locked', 'field_values'].includes(key)) return null;
+                            if (['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter', 'phone_password', 'phone_locked', 'field_values'].includes(key)) return null;
                             if (!val && val !== 0) return null;
                             let displayVal: any = val;
                             if (typeof val === 'object') {
                               if (key === 'person' || key === 'person_meta') {
                                 displayVal = (
-                                  <div style={{fontSize: 12, marginLeft: 5}}>
-                                    <div style={{color:'#ddd'}}><b>Nome:</b> {val.name || '—'}</div>
-                                    <div style={{color:'#ddd'}}><b>Profissão:</b> {val.occupation || '—'}</div>
-                                    <div style={{color: val.status && String(val.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71'}}><b>Estado:</b> {val.status || '—'}</div>
+                                  <div style={{ fontSize: 12, marginLeft: 5 }}>
+                                    <div style={{ color: '#ddd' }}><b>Nome:</b> {val.name || '—'}</div>
+                                    <div style={{ color: '#ddd' }}><b>Profissão:</b> {val.occupation || '—'}</div>
+                                    <div style={{ color: val.status && String(val.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71' }}><b>Estado:</b> {val.status || '—'}</div>
                                   </div>
                                 );
                               } else {
@@ -1969,9 +1993,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                               }
                             }
                             return (
-                              <div key={key} style={{display:'flex', flexDirection:'column', borderBottom:'1px solid #222', padding:'6px 0'}}>
-                                <span style={{color:'#666', fontSize:11, textTransform:'uppercase'}}>{key}:</span>
-                                <div style={{color:'#aaa', fontSize:12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak:'break-word', marginTop:4}}>
+                              <div key={key} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid #222', padding: '6px 0' }}>
+                                <span style={{ color: '#666', fontSize: 11, textTransform: 'uppercase' }}>{key}:</span>
+                                <div style={{ color: '#aaa', fontSize: 12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 4 }}>
                                   {displayVal}
                                 </div>
                               </div>
@@ -1990,11 +2014,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         </button>
                       )}
                       {card.metadata?.type === 'person' && (
-                        <div style={{padding:10, background:'#222', border:'1px solid #444', textAlign:'center', fontSize:10}}>
-                          STATUS: <br/>
+                        <div style={{ padding: 10, background: '#222', border: '1px solid #444', textAlign: 'center', fontSize: 10 }}>
+                          STATUS: <br />
                           <strong style={{
                             color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
-                            fontSize:14
+                            fontSize: 14
                           }}>
                             {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
                           </strong>
@@ -2021,62 +2045,62 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       });
       return null;
     }
-    
+
     const security = parsedMetadata.glitch_puzzle.security_layer || parsedMetadata.security_layer;
     const config = security ? { ...parsedMetadata.glitch_puzzle, security_layer: security } : parsedMetadata.glitch_puzzle;
-    
+
     console.debug('[InspectionModal] glitchSolverConfig created:', {
       hasOriginalImage: !!config.original_image_url,
       hasRewardCode: !!config.reward_code,
       hasSecurity: !!security,
       solved: config.solved
     });
-    
+
     return config;
   }, [parsedMetadata, currentCard]);
 
   const glitchPortal = showGlitchSolver && glitchSolverConfig && !glitchSolverConfig.solved
     ? createPortal(
-        <div className="glitch-solver-backdrop" onClick={() => setShowGlitchSolver(false)}>
-          <div className="glitch-solver-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="glitch-solver-header">
-              <div>
-                <span className="glitch-pill">GLITCH</span>
-                <span className="glitch-title">Painel de Sincronização</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)}>✖</button>
-              </div>
+      <div className="glitch-solver-backdrop" onClick={() => setShowGlitchSolver(false)}>
+        <div className="glitch-solver-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="glitch-solver-header">
+            <div>
+              <span className="glitch-pill">GLITCH</span>
+              <span className="glitch-title">Painel de Sincronização</span>
             </div>
-            <div className="glitch-solver-body">
-              <React.Suspense fallback={<div style={{color:'#0f0', padding:20, textAlign:'center'}}>CARREGANDO DECODIFICADOR...</div>}>
-                <GlitchPuzzleSolverLazy
-                  config={glitchSolverConfig}
-                  fullMetadata={parsedMetadata}
-                  investigationId={currentCard.investigation_id}
-                  cardId={currentCard.id}
-                  onSolved={handleSecuritySolved}
-                />
-              </React.Suspense>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)}>✖</button>
             </div>
           </div>
-        </div>, document.body)
+          <div className="glitch-solver-body">
+            <React.Suspense fallback={<div style={{ color: '#0f0', padding: 20, textAlign: 'center' }}>CARREGANDO DECODIFICADOR...</div>}>
+              <GlitchPuzzleSolverLazy
+                config={glitchSolverConfig}
+                fullMetadata={parsedMetadata}
+                investigationId={currentCard.investigation_id}
+                cardId={currentCard.id}
+                onSolved={handleSecuritySolved}
+              />
+            </React.Suspense>
+          </div>
+        </div>
+      </div>, document.body)
     : null;
 
   return (
     <>
       {createPortal(modal, document.body)}
       {glitchPortal}
-      
+
       {/* MODO EXPANDIR (FULLSCREEN) RENOVADO */}
       {fullscreenOpen && createPortal(
         <div className="fullscreen-viewer">
-          
+
           {/* HUD SUPERIOR: Título e Fechar */}
           <div className="fullscreen-hud-top">
             <div>
-              <div style={{color:'#fff', fontWeight:'bold', letterSpacing:1}}>EVIDÊNCIA #{String(currentCard.id || '').slice(0,4)}</div>
-              <div style={{color:'#00f3ff', fontSize:10, marginTop:2}}>{localUV ? 'LUZ UV ATIVA' : 'MODO PADRÃO'}</div>
+              <div style={{ color: '#fff', fontWeight: 'bold', letterSpacing: 1 }}>EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</div>
+              <div style={{ color: '#00f3ff', fontSize: 10, marginTop: 2 }}>{localUV ? 'LUZ UV ATIVA' : 'MODO PADRÃO'}</div>
             </div>
             <button className="btn-hud-close" onClick={() => setFullscreenOpen(false)}>×</button>
           </div>
@@ -2085,40 +2109,40 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           {/* A classe fullscreen-stage é alvo do nosso useEffect de Zoom novo */}
           <div className="fullscreen-stage" onClick={(e) => e.stopPropagation()}>
             {visualMode === 'phone' ? (
-              <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                 <PhoneViewer 
-                    chatData={_headerChatList} 
-                    contactName={currentCard.title}
-                    isLocked={phoneIsLocked}
-                    password={phonePassword}
-                    passwordType={parsedMetadata?.phone_lock_type || 'pin'}
-                    fullscreen={true}
-                 />
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PhoneViewer
+                  chatData={_headerChatList}
+                  contactName={currentCard.title}
+                  isLocked={phoneIsLocked}
+                  password={phonePassword}
+                  passwordType={parsedMetadata?.phone_lock_type || 'pin'}
+                  fullscreen={true}
+                />
               </div>
             ) : (
-              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {/* MysteryImage Renderizado aqui dentro */}
-                  <div className="image-zoom-wrapper">
-                    <MysteryImage
-                      baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                      hiddenSrc={currentCard.image_uv_url}
-                      filterLayerSrc={currentCard.image_filter_layer}
-                      filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                      revealSettings={fullscreenOnlyTreatment ? null : (() => {
-                         try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
-                      })()}
-                      isUVMode={localUV}
-                      fit="contain"
-                      className="large-evidence-img"
-                      style={{ maxHeight: '100%', maxWidth: '100%' }} 
-                      forensicChannel={forensicChannel}
-                    />
-                  </div>
-                  
-                  {/* Camada Termal sobreposta (se ativa) */}
-                  {localThermal && (
-                    <canvas ref={thermalCanvasRef} style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:40}} />
-                  )}
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* MysteryImage Renderizado aqui dentro */}
+                <div className="image-zoom-wrapper">
+                  <MysteryImage
+                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                    hiddenSrc={currentCard.image_uv_url}
+                    filterLayerSrc={currentCard.image_filter_layer}
+                    filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                    revealSettings={fullscreenOnlyTreatment ? null : (() => {
+                      try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
+                    })()}
+                    isUVMode={localUV}
+                    fit="contain"
+                    className="large-evidence-img"
+                    style={{ maxHeight: '100%', maxWidth: '100%' }}
+                    forensicChannel={forensicChannel}
+                  />
+                </div>
+
+                {/* Camada Termal sobreposta (se ativa) */}
+                {localThermal && (
+                  <canvas ref={thermalCanvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 40 }} />
+                )}
               </div>
             )}
           </div>
@@ -2126,34 +2150,34 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           {/* HUD INFERIOR: Ferramentas (Só aparece se não for celular/chat) */}
           {visualMode !== 'phone' && (
             <div className="fullscreen-hud-bottom">
-              
+
               {/* Botões de Ação */}
-              <div style={{display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center'}}>
-                <button className={`btn-hud ${localUV ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setLocalUV(!localUV)}}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button className={`btn-hud ${localUV ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalUV(!localUV) }}>
                   🔦 LUZ UV
                 </button>
-                
-                <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setLocalThermal(!localThermal)}}>
+
+                <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalThermal(!localThermal) }}>
                   <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL
                 </button>
 
-                <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e)=>{e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel')}}>
+                <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel') }}>
                   🔬 FORENSE
                 </button>
 
                 {forensicMode === 'channel' && (
-                   <select 
-                     className="btn-hud" 
-                     value={forensicChannel} 
-                     onChange={e=>setForensicChannel(e.target.value as any)}
-                     onClick={e=>e.stopPropagation()}
-                     style={{appearance:'none', paddingRight:30}}
-                   >
-                     <option value="all">RGB (Todos)</option>
-                     <option value="r">RED (Vermelho)</option>
-                     <option value="g">GREEN (Verde)</option>
-                     <option value="b">BLUE (Azul)</option>
-                   </select>
+                  <select
+                    className="btn-hud"
+                    value={forensicChannel}
+                    onChange={e => setForensicChannel(e.target.value as any)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ appearance: 'none', paddingRight: 30 }}
+                  >
+                    <option value="all">RGB (Todos)</option>
+                    <option value="r">RED (Vermelho)</option>
+                    <option value="g">GREEN (Verde)</option>
+                    <option value="b">BLUE (Azul)</option>
+                  </select>
                 )}
               </div>
 
@@ -2161,23 +2185,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               <div className="hud-sliders">
                 <div className="hud-slider-group">
                   <span>BRI</span>
-                  <input type="range" min={0} max={300} value={brightness} onChange={e=>setBrightness(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={brightness} onChange={e => setBrightness(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>CON</span>
-                  <input type="range" min={0} max={300} value={contrast} onChange={e=>setContrast(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={contrast} onChange={e => setContrast(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>SAT</span>
-                  <input type="range" min={0} max={300} value={saturation} onChange={e=>setSaturation(Number(e.target.value))} onTouchStart={e=>e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={saturation} onChange={e => setSaturation(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
                 </div>
-                <button className="btn-hud" style={{fontSize:10, padding:'4px 8px'}} onClick={()=> {setBrightness(100); setContrast(100); setSaturation(100)}}>RESET</button>
+                <button className="btn-hud" style={{ fontSize: 10, padding: '4px 8px' }} onClick={() => { setBrightness(100); setContrast(100); setSaturation(100) }}>RESET</button>
               </div>
             </div>
           )}
         </div>, document.body
       )}
-      
+
       <AudioViewerModal
         isOpen={audioExpanderOpen}
         onClose={() => setAudioExpanderOpen(false)}

@@ -1,12 +1,12 @@
 :root {
-  --nexus-blue: #00f3ff;
-  --nexus-blue-glow: rgb(0 243 255 / 40%);
-  --nexus-dark: #05080a;
-  --nexus-glass: rgb(5 12 15 / 85%);
-  --nexus-border: rgb(0 243 255 / 20%);
-  --nexus-glitch: #ff003c;
-  --crt-scanline: rgb(18 16 16 / 10%);
-  --muted: #8fa;
+  --nexus-blue: #cbd5e1;
+  --nexus-blue-glow: rgb(203 213 225 / 24%);
+  --nexus-dark: #0b0c10;
+  --nexus-glass: #11141b;
+  --nexus-border: #29313d;
+  --nexus-glitch: #e63946;
+  --crt-scanline: rgb(255 255 255 / 3%);
+  --muted: #94a3b8;
   --z-modal-top: 30000;
 }
 
@@ -36,7 +36,7 @@
   position: fixed;
   inset: 0;
   background: rgb(5 8 10 / 75%);
-  backdrop-filter: blur(6px);
+  backdrop-filter: none;
   z-index: var(--z-modal-top);
   display: flex;
   align-items: center;
@@ -62,15 +62,15 @@
   max-width: 1400px;
   max-height: 98vh;
   background: var(--nexus-glass);
-  backdrop-filter: blur(15px);
+  backdrop-filter: none;
   border: 1px solid var(--nexus-border);
   border-radius: 8px;
   box-shadow:
     0 0 40px rgb(0 0 0 / 50%),
-    0 0 20px rgb(0 243 255 / 15%);
+    0 0 20px rgb(203 213 225 / 15%);
   display: flex;
   flex-direction: column;
-  color: #dff;
+  color: #f1f5f9;
   font-family: "Share Tech Mono", monospace;
   overflow: hidden;
   position: relative;
@@ -145,7 +145,7 @@
   gap: 2px;
   padding: 2px 4px;
   background: rgb(0 0 0 / 20%);
-  border-bottom: 1px solid rgb(0 243 255 / 15%);
+  border-bottom: 1px solid rgb(203 213 225 / 15%);
   flex-shrink: 0;
   flex-wrap: nowrap;
   overflow: auto hidden;
@@ -167,14 +167,14 @@
 }
 
 .tab-btn:hover {
-  background: rgb(0 243 255 / 8%);
-  border-color: rgb(0 243 255 / 15%);
+  background: rgb(203 213 225 / 8%);
+  border-color: rgb(203 213 225 / 15%);
 }
 
 .tab-btn.active {
   color: #051018;
   background: var(--nexus-blue);
-  box-shadow: 0 2px 8px rgb(0 243 255 / 30%);
+  box-shadow: 0 2px 8px rgb(203 213 225 / 30%);
   border-color: var(--nexus-blue);
 }
 
@@ -193,13 +193,13 @@
   margin-bottom: 10px;
   background: linear-gradient(
     90deg,
-    rgb(0 243 255 / 2%) 0%,
+    rgb(203 213 225 / 2%) 0%,
     rgb(0 0 0 / 6%) 100%
   );
   padding: 10px;
   padding-left: 14px;
   border-radius: 6px;
-  border: 1px solid rgb(0 243 255 / 3%);
+  border: 1px solid rgb(203 213 225 / 3%);
   border-left: 3px solid var(--nexus-blue);
   flex-shrink: 0;
   position: relative;
@@ -207,11 +207,11 @@
 }
 
 .field-block:hover {
-  border-left-color: rgb(0 243 255 / 80%);
-  box-shadow: -5px 0 15px rgb(0 243 255 / 10%);
+  border-left-color: rgb(203 213 225 / 80%);
+  box-shadow: -5px 0 15px rgb(203 213 225 / 10%);
   background: linear-gradient(
     90deg,
-    rgb(0 243 255 / 4%) 0%,
+    rgb(203 213 225 / 4%) 0%,
     rgb(0 0 0 / 6%) 100%
   );
 }
@@ -229,7 +229,7 @@
 
 .dossier-body {
   padding: 8px;
-  color: #dff;
+  color: #f1f5f9;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -255,17 +255,17 @@
 
 /* Audio Section Styling */
 .evidence-group {
-  border: 1px solid rgb(0 243 255 / 8%);
+  border: 1px solid rgb(203 213 225 / 8%);
   padding: 10px;
-  background: linear-gradient(145deg, rgb(0 243 255 / 2%), rgb(0 0 0 / 30%));
+  background: linear-gradient(145deg, rgb(203 213 225 / 2%), rgb(0 0 0 / 30%));
   border-radius: 8px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
   transition: all 0.3s ease;
 }
 
 .evidence-group:hover {
-  border-color: rgb(0 243 255 / 15%);
-  box-shadow: 0 6px 20px rgb(0 243 255 / 8%);
+  border-color: rgb(203 213 225 / 15%);
+  box-shadow: 0 6px 20px rgb(203 213 225 / 8%);
 }
 
 .group-title {
@@ -277,7 +277,7 @@
   text-transform: uppercase;
   letter-spacing: 0.8px;
   padding-bottom: 5px;
-  border-bottom: 1px solid rgb(0 243 255 / 10%);
+  border-bottom: 1px solid rgb(203 213 225 / 10%);
 }
 
 .evp-config-row {
@@ -287,7 +287,7 @@
   padding: 12px;
   background: rgb(0 0 0 / 30%);
   border-radius: 6px;
-  border: 1px solid rgb(255 0 60 / 10%);
+  border: 1px solid rgb(230 57 70 / 10%);
   margin-top: 8px;
 }
 
@@ -301,7 +301,7 @@ label {
 
 .evp-config-row label {
   font-size: 11px;
-  color: #ff003c;
+  color: #e63946;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -310,7 +310,7 @@ label {
 
 .evp-config-row span {
   font-size: 14px;
-  color: #ff003c;
+  color: #e63946;
   font-weight: 800;
   min-width: 60px;
   text-align: right;
@@ -347,9 +347,9 @@ textarea:focus {
   outline: none;
   border-color: var(--nexus-blue);
   box-shadow:
-    0 0 12px rgb(0 243 255 / 20%),
-    inset 0 0 8px rgb(0 243 255 / 5%);
-  background: rgb(0 243 255 / 3%);
+    0 0 12px rgb(203 213 225 / 20%),
+    inset 0 0 8px rgb(203 213 225 / 5%);
+  background: rgb(203 213 225 / 3%);
 }
 
 .upload-btn {
@@ -359,10 +359,10 @@ textarea:focus {
   gap: 8px;
   background: linear-gradient(
     135deg,
-    rgb(0 243 255 / 10%),
-    rgb(0 243 255 / 5%)
+    rgb(203 213 225 / 10%),
+    rgb(203 213 225 / 5%)
   );
-  border: 1px solid rgb(0 243 255 / 20%);
+  border: 1px solid rgb(203 213 225 / 20%);
   color: var(--nexus-blue);
   padding: 10px 14px;
   border-radius: 6px;
@@ -376,13 +376,13 @@ textarea:focus {
 
 .upload-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgb(0 243 255 / 20%);
+  box-shadow: 0 4px 16px rgb(203 213 225 / 20%);
   background: linear-gradient(
     135deg,
-    rgb(0 243 255 / 15%),
-    rgb(0 243 255 / 8%)
+    rgb(203 213 225 / 15%),
+    rgb(203 213 225 / 8%)
   );
-  border-color: rgb(0 243 255 / 40%);
+  border-color: rgb(203 213 225 / 40%);
 }
 
 .upload-btn:active {
@@ -394,7 +394,7 @@ textarea:focus {
   color: var(--nexus-blue);
   margin-left: 8px;
   padding: 4px 8px;
-  background: rgb(0 243 255 / 10%);
+  background: rgb(203 213 225 / 10%);
   border-radius: 4px;
   font-weight: 600;
 }
@@ -416,12 +416,12 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--nexus-blue);
   cursor: pointer;
-  box-shadow: 0 0 10px rgb(0 243 255 / 50%);
+  box-shadow: 0 0 10px rgb(203 213 225 / 50%);
   transition: all 0.2s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 20px rgb(0 243 255 / 80%);
+  box-shadow: 0 0 20px rgb(203 213 225 / 80%);
   transform: scale(1.1);
 }
 
@@ -431,13 +431,13 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: var(--nexus-blue);
   cursor: pointer;
-  box-shadow: 0 0 10px rgb(0 243 255 / 50%);
+  box-shadow: 0 0 10px rgb(203 213 225 / 50%);
   border: none;
   transition: all 0.2s ease;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-  box-shadow: 0 0 20px rgb(0 243 255 / 80%);
+  box-shadow: 0 0 20px rgb(203 213 225 / 80%);
   transform: scale(1.1);
 }
 
@@ -498,7 +498,7 @@ input[type="range"]::-moz-range-thumb:hover {
 .dossier-footer {
   background: rgb(5 8 10 / 98%);
   padding: 8px 12px;
-  border-top: 1px solid rgb(0 243 255 / 20%);
+  border-top: 1px solid rgb(203 213 225 / 20%);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -506,7 +506,7 @@ input[type="range"]::-moz-range-thumb:hover {
   position: sticky;
   bottom: 0;
   z-index: 10001;
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   box-shadow: 0 -2px 10px rgb(0 0 0 / 30%);
 }
 
@@ -561,13 +561,13 @@ select {
 }
 
 select:hover {
-  border-color: rgb(0 243 255 / 20%);
+  border-color: rgb(203 213 225 / 20%);
 }
 
 select:focus {
   outline: none;
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgb(0 243 255 / 10%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 10%);
 }
 
 input[type="checkbox"],
@@ -589,13 +589,13 @@ input[type="radio"] {
 
 input[type="checkbox"]:hover,
 input[type="radio"]:hover {
-  border-color: rgb(0 243 255 / 30%);
+  border-color: rgb(203 213 225 / 30%);
 }
 
 input[type="checkbox"]:checked {
   background: var(--nexus-blue);
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 30%);
 }
 
 /* Checkbox especial para Shredder Puzzle */
@@ -605,10 +605,10 @@ input[type="checkbox"]:checked {
 
 @keyframes checkbox-glow {
   0%, 100% {
-    box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+    box-shadow: 0 0 12px rgb(203 213 225 / 30%);
   }
   50% {
-    box-shadow: 0 0 20px rgb(0 243 255 / 60%), 0 0 30px rgb(100 150 255 / 20%);
+    box-shadow: 0 0 20px rgb(203 213 225 / 60%), 0 0 30px rgb(100 150 255 / 20%);
   }
 }
 
@@ -620,7 +620,7 @@ label[for="shred-check"] {
 
 label[for="shred-check"]:hover {
   color: var(--nexus-blue);
-  text-shadow: 0 0 8px rgb(0 243 255 / 30%);
+  text-shadow: 0 0 8px rgb(203 213 225 / 30%);
 }
 
 /* Aviso de imagem necessária */
@@ -646,7 +646,7 @@ label[for="shred-check"]:hover {
 input[type="radio"]:checked {
   background: var(--nexus-blue);
   border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgb(0 243 255 / 30%);
+  box-shadow: 0 0 12px rgb(203 213 225 / 30%);
 }
 
 label.inline {
@@ -679,7 +679,7 @@ label.inline {
 }
 
 .btn-save {
-  background: linear-gradient(135deg, var(--nexus-blue), rgb(0 243 255 / 70%));
+  background: linear-gradient(135deg, var(--nexus-blue), rgb(203 213 225 / 70%));
   border: none;
   color: #051018;
   padding: 10px 20px;
@@ -690,13 +690,13 @@ label.inline {
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.8px;
-  box-shadow: 0 4px 16px rgb(0 243 255 / 20%);
+  box-shadow: 0 4px 16px rgb(203 213 225 / 20%);
   position: relative;
   z-index: 101;
 }
 
 .btn-save:hover {
-  box-shadow: 0 6px 24px rgb(0 243 255 / 40%);
+  box-shadow: 0 6px 24px rgb(203 213 225 / 40%);
   transform: translateY(-2px);
 }
 
@@ -828,7 +828,7 @@ label.inline {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgb(0 243 255 / 3%) 50%,
+    rgb(203 213 225 / 3%) 50%,
     transparent 100%
   );
   animation: scanline 8s linear infinite;
@@ -926,12 +926,12 @@ label.inline {
   background: var(--nexus-blue);
   box-shadow:
     0 0 10px var(--nexus-blue),
-    inset 0 0 6px rgb(0 243 255 / 50%);
+    inset 0 0 6px rgb(203 213 225 / 50%);
   border-radius: 10px;
 }
 
 .tab-content::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 243 255 / 90%);
+  background: rgb(203 213 225 / 90%);
   box-shadow: 0 0 15px var(--nexus-blue-glow);
 }
 
@@ -965,12 +965,12 @@ label.inline {
   background: var(--nexus-blue);
   box-shadow:
     0 0 10px var(--nexus-blue),
-    inset 0 0 6px rgb(0 243 255 / 50%);
+    inset 0 0 6px rgb(203 213 225 / 50%);
   border-radius: 10px;
 }
 
 .dossier-body::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 243 255 / 90%);
+  background: rgb(203 213 225 / 90%);
   box-shadow: 0 0 15px var(--nexus-blue-glow);
 }
 
@@ -1043,16 +1043,16 @@ label.inline {
   gap: 12px;
   align-items: flex-end;
   padding: 10px;
-  background: rgba(0, 243, 255, 0.05);
-  border: 1px solid rgba(0, 243, 255, 0.15);
+  background: rgb(203 213 225 / 0.05);
+  border: 1px solid rgb(203 213 225 / 0.15);
   border-radius: 6px;
   transition: all 0.3s ease;
 }
 
 .shredder-custom-config:hover {
-  background: rgba(0, 243, 255, 0.08);
-  border-color: rgba(0, 243, 255, 0.25);
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+  background: rgb(203 213 225 / 0.08);
+  border-color: rgb(203 213 225 / 0.25);
+  box-shadow: 0 0 15px rgb(203 213 225 / 0.1);
 }
 
 .shredder-input-group {
@@ -1076,31 +1076,31 @@ label.inline {
   font-weight: bold;
   text-align: center;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  border: 1px solid rgb(203 213 225 / 0.2);
   color: var(--nexus-blue);
   border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .shredder-input-group input[type="number"]:hover {
-  border-color: rgba(0, 243, 255, 0.4);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+  border-color: rgb(203 213 225 / 0.4);
+  box-shadow: 0 0 10px rgb(203 213 225 / 0.15);
 }
 
 .shredder-input-group input[type="number"]:focus {
   outline: none;
   border-color: var(--nexus-blue);
   box-shadow: 
-    0 0 15px rgba(0, 243, 255, 0.3),
-    inset 0 0 10px rgba(0, 243, 255, 0.1);
-  background: rgba(0, 243, 255, 0.05);
+    0 0 15px rgb(203 213 225 / 0.3),
+    inset 0 0 10px rgb(203 213 225 / 0.1);
+  background: rgb(203 213 225 / 0.05);
 }
 
 .shredder-pieces-counter {
   flex: 1;
   padding: 8px 12px;
-  background: rgba(0, 243, 255, 0.1);
-  border: 1px solid rgba(0, 243, 255, 0.25);
+  background: rgb(203 213 225 / 0.1);
+  border: 1px solid rgb(203 213 225 / 0.25);
   border-radius: 4px;
   text-align: center;
   animation: pulse 2s ease-in-out infinite;
@@ -1118,7 +1118,7 @@ label.inline {
   font-size: 18px;
   font-weight: bold;
   color: var(--nexus-blue);
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  text-shadow: 0 0 10px rgb(203 213 225 / 0.5);
 }
 
 @keyframes slideInFromTop {

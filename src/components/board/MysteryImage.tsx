@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { CircleDot } from 'lucide-react';
 import './MysteryEffects.css';
 import useThrottledMouse from '../../hooks/useThrottledMouse';
 
@@ -90,12 +91,12 @@ export function MysteryImage({
             const resp = await fetch(src, { mode: 'cors' });
             const blob = await resp.blob();
             const bitmap = await (window as any).createImageBitmap(blob);
-            try { bitmap.close?.(); } catch (e) {}
+            try { bitmap.close?.(); } catch (e) { }
             // console.debug(`ImageBitmap preloaded: ${src}`);
           } else {
             const img = new Image();
             img.src = src;
-            img.onload = () => {/*noop*/};
+            img.onload = () => {/*noop*/ };
           }
         } catch (e) {
           // ignore preload errors
@@ -209,7 +210,7 @@ export function MysteryImage({
   try {
     // eslint-disable-next-line no-console
     console.debug('MysteryImage debug', { filters, revealSettings, hiddenLayerOpacity });
-  } catch (e) {}
+  } catch (e) { }
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -267,7 +268,7 @@ export function MysteryImage({
     try {
       const _ctx = canvas.getContext('2d');
       if (_ctx) _ctx.clearRect(0, 0, canvas.width || 0, canvas.height || 0);
-    } catch (e) {}
+    } catch (e) { }
 
     const MAX_DIM = 800; // keep reduced size to limit pixel work
 
@@ -277,7 +278,7 @@ export function MysteryImage({
 
     const cleanupWorker = () => {
       if (workerRef.current) {
-        try { workerRef.current.terminate(); } catch (e) {}
+        try { workerRef.current.terminate(); } catch (e) { }
         workerRef.current = null;
       }
     };
@@ -352,7 +353,7 @@ export function MysteryImage({
           try {
             const bitmap = await (window as any).createImageBitmap(img);
             ctx.drawImage(bitmap, sx, sy, sW, sH);
-            try { bitmap.close?.(); } catch (e) {}
+            try { bitmap.close?.(); } catch (e) { }
           } catch (e) {
             ctx.drawImage(img, sx, sy, sW, sH);
           }
@@ -384,7 +385,7 @@ export function MysteryImage({
         const msg = { canvas: offscreen, src: baseSrc, channel: forensicChannel, maxDim: MAX_DIM } as any;
         w.postMessage(msg, [offscreen]);
         // politely ask worker to warm/cache the source as well
-        try { w.postMessage({ type: 'warm', src: baseSrc }); } catch (e) {}
+        try { w.postMessage({ type: 'warm', src: baseSrc }); } catch (e) { }
       } catch (e) {
         // if worker path fails for any reason, fallback to main thread
         doMainThreadProcessing();
@@ -407,7 +408,7 @@ export function MysteryImage({
       try {
         el.style.setProperty('--mouse-x', `${xy.x}px`);
         el.style.setProperty('--mouse-y', `${xy.y}px`);
-      } catch (e) {}
+      } catch (e) { }
       rafId = null;
     };
 
@@ -422,7 +423,7 @@ export function MysteryImage({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    try { el.style.setProperty('--uv-radius', `${RADIUS}px`); } catch (e) {}
+    try { el.style.setProperty('--uv-radius', `${RADIUS}px`); } catch (e) { }
   }, [RADIUS]);
 
   const handleResize = useCallback(() => {
@@ -451,26 +452,26 @@ export function MysteryImage({
       className={`uv-container ${isUVMode ? 'uv-active' : ''} ${className}`}
       ref={containerRef}
       onClick={(e) => {
-        try { e.stopPropagation(); } catch (err) {}
+        try { e.stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         // ignore clicks that are part of a double-click (detail > 1)
         try {
           const detail = (e as any).detail as number | undefined;
           if (typeof detail === 'number' && detail > 1) return;
-        } catch (err) {}
+        } catch (err) { }
         try {
           if (typeof onToggleUV === 'function') {
             onToggleUV();
             return;
           }
-        } catch (err) {}
+        } catch (err) { }
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', origin: 'image' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       onPointerDown={(e) => {
-        try { (e as any).stopPropagation(); } catch (err) {}
+        try { (e as any).stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         try {
@@ -478,43 +479,43 @@ export function MysteryImage({
           if (typeof onToggleUV === 'function') {
             // parent toggle won't support start/end; dispatch event instead
           }
-        } catch (err) {}
+        } catch (err) { }
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'start' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       onPointerUp={(e) => {
-        try { (e as any).stopPropagation(); } catch (err) {}
+        try { (e as any).stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       onPointerLeave={(e) => {
-        try { (e as any).stopPropagation(); } catch (err) {}
+        try { (e as any).stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       // Touch fallback for older browsers that may not fire pointer events reliably
       onTouchStart={(e) => {
-        try { e.stopPropagation(); } catch (err) {}
+        try { e.stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'start' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       onTouchEnd={(e) => {
-        try { e.stopPropagation(); } catch (err) {}
+        try { e.stopPropagation(); } catch (err) { }
         if (!hasSecret) return;
         if (!allowImageUVControl) return;
         try {
           (window as any).dispatchEvent(new CustomEvent('inspection:select-tool', { detail: { tool: 'uv', action: 'end' }, bubbles: true }));
-        } catch (err) {}
+        } catch (err) { }
       }}
       style={{
         ...style,
@@ -603,7 +604,7 @@ export function MysteryImage({
         />
       )}
 
-      {!isUVMode && hasSecret && fit !== 'contain' && <div style={{ position: 'absolute', bottom: 2, right: 4, opacity: 0.6, fontSize: 12 }}>🟣</div>}
+      {!isUVMode && hasSecret && fit !== 'contain' && <CircleDot size={12} aria-label="Camada oculta disponível" style={{ position: 'absolute', bottom: 3, right: 4, opacity: 0.6 }} />}
     </div>
   );
 }

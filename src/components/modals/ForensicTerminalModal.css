@@ -9,17 +9,17 @@
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   animation: ftm-fadeIn 0.2s ease-out;
 }
 
 .ftm-modal {
-  background: var(--nx-surface-alt, #0a0e14);
-  border: 1px solid var(--nx-neon-cyan, #00f3ff);
-  border-radius: var(--nx-radius, 4px);
+  background: var(--bg-1, #11141b);
+  border: 1px solid var(--nexus-blue, #cbd5e1);
+  border-radius: 0;
   width: 90%;
   max-width: 600px;
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.1), inset 0 0 10px rgba(0, 243, 255, 0.05);
+  box-shadow: 0 0 20px rgb(203 213 225 / 0.1), inset 0 0 10px rgb(203 213 225 / 0.05);
   display: flex;
   flex-direction: column;
   animation: ftm-slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -31,39 +31,39 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: rgba(0, 243, 255, 0.05);
-  border-bottom: 1px solid var(--nx-neon-cyan, #00f3ff);
+  background: rgb(203 213 225 / 0.05);
+  border-bottom: 1px solid var(--nexus-blue, #cbd5e1);
 }
 
 .ftm-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--nx-neon-cyan, #00f3ff);
-  font-family: var(--nx-font-mono, 'Courier New', monospace);
+  color: var(--nexus-blue, #cbd5e1);
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+  text-shadow: 0 0 5px rgb(203 213 225 / 0.5);
 }
 
 .ftm-close-btn {
   background: transparent;
   border: none;
-  color: var(--nx-text-muted, #4a5a6a);
+  color: var(--text-color-muted, #94a3b8);
   cursor: pointer;
   padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all 0.2s;
 }
 
 .ftm-close-btn:hover {
-  color: var(--nx-neon-pink, #ff0055);
-  background: rgba(255, 0, 85, 0.1);
+  color: var(--nexus-glitch, #e63946);
+  background: rgb(230 57 70 / 0.1);
 }
 
 .ftm-body {
@@ -75,7 +75,7 @@
 
 .ftm-description {
   font-size: 13px;
-  color: var(--nx-text-secondary, #8a9ba8);
+  color: var(--text-color-muted, #94a3b8);
   line-height: 1.5;
 }
 
@@ -90,17 +90,17 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--nx-text-primary, #e1e8ed);
+  color: var(--text-color, #f1f5f9);
   font-weight: 600;
 }
 
 .ftm-input {
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid var(--nx-border, #1a2535);
-  color: var(--nx-neon-cyan, #00f3ff);
+  border: 1px solid var(--border-color, #29313d);
+  color: var(--nexus-blue, #cbd5e1);
   padding: 10px 12px;
-  border-radius: 4px;
-  font-family: var(--nx-font-mono, 'Courier New', monospace);
+  border-radius: 0;
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
   font-size: 14px;
   outline: none;
   transition: all 0.2s;
@@ -108,21 +108,21 @@
 }
 
 .ftm-input:focus {
-  border-color: var(--nx-neon-cyan, #00f3ff);
-  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+  border-color: var(--nexus-blue, #cbd5e1);
+  box-shadow: 0 0 10px rgb(203 213 225 / 0.2);
 }
 
 .ftm-input::placeholder {
-  color: var(--nx-text-muted, #4a5a6a);
+  color: var(--text-color-muted, #94a3b8);
   letter-spacing: normal;
 }
 
 .ftm-btn-extract {
-  background: var(--nx-neon-cyan, #00f3ff);
+  background: var(--nexus-blue, #cbd5e1);
   color: #000;
   border: none;
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 0;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
@@ -137,29 +137,29 @@
 
 .ftm-btn-extract:hover:not(:disabled) {
   background: #fff;
-  box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+  box-shadow: 0 0 15px rgb(203 213 225 / 0.6);
 }
 
 .ftm-btn-extract:disabled {
-  background: var(--nx-surface-elevated, #10161e);
-  color: var(--nx-text-muted, #4a5a6a);
+  background: var(--bg-elevated, #1b2330);
+  color: var(--text-color-muted, #94a3b8);
   cursor: not-allowed;
-  border: 1px solid var(--nx-border, #1a2535);
+  border: 1px solid var(--border-color, #29313d);
 }
 
 .ftm-btn-extract.loading {
   background: transparent;
-  color: var(--nx-neon-cyan, #00f3ff);
-  border: 1px dashed var(--nx-neon-cyan, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
+  border: 1px dashed var(--nexus-blue, #cbd5e1);
   animation: ftm-pulse 1.5s infinite;
 }
 
 .ftm-terminal-screen {
-  background: #000;
-  border: 1px solid var(--nx-border, #1a2535);
-  border-radius: 4px;
+  background: #0b0c10;
+  border: 1px solid var(--border-color, #29313d);
+  border-radius: 0;
   padding: 16px;
-  font-family: var(--nx-font-mono, 'Courier New', monospace);
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
   font-size: 13px;
   min-height: 200px;
   max-height: 300px;
@@ -179,36 +179,36 @@
   left: 0;
   bottom: 0;
   right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgb(34 197 94 / 0.02), rgba(0, 0, 255, 0.06));
   z-index: 2;
   background-size: 100% 2px, 3px 100%;
   pointer-events: none;
 }
 
 .ftm-log-default {
-  color: var(--nx-neon-cyan, #00f3ff);
+  color: var(--nexus-blue, #cbd5e1);
 }
 
 .ftm-log-success {
-  color: var(--nx-neon-green, #00ff00);
-  text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+  color: #22c55e;
+  text-shadow: 0 0 5px rgb(34 197 94 / 0.3);
 }
 
 .ftm-log-error {
-  color: var(--nx-neon-pink, #ff0055);
-  text-shadow: 0 0 5px rgba(255, 0, 85, 0.3);
+  color: var(--nexus-glitch, #e63946);
+  text-shadow: 0 0 5px rgb(230 57 70 / 0.3);
 }
 
 .ftm-hint {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--nx-warning, #ffaa00);
+  color: #eab308;
   font-size: 12px;
-  background: rgba(255, 170, 0, 0.05);
+  background: rgb(234 179 8 / 0.05);
   padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 170, 0, 0.2);
+  border-radius: 0;
+  border: 1px solid rgb(234 179 8 / 0.2);
 }
 
 /* Animations */
@@ -218,14 +218,14 @@
 }
 
 @keyframes ftm-slideUp {
-  from { transform: translateY(20px) scale(0.95); opacity: 0; }
+  from { transform: translateY(8px); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 @keyframes ftm-pulse {
-  0% { box-shadow: 0 0 0 rgba(0, 243, 255, 0.4); }
-  50% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); }
-  100% { box-shadow: 0 0 0 rgba(0, 243, 255, 0.4); }
+  0% { box-shadow: 0 0 0 rgb(203 213 225 / 0.4); }
+  50% { box-shadow: 0 0 15px rgb(203 213 225 / 0.4); }
+  100% { box-shadow: 0 0 0 rgb(203 213 225 / 0.4); }
 }
 
 /* Custom Scrollbar */
@@ -236,9 +236,9 @@
   background: transparent;
 }
 .ftm-terminal-screen::-webkit-scrollbar-thumb {
-  background: var(--nx-border, #1a2535);
-  border-radius: 3px;
+  background: var(--border-color, #29313d);
+  border-radius: 0;
 }
 .ftm-terminal-screen::-webkit-scrollbar-thumb:hover {
-  background: var(--nx-text-muted, #4a5a6a);
+  background: var(--text-color-muted, #94a3b8);
 }
