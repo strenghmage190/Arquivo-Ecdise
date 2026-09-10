@@ -658,6 +658,8 @@
 
 .quick-modal-card {
   width: min(520px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   box-sizing: border-box;
   padding: 26px;
   border: 1px solid var(--home-border);

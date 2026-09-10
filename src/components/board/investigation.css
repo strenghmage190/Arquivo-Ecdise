@@ -166,7 +166,7 @@ body.space-panning .corkboard-canvas:active {
   display: flex;
   align-items: center;
   max-width: calc(100vw - 32px);
-  overflow-x: auto;
+  overflow: visible;
   padding: 6px 8px;
   background: rgb(15 17 23 / 85%);
   border: 1px solid var(--border);
@@ -225,6 +225,7 @@ body.space-panning .corkboard-canvas:active {
 
 .board-button,
 .hud-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;

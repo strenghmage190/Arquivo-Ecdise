@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
 import Desktop from '../components/layout/Desktop';
-import { createInvestigation, deleteInvestigation } from '../api/investigations';
+import { createInvestigation, deleteInvestigation, updateInvestigation } from '../api/investigations';
+
+import artSangue from '../../assets/ordem/Altera3Fes_de_Sangue_em_Sobrevivendo_ao_Horror.webp';
+import artMorte from '../../assets/ordem/Altera3Fes_de_Morte_em_Sobrevivendo_ao_Horror.webp';
+import artConhecimento from '../../assets/ordem/Altera3Fes_de_Conhecimento_em_Sobrevivendo_ao_Horror.webp';
+import artEnergia from '../../assets/ordem/Altera3Fes_de_Energia_em_Sobrevivendo_ao_Horror.webp';
+import artMedo from '../../assets/ordem/Medo.webp';
+import artMedoAlt from '../../assets/ordem/Medo_alt.webp';
 
 const ARCHIVE_ART = {
   hero: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2Fe7ef5a85ce2149138f7aa6359c8c6e6e',
@@ -12,7 +19,12 @@ const ARCHIVE_ART = {
   morte: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F5b95b382ddba400285c5133f82db3d2e',
   conhecimento: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F7cfe432a926148baa1f91932bfa4ee8b',
   energia: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F83a99cbf648c481a81b23068a2c88d4b',
-  medo: 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2Fe041d53d3b6b426691cf8f5a76051b0d',
+  medo: artMedo,
+  medo_alt: artMedoAlt,
+  sangue_alt: artSangue,
+  morte_alt: artMorte,
+  conhecimento_alt: artConhecimento,
+  energia_alt: artEnergia,
 } as const;
 
 const CASE_ART = [
@@ -22,6 +34,19 @@ const CASE_ART = [
   { key: 'energia', label: 'ENERGIA', short: 'ENE', src: ARCHIVE_ART.energia },
   { key: 'medo', label: 'MEDO', short: 'MED', src: ARCHIVE_ART.medo },
 ] as const;
+
+const HERO_CONTENT = [
+  { art: 'sangue', key: 'sangue', label: 'SANGUE', title1: 'O que foi ocultado', title2: 'deixa vestígio.' },
+  { art: 'sangue_alt', key: 'sangue', label: 'SANGUE', title1: 'A carne se contorce', title2: 'e a dor ensina.' },
+  { art: 'morte', key: 'morte', label: 'MORTE', title1: 'O tempo distorce', title2: 'o que já pereceu.' },
+  { art: 'morte_alt', key: 'morte', label: 'MORTE', title1: 'Cinzas ao vento', title2: 'do fim inevitável.' },
+  { art: 'conhecimento', key: 'conhecimento', label: 'CONHECIMENTO', title1: 'A verdade enlouquece', title2: 'quem tenta entender.' },
+  { art: 'conhecimento_alt', key: 'conhecimento', label: 'CONHECIMENTO', title1: 'O saber absoluto', title2: 'exige sacrifícios.' },
+  { art: 'energia', key: 'energia', label: 'ENERGIA', title1: 'O caos se espalha', title2: 'sem pedir licença.' },
+  { art: 'energia_alt', key: 'energia', label: 'ENERGIA', title1: 'A fúria elétrica', title2: 'não pode ser contida.' },
+  { art: 'medo', key: 'medo', label: 'MEDO', title1: 'O terror ancestral', title2: 'nunca desaparece.' },
+  { art: 'medo_alt', key: 'medo', label: 'MEDO', title1: 'O medo é', title2: 'infinito.' },
+];
 
 const CASE_EVOLUTIONS = [
   'METAMORFOSE',
@@ -65,8 +90,13 @@ export default function Home() {
   const [newElement, setNewElement] = useState<CaseElement | ''>('');
   const [newEvolution, setNewEvolution] = useState<CaseEvolution | ''>('');
   const [creating, setCreating] = useState(false);
+  const [heroElement, setHeroElement] = useState(HERO_CONTENT[0]);
+  const [imageMode, setImageMode] = useState<'default' | 'url' | 'upload'>('default');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
 
   useEffect(() => {
+    setHeroElement(HERO_CONTENT[Math.floor(Math.random() * HERO_CONTENT.length)]);
     fetchCases();
   }, []);
 
@@ -92,9 +122,15 @@ export default function Home() {
     if (!title || !newElement) return;
     setCreating(true);
     try {
-      const created = await createInvestigation(title, newDescription.trim() || undefined, coverUrl.trim() || undefined);
-      if (created?.id) {
-        const newId = String(created.id).split(':')[0];
+      let targetId = editingCaseId;
+      if (editingCaseId) {
+        await updateInvestigation(editingCaseId, { title, description: newDescription.trim() || null, cover_url: coverUrl.trim() || null });
+      } else {
+        const created = await createInvestigation(title, newDescription.trim() || undefined, coverUrl.trim() || undefined);
+        targetId = created?.id;
+      }
+      if (targetId) {
+        const newId = String(targetId).split(':')[0];
         const classifications = readCaseClassifications();
         classifications[newId] = {
           element: newElement,
@@ -102,16 +138,11 @@ export default function Home() {
         };
         window.localStorage.setItem(CLASSIFICATIONS_STORAGE_KEY, JSON.stringify(classifications));
         setShowCreateModal(false);
-        setNewTitle('');
-        setNewDescription('');
-        setCoverUrl('');
-        setNewElement('');
-        setNewEvolution('');
         await fetchCases();
-        navigate(`/case/${newId}`);
+        if (!editingCaseId) navigate(`/case/${newId}`);
       }
     } catch (error) {
-      alert('Erro ao iniciar caso');
+      alert('Erro ao salvar caso');
     } finally {
       setCreating(false);
     }
@@ -135,11 +166,27 @@ export default function Home() {
   }
 
   function openCreateModal() {
+    setEditingCaseId(null);
     setNewTitle('');
     setNewDescription('');
     setCoverUrl('');
     setNewElement('');
     setNewEvolution('');
+    setImageMode('default');
+    setUploadingImage(false);
+    setShowCreateModal(true);
+  }
+
+  function openEditModal(caseData: any) {
+    setEditingCaseId(caseData.id);
+    setNewTitle(caseData.title || '');
+    setNewDescription(caseData.description || '');
+    setCoverUrl(caseData.cover_url || '');
+    setNewElement(caseData.element || '');
+    setNewEvolution(caseData.evolution || '');
+    const isDefault = !caseData.cover_url || Object.values(ARCHIVE_ART).includes(caseData.cover_url);
+    setImageMode(isDefault ? 'default' : (caseData.cover_url?.includes('supabase') ? 'upload' : 'url'));
+    setUploadingImage(false);
     setShowCreateModal(true);
   }
 
@@ -179,17 +226,17 @@ export default function Home() {
         <section className={styles['archive-hero']} aria-labelledby="home-hero-title">
           <div className={styles['hero-copy']}>
             <div className={styles['hero-kicker']}><FolderOpen size={14} /> CENTRAL DE INVESTIGAÇÕES</div>
-            <h2 id="home-hero-title">O que foi ocultado<br /><em>deixa vestígio.</em></h2>
+            <h2 id="home-hero-title">{heroElement.title1}<br /><em style={{ color: `var(--home-${heroElement.key})` }}>{heroElement.title2}</em></h2>
             <p>Reúna pistas, preserve versões e acompanhe a ruptura antes que ela encontre o próximo agente.</p>
             <button type="button" className={styles['primary-action']} onClick={openCreateModal}>
               <Plus size={16} /> ABRIR NOVO CASO
             </button>
           </div>
           <div className={styles['hero-art']}>
-            <img src={ARCHIVE_ART.hero} alt="Alterações de sangue em quatro estágios" />
+            <img src={ARCHIVE_ART[heroElement.art as keyof typeof ARCHIVE_ART]} alt={`Alterações de ${heroElement.key} em quatro estágios`} />
             <div className={styles['hero-art-label']}>
               <span>PLACA DE REFERÊNCIA 01</span>
-              <strong>ALTERAÇÃO // SANGUE</strong>
+              <strong style={{ color: `var(--home-${heroElement.key})` }}>ALTERAÇÃO // {heroElement.label}</strong>
             </div>
           </div>
         </section>
@@ -235,18 +282,32 @@ export default function Home() {
                   <div className={styles['case-scanline']} aria-hidden="true" />
                   <div className={styles['case-card-top']}>
                     <span className={styles['case-index']}>CASO {String(index + 1).padStart(2, '0')}</span>
-                    <button
-                      type="button"
-                      className={styles['case-delete']}
-                      title="Apagar caso"
-                      aria-label={`Apagar caso ${currentCase.title}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDelete(currentCase.id);
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        className={styles['case-delete']}
+                        title="Editar caso"
+                        aria-label={`Editar caso ${currentCase.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEditModal(currentCase);
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className={styles['case-delete']}
+                        title="Apagar caso"
+                        aria-label={`Apagar caso ${currentCase.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(currentCase.id);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div className={styles['case-card-body']}>
                     <span className={styles['case-element']}><Image size={12} /> {art.label}</span>
@@ -287,8 +348,8 @@ export default function Home() {
           <div className={styles['quick-modal-card']} onClick={(event) => event.stopPropagation()}>
             <div className={styles['quick-modal-header']}>
               <div>
-                <div className={styles['eyebrow']}>PROTOCOLO // ABERTURA</div>
-                <h2 id="create-case-title">Novo caso</h2>
+                <div className={styles['eyebrow']}>PROTOCOLO // {editingCaseId ? 'ATUALIZAÇÃO' : 'ABERTURA'}</div>
+                <h2 id="create-case-title">{editingCaseId ? 'Editar caso' : 'Novo caso'}</h2>
               </div>
               <button type="button" className={styles['modal-close']} onClick={() => setShowCreateModal(false)} aria-label="Fechar abertura de caso">
                 <X size={17} />
@@ -334,18 +395,100 @@ export default function Home() {
               onChange={(event) => setNewDescription(event.target.value)}
               rows={3}
             />
-            <label htmlFor="case-cover">Imagem de capa (opcional)</label>
-            <input
-              id="case-cover"
-              className={styles['quick-input']}
-              placeholder="https://..."
-              value={coverUrl}
-              onChange={(event) => setCoverUrl(event.target.value)}
-            />
+            <label>Imagem de capa (opcional)</label>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: '11px', color: 'var(--home-muted)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input type="radio" name="imgMode" checked={imageMode === 'default'} onChange={() => { setImageMode('default'); setCoverUrl(''); }} /> Padrão
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input type="radio" name="imgMode" checked={imageMode === 'url'} onChange={() => setImageMode('url')} /> Link da Web
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input type="radio" name="imgMode" checked={imageMode === 'upload'} onChange={() => setImageMode('upload')} /> Enviar Arquivo
+              </label>
+            </div>
+            {imageMode === 'default' && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  gap: '8px', 
+                  marginBottom: '16px', 
+                  overflowX: 'auto', 
+                  paddingBottom: '8px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--home-muted) transparent'
+                }}
+              >
+                {Object.entries(ARCHIVE_ART).map(([key, src]) => {
+                  const isSelected = coverUrl === src || (!coverUrl && key === newElement);
+                  return (
+                    <button 
+                      key={key} 
+                      type="button"
+                      onClick={() => setCoverUrl(src)}
+                      style={{ 
+                        flex: '0 0 70px',
+                        padding: 0, 
+                        border: isSelected ? '2px solid var(--nexus-blue)' : '2px solid transparent', 
+                        background: 'none', 
+                        cursor: 'pointer',
+                        opacity: isSelected ? 1 : 0.6,
+                        transition: 'all 0.2s ease',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}
+                      title={key}
+                    >
+                      <img src={src} alt={key} style={{ width: '100%', height: '48px', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {imageMode === 'url' && (
+              <input
+                className={styles['quick-input']}
+                placeholder="https://..."
+                value={coverUrl}
+                onChange={(event) => setCoverUrl(event.target.value)}
+              />
+            )}
+            {imageMode === 'upload' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className={styles['quick-input']}
+                  disabled={uploadingImage}
+                  style={{ padding: '8px' }}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setUploadingImage(true);
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                      const path = `case-covers/${fileName}`;
+                      const { error } = await supabase.storage.from('investigation-assets').upload(path, file);
+                      if (error) throw error;
+                      const { data } = supabase.storage.from('investigation-assets').getPublicUrl(path);
+                      setCoverUrl(data.publicUrl);
+                    } catch (error) {
+                      console.error(error);
+                      alert('Erro ao enviar imagem');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                  }}
+                />
+                {uploadingImage && <small style={{ color: 'var(--home-muted)' }}>Enviando arquivo...</small>}
+                {coverUrl && !uploadingImage && <small style={{ color: 'var(--home-conhecimento)' }}>Arquivo enviado com sucesso!</small>}
+              </div>
+            )}
             <div className={styles['quick-actions']}>
               <button type="button" className={styles['secondary-action']} onClick={() => setShowCreateModal(false)}>CANCELAR</button>
               <button type="button" className={styles['primary-action']} disabled={!newTitle.trim() || !newElement || creating} onClick={handleCreate}>
-                {creating ? 'CRIANDO...' : 'INICIAR CASO'}
+                {creating ? 'SALVANDO...' : editingCaseId ? 'SALVAR ALTERAÇÕES' : 'INICIAR PROTOCOLO'}
               </button>
             </div>
           </div>

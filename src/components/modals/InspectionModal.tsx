@@ -705,7 +705,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // Nota: ativamos o modo de performance apenas durante o arraste (will-change = 'transform').
       // Aqui deixamos em 'auto' para que o navegador redesenhe em alta qualidade quando não estiver arrastando.
       transformTarget.style.willChange = 'auto';
-      transformTarget.style.transformOrigin = 'center center'; // Zoom no centro facilita no mobile
+      transformTarget.style.transformOrigin = 'center center';
       
       // Adiciona controles visuais se não existirem
       if (!container.querySelector('.image-controls')) {
@@ -778,12 +778,34 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       };
 
       // Zoom via Botões ou Roda do Mouse
-      const zoom = (delta: number) => {
-        const newScale = Math.max(1, Math.min(8, state.scale + delta));
-        state.scale = newScale;
+      const zoom = (delta: number, clientX?: number, clientY?: number) => {
+        const oldScale = state.scale;
+        const newScale = Math.max(1, Math.min(10, state.scale + delta));
+        
         if (newScale === 1) {
+          state.scale = 1;
           state.pointX = 0;
           state.pointY = 0;
+        } else {
+          const rect = container.getBoundingClientRect();
+          let cx, cy;
+          if (clientX !== undefined && clientY !== undefined) {
+            cx = clientX - rect.left;
+            cy = clientY - rect.top;
+          } else {
+            cx = rect.width / 2;
+            cy = rect.height / 2;
+          }
+          
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          
+          const mouseOffsetX = cx - centerX;
+          const mouseOffsetY = cy - centerY;
+          
+          state.pointX -= (mouseOffsetX - state.pointX) * (newScale - oldScale) / oldScale;
+          state.pointY -= (mouseOffsetY - state.pointY) * (newScale - oldScale) / oldScale;
+          state.scale = newScale;
         }
         updateTransform();
       };
@@ -812,24 +834,24 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       // Wheel Zoom (Mouse)
       const onWheel = (e: WheelEvent) => {
-        // Always use wheel to control zoom when pointer is over the container.
-        // Use a scaled delta so each tick feels smooth.
-        try {
-          e.preventDefault();
-        } catch (err) {}
-        const delta = -Math.sign(e.deltaY) * 0.12; // negative because wheel down usually positive deltaY
-        // apply smaller delta when scale is already high for finer control
-        const step = Math.abs(state.scale) > 2 ? delta * 0.6 : delta;
-        zoom(step);
+        try { e.preventDefault(); } catch (err) {}
+        const delta = -Math.sign(e.deltaY) * 0.25;
+        const step = Math.abs(state.scale) > 2 ? delta * 0.8 : delta;
+        zoom(step, e.clientX, e.clientY);
       };
       container.addEventListener('wheel', onWheel, { passive: false });
 
       // Double Click Reset
-      const onDblClick = () => {
-        state.scale = state.scale > 1 ? 1 : 2.5; // Toggle zoom
-        state.pointX = 0; state.pointY = 0;
-        updateTransform();
-      }
+      const onDblClick = (e: MouseEvent) => {
+        if (state.scale > 1) {
+          state.scale = 1;
+          state.pointX = 0; 
+          state.pointY = 0;
+          updateTransform();
+        } else {
+          zoom(1.5, e.clientX, e.clientY);
+        }
+      };
       container.addEventListener('dblclick', onDblClick);
 
       return () => {

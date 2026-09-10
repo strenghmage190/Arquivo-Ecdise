@@ -2032,7 +2032,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid var(--border)':'none' }}
                 data-tooltip="Fato"
               >
-                <div style={{width:10, height:10, background:'var(--text-secondary)'}} />
+                <div style={{width:10, height:10, background:'#c62828'}} />
               </button>
               <button 
                 className="hud-btn icon-only"
@@ -2040,7 +2040,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid var(--border)':'none' }}
                 data-tooltip="Teoria"
               >
-                <div style={{width:10, height:10, background:'var(--text-secondary)'}} />
+                <div style={{width:10, height:10, background:'#f9a825'}} />
               </button>
               <button 
                 className="hud-btn icon-only" 
@@ -2048,7 +2048,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid var(--border)':'none' }}
                 data-tooltip="Sobrenatural"
               >
-                <div style={{width:10, height:10, background:'var(--text-secondary)'}} />
+                <div style={{width:10, height:10, background:'#7e57c2'}} />
               </button>
             </>
           )}
