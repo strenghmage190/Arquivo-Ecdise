@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './BootScreen.css';
 
-const BOOT_ART = 'https://cdn.builder.io/api/v1/image/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F83a99cbf648c481a81b23068a2c88d4b';
+import BOOT_ART from '../../../assets/ordem/Simbolo da Ordem.png';
 
 export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   const [lines, setLines] = useState<string[]>([]);

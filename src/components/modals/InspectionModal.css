@@ -1951,10 +1951,11 @@ input[type="number"].filter-number {
     justify-content: center !important;
   }
 
-  /* Reduce sizes for buttons/actions to fit narrow header */ 
-  .actions { max-width: 100%; overflow-x: auto; gap: 6px; }
-  .btn-tool-tab { padding: 8px 10px; font-size: 11px; min-width: 44px; height: 36px; }
-  .btn-tool-tab.active-green, .btn-tool-tab.active-blue, .btn-tool-tab.active-purple { padding: 8px 10px; }
+  /* Reduce sizes for buttons/actions to fit narrow header without wrapping */ 
+  .actions { max-width: 100%; overflow-x: auto; gap: 4px; flex-wrap: nowrap !important; scrollbar-width: none; }
+  .actions::-webkit-scrollbar { display: none; }
+  .btn-tool-tab { padding: 6px 6px; font-size: 10px; min-width: auto; height: 34px; flex-shrink: 0; letter-spacing: 0; }
+  .btn-tool-tab.active-green, .btn-tool-tab.active-blue, .btn-tool-tab.active-purple { padding: 6px 6px; }
   /* HUD -> bottom sheet */ 
   .tools-hud-panel, .filters-overlay-panel {
     position: fixed !important;

@@ -14,6 +14,7 @@ import EventEmitter from 'eventemitter3';
 import { initDisplayConfigCache } from './config/displayConfig';
 // import { setupGlobalMouseListeners } from './hooks/useGlobalMouseEvents'; // Desabilitado - cursor customizado removido
 import { validatePolyfills, logValidationResults } from './utils/validatePolyfills';
+import { ErrorBoundary } from './ErrorBoundary';
 
 // Expose React version for polyfill validation and detect single instance
 if (typeof window !== 'undefined') {
@@ -28,7 +29,11 @@ const root = createRoot(container);
 initDisplayConfigCache()
   .catch((e) => console.warn('displayConfig cache init error', e))
   .finally(() => {
-    root.render(<App />);
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   });
 
 // Defer validation to next animation frame so CSS and other imports settle

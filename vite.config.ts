@@ -16,6 +16,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@excalidraw/excalidraw', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
   },
+  server: {
+    host: true,
+  },
   ssr: {
     noExternal: ['@excalidraw/excalidraw']
   },
