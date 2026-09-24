@@ -50,15 +50,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
     setShowGlitchSolver(false);
-
-    // Carregar estado de puzzle resolvido do localStorage
-    if (card?.investigation_id && card?.id) {
-      const solvedKey = `shredder_solved_${card.investigation_id}_${card.id}`;
-      const saved = localStorage.getItem(solvedKey);
-      setPuzzleSolved(saved === 'true');
-    } else {
-      setPuzzleSolved(false);
-    }
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
@@ -91,7 +82,13 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       if (forensicMode !== 'none') setForensicMode('none');
     }
   }, [forensicMode]);
-  const [puzzleSolved, setPuzzleSolved] = useState(false);
+  const [puzzleSolved, setPuzzleSolved] = useState(() => {
+    if (card?.investigation_id && card?.id) {
+      const saved = localStorage.getItem(`shredder_solved_${card.investigation_id}_${card.id}`);
+      return saved === 'true';
+    }
+    return false;
+  });
   const [shredderModalOpen, setShredderModalOpen] = useState(false);
 
   // Salvar estado de puzzle resolvido no localStorage
@@ -478,15 +475,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
   // Lock body scroll while the modal is open and focus the modal for accessibility
   React.useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.classList.add('inspection-modal-open');
       // focus the modal container so screen readers and keyboard users land inside it
       setTimeout(() => { fileRef.current?.focus(); }, 0);
     } else {
-      document.body.style.overflow = prevOverflow;
+      document.body.classList.remove('inspection-modal-open');
     }
-    return () => { document.body.style.overflow = prevOverflow; };
+    return () => { document.body.classList.remove('inspection-modal-open'); };
   }, [isOpen]);
 
   if (!isOpen || !(card || serverCard)) return null;
@@ -959,28 +955,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             )}
             <button
               onClick={() => setShredderModalOpen(true)}
-              style={{
-                padding: '14px 28px',
-                background: 'linear-gradient(90deg, #00f3ff, #ff003c)',
-                border: 'none',
-                borderRadius: '8px',
-                color: '#051018',
-                fontSize: '14px',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 16px rgba(0, 243, 255, 0.3)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 243, 255, 0.5)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 243, 255, 0.3)';
-              }}
+              className="btn-reconstructor"
             >
               🧩 ABRIR RECONSTRUTOR
             </button>

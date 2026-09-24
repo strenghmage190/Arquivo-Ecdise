@@ -2034,3 +2034,27 @@ input[type="number"].filter-number {
   }
 
 }
+
+.inspection-modal-open { overflow: hidden !important; }
+
+
+.btn-reconstructor {
+  padding: 14px 28px;
+  background: linear-gradient(90deg, #00f3ff, #ff003c);
+  border: none;
+  border-radius: 8px;
+  color: #051018;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 243, 255, 0.3);
+}
+
+.btn-reconstructor:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 243, 255, 0.5);
+}
+
