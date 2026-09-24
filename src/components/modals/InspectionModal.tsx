@@ -72,7 +72,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
 
-  const disableAllBut = (mode: string) => {
+  const disableAllBut = React.useCallback((mode: string) => {
     // filters
     if (mode === 'filters') setShowFilters(prev => !prev);
     else setShowFilters(false);
@@ -90,7 +90,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // if selecting another mode, close forensic panel
       if (forensicMode !== 'none') setForensicMode('none');
     }
-  };
+  }, [forensicMode]);
   const [puzzleSolved, setPuzzleSolved] = useState(false);
   const [shredderModalOpen, setShredderModalOpen] = useState(false);
 
@@ -137,15 +137,17 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     };
 
     const handleReposition = () => {
-      const btn = moreToolsBtnRef.current;
-      const modalEl = fileRef.current;
-      if (!btn || !modalEl) return;
-      const btnRect = btn.getBoundingClientRect();
-      const modalRect = modalEl.getBoundingClientRect();
-      setMoreToolsPos({
-        left: Math.max(8, (btnRect.left - (modalRect.left || 0))),
-        top: Math.max(8, (btnRect.bottom - (modalRect.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
-        width: btnRect.width,
+      requestAnimationFrame(() => {
+        const btn = moreToolsBtnRef.current;
+        const modalEl = fileRef.current;
+        if (!btn || !modalEl) return;
+        const btnRect = btn.getBoundingClientRect();
+        const modalRect = modalEl.getBoundingClientRect();
+        setMoreToolsPos({
+          left: Math.max(8, (btnRect.left - (modalRect.left || 0))),
+          top: Math.max(8, (btnRect.bottom - (modalRect.top || 0)) + DROPDOWN_VERTICAL_OFFSET),
+          width: btnRect.width,
+        });
       });
     };
 
@@ -580,8 +582,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       cursorColor: '#ff0066',
       height: 64,
       responsive: true,
-      backend: 'MediaElement',
-      media: audioElementRef.current || undefined,
       normalize: true,
     });
 
@@ -593,13 +593,16 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       setAudioDuration(dur);
     });
 
-    ws.on('audioprocess', () => {
-      setAudioPosition(ws.getCurrentTime() || 0);
-    });
-
-    ws.on('timeupdate', () => {
-      setAudioPosition(ws.getCurrentTime() || 0);
-    });
+    let lastUpdate = 0;
+    const updatePos = () => {
+      const now = Date.now();
+      if (now - lastUpdate > 250) {
+        setAudioPosition(ws.getCurrentTime() || 0);
+        lastUpdate = now;
+      }
+    };
+    ws.on('audioprocess', updatePos);
+    ws.on('timeupdate', updatePos);
 
     ws.on('play', () => setAudioIsPlaying(true));
     ws.on('pause', () => setAudioIsPlaying(false));
