@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-09-24T14:42:54.827Z"
 last_activity: 2026-09-24
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,9 +16,9 @@ progress:
 # Project State
 
 **Project:** Arquivo Ecdise
-**Milestone:** v2.0 Terminal Ordo Realitas
+**Milestone:** v2.1 Performance e Otimização Global
 **Status:** Planning
-**Date:** 2026-09-07
+**Date:** 2026-09-24
 
 ## Current Position
 
@@ -32,7 +32,8 @@ Last activity: 2026-09-24 — Milestone v2.1 started
 - ✅ **v1.0 UVEditor UI/UX Refactor & Layers Modernization** (Shipped 2026-08-15)
 - ✅ **v1.1 Audio Lab & Spectrogram Steganography Suite** (Shipped 2026-08-18)
 - ✅ **v1.2 CreateClueModal Refactoring & Cyberpunk UX** (Shipped 2026-09-07)
-- ◆ **v2.0 Terminal Ordo Realitas** (Active)
+- ✅ **v2.0 Terminal Ordo Realitas** (Shipped 2026-09-24)
+- ◆ **v2.1 Performance e Otimização Global** (Active)
 
 ---
-*State updated: 2026-09-07*
+*State updated: 2026-09-24*
