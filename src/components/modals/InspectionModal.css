@@ -2035,7 +2035,7 @@ input[type="number"].filter-number {
 
 }
 
-.inspection-modal-open { overflow: hidden !important; }
+.inspection-modal-open { overflow: hidden !important; overscroll-behavior: none; touch-action: none; }
 
 
 .btn-reconstructor {
@@ -2053,8 +2053,12 @@ input[type="number"].filter-number {
   box-shadow: 0 4px 16px rgba(0, 243, 255, 0.3);
 }
 
-.btn-reconstructor:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 243, 255, 0.5);
+@media (hover: hover) and (pointer: fine) {
+  .btn-reconstructor:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0, 243, 255, 0.5);
+  }
 }
 
+
+.filter-range, input[type="range"] { touch-action: pan-y; }

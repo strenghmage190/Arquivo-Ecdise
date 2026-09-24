@@ -835,7 +835,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       container.removeEventListener('touchmove', onMouseMove);
       container.removeEventListener('touchend', onMouseUp);
       container.removeEventListener('wheel', onWheel);
-      container.removeEventListener('dblclick', onDblClick);
+      container.removeEventListener('dblclick', onDblClickWrapper);
+      container.removeEventListener('touchstart', onTouchStartDouble);
 
       // Cleanup transform and reset will-change so browser may re-render in full quality
       try { transformTarget.style.willChange = 'auto'; } catch (err) { }
