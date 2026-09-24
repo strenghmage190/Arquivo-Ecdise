@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: milestone
-status: completed
-last_updated: "2026-09-24T16:43:47.546Z"
-last_activity: 2026-09-24 -- Phase 13 plan approved
+status: executing
+last_updated: "2026-09-24T16:45:15.945Z"
+last_activity: 2026-09-24 -- Phase 15 execution started
 progress:
   total_phases: 4
   completed_phases: 2
@@ -17,15 +17,15 @@ progress:
 
 **Project:** Arquivo Ecdise
 **Milestone:** v2.1 Performance e Otimização Global
-**Status:** Phase 12 complete
+**Status:** Executing Phase 15
 **Date:** 2026-09-24
 
 ## Current Position
 
-Phase: 13 (refatora-o-css-e-re-renders) — PLANNED
+Phase: 15 (estado-global-debounce) — EXECUTING
 Plan: 1 of 1
-Status: Phase 13 plan approved
-Last activity: 2026-09-24 -- Phase 13 plan approved
+Status: Executing Phase 15
+Last activity: 2026-09-24 -- Phase 15 execution started
 
 ## Milestones Overview
 
