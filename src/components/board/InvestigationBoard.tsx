@@ -1063,14 +1063,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       // if multiple selected and the dragged id is part of selection, move all selected
       const sel = selectedIdsRef.current || [];
       if (sel.length > 0 && sel.includes(d.id)) {
-        setLocalPositions((prev) => {
-          const next = { ...prev };
-          sel.forEach((sid) => {
-            const base = (d.origPositions && d.origPositions[sid]) ? d.origPositions[sid] : (prev[sid] || { x: d.origX, y: d.origY });
-            const offset = (d.pointerOffsets && d.pointerOffsets[sid]) ? d.pointerOffsets[sid] : { ox: (d.startWorldX ?? worldX) - base.x, oy: (d.startWorldY ?? worldY) - base.y };
-            next[sid] = { x: worldX - offset.ox, y: worldY - offset.oy };
-          });
-          return next;
+        sel.forEach((sid) => {
+          const base = (d.origPositions && d.origPositions[sid]) ? d.origPositions[sid] : (localPositions[sid] || { x: d.origX, y: d.origY });
+          const offset = (d.pointerOffsets && d.pointerOffsets[sid]) ? d.pointerOffsets[sid] : { ox: (d.startWorldX ?? worldX) - base.x, oy: (d.startWorldY ?? worldY) - base.y };
+          schedulePositionUpdate(sid, { x: worldX - offset.ox, y: worldY - offset.oy });
         });
         // schedule saves for all
         sel.forEach((sid) => scheduleDebouncedSave(sid));
@@ -1078,7 +1074,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
         const newX = worldX - offset.ox;
         const newY = worldY - offset.oy;
-        setLocalPositions((prev) => ({ ...prev, [d.id]: { x: newX, y: newY } }));
+        schedulePositionUpdate(d.id, { x: newX, y: newY });
         if (d.id) scheduleDebouncedSave(d.id);
       }
       if (connectionMode && connectionStart) setMousePos({ x: e.clientX, y: e.clientY });
@@ -1111,7 +1107,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
       const newX = worldX - offset.ox;
       const newY = worldY - offset.oy;
-      setLocalPositions((prev) => ({ ...prev, [d.id]: { x: newX, y: newY } }));
+      schedulePositionUpdate(d.id, { x: newX, y: newY });
       if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
       if (d.id) scheduleDebouncedSave(d.id);
       if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
