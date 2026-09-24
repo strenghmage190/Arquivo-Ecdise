@@ -67,9 +67,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [showGlitchSolver, setShowGlitchSolver] = useState(false);
   // audio handled as a visual mode tab now
   const [localThermal, setLocalThermal] = useState(false);
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
+  const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100 });
   const [showFilters, setShowFilters] = useState(false);
   const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
@@ -494,12 +492,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const currentCard = serverCard || card;
 
   // Metadata pré-calculado para reuso
-  let parsedMetadata: any = {};
-  try {
-    parsedMetadata = currentCard?.metadata && typeof currentCard.metadata === 'object'
-      ? currentCard.metadata
-      : (typeof currentCard?.metadata === 'string' ? JSON.parse(currentCard.metadata) : {});
-  } catch { parsedMetadata = {}; }
+  const parsedMetadata = React.useMemo(() => {
+    if (!currentCard?.metadata) return {};
+    if (typeof currentCard.metadata === 'object') return currentCard.metadata;
+    try {
+      return JSON.parse(currentCard.metadata);
+    } catch {
+      return {};
+    }
+  }, [currentCard?.metadata]);
   const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || parsedMetadata?.card_type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
   const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
   // Mega-clue metadata (compat: mega_clue or megaClue)
@@ -613,72 +614,40 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     };
   }, [visualMode, audioSources.src]);
 
-  // Waveform zoom controls: double-click to zoom near cursor, plus/minus buttons
-  React.useEffect(() => {
-    const wf = waveformRef.current;
-    if (!wf) return;
+  // Waveform zoom controls
+  const setWaveformZoom = (target: number, originPercent = 50) => {
+    const container = waveformRef.current;
+    if (!container) return;
+    container.style.transformOrigin = `${originPercent}% 50%`;
+    container.style.transition = 'transform 220ms ease';
+    container.style.transform = `scale(${target})`;
+    container.dataset.waveformZoom = String(target);
+  };
 
-    const container: HTMLElement = wf;
-    container.classList.add('waveform-zoomable');
-    if (!container.style.position) container.style.position = 'relative';
+  const handleWaveformDblClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const container = waveformRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
+    const current = parseFloat(container.dataset.waveformZoom || '1');
+    const target = current === 1 ? 1.6 : 1;
+    setWaveformZoom(target, percent);
+  };
 
-    // create controls overlay
-    const controls = document.createElement('div');
-    controls.className = 'waveform-controls';
-    controls.innerHTML = '<button type="button" aria-label="Zoom in" class="zoom-btn">+</button><button type="button" aria-label="Zoom out" class="zoom-btn">−</button>';
-    container.appendChild(controls);
+  const handleWaveformZoomIn = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || '1');
+    setWaveformZoom(Math.min(3, current + 0.2));
+  };
 
-    const btns = controls.querySelectorAll('.zoom-btn');
-    let currentZoom = 1;
+  const handleWaveformZoomOut = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || '1');
+    setWaveformZoom(Math.max(1, current - 0.2));
+  };
 
-    const setZoom = (z: number, originPercent = 50) => {
-      currentZoom = z;
-      container.style.transformOrigin = `${originPercent}% 50%`;
-      container.style.transition = 'transform 220ms ease';
-      container.style.transform = `scale(${currentZoom})`;
-      container.dataset.waveformZoom = String(currentZoom);
-    };
-
-    const handleDbl = (e: MouseEvent) => {
-      try {
-        e.stopPropagation();
-        const rect = container.getBoundingClientRect();
-        const x = (e.clientX - rect.left);
-        const percent = Math.max(0, Math.min(100, (x / Math.max(1, rect.width)) * 100));
-        const target = currentZoom === 1 ? 1.6 : 1;
-        setZoom(target, percent);
-      } catch (err) {
-        // ignore
-      }
-    };
-
-    const handleZoomIn = (ev: Event) => { ev.stopPropagation(); setZoom(Math.min(3, currentZoom + 0.2), 50); };
-    const handleZoomOut = (ev: Event) => { ev.stopPropagation(); setZoom(Math.max(1, currentZoom - 0.2), 50); };
-
-    container.addEventListener('dblclick', handleDbl);
-    if (btns && btns[0]) btns[0].addEventListener('click', handleZoomIn);
-    if (btns && btns[1]) btns[1].addEventListener('click', handleZoomOut);
-
-    const keyHandler = (e: KeyboardEvent) => {
-      if (document.activeElement && (document.activeElement === wf || wf.contains(document.activeElement))) {
-        if (e.key === '+' || e.key === '=') { handleZoomIn(e as any); }
-        if (e.key === '-') { handleZoomOut(e as any); }
-        if (e.key === '0') { setZoom(1, 50); }
-      }
-    };
-    window.addEventListener('keydown', keyHandler);
-
-    return () => {
-      window.removeEventListener('keydown', keyHandler);
-      container.removeEventListener('dblclick', handleDbl);
-      try { if (btns && btns[0]) btns[0].removeEventListener('click', handleZoomIn); if (btns && btns[1]) btns[1].removeEventListener('click', handleZoomOut); } catch (e) { }
-      if (controls.parentElement === container) container.removeChild(controls);
-      container.style.transform = '';
-      container.style.transformOrigin = '';
-      delete container.dataset.waveformZoom;
-      container.classList.remove('waveform-zoomable');
-    };
-  }, [waveformRef, visualMode, audioSources.src]);
 
   // Lógica de Zoom Otimizada (Sincroniza UV e Filtros)
   React.useEffect(() => {
@@ -764,11 +733,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       state.pointX = clientX - state.startX;
       state.pointY = clientY - state.startY;
-
-      // Garante que will-change está ativo durante o movimento
-      try {
-        if (transformTarget.style.willChange !== 'transform') transformTarget.style.willChange = 'transform';
-      } catch (err) { }
 
       updateTransform();
     };
@@ -900,7 +864,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
           <PhoneViewer
-            chatData={_headerChatList}
+            chatData={headerChatList}
             contactName={currentCard.title}
             isLocked={phoneIsLocked}
             password={phonePassword}
@@ -1124,7 +1088,13 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             <a href={audioSrc} target="_blank" rel="noreferrer" style={{ color: '#00f3ff', fontSize: 12 }}>baixar</a>
           </div>
 
-          <div style={{ width: '100%', minHeight: 70 }} ref={waveformRef} />
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: '100%', minHeight: 70 }} ref={waveformRef} onDoubleClick={handleWaveformDblClick} className="waveform-zoomable" />
+            <div className="waveform-controls" style={{ position: 'absolute', top: 0, right: 0 }}>
+              <button type="button" aria-label="Zoom in" className="zoom-btn" onClick={handleWaveformZoomIn}>+</button>
+              <button type="button" aria-label="Zoom out" className="zoom-btn" onClick={handleWaveformZoomOut}>−</button>
+            </div>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8 }}>
             <button
@@ -1237,7 +1207,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                     hiddenSrc={currentCard.image_uv_url}
                     filterLayerSrc={currentCard.image_filter_layer}
-                    filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                    filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
                     revealSettings={fullscreenOnlyTreatment ? null : reveal}
                     isUVMode={localUV}
                     fit="contain"
@@ -1270,11 +1240,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
 
     // Fallback: if no image but have chat, show phone
-    if (_headerChatList && _headerChatList.length > 0) {
+    if (headerChatList && headerChatList.length > 0) {
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
           <PhoneViewer
-            chatData={_headerChatList}
+            chatData={headerChatList}
             contactName={currentCard.title}
             isLocked={phoneIsLocked}
             password={phonePassword}
@@ -1310,36 +1280,26 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   }
 
   // Pre-parse metadata and chat so header can show a toggle when both image+chat exist
-  const _maybeMeta = currentCard.metadata && typeof currentCard.metadata === 'object'
-    ? currentCard.metadata
-    : (typeof currentCard.metadata === 'string' ? (() => { try { return JSON.parse(currentCard.metadata); } catch { return {}; } })() : {});
-  const _rawChat = currentCard.chat_data ?? _maybeMeta?.chat_data ?? _maybeMeta?.chat ?? null;
-  let _headerChatList: any[] | null = null;
-  if (_rawChat) {
-    if (typeof _rawChat === 'string') {
-      try {
-        const parsed = JSON.parse(_rawChat);
-        if (Array.isArray(parsed)) _headerChatList = parsed;
-        else if (parsed && typeof parsed === 'object') {
-          if (Array.isArray(parsed.messages)) _headerChatList = parsed.messages;
-          else if (Array.isArray(parsed.chat)) _headerChatList = parsed.chat;
-          else if (Array.isArray(parsed.data)) _headerChatList = parsed.data;
-          else {
-            for (const k of Object.keys(parsed)) { if (Array.isArray((parsed as any)[k])) { _headerChatList = (parsed as any)[k]; break; } }
-          }
-        }
-      } catch { _headerChatList = null; }
-    } else if (Array.isArray(_rawChat)) {
-      _headerChatList = _rawChat;
-    } else if (_rawChat && typeof _rawChat === 'object') {
-      if (Array.isArray((_rawChat as any).messages)) _headerChatList = (_rawChat as any).messages;
-      else if (Array.isArray((_rawChat as any).chat)) _headerChatList = (_rawChat as any).chat;
-      else if (Array.isArray((_rawChat as any).data)) _headerChatList = (_rawChat as any).data;
-      else {
-        for (const k of Object.keys(_rawChat)) { if (Array.isArray((_rawChat as any)[k])) { _headerChatList = (_rawChat as any)[k]; break; } }
+  const headerChatList = React.useMemo(() => {
+    const rawChat = currentCard?.chat_data ?? parsedMetadata?.chat_data ?? parsedMetadata?.chat ?? null;
+    if (!rawChat) return null;
+    
+    let parsed = rawChat;
+    if (typeof rawChat === 'string') {
+      try { parsed = JSON.parse(rawChat); } catch { return null; }
+    }
+    
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object') {
+      if (Array.isArray(parsed.messages)) return parsed.messages;
+      if (Array.isArray(parsed.chat)) return parsed.chat;
+      if (Array.isArray(parsed.data)) return parsed.data;
+      for (const k of Object.keys(parsed)) {
+        if (Array.isArray(parsed[k])) return parsed[k];
       }
     }
-  }
+    return null;
+  }, [currentCard?.chat_data, parsedMetadata]);
 
   // Robust check for presence of chat content in various shapes
   const hasChatContent = (c: any) => {
@@ -1446,10 +1406,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   }, [setVisualMode, disableAllBut, setLocalThermal, setLocalUV, setShowGlitchSolver, setFullscreenOpen]);
 
   // derive contact name for header/meta display (prefer explicit column, then metadata, then chat payload)
-  const contactNameFromPayload = currentCard.chat_contact_name ?? _maybeMeta?.chat_contact_name ?? null;
+  const contactNameFromPayload = currentCard.chat_contact_name ?? parsedMetadata?.chat_contact_name ?? null;
   let contactNameInferred: string | null = contactNameFromPayload;
-  if (!contactNameInferred && _headerChatList && _headerChatList.length > 0) {
-    const first = _headerChatList[0];
+  if (!contactNameInferred && headerChatList && headerChatList.length > 0) {
+    const first = headerChatList[0];
     contactNameInferred = first?.contact || first?.name || first?.sender || null;
   }
 
@@ -1457,7 +1417,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const hasImage = !!currentCard.image_url;
   const hasVideo = !!currentCard.video_url || !!unifiedMedia.videoUrl;
   const hasAudio = !!audioSources.src;
-  const hasChat = !!_headerChatList?.length;
+  const hasChat = !!headerChatList?.length;
   const mediaCount = [hasImage, hasVideo, hasAudio, hasChat].filter(Boolean).length;
 
   const modal = (
@@ -1750,27 +1710,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               {showFilters && (
                 <div className="filters-overlay-panel">
                   <div className="filter-row">
-                    <label>BRILHO {brightness}%</label>
+                    <label>BRILHO {filters.brightness}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="300" value={brightness} onChange={e => setBrightness(Number(e.target.value))} />
-                      <input className="filter-number" type="number" min="0" max="300" value={brightness} onChange={e => setBrightness(Number(e.target.value))} />
+                      <input className="filter-range" type="range" min="0" max="300" value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} />
+                      <input className="filter-number" type="number" min="0" max="300" value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} />
                     </div>
                   </div>
                   <div className="filter-row">
-                    <label>CONTRASTE {contrast}%</label>
+                    <label>CONTRASTE {filters.contrast}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="300" value={contrast} onChange={e => setContrast(Number(e.target.value))} />
-                      <input className="filter-number" type="number" min="0" max="300" value={contrast} onChange={e => setContrast(Number(e.target.value))} />
+                      <input className="filter-range" type="range" min="0" max="300" value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} />
+                      <input className="filter-number" type="number" min="0" max="300" value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} />
                     </div>
                   </div>
                   <div className="filter-row">
-                    <label>SATURAÇÃO {saturation}%</label>
+                    <label>SATURAÇÃO {filters.saturation}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="200" value={saturation} onChange={e => setSaturation(Number(e.target.value))} />
-                      <input className="filter-number" type="number" min="0" max="200" value={saturation} onChange={e => setSaturation(Number(e.target.value))} />
+                      <input className="filter-range" type="range" min="0" max="200" value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} />
+                      <input className="filter-number" type="number" min="0" max="200" value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} />
                     </div>
                   </div>
-                  <button className="btn-reset-filters" onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); }}>RESET</button>
+                  <button className="btn-reset-filters" onClick={() => { setFilters({ brightness: 100, contrast: 100, saturation: 100 }); }}>RESET</button>
                 </div>
               )}
 
@@ -2113,7 +2073,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             {visualMode === 'phone' ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <PhoneViewer
-                  chatData={_headerChatList}
+                  chatData={headerChatList}
                   contactName={currentCard.title}
                   isLocked={phoneIsLocked}
                   password={phonePassword}
@@ -2129,7 +2089,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                     hiddenSrc={currentCard.image_uv_url}
                     filterLayerSrc={currentCard.image_filter_layer}
-                    filters={showFilters ? { brightness, contrast, saturate: saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                    filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
                     revealSettings={fullscreenOnlyTreatment ? null : (() => {
                       try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
                     })()}
@@ -2187,17 +2147,17 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               <div className="hud-sliders">
                 <div className="hud-slider-group">
                   <span>BRI</span>
-                  <input type="range" min={0} max={300} value={brightness} onChange={e => setBrightness(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>CON</span>
-                  <input type="range" min={0} max={300} value={contrast} onChange={e => setContrast(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>SAT</span>
-                  <input type="range" min={0} max={300} value={saturation} onChange={e => setSaturation(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={0} max={300} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
-                <button className="btn-hud" style={{ fontSize: 10, padding: '4px 8px' }} onClick={() => { setBrightness(100); setContrast(100); setSaturation(100) }}>RESET</button>
+                <button className="btn-hud" style={{ fontSize: 10, padding: '4px 8px' }} onClick={() => { setFilters({ brightness: 100, contrast: 100, saturation: 100 }); }}>RESET</button>
               </div>
             </div>
           )}
