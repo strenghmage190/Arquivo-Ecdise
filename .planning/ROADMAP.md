@@ -6,7 +6,8 @@
 |---|-------|------|--------------|------------------|
 | 12 | Otimização Estrutural e de Mídia | Configurar lazy loading de rotas e otimização de imagens | IMG-01, IMG-02, RND-01 | 3 |
 | 13 | Refatoração CSS e Re-renders | Blindar componentes com React.memo e remover estilos CSS pesados | CSS-01, CSS-02, RND-02 | 3 |
-| 14 | Virtualização do DOM | Implementar scroll virtual em listas gigantes para eliminar travamentos | DOM-01, DOM-02 | 2 |
+| 14 | Virtualização do DOM | 1/1 | Complete   | 2026-09-24 |
+| 15 | Estado Global & Debounce | Extrair estados massivos para Zustand e adicionar debounce no Realtime | OPT-01, OPT-02 | 3 |
 
 ### Phase Details
 
@@ -30,5 +31,14 @@ Success criteria:
 Goal: Implementar scroll virtual em listas gigantes para eliminar travamentos
 Requirements: DOM-01, DOM-02
 Success criteria:
-1. `react-virtuoso` renderiza apenas os itens no viewport.
-2. Scroll de milhares de itens é realizado sem drop de FPS.
+3. `react-virtuoso` renderiza apenas os itens no viewport.
+4. Scroll de milhares de itens é realizado sem drop de FPS.
+
+### Phase 15: Estado Global & Debounce
+Goal: Extrair estados massivos para Zustand e adicionar debounce no Realtime
+Requirements: OPT-01, OPT-02
+Success criteria:
+1. `zustand` instalado e armazenando o estado do `InvestigationBoard`.
+2. Supabase Realtime usa debounce nas atualizações de posições (x/y).
+3. Performance de arrastar cards aprimorada (sem delays).
+

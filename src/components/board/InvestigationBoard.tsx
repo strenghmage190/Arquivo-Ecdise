@@ -692,6 +692,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     loadBoard();
   }, [investigationId]);
 
+  const pendingUpdatesRef = useRef<Record<string, any>>({});
+  const realtimeUpdateTimeout = useRef<any>(null);
+
   // Realtime subscriptions: notes, cards, and investigation (doomsday clock)
   useEffect(() => {
     if (!investigationId) return;
@@ -719,13 +722,31 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 return { ...prev, [newRow.id]: { x: newRow.x ?? 100, y: newRow.y ?? 100 } };
               });
             } else if (ev === 'UPDATE' && newRow) {
-              setCards((prev: any[]) => prev.map((c: any) => c.id === newRow.id ? newRow : c));
-              setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
-                const has = prev[newRow.id] || { x: newRow.x ?? 100, y: newRow.y ?? 100 };
-                const nx = (newRow.x !== undefined && newRow.x !== null) ? newRow.x : has.x;
-                const ny = (newRow.y !== undefined && newRow.y !== null) ? newRow.y : has.y;
-                return { ...prev, [newRow.id]: { x: nx, y: ny } };
-              });
+              pendingUpdatesRef.current[newRow.id] = newRow;
+              if (!realtimeUpdateTimeout.current) {
+                realtimeUpdateTimeout.current = setTimeout(() => {
+                  if (!mounted) return;
+                  realtimeUpdateTimeout.current = null;
+                  const updates = pendingUpdatesRef.current;
+                  pendingUpdatesRef.current = {};
+                  const updateIds = Object.keys(updates);
+                  if (updateIds.length === 0) return;
+
+                  setCards((prev: any[]) => prev.map((c: any) => updates[c.id] ? updates[c.id] : c));
+                  setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
+                    const next = { ...prev };
+                    updateIds.forEach(id => {
+                      const row = updates[id];
+                      const has = prev[id] || { x: row.x ?? 100, y: row.y ?? 100 };
+                      next[id] = {
+                        x: (row.x !== undefined && row.x !== null) ? row.x : has.x,
+                        y: (row.y !== undefined && row.y !== null) ? row.y : has.y
+                      };
+                    });
+                    return next;
+                  });
+                }, 100);
+              }
             } else if (ev === 'DELETE' && oldRow) {
               setCards((prev: any[]) => prev.filter((c: any) => c.id !== oldRow.id));
               setLocalPositions((prev: Record<string, { x: number; y: number }>) => {
