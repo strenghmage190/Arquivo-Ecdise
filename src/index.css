@@ -289,3 +289,13 @@ body.mobile-mode .corkboard-canvas {
 /* 5) Image performance hint: encourage using responsive images via picture/srcset */
 
 /* Global guard for large images already handled above (max-width:100%). */
+
+/* 6) Board Panning selection guard */
+.corkboard-canvas {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.card-node {
+  user-select: text;
+  -webkit-user-select: text;
+}
