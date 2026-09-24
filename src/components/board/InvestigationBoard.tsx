@@ -1041,7 +1041,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       if (p) {
         const dx = e.clientX - p.startX;
         const dy = e.clientY - p.startY;
-        setOrigin({ x: p.originX - dx / zoom, y: p.originY - dy / zoom });
+        scheduleOriginUpdate(p.originX - dx / zoom, p.originY - dy / zoom);
         return;
       }
       const d = draggingRef.current;
@@ -1090,7 +1090,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       if (p) {
         const dx = t.clientX - p.startX;
         const dy = t.clientY - p.startY;
-        setOrigin({ x: p.originX - dx / zoom, y: p.originY - dy / zoom });
+        scheduleOriginUpdate(p.originX - dx / zoom, p.originY - dy / zoom);
         return;
       }
       const d = draggingRef.current;
@@ -1853,7 +1853,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         return;
       }
       e.preventDefault();
-      setOrigin(prev => ({ x: prev.x + e.deltaX / zoom, y: prev.y + e.deltaY / zoom }));
+      const curr = pendingOriginRef.current || origin;
+      scheduleOriginUpdate(curr.x + e.deltaX / zoom, curr.y + e.deltaY / zoom);
     };
 
     const handleTouchStart = (e: TouchEvent) => {
