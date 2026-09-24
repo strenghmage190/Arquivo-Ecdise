@@ -1,7 +1,34 @@
-# ROADMAP
+# Roadmap: v2.1 Performance e Otimização Global
 
-## Milestones Anteriores
-- [v2.0 Terminal Ordo Realitas](milestones/v2.0-ROADMAP.md) - Concluído
+**3 phases** | **8 requirements mapped** | All covered ✓
 
-## Próximo Milestone
-- (A definir via /gsd-new-milestone)
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 12 | Otimização Estrutural e de Mídia | Configurar lazy loading de rotas e otimização de imagens | IMG-01, IMG-02, RND-01 | 3 |
+| 13 | Refatoração CSS e Re-renders | Blindar componentes com React.memo e remover estilos CSS pesados | CSS-01, CSS-02, RND-02 | 3 |
+| 14 | Virtualização do DOM | Implementar scroll virtual em listas gigantes para eliminar travamentos | DOM-01, DOM-02 | 2 |
+
+### Phase Details
+
+**Phase 12: Otimização Estrutural e de Mídia**
+Goal: Configurar lazy loading de rotas e otimização de imagens
+Requirements: IMG-01, IMG-02, RND-01
+Success criteria:
+1. Navegador carrega telas apenas sob demanda (Network tab verifica os chunks divididos).
+2. `vite-plugin-image-optimizer` instalado e configurado no Vite.
+3. Tags de imagem possuem `loading="lazy"`.
+
+**Phase 13: Refatoração CSS e Re-renders**
+Goal: Blindar componentes com React.memo e remover estilos CSS pesados
+Requirements: CSS-01, CSS-02, RND-02
+Success criteria:
+1. Digitação em inputs não causa travamentos e nem re-renders excessivos.
+2. Inexistência de `backdrop-blur` nas listas e cards repetidos.
+3. Inexistência de `shadow-2xl` em listas, usando apenas bordas sutis.
+
+**Phase 14: Virtualização do DOM**
+Goal: Implementar scroll virtual em listas gigantes para eliminar travamentos
+Requirements: DOM-01, DOM-02
+Success criteria:
+1. `react-virtuoso` renderiza apenas os itens no viewport.
+2. Scroll de milhares de itens é realizado sem drop de FPS.
