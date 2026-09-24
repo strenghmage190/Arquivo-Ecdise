@@ -308,7 +308,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   }, [isOpen]);
 
-  // Render thermal canvas when enabled
+  // Render thermal canvas when enabled (OTIMIZADO COM LUT E DOWNSCALE)
   React.useEffect(() => {
     const canvas = thermalCanvasRef.current;
     if (!canvas) return;
@@ -320,7 +320,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       return;
     }
 
-    // Use the visible base image for thermal rendering; fall back to UV-only layer if base missing
     const imgSrc = (card && (card.image_url || card.image_uv_url)) || null;
     if (!imgSrc) return;
 
@@ -328,63 +327,82 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = imgSrc;
+
     img.onload = () => {
       if (cancelled) return;
       try {
-        const visual = fileRef.current?.querySelector('.inspect-visual-area') as HTMLElement | null;
-        // Use intrinsic image resolution for canvas backing store to preserve aspect ratio and detail
-        const naturalW = img.naturalWidth || img.width || 1024;
-        const naturalH = img.naturalHeight || img.height || 768;
-        canvas.width = Math.max(1, naturalW);
-        canvas.height = Math.max(1, naturalH);
-        // Ensure canvas element scales to fit the visual container without distorting
-        try {
-          canvas.style.maxWidth = '100%';
-          canvas.style.maxHeight = '100%';
-          canvas.style.width = 'auto';
-          canvas.style.height = '100%';
-          canvas.style.left = '50%';
-          canvas.style.top = '50%';
-          canvas.style.transform = 'translate(-50%, -50%)';
-        } catch (e) { }
+        // 1. DOWNSCALE INTELIGENTE: Limitar tamanho máximo para processamento rápido
+        const MAX_SIZE = 1200; // Câmeras termais são low-res, não precisamos de 4K
+        let calcWidth = img.naturalWidth || img.width || 1024;
+        let calcHeight = img.naturalHeight || img.height || 768;
+        
+        if (calcWidth > MAX_SIZE || calcHeight > MAX_SIZE) {
+          const ratio = Math.min(MAX_SIZE / calcWidth, MAX_SIZE / calcHeight);
+          calcWidth = Math.round(calcWidth * ratio);
+          calcHeight = Math.round(calcHeight * ratio);
+        }
+
+        canvas.width = Math.max(1, calcWidth);
+        canvas.height = Math.max(1, calcHeight);
+        
+        // Estilo CSS para expandir o canvas reduzido pela tela
+        canvas.style.maxWidth = '100%';
+        canvas.style.maxHeight = '100%';
+        canvas.style.width = 'auto';
+        canvas.style.height = '100%';
+        canvas.style.left = '50%';
+        canvas.style.top = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Desligar suavização (smoothing) para dar um ar mais digital/termal
+        ctx.imageSmoothingEnabled = false; 
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
-        // IRONBOW mapping (tactical thermal palette)
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i + 1], b = data[i + 2];
-          const val = (r + g + b) / 3; // 0..255
 
-          let red = 0, green = 0, blue = 0;
+        // 2. LOOKUP TABLE (LUT) DE CORES IRONBOW (Pré-cálculo)
+        // Evita fazer if/else e multiplicações matemáticas milhões de vezes
+        const lutR = new Uint8Array(256);
+        const lutG = new Uint8Array(256);
+        const lutB = new Uint8Array(256);
 
-          if (val < 85) {
-            // 0-85: Preto -> Roxo escuro
-            const t = val / 85; // 0..1
-            red = Math.round((t * 70));
-            green = 0;
-            blue = Math.round((t * 100));
-          } else if (val < 170) {
-            // 86-170: Roxo -> Vermelho/Vermelho forte
-            const t = (val - 85) / 85; // 0..1
-            red = Math.round(70 + (t * (255 - 70)));
-            green = 0;
-            blue = Math.round(100 - (t * 100));
+        for (let v = 0; v < 256; v++) {
+          if (v < 85) {
+            const t = v / 85;
+            lutR[v] = Math.round(t * 70);
+            lutG[v] = 0;
+            lutB[v] = Math.round(t * 100);
+          } else if (v < 170) {
+            const t = (v - 85) / 85;
+            lutR[v] = Math.round(70 + (t * (255 - 70)));
+            lutG[v] = 0;
+            lutB[v] = Math.round(100 - (t * 100));
           } else {
-            // 171-255: Vermelho -> Amarelo -> Branco
-            const t = (val - 170) / 85; // 0..1
-            red = 255;
-            green = Math.round(t * 255);
-            blue = Math.round(t * 255);
+            const t = (v - 170) / 85;
+            lutR[v] = 255;
+            lutG[v] = Math.round(t * 255);
+            lutB[v] = Math.round(t * 255);
           }
-
-          // clamp and write back
-          data[i] = Math.max(0, Math.min(255, red));
-          data[i + 1] = Math.max(0, Math.min(255, green));
-          data[i + 2] = Math.max(0, Math.min(255, blue));
-          // keep alpha untouched (data[i+3])
         }
+
+        // 3. APLICAÇÃO OTIMIZADA NOS PIXELS
+        for (let i = 0; i < data.length; i += 4) {
+          // Usando fórmula de Luminância correta em vez de média simples,
+          // gera mapas de calor muito mais precisos. Bitwise (~~) arredonda super rápido.
+          const val = ~~((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+          
+          data[i]     = lutR[val];
+          data[i + 1] = lutG[val];
+          data[i + 2] = lutB[val];
+          // Alpha data[i+3] continua intacto
+        }
+
         ctx.putImageData(imageData, 0, 0);
+
+        // Overlay Gradiente
         ctx.globalCompositeOperation = 'lighter';
         const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
         grad.addColorStop(0, 'rgba(255,80,20,0.06)');
@@ -393,14 +411,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalCompositeOperation = 'source-over';
 
-        // Render secret thermal text if present
+        // Render Secret Thermal Text
         try {
           const thermalText = card?.metadata?.thermal_secret_text;
           if (thermalText && typeof thermalText === 'string' && thermalText.trim()) {
-            // Calculate responsive font size based on canvas dimensions
-            let baseFontSize = Math.max(48, Math.min(canvas.width, canvas.height) / 12);
-
-            // Apply user-configured font size multiplier
+            let baseFontSize = Math.max(24, Math.min(canvas.width, canvas.height) / 12); // Reduzido baseado no novo tamanho max
             const fontSizeMultiplier = (card?.metadata?.thermal_font_size || 100) / 100;
             baseFontSize = baseFontSize * fontSizeMultiplier;
 
@@ -408,16 +423,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Split text into lines if too long (wrap at ~40 chars or by newlines)
             const maxLineLength = 40;
             const lines: string[] = [];
-            const paragraphs = thermalText.split('\n');
-
-            paragraphs.forEach(paragraph => {
+            thermalText.split('\n').forEach(paragraph => {
               if (paragraph.length <= maxLineLength) {
                 lines.push(paragraph);
               } else {
-                // Simple word wrap
                 const words = paragraph.split(' ');
                 let currentLine = '';
                 words.forEach(word => {
@@ -432,7 +443,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               }
             });
 
-            // Position text based on user-configured vertical position
             const lineHeight = baseFontSize * 1.3;
             const totalHeight = lines.length * lineHeight;
             const positionYPercent = (card?.metadata?.thermal_position_y || 50) / 100;
@@ -441,36 +451,28 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
             lines.forEach((line, index) => {
               const y = startY + (index * lineHeight);
-
-              // Outer glow (multiple layers for intensity)
-              ctx.shadowBlur = 30;
-              ctx.shadowColor = 'rgba(255, 255, 0, 0.8)';
-              ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-              ctx.fillText(line, centerX, y);
-
-              // Mid glow
-              ctx.shadowBlur = 15;
+              
+              // Simplificado o Blur de sombra para 2 passos em vez de 3. (shadowBlur pesa mt na GPU)
+              ctx.shadowBlur = 20;
               ctx.shadowColor = 'rgba(255, 200, 0, 1)';
-              ctx.fillStyle = 'rgba(255, 220, 0, 0.6)';
+              ctx.fillStyle = 'rgba(255, 220, 0, 0.8)';
               ctx.fillText(line, centerX, y);
 
-              // Core text (hot white)
               ctx.shadowBlur = 5;
               ctx.shadowColor = 'rgba(255, 255, 255, 1)';
-              ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+              ctx.fillStyle = 'rgba(255, 255, 255, 1)';
               ctx.fillText(line, centerX, y);
             });
-
-            // Reset shadow
             ctx.shadowBlur = 0;
           }
         } catch (e) {
-          // ignore thermal text rendering errors
+          // ignore
         }
       } catch (e) {
-        // ignore
+        console.error("Erro no processamento termal:", e);
       }
     };
+    
     return () => { cancelled = true; };
   }, [localThermal, card]);
 
