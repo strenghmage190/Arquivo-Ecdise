@@ -811,18 +811,31 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     };
     container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Double Click Reset
-    const onDblClick = (e: MouseEvent) => {
+    // Double Tap / Double Click Reset
+    const onDblClick = (clientX: number, clientY: number) => {
       if (state.scale > 1) {
         state.scale = 1;
         state.pointX = 0;
         state.pointY = 0;
         updateTransform();
       } else {
-        zoom(1.5, e.clientX, e.clientY);
+        zoom(1.5, clientX, clientY);
       }
     };
-    container.addEventListener('dblclick', onDblClick);
+    const onDblClickWrapper = (e: MouseEvent) => onDblClick(e.clientX, e.clientY);
+    container.addEventListener('dblclick', onDblClickWrapper);
+
+    let lastTap = 0;
+    const onTouchStartDouble = (e: TouchEvent) => {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0) {
+        e.preventDefault();
+        onDblClick(e.touches[0].clientX, e.touches[0].clientY);
+      }
+      lastTap = currentTime;
+    };
+    container.addEventListener('touchstart', onTouchStartDouble, { passive: false });
 
     return () => {
       if (btnIn) btnIn.removeEventListener('click', handleIn);
