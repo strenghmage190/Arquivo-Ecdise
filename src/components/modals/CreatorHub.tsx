@@ -1,5 +1,6 @@
 import { Lock, Music, FileText, Settings, Edit3, Pen, Eye, Search, Lightbulb } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { VirtuosoGrid } from 'react-virtuoso';
 import { fetchCardsForInvestigation, InvestigationCard } from '../../api/investigations';
 import { supabase } from '../../supabaseClient';
 import CreateClueModal_Refactored from './CreateClueModal_Refactored';
@@ -254,9 +255,12 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                   <p>Clique em "Criar Nova Pista" para começar.</p>
                 </div>
               ) : (
-                <div className="cards-grid">
-                  {cards.filter(c => !c.is_hidden).map(card => (
-                    <div key={card.id} className="card-summary">
+                <VirtuosoGrid
+                  style={{ height: '400px', width: '100%' }}
+                  listClassName="cards-grid"
+                  data={cards.filter(c => !c.is_hidden)}
+                  itemContent={(index, card) => (
+                    <div className="card-summary">
                       <div className="card-summary-header">
                         <span className="card-icon">{getTypeIcon(card.type)}</span>
                         <div className="card-title-section">
@@ -305,17 +309,20 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                />
               )}
 
               {/* Pistas Ocultas */}
               {cards.filter(c => c.is_hidden).length > 0 && (
                 <div style={{ marginTop: '20px' }}>
                   <h3><Eye className="lucide-icon inline-icon" size={16} /> PISTAS OCULTAS ({cards.filter(c => c.is_hidden).length})</h3>
-                  <div className="cards-grid">
-                    {cards.filter(c => c.is_hidden).map(card => (
-                      <div key={card.id} className="card-summary hidden-clue">
+                  <VirtuosoGrid
+                    style={{ height: '300px', width: '100%' }}
+                    listClassName="cards-grid"
+                    data={cards.filter(c => c.is_hidden)}
+                    itemContent={(index, card) => (
+                      <div className="card-summary hidden-clue">
                         <div className="card-summary-header">
                           <span className="card-icon">👻</span>
                           <div className="card-title-section">
@@ -357,8 +364,8 @@ export default function CreatorHub({ isOpen, onClose, investigationId, onOpenLeg
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  />
                 </div>
               )}
             </div>
