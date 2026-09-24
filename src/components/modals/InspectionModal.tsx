@@ -46,6 +46,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
 
   const [isUnlocked, setIsUnlocked] = useState(!isCardLocked(card) || isGameMaster);
+  const isMounted = React.useRef(true);
+  React.useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   React.useEffect(() => {
     setIsUnlocked(!isCardLocked(card) || isGameMaster);
@@ -233,13 +235,13 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       try {
         // Persist change on server and use returned card as canonical
         const updated = await updateInvestigationCard(cardObj.id, updates as any);
-        setServerCard(updated);
+        if (isMounted.current) setServerCard(updated);
       } catch (err) {
         console.error('Falha ao persistir solução do puzzle no servidor:', err);
         // fallback: optimistic local update so UI reflects solved state
         const updatedCard: any = { ...cardObj, metadata: nextMetadata };
         if (focused) updatedCard.image_url = focused;
-        setServerCard(updatedCard);
+        if (isMounted.current) setServerCard(updatedCard);
         alert('Solução aplicada localmente, mas falha ao salvar no servidor. Tente novamente ou verifique a conexão.');
       }
     })();
@@ -253,7 +255,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     try {
       const updates: any = { is_locked: false, lock_password: null };
       const updated = await updateInvestigationCard(cardObj.id, updates as any);
-      setServerCard(updated);
+      if (isMounted.current) setServerCard(updated);
     } catch (err) {
       console.error('Falha ao persistir desbloqueio no servidor:', err);
       // optimistic update already applied via setIsUnlocked(true)
@@ -500,7 +502,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     }
   }, [currentCard?.metadata]);
   const isGlitchPuzzleGlobal = currentCard?.type === 'glitch_puzzle' || parsedMetadata?.type === 'glitch_puzzle' || parsedMetadata?.card_type === 'glitch_puzzle' || Boolean(parsedMetadata?.glitch_puzzle);
-  const unifiedMedia = resolveUnifiedMedia(currentCard, parsedMetadata);
+  const unifiedMedia = React.useMemo(() => {
+    return resolveUnifiedMedia(currentCard, parsedMetadata);
+  }, [currentCard, parsedMetadata]);
   // Mega-clue metadata (compat: mega_clue or megaClue)
   const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
 
@@ -975,7 +979,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           const publicUrl = await uploadInvestigationFile(file, currentCard.investigation_id, ext);
           if (!publicUrl) throw new Error('Falha ao enviar vídeo');
           const updated = await updateInvestigationCard(currentCard.id, { video_url: publicUrl });
-          setServerCard(updated);
+          if (isMounted.current) setServerCard(updated);
         } catch (err) {
           console.error('Erro substituindo vídeo', err);
           alert('Falha ao substituir vídeo');
@@ -990,7 +994,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           if (!confirm('Remover vídeo anexado deste cartão?')) return;
           setVideoUploadingInspection(true);
           const updated = await updateInvestigationCard(currentCard.id, { video_url: null });
-          setServerCard(updated);
+          if (isMounted.current) setServerCard(updated);
         } catch (err) {
           console.error('Erro removendo vídeo', err);
           alert('Falha ao remover vídeo');
@@ -1306,16 +1310,18 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
   // Auto-switch visual mode when image/chat availability changes
   React.useEffect(() => {
+    const hasValidImage = currentCard?.image_url || unifiedMedia?.imageUrl;
+    
     // if currently showing image but image was removed and chat exists, switch to phone
-    if (visualMode === 'image' && !currentCard.image_url && effectiveHasChat) {
+    if (visualMode === 'image' && !hasValidImage && effectiveHasChat) {
       setVisualMode('phone');
     }
     // if currently showing phone but there's no chat data, and an image exists, switch to image
-    if (visualMode === 'phone' && !effectiveHasChat && currentCard.image_url) {
+    if (visualMode === 'phone' && !effectiveHasChat && hasValidImage) {
       setVisualMode('image');
     }
     // only run when these change
-  }, [visualMode, currentCard.image_url, effectiveHasChat]);
+  }, [visualMode, currentCard?.image_url, unifiedMedia?.imageUrl, effectiveHasChat]);
 
   // Listen for mobile "inspection:select-tool" events dispatched by the BottomNavigationBar
   React.useEffect(() => {
