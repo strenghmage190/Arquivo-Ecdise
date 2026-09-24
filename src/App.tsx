@@ -1,18 +1,18 @@
 import { Hand, Pen } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './components/auth/AuthProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Login from './pages/Login';
-import ResetPassword from './pages/ResetPassword';
-import Home from './pages/Home';
-import InvestigationPage from './pages/Investigation';
-import InvitePage from './pages/Invite';
-import MobileTestPage from './pages/MobileTestPage';
+const Login = lazy(() => import('./pages/Login'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Home = lazy(() => import('./pages/Home'));
+const InvestigationPage = lazy(() => import('./pages/Investigation'));
+const InvitePage = lazy(() => import('./pages/Invite'));
+const MobileTestPage = lazy(() => import('./pages/MobileTestPage'));
 import SystemOverlays from './components/ui/SystemOverlays';
 import BottomNavigationBar from './components/BottomNavigationBar';
-import ForensicBenchmarkPage from './pages/__dev/ForensicBenchmarkPage';
+const ForensicBenchmarkPage = lazy(() => import('./pages/__dev/ForensicBenchmarkPage'));
 // ConnectionLine removed for production layout
 import { Pencil } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
@@ -79,45 +79,47 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <div className="app-container">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            {/* Test route removed - developer test page not included in production */}
+          <Suspense fallback={<div className="text-white text-center">Carregando...</div>}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              {/* Test route removed - developer test page not included in production */}
 
-            <Route path="/mobile-test" element={<MobileTestPage />} />
+              <Route path="/mobile-test" element={<MobileTestPage />} />
 
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route
-              path="/case/:id"
-              element={
-                <ProtectedRoute>
-                  <InvestigationPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/case/:id"
+                element={
+                  <ProtectedRoute>
+                    <InvestigationPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/invite/:inviteCode"
-              element={
-                <ProtectedRoute>
-                  <InvitePage />
-                </ProtectedRoute>
-              }
-            />
-            {process.env.NODE_ENV !== 'production' && (
-              <Route path="/__dev/forensic-benchmark" element={<ForensicBenchmarkPage />} />
-            )}
-          </Routes>
+              <Route
+                path="/invite/:inviteCode"
+                element={
+                  <ProtectedRoute>
+                    <InvitePage />
+                  </ProtectedRoute>
+                }
+              />
+              {process.env.NODE_ENV !== 'production' && (
+                <Route path="/__dev/forensic-benchmark" element={<ForensicBenchmarkPage />} />
+              )}
+            </Routes>
+          </Suspense>
           </div>
           <SystemOverlays />
       </BrowserRouter>

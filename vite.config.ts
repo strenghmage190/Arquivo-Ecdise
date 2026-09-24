@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 import path from 'path';
 
 // Ensure a single React instance is used and pre-bundle Excalidraw.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    ViteImageOptimizer({ webp: { quality: 80 }, png: { quality: 80 }, jpeg: { quality: 80 } })
+  ],
   resolve: {
     alias: [
       { find: 'react', replacement: path.resolve(__dirname, 'node_modules/react') },
