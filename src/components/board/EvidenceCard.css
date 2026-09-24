@@ -20,7 +20,7 @@
     linear-gradient(rgb(148 163 184 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(148 163 184 / 3%) 1px, transparent 1px);
   background-size: 20px 20px;
-  box-shadow: 0 10px 22px rgb(0 0 0 / 44%);
+  box-shadow: 0 4px 6px rgb(0 0 0 / 20%);
   color: var(--text-primary);
   font-family: var(--font-system);
   transition: border-color 150ms, background-color 150ms;
@@ -62,7 +62,7 @@
 }
 
 .clue-card:hover {
-  box-shadow: 0 0 20px var(--evidence-glow), 0 10px 22px rgb(0 0 0 / 44%);
+  box-shadow: 0 0 15px var(--evidence-glow), 0 4px 6px rgb(0 0 0 / 20%);
 }
 
 .card-node.selected {

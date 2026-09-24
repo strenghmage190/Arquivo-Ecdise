@@ -84,6 +84,75 @@ interface Props {
   investigationId: string;
 }
 
+const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any) => {
+  const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!isUV || !boardRef.current) return;
+    const el = boardRef.current;
+    
+    const onMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const lx = e.clientX - rect.left;
+      const ly = e.clientY - rect.top;
+      setOverlayPos({ x: lx, y: ly, over: true });
+    };
+    
+    const onLeave = () => setOverlayPos(o => o ? { ...o, over: false } : null);
+    
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('mouseleave', onLeave);
+    
+    return () => {
+      el.removeEventListener('mousemove', onMove);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [isUV, boardRef]);
+
+  if (!overlayPos || !overlayPos.over) return null;
+
+  const worldX = origin.x + (overlayPos.x / zoom);
+  const worldY = origin.y + (overlayPos.y / zoom);
+
+  if (performanceMode) {
+    return (
+      <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3100 }}>
+        <div style={{
+          position: 'absolute',
+          left: worldX,
+          top: worldY,
+          transform: 'translate(-50%, -50%)',
+          width: 220,
+          height: 220,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(179, 102, 255, 0.48) 0%, rgba(179, 102, 255, 0) 68%)',
+          pointerEvents: 'none',
+          mixBlendMode: 'screen'
+        }} />
+        <div style={{
+          position: 'absolute',
+          left: worldX,
+          top: worldY,
+          transform: 'translate(-50%, -50%)',
+          width: 72,
+          height: 72,
+          borderRadius: '50%',
+          background: 'rgba(200,140,255,0.18)',
+          pointerEvents: 'none',
+          mixBlendMode: 'screen'
+        }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
+      <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
+      <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(180,102,255,0.18) 40%, rgba(80,10,120,0.5) 80%, transparent 100%)`, pointerEvents: 'none' }} />
+    </div>
+  );
+};
+
 export const InvestigationBoard = React.memo(function InvestigationBoard({ investigationId }: Props) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
@@ -101,7 +170,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
   const [zoom, setZoom] = useState(0.9);
   const [isUV, setIsUV] = useState(false);
-  const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
 
   const {
@@ -1143,33 +1211,34 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
   const clearSelection = () => setSelectedIds([]);
 
-  const toggleCardStatus = async (cardId: string, status: string, currentTags: string[]) => {
+  const toggleCardStatus = useCallback(async (cardId: string, status: string, currentTags: string[]) => {
     // compute newStatus from current cards state to avoid race between setState and API call
-    const existing = cards.find(c => c.id === cardId);
-    const newStatus = (existing?.metadata?.status === status) ? null : status;
-
-    // optimistically update UI
-    setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: newStatus } })));
-
-    try {
-      const updated = await api.updateInvestigationCard(cardId, { metadata: { ...(existing?.metadata || {}), status: newStatus } } as any);
-      console.debug('toggleCardStatus: server response', updated);
-      showToast({ id: `status-${cardId}`, message: `Status atualizado: ${newStatus || 'removido'}` }, 2500);
-      // reload board from server to ensure UI matches canonical state (handles RLS/normalization)
-      try {
-        await loadBoard();
-      } catch (loadErr) {
-        console.warn('toggleCardStatus: loadBoard failed after update', loadErr);
-        // fallback: merge server response into local state
-        setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, ...(updated || {}), metadata: (updated as any)?.metadata || { ...(c.metadata || {}), status: newStatus } })));
-      }
-    } catch (e) {
-      console.error('Erro ao salvar status', e);
-      showToast({ id: `status-err-${cardId}`, message: 'Falha ao salvar status', connectionId: undefined }, 4000);
-      // revert UI change on failure
-      setCards(prev => prev.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: existing?.metadata?.status || null } })));
-    }
-  };
+    setCards(prev => {
+      const existing = prev.find(c => c.id === cardId);
+      const newStatus = (existing?.metadata?.status === status) ? null : status;
+      
+      const doUpdate = async () => {
+        try {
+          const updated = await api.updateInvestigationCard(cardId, { metadata: { ...(existing?.metadata || {}), status: newStatus } } as any);
+          console.debug('toggleCardStatus: server response', updated);
+          showToast({ id: `status-${cardId}`, message: `Status atualizado: ${newStatus || 'removido'}` }, 2500);
+          try {
+            await loadBoard();
+          } catch (loadErr) {
+            console.warn('toggleCardStatus: loadBoard failed after update', loadErr);
+            setCards(prev2 => prev2.map(c => (c.id !== cardId ? c : { ...c, ...(updated || {}), metadata: (updated as any)?.metadata || { ...(c.metadata || {}), status: newStatus } })));
+          }
+        } catch (e) {
+          console.error('Erro ao salvar status', e);
+          showToast({ id: `status-err-${cardId}`, message: 'Falha ao salvar status', connectionId: undefined }, 4000);
+          setCards(prev2 => prev2.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: existing?.metadata?.status || null } })));
+        }
+      };
+      
+      doUpdate();
+      return prev.map(c => (c.id !== cardId ? c : { ...c, metadata: { ...(c.metadata || {}), status: newStatus } }));
+    });
+  }, [investigationId]);
 
   const toggleSelect = (id: string, additive = false) => {
     setSelectedIds((prev) => {
@@ -1538,17 +1607,21 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return Boolean(lockedFlag || password);
   };
 
-  const openEvidenceViewer = (card: any) => {
+  const openEvidenceViewer = useCallback((card: any) => {
     try {
-      const center = getCardCenter(card?.id);
-      if (center) panToPosition(center.x, center.y);
+      const pos = localPositionsRef.current[card?.id];
+      if (pos) {
+        const rectWidth = 220;
+        const rectHeight = 160;
+        panToPosition(pos.x + rectWidth / 2, pos.y + rectHeight / 2);
+      }
     } catch {
       // ignore centering failures
     }
     setInspectCard(card);
-  };
+  }, []);
 
-  const handleCardOpen = (card: any) => {
+  const handleCardOpen = useCallback((card: any) => {
     const metadata = parseCardMetadata(card);
     const hydratedMedia = resolveUnifiedMedia(card, metadata, { revealBase: true });
     const cardForView = { ...card, ...hydratedMedia, metadata };
@@ -1577,7 +1650,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     }
 
     openEvidenceViewer(cardForView);
-  };
+  }, [isGameMaster, playerView, openEvidenceViewer]);
+
+  const handleEditCard = useCallback((card: any) => {
+    setEditingCard(card);
+    setShowLegacyModal(true);
+  }, []);
 
   const handleUnlockSubmit = async (submittedCode: string): Promise<CodePromptResult> => {
     if (!unlockingCard) return { success: false, message: 'Nenhum card selecionado.' };
@@ -2179,15 +2257,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           } catch (err) { /* ignore */ }
         }}
         onMouseMove={(e) => {
-          if (!isUV) return;
-          const boardRect = boardRef.current?.getBoundingClientRect();
-          if (!boardRect) return;
-          const lx = e.clientX - boardRect.left;
-          const ly = e.clientY - boardRect.top;
-          console.debug('uv overlay move', { isUV, performanceMode, coords: { x: lx, y: ly } });
-          setOverlayPos({ x: lx, y: ly, over: true });
+          // UV overlay now handled by GlobalUVOverlay component natively
         }}
-        onMouseLeave={() => { console.debug('uv overlay leave', { isUV, performanceMode }); setOverlayPos((o) => o ? { ...o, over: false } : null); }}
+        onMouseLeave={() => { }}
         onMouseDown={(e) => {
           if (e.target === boardRef.current || e.target === e.currentTarget) {
             // close any open context menu when clicking the background
@@ -2229,54 +2301,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           className="board-transform-layer"
           style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
         >
-          {/* Global UV overlay that follows the mouse across the whole corkboard */}
-          {isUV && overlayPos && overlayPos.over && (() => {
-            // overlayPos is in screen-local board coords (pixels from corkboard left/top)
-            // convert to world coordinates inside the transformed layer: world = origin + screen/zoom
-            const worldX = origin.x + (overlayPos.x / zoom);
-            const worldY = origin.y + (overlayPos.y / zoom);
-
-            // If performance mode is enabled, render a lightweight UV halo
-            if (performanceMode) {
-              return (
-                <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3100 }}>
-                  <div style={{
-                    position: 'absolute',
-                    left: worldX,
-                    top: worldY,
-                    transform: 'translate(-50%, -50%)',
-                    width: 220,
-                    height: 220,
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(179, 102, 255, 0.48) 0%, rgba(179, 102, 255, 0) 68%)',
-                    pointerEvents: 'none',
-                    mixBlendMode: 'screen'
-                  }} />
-                  {/* center highlight to make the UV spot more visible on dark canvases */}
-                  <div style={{
-                    position: 'absolute',
-                    left: worldX,
-                    top: worldY,
-                    transform: 'translate(-50%, -50%)',
-                    width: 72,
-                    height: 72,
-                    borderRadius: '50%',
-                    background: 'rgba(200,140,255,0.18)',
-                    pointerEvents: 'none',
-                    mixBlendMode: 'screen'
-                  }} />
-                </div>
-              );
-            }
-
-            // Full effect when not in performance mode
-            return (
-              <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
-                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
-                <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(180,102,255,0.18) 40%, rgba(80,10,120,0.5) 80%, transparent 100%)`, pointerEvents: 'none' }} />
-              </div>
-            );
-          })()}
+          {isUV && (
+            <GlobalUVOverlay isUV={isUV} performanceMode={performanceMode} boardRef={boardRef} zoom={zoom} origin={origin} />
+          )}
           {/* overflow visible prevents SVG clipping for lines that extend past view */}
           <svg className="connections-layer" style={{ overflow: 'visible' }}>
             {connections.map((conn) => {
@@ -2501,10 +2528,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                       } catch (e) { console.error('toggle from EvidenceCard failed', e); }
                     }}
                     onOpen={() => handleCardOpen(card)}
-                    onEdit={() => {
-                      setEditingCard(card);
-                      setShowLegacyModal(true);
-                    }}
+                    onEdit={() => handleEditCard(card)}
                     performanceMode={performanceMode}
                   />
                 </div>

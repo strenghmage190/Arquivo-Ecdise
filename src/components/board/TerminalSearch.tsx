@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { Virtuoso } from 'react-virtuoso';
 import './TerminalSearch.css';
 
 declare global {
@@ -97,18 +98,21 @@ export default function TerminalSearch({ onSearch, onClose }: Props) {
       {history.length > 0 && (
         <div className="term-history">
           <div className="term-history-title">ULTIMAS CONSULTAS</div>
-          <div className="term-history-list">
-            {history.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="term-chip"
-                onClick={() => submit(undefined, item)}
-                disabled={busy}
-              >
-                {item}
-              </button>
-            ))}
+          <div className="term-history-list" style={{ height: '200px' }}>
+            <Virtuoso
+              data={history}
+              itemContent={(index, item) => (
+                <button
+                  type="button"
+                  className="term-chip"
+                  onClick={() => submit(undefined, item)}
+                  disabled={busy}
+                  style={{ display: 'block', width: '100%', marginBottom: '4px' }}
+                >
+                  {item}
+                </button>
+              )}
+            />
           </div>
         </div>
       )}

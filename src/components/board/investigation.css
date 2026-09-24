@@ -168,11 +168,10 @@ body.space-panning .corkboard-canvas:active {
   max-width: calc(100vw - 32px);
   overflow: visible;
   padding: 6px 8px;
-  background: rgb(15 17 23 / 85%);
+  background: rgb(15 17 23 / 98%);
   border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: 0 16px 44px rgb(0 0 0 / 52%);
-  backdrop-filter: blur(16px);
   transform: translateX(-50%);
   scrollbar-width: none;
 }
