@@ -745,7 +745,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     });
                     return next;
                   });
-                }, 100);
+                }, 300);
               }
             } else if (ev === 'DELETE' && oldRow) {
               setCards((prev: any[]) => prev.filter((c: any) => c.id !== oldRow.id));
