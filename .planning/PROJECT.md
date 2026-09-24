@@ -19,9 +19,16 @@ Um sistema forense imersivo onde o chrome é invisível (monocromático) e a ún
 - Toolbar flutuante unificada (cápsula)
 - Formulários padronizados
 
-## Next Milestone Goals
+## Current Milestone: v2.1 Performance e Otimização Global
 
-(A definir via `/gsd-new-milestone`)
+**Goal:** Otimizar a performance do site para rodar liso em dispositivos móveis e PCs fracos, focando em uso de RAM, CPU e renderização.
+
+**Target features:**
+- Otimização de CSS/Tailwind (remover backdrop-blur e sombras pesadas)
+- Code Splitting / Lazy Loading nas rotas
+- Otimização automática de imagens (WebP, lazy loading)
+- Memoization de componentes pesados (React.memo)
+- Virtualização de listas gigantes (react-virtuoso)
 
 <details>
 <summary>Archived Milestone v2.0</summary>
@@ -136,4 +143,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-10 (Milestone v2.0 completed)*
+*Last updated: 2026-09-24 (Milestone v2.1 started)*
