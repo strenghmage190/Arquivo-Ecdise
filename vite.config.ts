@@ -19,6 +19,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['@excalidraw/excalidraw', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+    esbuildOptions: {
+      target: 'es2015',
+    },
+  },
+  build: {
+    target: 'es2015',
   },
   server: {
     host: true,

@@ -14,6 +14,28 @@
   <body>
     <div id="root"></div>
     <script>
+      // Visible error logger for mobile debugging
+      window.addEventListener('error', function(e) {
+        var errDiv = document.getElementById('debug-error');
+        if (!errDiv) {
+          errDiv = document.createElement('div');
+          errDiv.id = 'debug-error';
+          errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:999999;padding:10px;font-family:sans-serif;font-size:12px;overflow:auto;max-height:100%;';
+          document.body.appendChild(errDiv);
+        }
+        errDiv.innerHTML += '<br>' + (e.message || e) + ' in ' + e.filename + ':' + e.lineno;
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var errDiv = document.getElementById('debug-error');
+        if (!errDiv) {
+          errDiv = document.createElement('div');
+          errDiv.id = 'debug-error';
+          errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:999999;padding:10px;font-family:sans-serif;font-size:12px;overflow:auto;max-height:100%;';
+          document.body.appendChild(errDiv);
+        }
+        errDiv.innerHTML += '<br>Promise: ' + (e.reason ? e.reason.message || e.reason : 'unknown');
+      });
+
       // Suppress noisy extension-injected syntax errors (e.g. webpage_content_reporter.js)
       window.addEventListener('error', function (e) {
         try {

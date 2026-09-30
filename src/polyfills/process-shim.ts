@@ -1,7 +1,28 @@
 // Minimal process.env shim for libraries that reference `process` in the browser.
 // Keeps references like `process.env.NODE_ENV` from throwing.
 declare global {
-  interface Window { process?: any }
+  interface Window { process?: any; structuredClone?: any }
+}
+
+// Basic polyfills for older iOS/Android devices
+if (typeof window !== 'undefined' && !window.structuredClone) {
+  window.structuredClone = (obj: any) => JSON.parse(JSON.stringify(obj));
+}
+if (typeof Array.prototype.at !== 'function') {
+  Array.prototype.at = function(index) {
+    index = Math.trunc(index) || 0;
+    if (index < 0) index += this.length;
+    if (index < 0 || index >= this.length) return undefined;
+    return this[index];
+  };
+}
+if (typeof String.prototype.at !== 'function') {
+  String.prototype.at = function(index) {
+    index = Math.trunc(index) || 0;
+    if (index < 0) index += this.length;
+    if (index < 0 || index >= this.length) return undefined;
+    return String(this)[index];
+  };
 }
 
 // Provide a small, safe `process` object on the global scope.
