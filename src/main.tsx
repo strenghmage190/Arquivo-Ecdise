@@ -1,3 +1,5 @@
+// Must be set BEFORE excalidraw is imported so it doesn't fetch from unpkg CDN
+if (typeof window !== 'undefined') (window as any).EXCALIDRAW_ASSET_PATH = '/excalidraw-assets/';
 import { AlertTriangle } from 'lucide-react';
 import './polyfills/process-shim';
 import React from 'react';
