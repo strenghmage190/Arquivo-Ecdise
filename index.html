@@ -6,28 +6,44 @@
     <title>Terminal Ordo Realitas</title>
     <link rel="icon" type="image/webp" href="/assets/ordem/Simbolo_Transcender.webp" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <meta property="og:image" content="https://bolt.new/static/og_default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-</head>
-  <body>
+    <style>
+      /* Loading screen — visível antes do React montar. Removido via JS após mount. */
+      #root:empty::before {
+        content: 'INICIALIZANDO SISTEMA...';
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #050505;
+        color: #b33030;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+      /* Spinner no centro */
+      #root:empty::after {
+        content: '';
+        position: fixed;
+        top: calc(50% - 30px);
+        left: calc(50% - 20px);
+        width: 40px;
+        height: 40px;
+        border: 2px solid #1a0505;
+        border-top-color: #b33030;
+        border-radius: 50%;
+        animation: __spin 1s linear infinite;
+      }
+      @keyframes __spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body style="margin:0;background:#050505;">
     <div id="root"></div>
-    <script>
-      // Suppress noisy extension-injected syntax errors (e.g. webpage_content_reporter.js)
-      window.addEventListener('error', function (e) {
-        try {
-          var fn = e.filename || (e && e.target && e.target.src) || '';
-          var msg = e && e.message ? e.message : '';
-          if (fn.indexOf('webpage_content_reporter.js') !== -1 || msg.indexOf("Unexpected token 'export'") !== -1 && fn) {
-            e.preventDefault();
-            console.warn('Suppressed extension error from', fn || msg);
-          }
-        } catch (err) {
-          // ignore
-        }
-      }, true);
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
