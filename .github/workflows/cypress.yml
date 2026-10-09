@@ -49,7 +49,7 @@ jobs:
           path: dist
 
       - name: Cypress run
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@f790eee7a50d9505912f50c2095510be7de06aa7 # v6.10.9
         with:
           start: npx serve dist -p 3000 -s
           wait-on: 'http://localhost:3000'
