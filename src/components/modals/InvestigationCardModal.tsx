@@ -2,6 +2,8 @@ import { Check, X, Lock, RefreshCw, Thermometer } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
+import Button from '../ui/Button';
+import ModalSurface from '../ui/ModalSurface';
 import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
@@ -408,11 +410,14 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         onClick={(e) => e.stopPropagation()}
         {...(isMobile ? swipeHandlers : {})}
         style={{ 
-          width: isMobile ? '100vw' : 720, 
-          height: isMobile ? '100vh' : 'auto',
-          maxWidth: isMobile ? '100vw' : '95vw',
-          maxHeight: isMobile ? '100vh' : '90vh',
-          overflowY: isMobile ? 'auto' : 'visible'
+          width: isMobile ? '100vw' : 'min(94vw, 760px)', 
+          height: isMobile ? '100dvh' : 'auto',
+          maxWidth: isMobile ? '100vw' : '760px',
+          maxHeight: isMobile ? '100dvh' : '90dvh',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          paddingTop: isMobile ? 'env(safe-area-inset-top, 16px)' : undefined,
+          paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 16px)' : undefined,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -698,13 +703,13 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose}>FECHAR</button>
+          <Button variant="secondary" size="md" onClick={onClose}>FECHAR</Button>
           {isGameMaster && (
             <>
               {existing && (
-                <button className="btn-danger" onClick={handleDelete}>DELETAR</button>
+                <Button variant="caseDelete" size="md" onClick={handleDelete}>DELETAR</Button>
               )}
-              <button className="btn-primary" onClick={handleSave}>SALVAR ALTERAÇÕES</button>
+              <Button variant="primary" size="md" onClick={handleSave}>SALVAR ALTERAÇÕES</Button>
             </>
           )}
         </div>

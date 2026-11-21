@@ -66,23 +66,24 @@ export default function FakePhoneChatBuilder() {
       </button>
 
       {showChatEditor && (
-        <div style={{ display: 'flex', gap: '20px', marginTop: '15px', background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(100,150,255,0.2)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px', background: 'rgba(0,0,0,0.4)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(100,150,255,0.2)' }}>
           
-          {/* LADO ESQUERDO: INPUTS */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div className="cc-field">
-              <label className="cc-label">Nome do Contato</label>
-              <input 
-                className="cc-input"
-                value={phoneState.contactName} 
-                onChange={e => setPhoneState(s => ({ ...s, contactName: e.target.value }))} 
-                placeholder="Ex: Suspeito Principal" 
-              />
-            </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+            {/* LADO ESQUERDO: INPUTS */}
+            <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '15px', minWidth: 0 }}>
+              <div className="cc-field">
+                <label className="cc-label">Nome do Contato</label>
+                <input 
+                  className="cc-input"
+                  value={phoneState.contactName} 
+                  onChange={e => setPhoneState(s => ({ ...s, contactName: e.target.value }))} 
+                  placeholder="Ex: Suspeito Principal" 
+                />
+              </div>
 
-            <div>
-              <label className="cc-label">Mensagens</label>
-              {phoneState.chatList.length === 0 ? (
+              <div>
+                <label className="cc-label">Mensagens</label>
+                {phoneState.chatList.length === 0 ? (
                 <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 6, border: '1px dashed rgba(100,150,255,0.3)', color: '#888', fontSize: 11, textAlign: 'center', marginBottom: 10 }}>
                   Nenhuma mensagem. Clique em "➕ Adicionar Mensagem".
                 </div>
@@ -173,8 +174,8 @@ export default function FakePhoneChatBuilder() {
           </div>
 
           {/* LADO DIREITO: PREVIEW */}
-          <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
-            <div style={{ width: '100%', height: '500px', position: 'relative', border: '1px solid #333', borderRadius: '24px', overflow: 'hidden' }}>
+          <div style={{ width: '100%', maxWidth: '340px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+            <div style={{ width: '100%', maxWidth: '320px', height: '500px', position: 'relative', border: '1px solid #333', borderRadius: '24px', overflow: 'hidden' }}>
               <PhoneViewer 
                 chatData={phoneState.chatList} 
                 contactName={phoneState.contactName} 
@@ -206,13 +207,14 @@ export default function FakePhoneChatBuilder() {
                 onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleQuickAddMessage(); } }}
                 placeholder="Digite a mensagem e CTRL+ENTER"
               />
-              <button className="cc-btn cc-btn-save" style={{ width: '100%', justifyContent: 'center' }} onClick={handleQuickAddMessage}>
+              <button type="button" className="cc-btn cc-btn-save" style={{ width: '100%', minHeight: '40px', justifyContent: 'center' }} onClick={handleQuickAddMessage}>
                 Adicionar
               </button>
             </div>
           </div>
           
         </div>
+      </div>
       )}
     </div>
   );

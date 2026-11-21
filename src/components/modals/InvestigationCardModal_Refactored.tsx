@@ -2,6 +2,7 @@ import { Edit3, Camera, Lock, Check, X, Pen } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
+import Button from '../ui/Button';
 import { InvestigationCard, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
@@ -496,35 +497,33 @@ export default function InvestigationCardModal_Refactored({
 
         {/* Footer Actions */}
         <div className="investigation-dossier-footer">
-          <button
+          <Button
+            variant="secondary"
+            size="md"
             onClick={onClose}
             className="investigation-btn-cancel"
           >
             FECHAR
-          </button>
+          </Button>
           {isGameMaster && (
             <>
               {existing && (
-                <button
+                <Button
+                  variant="caseDelete"
+                  size="md"
                   onClick={handleDelete}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#e74c3c',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                  }}
                 >
                   🗑️ DELETAR
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleSave}
                 className="investigation-btn-save"
               >
                 ✓ SALVAR ALTERAÇÕES
-              </button>
+              </Button>
             </>
           )}
         </div>

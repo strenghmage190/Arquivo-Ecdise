@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Eye, EyeOff, Shield, Image as ImageIcon, Music, Lock, Zap, Settings, BookOpen, Cpu, Network, ShieldAlert, Fingerprint } from 'lucide-react';
+import { X, Save, Eye, EyeOff, Shield, Image as ImageIcon, Music, Lock, Zap, Settings, BookOpen, Cpu, Network, ShieldAlert, Fingerprint, ChevronDown, BookmarkPlus } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import UVEditor from '../tools/UVEditor';
 import AudioLab from '../tools/audiolab/AudioLab';
@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { ClueModalProvider, useClueModal } from '../../contexts/ClueModalContext';
 import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
 import { useClueTour } from '../../hooks/useClueTour';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { createClueTemplate, sanitizeTemplateData } from '../../api/templates';
 import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
 import 'react-tooltip/dist/react-tooltip.css';
 import './CreateClueModal_Refactored.css';
@@ -71,9 +73,10 @@ const TABS = [
 function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initialX, initialY, investigationId }: Props) {
   const { playBoot, playClick, playHover, playClose, playProcess, playSuccess } = useCyberpunkUI();
   const { startTour, shouldShowTour } = useClueTour();
+  const isMobile = useIsMobile();
   const {
     resetForm, loadExistingCard, registerUrl, revokeUrl,
-    coreState, securityState, mediaState, setMediaState,
+    coreState, setCoreState, securityState, mediaState, setMediaState,
     cipherState, glitchState, megaClueState,
     displayConfig, mediaVisibility, fieldVisibilityConfig,
     editorState, setEditorState,
@@ -82,6 +85,7 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
   const [activeTab, setActiveTab] = useState('geral');
   const [direction, setDirection] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -111,6 +115,49 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
     setDirection(nextIndex > currentIndex ? 1 : -1);
     setActiveTab(tabId);
     playClick();
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!coreState.title.trim()) {
+      toast.error('Dê um título à evidência antes de salvar como template.');
+      return;
+    }
+    const templateName = window.prompt('Nome do Template de Pista:', coreState.title.trim());
+    if (!templateName) return;
+
+    setIsSavingTemplate(true);
+    playProcess();
+    try {
+      const formPayload = {
+        coreState,
+        securityState,
+        cipherState,
+        glitchState,
+        megaClueState,
+        displayConfig,
+        mediaVisibility,
+        fieldVisibilityConfig,
+        filterConfig,
+        thermalConfig,
+        phoneState,
+        personState,
+        metadataState
+      };
+      const sanitized = sanitizeTemplateData(formPayload);
+      await createClueTemplate({
+        name: templateName,
+        description: coreState.descPublic || 'Template de criação de evidência',
+        template_data: sanitized,
+        is_public: false
+      });
+      toast.success(`[ TEMPLATE ] "${templateName}" salvo com sucesso!`);
+      playSuccess();
+    } catch (err: any) {
+      console.error('Erro ao salvar template:', err);
+      toast.error('Erro ao salvar template: ' + (err.message || 'Falha de comunicação'));
+    } finally {
+      setIsSavingTemplate(false);
+    }
   };
 
   const handleSave = async () => {
@@ -537,6 +584,26 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
           <X size={20} />
         </button>
         <aside className="cc-refactored-sidebar">
+          {/* Mobile Tab Dropdown */}
+          <div className="cc-mobile-tab-selector">
+            <label htmlFor="cc-tab-select" className="sr-only">Selecione a aba</label>
+            <div className="cc-tab-select-wrapper">
+              <select
+                id="cc-tab-select"
+                className="cc-tab-dropdown"
+                value={activeTab}
+                onChange={(e) => handleTabChange(e.target.value)}
+              >
+                {visibleTabs.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={18} className="cc-tab-select-chevron" />
+            </div>
+          </div>
+
           <nav className="cc-tabs-nav">
             {visibleTabs.map((tab) => {
               const Icon = tab.icon;
@@ -546,13 +613,7 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
                   key={tab.id}
                   data-tab={tab.id}
                   className={`cc-tab-button ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    const currentIndex = visibleTabs.findIndex(t => t.id === activeTab);
-                    const nextIndex = visibleTabs.findIndex(t => t.id === tab.id);
-                    setDirection(nextIndex > currentIndex ? 1 : -1);
-                    setActiveTab(tab.id);
-                    playClick();
-                  }}
+                  onClick={() => handleTabChange(tab.id)}
                   onMouseEnter={() => playHover()}
                 >
                   <Icon size={18} />
@@ -606,22 +667,34 @@ function CreateClueModalContent({ isOpen, onClose, existingCard, onSaved, initia
 
           <footer className="cc-refactored-footer">
             <div className="cc-footer-info">
-              <span className="cc-status-badge">{isSaving ? 'PROCESSANDO...' : 'PRONTO'}</span>
+              <span className="cc-status-badge">{isSaving ? 'PROCESSANDO...' : isSavingTemplate ? 'SALVANDO TEMPLATE...' : 'PRONTO'}</span>
             </div>
             <div className="cc-footer-buttons">
               <button 
+                type="button"
                 className="cc-btn cc-btn-cancel" 
                 onClick={() => { playClose(); onClose(); }}
                 onMouseEnter={() => playHover()}
-                disabled={isSaving}
+                disabled={isSaving || isSavingTemplate}
               >
                 <X size={16} /> CANCELAR
               </button>
               <button 
+                type="button"
+                className="cc-btn cc-btn-template" 
+                onClick={handleSaveTemplate}
+                onMouseEnter={() => playHover()}
+                disabled={isSaving || isSavingTemplate}
+                title="Salvar campos preenchidos como um modelo reutilizável"
+              >
+                <BookmarkPlus size={16} /> {isSavingTemplate ? 'SALVANDO...' : 'SALVAR COMO TEMPLATE'}
+              </button>
+              <button 
+                type="button"
                 className="cc-btn cc-btn-save" 
                 onClick={handleSave}
                 onMouseEnter={() => playHover()}
-                disabled={isSaving}
+                disabled={isSaving || isSavingTemplate}
               >
                 <Save size={16} /> {isSaving ? 'SALVANDO...' : 'SALVAR EVIDÊNCIA'}
               </button>

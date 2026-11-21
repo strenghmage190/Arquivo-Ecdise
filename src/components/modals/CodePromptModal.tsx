@@ -1,5 +1,7 @@
 import { AlertTriangle, Lightbulb, Lock, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import useEscapeClose from './useEscapeClose';
+import Button from '../ui/Button';
 import './CodePromptModal.css';
 
 export type CodePromptResult = { success: boolean; message?: string; closeModal?: boolean };
@@ -19,6 +21,7 @@ export default function CodePromptModal({
   title = 'ARQUIVO PROTEGIDO',
   description = 'Este arquivo requer autenticação. Digite o código de acesso:',
 }: CodePromptModalProps): React.ReactElement {
+  useEscapeClose(true, onClose);
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -160,12 +163,12 @@ export default function CodePromptModal({
                 </div>
 
                 <div className="code-prompt-actions">
-                  <button type="submit" className="code-btn primary" data-text="CONFIRMAR" disabled={submitting}>
+                  <Button type="submit" variant="primary" size="md" className="code-btn primary" data-text="CONFIRMAR" disabled={submitting}>
                     {submitting ? 'VALIDANDO...' : 'CONFIRMAR'}
-                  </button>
-                  <button type="button" className="code-btn secondary" data-text="CANCELAR" onClick={onClose}>
+                  </Button>
+                  <Button type="button" variant="secondary" size="md" className="code-btn secondary" data-text="CANCELAR" onClick={onClose}>
                     CANCELAR
-                  </button>
+                  </Button>
                 </div>
               </form>
 

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import ForensicTerminalModal from './ForensicTerminalModal';
+import ModalSurface from '../ui/ModalSurface';
 import './AudioViewerModal.css';
 
 interface Props {
@@ -62,6 +63,7 @@ export default function AudioViewerModal({
       responsive: true,
       backend: 'MediaElement',
       minPxPerSec: 250,
+      interact: true,
     });
 
     wavesurferRef.current = ws;
