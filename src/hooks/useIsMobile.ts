@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Função utilitária para debounce
-const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout;
+const debounce = (func: (...args: any[]) => void, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
   return (...args: any[]) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay);
   };
 };
 
@@ -15,7 +15,13 @@ export const useIsMobile = () => {
   const detectTouchSupport = () => {
     if (typeof window === 'undefined') return false;
     try {
-      return Boolean((window as any).ontouchstart !== undefined || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || (navigator as any).msMaxTouchPoints > 0);
+      const matchPointerCoarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+      const hasTouchEvents = Boolean(
+        'ontouchstart' in window ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
+        ((navigator as any).msMaxTouchPoints && (navigator as any).msMaxTouchPoints > 0)
+      );
+      return matchPointerCoarse || hasTouchEvents;
     } catch (e) {
       return false;
     }
@@ -32,15 +38,13 @@ export const useIsMobile = () => {
     const touch = detectTouchSupport();
     const uaMobile = detectMobileUA();
 
-    // Only consider mobile when the viewport is small AND we detect a touch-capable device
-    // or the user agent reports a mobile device. This prevents forcing "mobile" mode on desktop when
-    // the user toggles a mobile preview in devtools or manually resizes the window.
+    // Mobile quando largura é <= 768px E dispositivo suporta touch/pointer coarse ou UA mobile
     setIsMobile(Boolean(smallWidth && (touch || uaMobile)));
   }, []);
 
   useEffect(() => {
     checkMobile();
-    const debouncedCheck = debounce(checkMobile, 150); // 150ms debounce
+    const debouncedCheck = debounce(checkMobile, 150);
     window.addEventListener('resize', debouncedCheck);
     return () => window.removeEventListener('resize', debouncedCheck);
   }, [checkMobile]);
@@ -53,7 +57,9 @@ export const useIsTouchDevice = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setIsTouchDevice(Boolean('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)));
+    const matchPointerCoarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    const hasTouch = Boolean('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+    setIsTouchDevice(matchPointerCoarse || hasTouch);
   }, []);
 
   return isTouchDevice;
@@ -66,6 +72,6 @@ export const useDeviceType = (): DeviceType => {
   const isTouch = useIsTouchDevice();
 
   if (isMobile) return 'mobile';
-  if (isTouch) return 'tablet'; // Assume tablets são touch sem ser mobile width
+  if (isTouch) return 'tablet';
   return 'desktop';
 };

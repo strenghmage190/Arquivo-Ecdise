@@ -1,38 +1,61 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 
-interface BottomSheetProps {
+export interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
+  maxHeight?: string;
 }
 
-const BottomSheet: React.FC<BottomSheetProps> = React.memo(({ isOpen, onClose, children, title = 'Menu' }) => {
+const BottomSheet: React.FC<BottomSheetProps> = React.memo(({
+  isOpen,
+  onClose,
+  children,
+  title = 'Menu',
+  maxHeight = '80dvh'
+}) => {
   const handlers = useSwipeable({
     onSwipedDown: onClose,
     trackMouse: true,
     delta: 50,
   });
 
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    if (isOpen) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, handleKeyDown]);
+
+  if (!isOpen) return null;
 
   return (
     <>
-      {isOpen && (
-        <div
-          onClick={onClose}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.22)', zIndex: 9998 }}
-          aria-hidden="true"
-        />
-      )}
       <div
-        className={`bottom-sheet ${isOpen ? 'open' : ''}`}
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(2px)',
+          zIndex: 'var(--z-modals, 2000)',
+          animation: 'fadeInBackdrop 0.2s ease forwards',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="bottom-sheet open"
         {...handlers}
         role="dialog"
         aria-modal="true"
@@ -41,22 +64,97 @@ const BottomSheet: React.FC<BottomSheetProps> = React.memo(({ isOpen, onClose, c
           position: 'fixed',
           bottom: 0,
           left: 0,
+          right: 0,
           width: '100vw',
-          maxHeight: isOpen ? '70vh' : '0px',
-          height: isOpen ? 'auto' : 0,
-          background: 'var(--sheet-bg, #fff)',
-          borderTop: '1px solid rgba(0,0,0,0.08)',
-          transition: 'max-height 0.28s ease, height 0.28s ease',
-          zIndex: 10000,
-          overflow: 'hidden',
-          boxShadow: '0 -8px 30px rgba(0,0,0,0.12)'
+          maxHeight: maxHeight,
+          background: 'var(--surface, #11141b)',
+          borderTop: '1px solid var(--border, #29313d)',
+          borderTopLeftRadius: 'var(--radius-lg, 12px)',
+          borderTopRightRadius: 'var(--radius-lg, 12px)',
+          zIndex: 'calc(var(--z-modals, 2000) + 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.8)',
+          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+          overscrollBehavior: 'contain',
         }}
       >
-        <div style={{ padding: '14px 16px', height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onClick={(e) => e.stopPropagation()}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h2 id="bottom-sheet-title" style={{ margin: 0, fontSize: 16 }}>{title}</h2>
-            <button aria-label="Fechar menu" onClick={onClose} className="hud-btn"><X size={16} /></button>
-          </div>
+        {/* Grab Handle */}
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: '8px',
+            paddingBottom: '4px',
+            cursor: 'grab',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '4px',
+              backgroundColor: 'var(--border, #29313d)',
+              borderRadius: '2px',
+            }}
+          />
+        </div>
+
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 16px 12px',
+            borderBottom: '1px solid var(--border, #29313d)',
+          }}
+        >
+          <h2
+            id="bottom-sheet-title"
+            style={{
+              margin: 0,
+              fontSize: 'var(--font-size-sm, 14px)',
+              fontFamily: 'var(--font-system, monospace)',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              color: 'var(--text-primary, #f1f5f9)',
+              textTransform: 'uppercase',
+            }}
+          >
+            {title}
+          </h2>
+          <button
+            aria-label="Fechar"
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-secondary, #94a3b8)',
+              cursor: 'pointer',
+              minHeight: 'var(--control-h-sm, 32px)',
+              minWidth: 'var(--control-h-sm, 32px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div
+          style={{
+            padding: '16px',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin',
+            flex: 1,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {children}
         </div>
       </div>

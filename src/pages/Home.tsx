@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil } from 'lucide-react';
+import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil, Search } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
 import Desktop from '../components/layout/Desktop';
@@ -53,9 +53,11 @@ const HERO_CONTENT = [
 ];
 
 const CASE_EVOLUTIONS = [
-  'METAMORFOSE',
-  'ENCARNAÇÃO',
-  'APOTEOSE',
+  'ESTÁGIO 0 (LATENTE)',
+  'ESTÁGIO 1 (METAMORFOSE)',
+  'ESTÁGIO 2 (ENCARNAÇÃO)',
+  'ESTÁGIO 3 (APOTEOSE)',
+  'ESTÁGIO 4 (TRANSCENDER)',
   'SÍNTESE',
   'QUIMERA',
   'SINGULARIDADE',
@@ -98,6 +100,18 @@ export default function Home() {
   const [imageMode, setImageMode] = useState<'default' | 'url' | 'upload'>('default');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredCases = useMemo(() => {
+    if (!searchQuery.trim()) return cases;
+    const q = searchQuery.toLowerCase().trim();
+    return cases.filter((c: any) =>
+      c.title?.toLowerCase().includes(q) ||
+      c.description?.toLowerCase().includes(q) ||
+      c.element?.toLowerCase().includes(q) ||
+      c.evolution?.toLowerCase().includes(q)
+    );
+  }, [cases, searchQuery]);
 
   useEffect(() => {
     setHeroElement(HERO_CONTENT[Math.floor(Math.random() * HERO_CONTENT.length)]);
@@ -258,7 +272,49 @@ export default function Home() {
               <div className={styles['eyebrow']}>REGISTROS // EM OBSERVAÇÃO</div>
               <h2 id="case-list-title">Casos em investigação</h2>
             </div>
-            <span className={styles['section-index']}>ARQUIVO 07 / {String(cases.length).padStart(2, '0')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', color: 'var(--home-muted)', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Filtrar casos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    padding: '6px 12px 6px 30px',
+                    minHeight: '32px',
+                    background: 'var(--home-surface, #11141b)',
+                    border: '1px solid var(--home-border, #29313d)',
+                    borderRadius: '4px',
+                    color: 'var(--home-text, #f1f5f9)',
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
+                    outline: 'none',
+                    width: 'min(200px, 100%)',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '6px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--home-muted)',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex'
+                    }}
+                    title="Limpar busca"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              <span className={styles['section-index']}>ARQUIVO 07 / {String(filteredCases.length).padStart(2, '0')}</span>
+            </div>
           </header>
 
           <div className={styles['case-grid']}>
@@ -268,7 +324,7 @@ export default function Home() {
               <small>Registrar um novo caso</small>
             </button>
 
-            {cases.map((currentCase, index) => {
+            {filteredCases.map((currentCase, index) => {
               const art = getCaseArt(currentCase.id || index, currentCase.element);
               const cleanId = String(currentCase.id).split(':')[0];
               return (
@@ -336,12 +392,17 @@ export default function Home() {
             })}
           </div>
 
-          {cases.length === 0 && (
+          {cases.length === 0 ? (
             <div className={styles['empty-state']}>
               <span>NENHUM REGISTRO INDEXADO</span>
               <small>O primeiro caso ainda aguarda autorização de abertura.</small>
             </div>
-          )}
+          ) : filteredCases.length === 0 ? (
+            <div className={styles['empty-state']}>
+              <span>NENHUM CASO CORRESPONDE AO FILTRO</span>
+              <small>Tente buscar por outro termo, elemento ou evolução.</small>
+            </div>
+          ) : null}
         </section>
 
         <footer className={styles['telemetry-ticker']} aria-label="Telemetria da Ordem">

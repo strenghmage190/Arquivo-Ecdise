@@ -11,8 +11,6 @@ body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-bac
   animation-delay: 0s !important;
   transition-duration: 0.05s !important;
   transition-delay: 0s !important;
-
-  /* Não desabilite 'transform' globalmente, pois quebra layout! */
 }
 
 /* EXCEÇÃO: Modais e overlays mantêm animações normais */
@@ -39,8 +37,6 @@ body.performance-mode .glitch-solver-modal * {
 }
 
 /* 2. EFEITOS PESADOS (Glow, Blur, Neon) - direcionado apenas a elementos decorativos */
-
-/* Substitui a regra global por uma lista explícita de seletores decorativos. */
 body.performance-mode .decorative,
 body.performance-mode .background-effect,
 body.performance-mode .particle-effect,
@@ -53,34 +49,24 @@ body.performance-mode .glitch-layer-3,
 body.performance-mode .glitch-text-overlay *,
 body.performance-mode .drop-zone,
 body.performance-mode .scanner-line {
-  box-shadow: none !important; /* Mata neons apenas nas decorações */
-  text-shadow: none !important; /* Mata brilho de texto decorativo */
-  backdrop-filter: none !important; /* Mata blur decorativo */
+  box-shadow: none !important;
+  text-shadow: none !important;
   backdrop-filter: none !important;
-  filter: none !important; /* Mata outros filtros decorativos */
-  background-image: none !important; /* Remove imagens de fundo apenas em decorações */
+  filter: none !important;
+  background-image: none !important;
 }
 
 /* 3. SUBSTITUIÇÃO VISUAL (Fallback para Glassmorphism) */
-
-/* Quando tiramos o blur, o fundo fica invisível ou feio. Vamos colocar um fundo sólido. */
 body.performance-mode .investigation-toolbar,
 body.performance-mode .modal-content,
 body.performance-mode .glass-panel,
 body.performance-mode .toolbar,
 body.performance-mode .clue-card {
-  background-color: #05080a !important; /* Cor sólida escura (Nexus Dark) */
-  border: 1px solid #1e40af !important; /* Borda simples para definição */
+  background-color: #05080a !important;
+  border: 1px solid #1e40af !important;
 }
 
-/* 4. PERFORMANCE GRÁFICA */
-
-/* NOTE: Não remover imagens de fundo globalmente — isso afeta o inspector UV.
-   Aplicamos `background-image: none` apenas às decorações (acima). */
-
-/* ------------------------------------------------------------------
-   VARIÁVEIS DE MODO PERFORMANCE (Facilitam ajustes finos sem !important)
------------------------------------------------------------------- */
+/* 4. VARIÁVEIS DE MODO PERFORMANCE */
 body.performance-mode {
   --perf-decor-filter: none;
   --perf-decor-backdrop-filter: none;
@@ -97,383 +83,19 @@ body.performance-mode .particle-effect,
 body.performance-mode .glitch-corruption * {
   filter: var(--perf-decor-filter) !important;
   backdrop-filter: var(--perf-decor-backdrop-filter) !important;
-  backdrop-filter: var(--perf-decor-backdrop-filter) !important;
   box-shadow: var(--perf-decor-box-shadow) !important;
   text-shadow: var(--perf-decor-text-shadow) !important;
   background-image: var(--perf-decor-bg-image) !important;
   border-radius: var(--perf-decor-border-radius) !important;
 }
 
-/* 5. PROTEÇÃO DE LAYOUT (O que não quebra centralização) */
-
-/* Reabilitar interações básicas para botões não parecerem quebrados */
-body.performance-mode button:active,
-body.performance-mode .clickable:active {
-  opacity: 0.7 !important; /* Feedback visual simples em vez de animado */
+/* Otimizações adicionais seguras */
+body.performance-mode button:hover {
+  opacity: 0.7 !important;
 }
 
-/* 6. CORREÇÃO ESPECÍFICA: TOOLBAR E POSICIONAMENTO */
-
-/* Garante que elementos de layout ainda possam usar flex e grid corretamente */
-body.performance-mode {
-  /* Evita repaint de scroll suave */
-
+body.performance-mode html,
+body.performance-mode body,
+body.performance-mode * {
   scroll-behavior: auto !important;
-}
-
-/* -----------------------------------------------------------
-   OVERRIDES DE SEGURANÇA (Se precisar manter alguma imagem/transform)
-   ----------------------------------------------------------- */
-
-/* Se você usa transform para centralizar, mantenha ele habilitado */
-body.performance-mode .fixed-center,
-body.performance-mode [style*="transform"], /* Tenta manter inline styles */
-body.performance-mode .center-xy {
-  /* Não forçar 'transform: none' aqui */
-}
-
-/* Permitir seleção de texto (IMPORTANTE para puzzles) */
-body.performance-mode * {
-  user-select: text !important;
-}
-
-/* Impedir seleção apenas em UI */
-body.performance-mode button,
-body.performance-mode .nav-item {
-  user-select: none !important;
-}
-
-/* Disable pointer events on decorative elements */
-body.performance-mode .decorative,
-body.performance-mode .background-effect,
-body.performance-mode .particle-effect {
-  pointer-events: none !important;
-  opacity: 0.2 !important;
-}
-
-/* Simplify text rendering */
-body.performance-mode * {
-  font-variant-ligatures: none !important;
-  font-feature-settings: normal !important;
-}
-
-/* Disable CSS containment for better performance */
-body.performance-mode * {
-  contain: none !important;
-}
-
-/* Reduce GPU memory usage */
-body.performance-mode canvas {
-  image-rendering: pixelated !important;
-}
-
-/* Disable expensive CSS properties - APENAS em não-críticos */
-body.performance-mode .decorative,
-body.performance-mode .background-effect,
-body.performance-mode .particle-effect {
-  mix-blend-mode: normal !important;
-  isolation: auto !important;
-}
-
-/* Simplify border images */
-body.performance-mode * {
-  border-image: none !important;
-}
-
-/* Disable CSS counters */
-body.performance-mode * {
-  counter-reset: none !important;
-  counter-increment: none !important;
-}
-
-/* Disable CSS quotes */
-body.performance-mode * {
-  quotes: none !important;
-}
-
-/* Disable CSS widows/orphans */
-body.performance-mode * {
-  widows: auto !important;
-  orphans: auto !important;
-}
-
-/* Disable CSS page breaks */
-body.performance-mode * {
-  break-after: auto !important;
-  break-before: auto !important;
-  break-inside: auto !important;
-}
-
-/* Disable CSS columns */
-body.performance-mode * {
-  column-count: auto !important;
-  column-gap: normal !important;
-  column-rule: none !important;
-}
-
-/* REMOVIDO: Essas regras quebram layouts críticos */
-/* NÃO force flex-shrink ou grid-template globalmente */
-/* Layout flexbox e grid são essenciais para modais e ferramentas */
-
-/* Disable CSS transforms that create layers */
-body.performance-mode * {
-  perspective: none !important;
-  backface-visibility: visible !important;
-}
-
-/* Disable CSS animations on pseudo-elements */
-body.performance-mode *::before,
-body.performance-mode *::after {
-  animation: none !important;
-  transition: none !important;
-}
-
-/* ============================================================================
-   EXCEÇÕES CENTRALIZADAS: Zona segura via atributo `data-perf-keep`
-   ========================================================================== */
-
-/*
-  Em vez de manter uma longa lista frágil de seletores, marcamos componentes
-  críticos com `data-perf-keep="1"`. Esta regra cria uma "zona segura"
-  que restaura todas as propriedades para esses elementos e seus descendentes.
-
-  Usamos `all: initial !important` para garantir que propriedades desativadas
-  (filtros, backdrop-filter, animações, sombras, etc.) sejam restauradas.
-  Em seguida reabilitamos apenas as propriedades de layout básicas para evitar
-  quebra de render (display/position/box-sizing).
-*/
-
-body.performance-mode [data-perf-keep="1"],
-body.performance-mode [data-perf-keep="1"] * {
-  all: initial !important;
-
-  /* Reaplicar propriedades essenciais de layout para evitar que 'all: initial' quebre a estrutura */
-  display: revert !important;
-  position: revert !important;
-  float: revert !important;
-  inset: revert !important;
-  top: revert !important;
-  left: revert !important;
-  right: revert !important;
-  bottom: revert !important;
-  box-sizing: border-box !important;
-  contain: none !important;
-  z-index: revert !important;
-
-  /* Permitir que efeitos e filtros venham de volta */
-  filter: initial !important;
-  backdrop-filter: initial !important;
-  backdrop-filter: initial !important;
-  animation: initial !important;
-  transition: initial !important;
-  box-shadow: initial !important;
-}
-
-/* Contenção específica para modais/inspection visual dentro da zona segura
-  Evita imagens/vídeos expandirem além da viewport e quebrarem o layout. */
-body.performance-mode [data-perf-keep="1"] .inspect-file,
-body.performance-mode [data-perf-keep="1"] .inspect-visual-area,
-body.performance-mode [data-perf-keep="1"] .inspect-backdrop,
-body.performance-mode
-  [data-perf-keep="1"]
-  .inspect-file
-  .inspect-visual-area-wrapper {
-  max-width: calc(100vw - 80px) !important;
-  max-height: calc(100vh - 120px) !important;
-  overflow: auto !important;
-  display: block !important;
-  box-sizing: border-box !important;
-}
-
-body.performance-mode [data-perf-keep="1"] .inspect-visual-area img,
-body.performance-mode
-  [data-perf-keep="1"]
-  .inspect-visual-area
-  .large-evidence-img,
-body.performance-mode [data-perf-keep="1"] .inspect-visual-area video,
-body.performance-mode [data-perf-keep="1"] .inspect-visual-area canvas {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  width: auto !important;
-  height: auto !important;
-  object-fit: contain !important;
-  display: block !important;
-}
-
-/* Contenção para elementos que usam inline background-image */
-body.performance-mode [data-perf-keep="1"] [style*="background-image"],
-body.performance-mode
-  [data-perf-keep="1"]
-  .large-evidence-img[style*="background-image"] {
-  background-size: contain !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-}
-
-/* ------------------------------------------------------------------
-   Additional performance reductions: aggressively disable GPU-heavy
-   properties, will-change, and long-running transitions/animations.
-   These are conservative but important on low-end devices.
------------------------------------------------------------------- */
-body.performance-mode * {
-  will-change: auto !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-  animation-iteration-count: 1 !important;
-  animation-play-state: paused !important;
-  transition-duration: 0s !important;
-  transition-delay: 0s !important;
-  /* NÃO remover transform globalmente - quebra centralização de modais e posicionamento */
-  /* transform: none !important; */
-  perspective: none !important;
-}
-
-/* Reduce heavy image processing and prefer simple rendering */
-body.performance-mode img,
-body.performance-mode picture,
-body.performance-mode video,
-body.performance-mode canvas {
-  image-rendering: auto !important;
-  backface-visibility: visible !important;
-  object-fit: contain !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-}
-
-/* Honor user's reduced-motion but also allow forcing it in performance mode */
-@media (prefers-reduced-motion: reduce) {
-  body.performance-mode * {
-    animation-duration: 0s !important;
-    transition-duration: 0s !important;
-  }
-}
-
-/* Disable will-change on pseudo elements too */
-body.performance-mode *::before,
-body.performance-mode *::after {
-  will-change: auto !important;
-}
-
-/* Prevent heavy compositing hints from libraries */
-body.performance-mode [style*="will-change"] {
-  will-change: auto !important;
-}
-
-/* NÃO remover transforms inline - eles são usados para posicionamento crítico */
-/* Modais, tooltips, overlays e ferramentas dependem de transform para funcionar */
-
-/* ============================================================================
-   EXCEÇÕES CRÍTICAS PARA MODAIS E ELEMENTOS INTERATIVOS
-   ========================================================================== */
-
-/* CRÍTICO: Restaurar animações e transições em modais */
-body.performance-mode .inspect-backdrop,
-body.performance-mode .inspect-backdrop *,
-body.performance-mode .inspect-file,
-body.performance-mode .inspect-file *,
-body.performance-mode .modal-backdrop,
-body.performance-mode .modal-backdrop *,
-body.performance-mode .glitch-solver-backdrop,
-body.performance-mode .glitch-solver-backdrop *,
-body.performance-mode .glitch-solver-modal,
-body.performance-mode .glitch-solver-modal *,
-body.performance-mode .code-prompt-overlay,
-body.performance-mode .code-prompt-overlay *,
-body.performance-mode .code-prompt-modal,
-body.performance-mode .code-prompt-modal * {
-  animation: initial !important;
-  transition: initial !important;
-  backdrop-filter: initial !important;
-  transform: initial !important;
-  pointer-events: initial !important;
-  display: initial !important;
-  mix-blend-mode: initial !important;
-  filter: initial !important;
-  box-shadow: initial !important;
-  text-shadow: initial !important;
-}
-
-/* CRÍTICO: Modais precisam de transform, animations e backdrop-filter para funcionar */
-body.performance-mode .inspect-backdrop,
-body.performance-mode .inspect-file,
-body.performance-mode .modal-backdrop,
-body.performance-mode .glitch-solver-backdrop,
-body.performance-mode .glitch-solver-modal,
-body.performance-mode .code-prompt-overlay,
-body.performance-mode .code-prompt-modal {
-  animation-duration: initial !important;
-  transition-duration: initial !important;
-  backdrop-filter: blur(4px) !important;
-  pointer-events: auto !important;
-}
-
-/* CRÍTICO: Elementos interativos dentro de modais - NÃO forçar display ou transform */
-body.performance-mode .inspect-backdrop *,
-body.performance-mode .inspect-file *,
-body.performance-mode .glitch-solver-backdrop *,
-body.performance-mode .glitch-solver-modal *,
-body.performance-mode .code-prompt-overlay *,
-body.performance-mode .code-prompt-modal * {
-  pointer-events: auto !important;
-  animation-duration: initial !important;
-  transition-duration: initial !important;
-}
-
-/* CRÍTICO: Overlays UV e forense precisam de mix-blend-mode e filter */
-body.performance-mode .global-uv-overlay,
-body.performance-mode .global-uv-overlay-lite,
-body.performance-mode .uv-editor-panel,
-body.performance-mode .thermal-canvas,
-body.performance-mode .thermal-overlay {
-  filter: initial !important;
-  mix-blend-mode: initial !important;
-  backdrop-filter: initial !important;
-  transform: initial !important;
-}
-
-/* CRÍTICO: Análise forense RGB precisa de filtros */
-body.performance-mode .mystery-image[data-forensic-channel],
-body.performance-mode .mystery-image[data-forensic-channel] img,
-body.performance-mode .mystery-image[data-forensic-channel] canvas {
-  filter: initial !important;
-}
-
-/* CRÍTICO: Botões e controles precisam de pointer-events */
-body.performance-mode button,
-body.performance-mode .btn,
-body.performance-mode .hud-btn,
-body.performance-mode .clickable,
-body.performance-mode input,
-body.performance-mode select,
-body.performance-mode textarea,
-body.performance-mode a {
-  pointer-events: auto !important;
-  animation: initial !important;
-  transition: initial !important;
-}
-
-/* CRÍTICO: Containers de imagem/vídeo precisam de filtros para funcionar */
-body.performance-mode .large-evidence-img,
-body.performance-mode .mystery-image img,
-body.performance-mode .mystery-image canvas,
-body.performance-mode .cctv-wrapper video {
-  filter: initial !important;
-  transform: initial !important;
-}
-
-/* CRÍTICO: HUD panels precisam de backdrop-filter para legibilidade */
-body.performance-mode .tools-hud-panel,
-body.performance-mode .filters-overlay-panel {
-  backdrop-filter: blur(4px) !important;
-}
-
-/* CRÍTICO: Code Prompt e inputs de senha precisam funcionar */
-body.performance-mode .code-prompt-overlay,
-body.performance-mode .code-prompt-modal,
-body.performance-mode .code-input-wrapper {
-  pointer-events: auto !important;
-  backdrop-filter: blur(4px) !important;
-  transform: initial !important;
 }

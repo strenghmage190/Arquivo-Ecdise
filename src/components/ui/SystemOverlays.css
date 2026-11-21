@@ -1,0 +1,196 @@
+/* SystemOverlays & HUD Overlay Styles */
+
+.hud-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-hud, 1000);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  overflow: hidden;
+}
+
+.hud-overlay-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hud-interactive {
+  pointer-events: auto;
+}
+
+.nexus-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  width: 100%;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.nexus-hud.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+}
+
+.hud-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  pointer-events: auto;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-sm, 32px);
+  height: var(--control-h-sm, 32px);
+  background: rgba(17, 20, 27, 0.85);
+  border: 1px solid var(--border, #29313d);
+  color: var(--text-primary, #f1f5f9);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.nav-btn:hover {
+  background: var(--surface, #1e293b);
+  border-color: var(--nexus-blue, #cbd5e1);
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.2);
+}
+
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  pointer-events: auto;
+}
+
+.system-monitor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  background: rgba(10, 10, 15, 0.85);
+  border: 1px solid var(--border, #29313d);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-system, monospace);
+  font-size: 11px;
+  backdrop-filter: blur(4px);
+}
+
+.system-monitor .label {
+  color: var(--text-secondary, #94a3b8);
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.system-monitor .bar-container {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.system-monitor .fill {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.system-monitor .fill.danger {
+  background: var(--ordo-red, #e63946);
+  box-shadow: 0 0 8px var(--ordo-red, #e63946);
+}
+
+.system-monitor .value {
+  color: var(--text-primary, #f1f5f9);
+  font-weight: bold;
+  min-width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-h-sm, 32px);
+  padding: 0 12px;
+  background: rgba(230, 57, 70, 0.15);
+  border: 1px solid rgba(230, 57, 70, 0.4);
+  color: #fff;
+  font-family: var(--font-system, monospace);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.btn-logout:hover {
+  background: var(--ordo-red, #e63946);
+  box-shadow: 0 0 12px rgba(230, 57, 70, 0.4);
+}
+
+/* Background hex stream */
+.background-data {
+  position: fixed;
+  top: 60px;
+  bottom: 20px;
+  width: 140px;
+  font-family: var(--font-terminal, monospace);
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(148, 163, 184, 0.08);
+  pointer-events: none;
+  overflow: hidden;
+  user-select: none;
+  z-index: 0;
+}
+
+@media (max-width: 768px) {
+  .background-data {
+    display: none;
+  }
+
+  .system-monitor .label {
+    display: none;
+  }
+}
+
+/* Sigil rail */
+.sigil-rail {
+  position: fixed;
+  left: var(--space-2, 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.15;
+}
+
+.sigil-rail-mark {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--text-secondary, #94a3b8);
+}

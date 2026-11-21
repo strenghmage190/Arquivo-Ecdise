@@ -76,15 +76,44 @@ export default function InviteModal({ isOpen, onClose, investigationId, inviteLi
           <p>Envie este link para jogadores — ele permite que entrem direto no caso.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* The investigationId prop remains available for legacy flows */}
-          <input
-            readOnly
-            value={inviteLink || ''}
-            placeholder="Gere o link no botão ✉️"
-            style={{ flex: 1, background: '#000', border: '1px solid #444', color: '#c6a45f', padding: 8 }}
-          />
-          <button onClick={() => handleCopy(inviteLink || '')} style={{ background: '#c6a45f', color: '#000', border: 'none', cursor: 'pointer' }}>COPIAR</button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'stretch' }}>
+            <input
+              readOnly
+              value={inviteLink || ''}
+              placeholder="Gere o link no botão ✉️"
+              style={{
+                flex: '1 1 200px',
+                minHeight: 'var(--control-h-md, 40px)',
+                background: 'rgba(0, 0, 0, 0.6)',
+                border: '1px solid var(--border, #444)',
+                color: '#c6a45f',
+                padding: '8px 12px',
+                fontSize: '14px',
+                fontFamily: 'var(--font-terminal, monospace)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                boxSizing: 'border-box'
+              }}
+            />
+            <button
+              onClick={() => handleCopy(inviteLink || '')}
+              style={{
+                minHeight: 'var(--control-h-md, 40px)',
+                padding: '8px 16px',
+                background: '#c6a45f',
+                color: '#000',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontFamily: 'inherit',
+                borderRadius: 'var(--radius-sm, 4px)',
+                flex: '0 0 auto'
+              }}
+            >
+              COPIAR
+            </button>
+          </div>
         </div>
 
         <hr style={{ borderColor: '#333', margin: '12px 0' }} />

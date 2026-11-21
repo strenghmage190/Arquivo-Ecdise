@@ -1,7 +1,11 @@
-import { Volume2, FileText } from 'lucide-react';
+import { Volume2, FileText, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Toast from '../ui/Toast';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import BottomSheet from '../ui/BottomSheet';
+import { MobileDrawer } from '../ui/MobileDrawer';
+import Button from '../ui/Button';
 
 interface GMOverwatchProps {
   investigationId: string;
@@ -25,6 +29,7 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
   const [allCards, setAllCards] = useState<HiddenCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; } | null>(null);
+  const isMobile = useIsMobile();
 
   const loadAllCards = async () => {
     setLoading(true);
@@ -148,103 +153,148 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
 
   if (!isVisible) return null;
 
-  return (
-    <>
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        width: '300px',
-        height: '100vh',
-        background: 'rgba(0, 0, 0, 0.9)',
-        borderLeft: '2px solid #00ffff',
-        zIndex: 1200,
-        overflowY: 'auto',
-        padding: '20px',
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ color: '#00ffff', margin: 0 }}>GM Overwatch</h3>
-          <button onClick={onToggle} style={{ background: 'none', border: 'none', color: '#00ffff', cursor: 'pointer' }}>✕</button>
-        </div>
-
-        {loading ? (
-          <div style={{ color: '#fff' }}>Carregando...</div>
-        ) : !allCards || allCards.length === 0 ? (
-          <div style={{ color: '#aaa' }}>Nenhuma pista</div>
-        ) : (
-          <div>
-            {allCards.map(card => (
-              <div key={card.id} style={{
-                background: 'rgba(139, 92, 246, 0.1)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-                borderRadius: '6px',
-                padding: '12px',
-                marginBottom: '12px',
+  const content = (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {loading ? (
+        <div style={{ color: 'var(--text-secondary, #94a3b8)', padding: 'var(--space-4, 16px)' }}>Carregando pistas...</div>
+      ) : !allCards || allCards.length === 0 ? (
+        <div style={{ color: 'var(--text-secondary, #94a3b8)', padding: 'var(--space-4, 16px)' }}>Nenhuma pista encontrada.</div>
+      ) : (
+        <div style={{ overflowY: 'auto', padding: isMobile ? 'var(--space-3, 12px)' : '0' }}>
+          {allCards.map(card => (
+            <div
+              key={card.id}
+              style={{
+                background: 'rgba(15, 23, 42, 0.75)',
+                border: '1px solid var(--border, #29313d)',
+                borderRadius: 'var(--radius-md, 8px)',
+                padding: 'var(--space-3, 12px)',
+                marginBottom: 'var(--space-3, 12px)',
                 position: 'relative'
-              }}>
-                <div style={{
+              }}
+            >
+              <div
+                style={{
                   position: 'absolute',
                   top: '8px',
                   right: '8px',
-                  background: card.is_hidden ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 255, 0, 0.8)',
+                  background: card.is_hidden ? 'rgba(230, 57, 70, 0.85)' : 'rgba(34, 197, 94, 0.85)',
                   color: '#fff',
-                  padding: '2px 6px',
-                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full, 9999px)',
                   fontSize: '10px',
-                  fontWeight: 'bold'
-                }}>
-                  {card.is_hidden ? 'OCULTA' : 'VISÍVEL'}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ marginRight: '8px', fontSize: '16px' }}>{getCardIcon(card.type)}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>{card.title}</div>
-                    <div style={{ color: '#aaa', fontSize: '11px' }}>
-                      Tipo: {card.type} • Criada: {card.created_at ? new Date(card.created_at).toLocaleDateString('pt-BR') : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ color: '#aaa', fontSize: '12px', marginBottom: '8px' }}>
-                  <strong>Código de descoberta:</strong> <code style={{
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    padding: '2px 4px',
-                    borderRadius: '3px',
-                    color: '#00ffff'
-                  }}>{card.discovery_code || 'Nenhum'}</code>
-                </div>
-
-                {(card.description_public || card.description_hidden) && (
-                  <div style={{ color: '#ccc', fontSize: '12px', marginBottom: '10px', fontStyle: 'italic' }}>
-                    {card.description_public || card.description_hidden}
-                  </div>
-                )}
-
-                {card.is_hidden && (
-                  <button
-                    onClick={() => handleReveal(card.id, card.title)}
-                    style={{
-                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                      color: '#000',
-                      border: 'none',
-                      padding: '8px 12px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      width: '100%'
-                    }}
-                  >
-                    🚀 DEPLOY ASSET
-                  </button>
-                )}
+                  fontFamily: 'var(--font-system, monospace)',
+                  fontWeight: 'bold',
+                  letterSpacing: '1px'
+                }}
+              >
+                {card.is_hidden ? 'OCULTA' : 'VISÍVEL'}
               </div>
-            ))}
+
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>{getCardIcon(card.type)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: 'var(--text-primary, #f1f5f9)', fontWeight: 'bold', fontSize: '14px', overflowWrap: 'anywhere' }}>
+                    {card.title}
+                  </div>
+                  <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '11px', fontFamily: 'var(--font-system, monospace)' }}>
+                    Tipo: {card.type} • {card.created_at ? new Date(card.created_at).toLocaleDateString('pt-BR') : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '12px', marginBottom: '8px' }}>
+                <strong>Código:</strong>{' '}
+                <code style={{
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm, 4px)',
+                  color: 'var(--nexus-blue, #cbd5e1)',
+                  fontFamily: 'var(--font-terminal, monospace)'
+                }}>
+                  {card.discovery_code || 'Nenhum'}
+                </code>
+              </div>
+
+              {(card.description_public || card.description_hidden) && (
+                <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '10px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                  {card.description_public || card.description_hidden}
+                </div>
+              )}
+
+              {card.is_hidden && (
+                <Button
+                  variant="primary"
+                  size={isMobile ? 'md' : 'sm'}
+                  onClick={() => handleReveal(card.id, card.title)}
+                  style={{
+                    width: '100%',
+                    justifyContent: 'center',
+                    marginTop: '4px'
+                  }}
+                >
+                  🚀 REVELAR PISTA (DEPLOY)
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <BottomSheet
+          isOpen={isVisible}
+          onClose={onToggle}
+          title="GM Overwatch"
+          maxHeight="85dvh"
+        >
+          {content}
+        </BottomSheet>
+      ) : (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            width: '320px',
+            height: '100vh',
+            background: 'var(--surface, #11141b)',
+            borderLeft: '1px solid var(--border, #29313d)',
+            zIndex: 'var(--z-modals, 2000)',
+            overflowY: 'auto',
+            padding: 'var(--space-4, 16px)',
+            boxSizing: 'border-box',
+            boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.8)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4, 16px)', borderBottom: '1px solid var(--border, #29313d)', paddingBottom: 'var(--space-2, 8px)' }}>
+            <h3 style={{ color: 'var(--text-primary, #f1f5f9)', margin: 0, fontSize: '15px', fontFamily: 'var(--font-hud, sans-serif)', letterSpacing: '1px' }}>
+              GM OVERWATCH
+            </h3>
+            <button
+              onClick={onToggle}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary, #94a3b8)',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              aria-label="Fechar Overwatch"
+            >
+              <X size={18} />
+            </button>
           </div>
-        )}
-      </div>
+          {content}
+        </div>
+      )}
 
       {toast && (
         <Toast

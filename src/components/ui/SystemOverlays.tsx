@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { eventManager } from '../../utils/EventManager';
 import { audioManager } from '../../utils/AudioManager';
 import { isExtendedPerformanceMode } from '../../utils/performance';
+import './SystemOverlays.css';
 
 // <Check className="lucide-icon inline-icon" size={16} /> Singleton flag para evitar múltiplas instâncias registrarem listeners duplicados
 let systemOverlaysInstanceCount = 0;
@@ -135,41 +136,43 @@ export default function SystemOverlays() {
 
   return (
     <>
-      <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`}>
-        <div className="hud-left">
-          {location.pathname === '/' ? (
-            <>
-              <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
-                <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
-                <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
-                <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-              <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
-                <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
-              </button>
-            </>
-          ) : (
-            <div style={{ width: 160, height: 1 }} aria-hidden />
-          )}
-        </div>
-
-        <div className="hud-right">
-          <div className="system-monitor" role="status" aria-live="polite">
-            <div className="label">MEMBRANA LOCAL</div>
-            <div className="bar-container">
-              <div className="fill" id="integrity-bar" ref={integrityRef}></div>
-            </div>
-            <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
+      <div className="hud-overlay-root" aria-hidden="true">
+        <header className={`nexus-hud ${hideHeader ? 'hidden' : ''}`} style={{ padding: 'var(--space-2, 8px) var(--space-4, 16px)' }}>
+          <div className="hud-left">
+            {location.pathname === '/' ? (
+              <>
+                <button className="nav-btn" title="Arquivos" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'files' } }))}>
+                  <span aria-hidden><Folder className="lucide-icon inline-icon" size={16} /></span>
+                </button>
+                <button className="nav-btn" title="Terminal C.R.I.S." onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'terminal' } }))}>
+                  <span aria-hidden><Skull className="lucide-icon inline-icon" size={16} /></span>
+                </button>
+                <button className="nav-btn" title="Conexão Remota" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'net' } }))}>
+                  <span aria-hidden><Radio className="lucide-icon inline-icon" size={16} /></span>
+                </button>
+                <button className="nav-btn" title="Perfil do Agente" onClick={() => window.dispatchEvent(new CustomEvent('open-desktop-window', { detail: { window: 'profile' } }))}>
+                  <span aria-hidden><User className="lucide-icon inline-icon" size={16} /></span>
+                </button>
+              </>
+            ) : (
+              <div style={{ width: 160, height: 1 }} aria-hidden />
+            )}
           </div>
-          {location.pathname === '/' && (
-            <button className="btn-logout" onClick={() => navigate('/login')}>SAIR DO SISTEMA</button>
-          )}
-        </div>
-      </header>
+
+          <div className="hud-right">
+            <div className="system-monitor" role="status" aria-live="polite">
+              <div className="label">MEMBRANA LOCAL</div>
+              <div className="bar-container">
+                <div className="fill" id="integrity-bar" ref={integrityRef}></div>
+              </div>
+              <div className="value" id="integrity-text" ref={integrityTextRef}>99.4%</div>
+            </div>
+            {location.pathname === '/' && (
+              <button className="btn-logout" onClick={() => navigate('/login')}>SAIR DO SISTEMA</button>
+            )}
+          </div>
+        </header>
+      </div>
 
       <div className="background-data" style={{left:8}} dangerouslySetInnerHTML={{__html: hexColumn(50).replace(/\n/g,'<br/>') }} />
       {location.pathname !== '/' && (

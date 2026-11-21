@@ -351,8 +351,32 @@
 
 .case-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.case-card {
+  container-type: inline-size;
+  container-name: case-card;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
+  background-size: 24px 24px;
+  transition: color 150ms, border-color 150ms, background-color 150ms, box-shadow 180ms;
+}
+
+@container case-card (max-width: 280px) {
+  .case-card-body h3 {
+    font-size: 14px;
+  }
+  .case-evolution {
+    display: none;
+  }
 }
 
 .case-new-card,
@@ -407,19 +431,6 @@
   margin-top: 8px;
   color: var(--home-muted);
   font-size: 10px;
-}
-
-.case-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 16px;
-  cursor: pointer;
-  background-image:
-    linear-gradient(rgb(148 163 184 / 4%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(148 163 184 / 4%) 1px, transparent 1px);
-  background-size: 24px 24px;
-  transition: color 150ms, border-color 150ms, background-color 150ms, box-shadow 180ms;
 }
 
 .case-card[data-spectrum="sangue"] { --case-accent: var(--home-sangue); border-top: 2px solid var(--home-sangue); }
@@ -714,12 +725,20 @@
   margin-bottom: 18px;
   padding: 12px;
   border: 1px solid var(--home-border);
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   outline: 0;
   background: var(--home-bg);
   color: var(--home-text);
-  font: 12px/1.5 "JetBrains Mono", "Space Mono", monospace;
+  font: 16px/1.5 var(--font-system, "JetBrains Mono", monospace); /* >= 16px para iOS touch */
   transition: border-color 150ms, background-color 150ms;
+}
+
+@media (min-width: 640px) {
+  .quick-input,
+  .quick-select,
+  .quick-textarea {
+    font-size: 13px;
+  }
 }
 
 .quick-input:focus,

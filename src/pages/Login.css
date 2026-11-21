@@ -8,14 +8,20 @@
 }
 
 .login-terminal {
-  height: 100vh;
-  background-color: #050505;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--bg, #050505);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Share Tech Mono", monospace;
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4, 16px);
+  padding-top: max(var(--space-4, 16px), env(safe-area-inset-top, 0px));
+  padding-bottom: max(var(--space-4, 16px), env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 /* Efeito de Scanlines (Linhas de monitor antigo) */
@@ -56,15 +62,22 @@
 
 .terminal-box {
   width: 100%;
-  max-width: 420px;
-  padding: 50px 40px;
-  background: rgb(10 10 12 / 90%);
-  border: 1px solid rgb(187 51 51 / 30%);
+  max-width: min(420px, 100%);
+  padding: 36px 24px;
+  background: rgba(10, 10, 12, 0.95);
+  border: 1px solid rgba(187, 51, 51, 0.4);
   box-shadow:
-    0 0 30px rgb(0 0 0 / 100%),
-    inset 0 0 20px rgb(187 51 51 / 5%);
+    0 0 30px rgba(0, 0, 0, 0.95),
+    inset 0 0 20px rgba(187, 51, 51, 0.08);
   position: relative;
   z-index: 20;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .terminal-box {
+    padding: 50px 40px;
+  }
 }
 
 /* Cantoneiras Decorativas */
@@ -126,46 +139,63 @@
 
 .input-group input {
   width: 100%;
-  background: rgb(0 0 0 / 50%);
-  border: 1px solid rgb(255 255 255 / 10%);
-  padding: 14px;
+  min-height: var(--control-h-md, 40px);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 14px;
   color: #fff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px; /* Impede auto-zoom no iOS */
   box-sizing: border-box;
-  transition: all 0.3s ease;
-  border-radius: 2px;
+  transition: all 0.25s ease;
+  border-radius: var(--radius-sm, 4px);
 }
 
 .input-group input:focus {
   outline: none;
-  border-color: var(--ordo-red);
-  background: rgb(180 50 50 / 5%);
-  box-shadow: 0 0 15px var(--ordo-red-glow);
-  padding-left: 20px;
+  border-color: var(--ordo-red, #e63946);
+  background: rgba(180, 50, 50, 0.08);
+  box-shadow: 0 0 16px var(--ordo-red-glow, rgba(180, 50, 50, 0.4));
+  padding-left: 16px;
 }
 
 .btn-access {
   width: 100%;
-  padding: 18px;
+  min-height: var(--control-h-lg, 48px);
+  padding: 14px 20px;
   background: transparent;
-  color: var(--ordo-red);
-  border: 1px solid var(--ordo-red);
+  color: var(--ordo-red, #e63946);
+  border: 1.5px solid var(--ordo-red, #e63946);
   font-weight: bold;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
   text-transform: uppercase;
   position: relative;
   overflow: hidden;
-  transition: all 0.4s;
+  transition: all 0.3s ease;
+  border-radius: var(--radius-sm, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-access:hover {
-  background: var(--ordo-red);
+.btn-access:hover:not(:disabled) {
+  background: var(--ordo-red, #e63946);
   color: #fff;
-  box-shadow: 0 0 20px var(--ordo-red-glow);
-  letter-spacing: 6px;
+  box-shadow: 0 0 20px var(--ordo-red-glow, rgba(180, 50, 50, 0.4));
+  letter-spacing: 4px;
+}
+
+.btn-access:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-access:focus-visible {
+  outline: 2px solid var(--ordo-red, #e63946);
+  outline-offset: 2px;
+  box-shadow: 0 0 15px var(--ordo-red-glow, rgba(180, 50, 50, 0.4));
 }
 
 .system-msg {

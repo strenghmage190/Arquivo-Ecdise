@@ -15,7 +15,12 @@ export const ActiveAgentsHud = ({ agents }: { agents: AgentPresence[] }) => {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex items-center gap-2 p-2 bg-black/80 border border-[#1e40af] backdrop-blur-sm rounded shadow-[0_0_10px_#1e40af]">
+    <div
+      className="flex items-center gap-2 p-1.5 md:p-2 bg-black/80 border border-[#1e40af] backdrop-blur-sm rounded shadow-[0_0_10px_#1e40af] pointer-events-auto"
+      style={{
+        zIndex: 'var(--z-hud, 1000)',
+      }}
+    >
       <div className="flex -space-x-2">
         {agents.map((agent) => {
           const glowColor = getGlowColor(agent.clearance_level, agent.color);

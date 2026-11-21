@@ -10,26 +10,38 @@
 .invite-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(11 12 16 / 85%);
-  backdrop-filter: none;
-  z-index: 15000;
+  background: rgba(11, 12, 16, 0.85);
+  backdrop-filter: blur(3px);
+  z-index: var(--z-modals, 2000);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--space-4, 16px);
+  box-sizing: border-box;
 }
 
 .invite-modal {
-  width: 520px;
-  background: linear-gradient(180deg, rgb(11 12 16 / 92%), rgb(11 12 16 / 85%));
-  padding: 30px;
-  border: 1px solid rgb(203 213 225 / 20%);
-  color: #f1f5f9;
-  border-radius: 0;
-  font-family: "Share Tech Mono", monospace;
+  width: min(520px, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: linear-gradient(180deg, rgba(17, 20, 27, 0.98), rgba(11, 12, 16, 0.95));
+  padding: 24px 20px;
+  border: 1px solid var(--border, rgba(203, 213, 225, 0.2));
+  color: var(--text-primary, #f1f5f9);
+  border-radius: var(--radius-md, 8px);
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
   box-shadow:
-    0 20px 50px rgb(0 0 0 / 60%),
-    0 0 20px rgb(203 213 225 / 10%);
+    0 20px 50px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(203, 213, 225, 0.1);
   position: relative;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .invite-modal {
+    padding: 30px;
+  }
 }
 
 .invite-modal h2 {
@@ -42,41 +54,55 @@
 
 .invite-form {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin: 20px 0;
-  align-items: stretch;
+  margin: 16px 0;
+}
+
+@media (min-width: 480px) {
+  .invite-form {
+    flex-direction: row;
+    align-items: stretch;
+  }
 }
 
 .invite-form input {
   flex: 1;
-  background: rgb(0 0 0 / 50%);
-  border: 1px solid rgb(203 213 225 / 20%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(203, 213, 225, 0.2);
   color: #f1f5f9;
-  padding: 12px 14px;
-  border-radius: 0;
+  padding: 10px 14px;
+  min-height: var(--control-h-md, 40px);
+  border-radius: var(--radius-sm, 4px);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 16px; /* Previne auto-zoom no iOS */
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .invite-form input:focus {
   outline: none;
-  border-color: var(--nexus-blue);
-  box-shadow: 0 0 12px rgb(203 213 225 / 20%);
+  border-color: var(--nexus-blue, #cbd5e1);
+  box-shadow: 0 0 12px rgba(203, 213, 225, 0.3);
 }
 
 .invite-form button {
   background: transparent;
-  color: var(--ordo-red);
-  border: 1px solid var(--ordo-red);
-  padding: 12px 20px;
+  color: var(--ordo-red, #e63946);
+  border: 1px solid var(--ordo-red, #e63946);
+  padding: 10px 18px;
+  min-height: var(--control-h-md, 40px);
   cursor: pointer;
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 2px;
   font-weight: bold;
+  font-size: 14px;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .invite-form button:hover {

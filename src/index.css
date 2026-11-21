@@ -12,114 +12,359 @@
   src: url("https://cdn.builder.io/o/assets%2Fb4bc12b65d81467ebb24dfe4e4692469%2F322319c5ed2c40469fe2589b75e71835?alt=media&token=2ed55d33-f004-4edc-bfd5-379928a3fd15&apiKey=b4bc12b65d81467ebb24dfe4e4692469") format("truetype");
   font-display: swap;
 }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #0b0c10;
-  --surface: #11141b;
-  --border: #29313d;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --fg: #f1f5f9;
-  --institutional-red: #e63946;
-  --nexus-dark: #0b0c10;
-  --nexus-blue: #cbd5e1;
-  --nexus-glitch: #e63946;
-  --ordo-red: #e63946;
-  --muted: #94a3b8;
-  --el-sangue: #e63946;
-  --el-sangue-hot: #ff1e27;
-  --el-energia: #a855f7;
-  --el-energia-soft: #c084fc;
-  --el-morte: #1f2933;
-  --el-morte-border: #64748b;
-  --el-conhecimento: #eab308;
-  --el-conhecimento-deep: #ca8a04;
-  --el-medo: #f8fafc;
-  --font-system: "JetBrains Mono", "Space Mono", monospace;
-  --font-hud: "Chakra Petch", "Rajdhani", sans-serif;
-  --font-case: "Rajdhani", "Chakra Petch", sans-serif;
-  --font-terminal: "Share Tech Mono", "JetBrains Mono", monospace;
+@layer base {
+  :root {
+    /* Cores principais */
+    --bg: #0b0c10;
+    --surface: #11141b;
+    --border: #29313d;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --fg: #f1f5f9;
+    --institutional-red: #e63946;
+    --nexus-dark: #0b0c10;
+    --nexus-blue: #cbd5e1;
+    --nexus-glitch: #e63946;
+    --ordo-red: #e63946;
+    --muted: #94a3b8;
+
+    /* Elementos Ordo Realitas */
+    --el-sangue: #e63946;
+    --el-sangue-hot: #ff1e27;
+    --el-energia: #a855f7;
+    --el-energia-soft: #c084fc;
+    --el-morte: #1f2933;
+    --el-morte-border: #64748b;
+    --el-conhecimento: #eab308;
+    --el-conhecimento-deep: #ca8a04;
+    --el-medo: #f8fafc;
+
+    /* Tipografia oficial com clamp() */
+    --font-system: "JetBrains Mono", "Space Mono", monospace;
+    --font-hud: "Chakra Petch", "Rajdhani", sans-serif;
+    --font-case: "Rajdhani", "Chakra Petch", sans-serif;
+    --font-terminal: "Share Tech Mono", "JetBrains Mono", monospace;
+
+    --font-size-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
+    --font-size-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem);
+    --font-size-base: clamp(0.9rem, 0.85rem + 0.35vw, 1rem);
+    --font-size-lg: clamp(1.1rem, 1rem + 0.5vw, 1.25rem);
+    --font-size-xl: clamp(1.3rem, 1.15rem + 0.75vw, 1.5rem);
+    --font-size-2xl: clamp(1.6rem, 1.4rem + 1vw, 2rem);
+    --font-size-3xl: clamp(2rem, 1.7rem + 1.5vw, 2.75rem);
+
+    /* Alturas oficiais de controles */
+    --control-h-sm: 32px;
+    --control-h-md: 40px;
+    --control-h-md-mobile: 44px;
+    --control-h-lg: 48px;
+
+    /* Escala fixa de espaçamentos */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Border-radius padronizados */
+    --radius-none: 0px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+
+    /* Escala Centralizada de Z-Index */
+    --z-board: 1;
+    --z-connections: 10;
+    --z-cards: 100;
+    --z-marquee: 500;
+    --z-uv: 800;
+    --z-hud: 1000;
+    --z-mobile-bars: 1200;
+    --z-modals: 2000;
+    --z-cris: 3000;
+    --z-toasts: 4000;
+    --z-driver: 5000;
+
+    /* Aliases para compatibilidade */
+    --z-background: -1;
+    --z-base: var(--z-board);
+    --z-card-hover: 150;
+    --z-dropdown: 900;
+    --z-modal-backdrop: 1900;
+    --z-modal-base: var(--z-modals);
+    --z-modal-top: 2100;
+    --z-tooltip: 4500;
+  }
+
+  html {
+    box-sizing: border-box;
+    scrollbar-gutter: stable;
+  }
+
+  *, *::before, *::after {
+    box-sizing: inherit;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+    font-family: var(--font-system);
+    background: var(--bg);
+    color: var(--fg);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    scrollbar-width: thin;
+    scrollbar-color: #3b4252 var(--bg);
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Scrollbars nativas escuras */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: var(--radius-sm);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  /* Inputs, selects e textareas: font-size >= 16px no mobile para prevenir auto-zoom no iOS */
+  input,
+  textarea,
+  select {
+    border-radius: var(--radius-none);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 16px;
+    height: var(--control-h-md);
+    padding: 0 var(--space-3);
+  }
+
+  textarea {
+    height: auto;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* Ordo Realitas Focus Ring */
+  :focus-visible {
+    outline: 2px solid var(--institutional-red);
+    outline-offset: 2px;
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.4);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--institutional-red);
+    outline-offset: 1px;
+    border-color: var(--institutional-red);
+  }
 }
 
-body {
-  min-width: 320px;
-  margin: 0;
-  font-family: var(--font-system);
-  background: var(--bg);
-  color: var(--fg);
+@layer components {
+  /* Controles com alturas rígidas do Design System */
+  .control-sm {
+    height: var(--control-h-sm);
+    padding: 0 var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .control-md {
+    height: var(--control-h-md);
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .control-lg {
+    height: var(--control-h-lg);
+    padding: 0 var(--space-4);
+    font-size: var(--font-size-base);
+  }
+
+  /* Modal Surface rígido com limites responsivos */
+  .modal-surface-container {
+    width: min(94vw, 840px);
+    max-height: 90dvh;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    z-index: var(--z-modals);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .modal-surface-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding: var(--space-4);
+  }
+
+  /* Botão Base do Design System */
+  .btn-ordo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-family: var(--font-system);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  .btn-ordo-primary {
+    background: var(--institutional-red);
+    color: #ffffff;
+    border-color: var(--institutional-red);
+  }
+
+  .btn-ordo-primary:hover:not(:disabled) {
+    background: #ff1e27;
+    box-shadow: 0 0 12px rgba(230, 57, 70, 0.5);
+  }
+
+  .btn-ordo-secondary {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+
+  .btn-ordo-secondary:hover:not(:disabled) {
+    border-color: var(--text-secondary);
+    background: #181d27;
+  }
+
+  /* Container global */
+  .container {
+    padding: var(--space-4);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Canvas do Quadro de Investigação */
+  .corkboard-canvas {
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  .card-node {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .full-vh {
+    height: 100dvh;
+    min-height: 100vh;
+  }
+
+  /* Loading Spinner */
+  .loading-spinner {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border);
+    border-top-color: var(--text-primary);
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+  }
+
+  .loading-spinner::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 2px solid var(--border);
+    border-top-color: var(--text-secondary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite reverse;
+  }
+
+  .loading-spinner::after {
+    content: "CARREGANDO";
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-system);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    animation: blink 1.5s infinite;
+  }
 }
 
-input,
-textarea,
-select {
-  border-radius: 0;
-  border-color: var(--border, #2A2A2C);
-  background: var(--surface, #131315);
-  color: var(--text-primary, #E8E8EA);
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .overscroll-none {
+    overscroll-behavior: none;
+  }
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 1px solid var(--institutional-red, #8B1414);
-  outline-offset: 1px;
+/* Regras para ponteiros touch / dispositivos móveis */
+@media (pointer: coarse) {
+  .control-md,
+  button,
+  .btn-ordo,
+  .hud-btn,
+  .board-button,
+  .mode-btn,
+  .fab-btn {
+    min-height: var(--control-h-md-mobile);
+    min-width: var(--control-h-md-mobile);
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
-.container {
-  padding: 1rem;
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.loading-spinner {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  border: 3px solid var(--border);
-  border-top-color: var(--text-primary);
-  border-radius: 50%;
-  animation: spin 1.2s linear infinite;
-}
-
-.loading-spinner::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 2px solid var(--border);
-  border-top-color: var(--text-secondary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite reverse;
-}
-
-.loading-spinner::after {
-  content: "CARREGANDO";
-  position: absolute;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-system);
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  animation: blink 1.5s infinite;
-}
-
+/* Keyframes base */
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
-  }
-  50% { 
-    box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 15px rgba(0, 243, 255, 0.2);
   }
 }
 
@@ -137,165 +382,4 @@ select:focus {
   0%, 100% { opacity: .82; }
   48% { opacity: 1; }
   52% { opacity: .56; }
-}
-
-/* --- MOBILE HELPERS: regras responsivas básicas --- */
-
-/* Aplicar essas regras para telas menores que 768px */
-@media (width <= 768px) {
-  /* Layout containers devem ocupar toda a largura */
-  .container,
-  .main-content {
-    width: 100%;
-    padding: 16px;
-    box-sizing: border-box;
-  }
-
-  /* Evitar imagens vazando horizontalmente */
-  img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-  }
-
-  /* Tornar colunas em pilha vertical */
-  .flex-container,
-  .columns {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  /* Menu de navegação: empilhar itens e centralizar */
-  nav ul {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0;
-    margin: 0;
-  }
-
-  nav li {
-    margin: 8px 0;
-  }
-
-  /* Ajustes específicos do quadro de investigação */
-  .mobile-hud {
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    z-index: 15000;
-    pointer-events: auto;
-  }
-
-  .mobile-modes .mode-btn {
-    font-size: 18px;
-    padding: 8px;
-    border-radius: 8px;
-  }
-
-  /* Hide explicit mode icons on touch devices — pan is always enabled */
-  .mobile-hud .mobile-modes {
-    display: none !important;
-  }
-
-  /* Bottom sheet children spacing */
-  .bottom-sheet .fab-item {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
-    text-align: left;
-    margin-bottom: 8px;
-  }
-}
-
-/* --- TOUCH / MOBILE UX IMPROVEMENTS --- */
-
-/* 1) Avoid hover styles on touch-only devices (prevents "ghost touch") */
-@media (hover: hover) and (pointer: fine) {
-  a:hover,
-  button:hover {
-    transition: color 150ms, border-color 150ms, background-color 150ms;
-  }
-}
-
-/* 2) Touch target sizing and tap affordances for coarse pointers (fingers) */
-@media (pointer: coarse) {
-  .hud-btn,
-  .board-button,
-  .mode-btn,
-  .fab-btn,
-  .main-fab-trigger,
-  .mobile-modes .mode-btn {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 10px 12px;
-    border-radius: 0;
-    touch-action: manipulation;
-  }
-
-  /* Make inputs comfortable for typing on iOS (avoid auto-zoom) */
-  input,
-  textarea,
-  select {
-    font-size: 16px;
-  }
-
-  /* Active feedback for touch interactions */
-  button:active {
-    transform: translateY(1px);
-    opacity: 0.98;
-  }
-
-  /* Remove tap highlight color for a cleaner look */
-  button,
-  a {
-    -webkit-tap-highlight-color: rgb(0 0 0 / 0%);
-  }
-}
-
-/* 3) Full-screen sections: prefer dynamic viewport unit with fallback */
-.full-vh {
-  height: 100dvh;
-  min-height: 100vh; /* fallback for browsers that don't support dvh */
-}
-
-/* Corkboard canvas: handle touch-based panning ourselves and show grab cursor */
-body.mobile-mode .corkboard-canvas {
-  touch-action: none;
-  -webkit-touch-callout: none;
-  cursor: grab;
-}
-
-.corkboard-canvas:active {
-  cursor: grabbing;
-}
-
-/* 4) Readability: slightly larger line-height on small screens */
-@media (width <= 768px) {
-  body {
-    line-height: 1.6;
-  }
-  .container {
-    padding: 0 15px;
-  }
-}
-
-/* 5) Image performance hint: encourage using responsive images via picture/srcset */
-
-/* Global guard for large images already handled above (max-width:100%). */
-
-/* 6) Board Panning selection guard */
-.corkboard-canvas {
-  user-select: none;
-  -webkit-user-select: none;
-}
-.card-node {
-  user-select: text;
-  -webkit-user-select: text;
 }

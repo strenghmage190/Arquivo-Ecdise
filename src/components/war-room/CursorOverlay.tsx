@@ -61,7 +61,10 @@ export const CursorOverlay = ({ cursors, agents }: Props) => {
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[40]">
+    <div
+      className="absolute inset-0 pointer-events-none overflow-hidden"
+      style={{ zIndex: 'var(--z-connections, 10)' }}
+    >
       {Object.values(cursors).map((cursor) => {
         const color = getAgentColor(cursor.user_id, cursor.info);
         const codename = getAgentName(cursor.user_id, cursor.info);

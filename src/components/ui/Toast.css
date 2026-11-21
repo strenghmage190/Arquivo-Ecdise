@@ -1,29 +1,30 @@
 .toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 99999;
+  top: calc(env(safe-area-inset-top, 0px) + var(--space-4, 16px));
+  right: calc(env(safe-area-inset-right, 0px) + var(--space-4, 16px));
+  z-index: var(--z-toasts, 4000);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2, 8px);
   pointer-events: none;
+  max-width: calc(100vw - 32px);
 }
 
 .toast {
-  min-width: 300px;
-  max-width: 500px;
-  padding: 16px 20px;
-  border-radius: 8px;
+  min-width: min(300px, calc(100vw - 32px));
+  max-width: min(500px, calc(100vw - 32px));
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-radius: var(--radius-md, 8px);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3, 12px);
   box-shadow:
     0 4px 20px rgb(0 0 0 / 40%),
     0 0 0 1px rgb(255 255 255 / 10%);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 14px;
+  font-family: var(--font-system, "Share Tech Mono", monospace);
+  font-size: var(--font-size-sm, 14px);
   animation: toast-enter 0.3s ease-out;
-  pointer-events: all;
+  pointer-events: auto;
   backdrop-filter: blur(10px);
 }
 

@@ -102,27 +102,103 @@ export default function ForensicBenchmark({ defaultSrc = '' }: { defaultSrc?: st
   }
 
   return (
-    <div style={{ padding: 12, fontFamily: 'sans-serif' }}>
-      <h3>Forensic Canvas Benchmark</h3>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input value={src} onChange={(e) => setSrc(e.target.value)} placeholder="image URL" style={{ flex: 1 }} />
-        <select value={channel} onChange={(e) => setChannel(e.target.value as any)}>
-          <option value="all">all</option>
-          <option value="r">r</option>
-          <option value="g">g</option>
-          <option value="b">b</option>
+    <div style={{ padding: 'var(--space-4, 16px)', fontFamily: 'var(--font-system, monospace)', color: 'var(--text-primary, #f1f5f9)', maxWidth: 800, margin: '0 auto' }}>
+      <h3 style={{ fontFamily: 'var(--font-hud, sans-serif)', color: 'var(--ordo-red, #e63946)', letterSpacing: '1px' }}>
+        FORENSIC CANVAS BENCHMARK
+      </h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2, 8px)', alignItems: 'center', marginBottom: 'var(--space-3, 12px)' }}>
+        <input
+          value={src}
+          onChange={(e) => setSrc(e.target.value)}
+          placeholder="Image URL (CORS enabled)"
+          style={{
+            flex: '1 1 240px',
+            minHeight: 'var(--control-h-md, 40px)',
+            padding: '8px 12px',
+            background: 'var(--surface, #11141b)',
+            border: '1px solid var(--border, #29313d)',
+            color: '#fff',
+            fontSize: '16px',
+            borderRadius: 'var(--radius-sm, 4px)'
+          }}
+        />
+        <select
+          value={channel}
+          onChange={(e) => setChannel(e.target.value as any)}
+          style={{
+            minHeight: 'var(--control-h-md, 40px)',
+            padding: '8px 12px',
+            background: 'var(--surface, #11141b)',
+            border: '1px solid var(--border, #29313d)',
+            color: '#fff',
+            borderRadius: 'var(--radius-sm, 4px)',
+            fontSize: '14px'
+          }}
+        >
+          <option value="all">all channels</option>
+          <option value="r">red (r)</option>
+          <option value="g">green (g)</option>
+          <option value="b">blue (b)</option>
         </select>
-        <input type="number" value={runs} onChange={(e) => setRuns(Number(e.target.value))} style={{ width: 64 }} />
-        <button onClick={runMainThread} disabled={running || !src}>Run main</button>
-        <button onClick={runWorker} disabled={running || !src}>Run worker</button>
+        <input
+          type="number"
+          value={runs}
+          onChange={(e) => setRuns(Number(e.target.value))}
+          style={{
+            width: 72,
+            minHeight: 'var(--control-h-md, 40px)',
+            padding: '8px',
+            background: 'var(--surface, #11141b)',
+            border: '1px solid var(--border, #29313d)',
+            color: '#fff',
+            borderRadius: 'var(--radius-sm, 4px)',
+            fontSize: '14px'
+          }}
+        />
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={runMainThread}
+            disabled={running || !src}
+            style={{
+              minHeight: 'var(--control-h-md, 40px)',
+              padding: '8px 16px',
+              background: 'rgba(230, 57, 70, 0.2)',
+              border: '1px solid var(--ordo-red, #e63946)',
+              color: '#fff',
+              cursor: running || !src ? 'not-allowed' : 'pointer',
+              borderRadius: 'var(--radius-sm, 4px)',
+              fontFamily: 'inherit',
+              fontWeight: 'bold'
+            }}
+          >
+            Run Main
+          </button>
+          <button
+            onClick={runWorker}
+            disabled={running || !src}
+            style={{
+              minHeight: 'var(--control-h-md, 40px)',
+              padding: '8px 16px',
+              background: 'rgba(168, 85, 247, 0.2)',
+              border: '1px solid var(--primary, #a855f7)',
+              color: '#fff',
+              cursor: running || !src ? 'not-allowed' : 'pointer',
+              borderRadius: 'var(--radius-sm, 4px)',
+              fontFamily: 'inherit',
+              fontWeight: 'bold'
+            }}
+          >
+            Run Worker
+          </button>
+        </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <div>Main-thread: {mainTimes ? `${avg(mainTimes)} ms avg (${mainTimes.length} runs)` : '—'}</div>
-        <div>Worker: {workerTimes ? `${avg(workerTimes)} ms avg (${workerTimes.length} runs)` : '—'}</div>
+      <div style={{ marginTop: 'var(--space-4, 16px)', padding: 'var(--space-3, 12px)', background: 'var(--surface, #11141b)', border: '1px solid var(--border, #29313d)', borderRadius: 'var(--radius-sm, 4px)' }}>
+        <div style={{ marginBottom: 6 }}>Main-thread: <strong>{mainTimes ? `${avg(mainTimes)} ms avg (${mainTimes.length} runs)` : '—'}</strong></div>
+        <div>Worker: <strong>{workerTimes ? `${avg(workerTimes)} ms avg (${workerTimes.length} runs)` : '—'}</strong></div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 'var(--space-3, 12px)', color: 'var(--text-secondary, #94a3b8)', fontSize: 'var(--font-size-xs, 12px)' }}>
         <small>Notes: runs do a full draw + pixel-loop similar to production. Worker uses OffscreenCanvas.</small>
       </div>
     </div>
