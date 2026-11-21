@@ -7,6 +7,9 @@ function getAudioCtx(): AudioContext | null {
     const C = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!C) return null;
     sharedCtx = new C();
+    if (sharedCtx.state === 'suspended') {
+      sharedCtx.resume().catch(() => {});
+    }
     return sharedCtx;
   } catch (e) {
     return null;

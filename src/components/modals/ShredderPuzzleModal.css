@@ -474,10 +474,18 @@
 
 @media (max-width: 768px) {
   .shredder-modal {
-    width: 100vw;
-    max-height: 100vh;
-    border-radius: 0;
+    width: 98vw;
+    max-height: 96vh;
+    border-radius: 4px;
     border: none;
+  }
+
+  .shredder-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .shredder-modal-header {

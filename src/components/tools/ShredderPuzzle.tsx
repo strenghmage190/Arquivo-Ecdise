@@ -1,4 +1,4 @@
-import { RefreshCw, Eye, Users, Gamepad2, Lightbulb, Lock } from 'lucide-react';
+import { RefreshCw, Eye, Users, Gamepad2, Lightbulb, Lock, Check, Wand2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import './ShredderPuzzle.css';
 
@@ -31,6 +31,7 @@ export default function ShredderPuzzle({
   const [gmViewMode, setGmViewMode] = useState<'all' | 'player'>('all'); // GM can toggle view
   const [showPreview, setShowPreview] = useState(false); // Preview da imagem completa
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(1);
+  const [gmToggleMode, setGmToggleMode] = useState(false); // Modo explícito de clique para revelar/ocultar peças
 
   const total = rows * cols;
 
@@ -62,7 +63,6 @@ export default function ShredderPuzzle({
   // Load saved state
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
       const savedRevealed = localStorage.getItem(revealedKey);
       
       // SEMPRE embaralhar ao carregar, ignorar estado salvo
@@ -92,8 +92,8 @@ export default function ShredderPuzzle({
   }, [positions, onSolved]);
 
   const handleTileClick = (index: number, ctrlKey: boolean = false) => {
-    // GM pode usar Ctrl+Click para revelar/ocultar peças individualmente
-    if (isGameMaster && ctrlKey) {
+    // GM pode usar Ctrl+Click ou o botão explícito de "Modo Revelar / Ocultar"
+    if (isGameMaster && (ctrlKey || gmToggleMode)) {
       if (revealedPieces.has(index)) {
         // Ocultar peça
         const newRevealed = new Set(revealedPieces);
@@ -115,6 +115,7 @@ export default function ShredderPuzzle({
       return;
     }
 
+    // Troca de tiras em 2 toques (toque 1 seleciona, toque 2 na outra peça troca as posições)
     if (selected === null) {
       setSelected(index);
     } else if (selected === index) {
@@ -144,10 +145,6 @@ export default function ShredderPuzzle({
     const ordered = Array.from({ length: total }, (_, i) => i);
     setPositions(ordered);
     setSelected(null);
-  };
-
-  const handleRevealPiece = (index: number) => {
-    setRevealedPieces(prev => new Set([...prev, index]));
   };
 
   const handleRevealAll = () => {
@@ -206,9 +203,15 @@ export default function ShredderPuzzle({
 
       {/* Controls */}
       <div className="shredder-controls">
-        <button className="shredder-btn" onClick={handleReset}>
+        <button className="shredder-btn" onClick={handleReset} title="Reembaralhar tiras">
           <RefreshCw className="lucide-icon inline-icon" size={16} /> Embaralhar
         </button>
+
+        {isGameMaster && (
+          <button className="shredder-btn btn-solve" onClick={handleAutoSolve} title="Resolver puzzle imediatamente">
+            <Wand2 className="lucide-icon inline-icon" size={16} /> Resolver
+          </button>
+        )}
         
         {isGameMaster && (
           <>
@@ -216,7 +219,14 @@ export default function ShredderPuzzle({
               className={`shredder-btn btn-toggle ${showRevealControl ? 'active' : ''}`}
               onClick={() => setShowRevealControl(!showRevealControl)}
             >
-              {showRevealControl ? '✕ Fechar' : '🔓 Controles GM'}
+              {showRevealControl ? '✕ Fechar Painel' : '🔓 Controles GM'}
+            </button>
+            <button 
+              className={`shredder-btn btn-toggle ${gmToggleMode ? 'active' : ''}`}
+              onClick={() => setGmToggleMode(!gmToggleMode)}
+              title="Toque nas peças para alternar entre revelada e oculta sem precisar de teclado"
+            >
+              {gmToggleMode ? '✓ Modo Revelar Ativo' : '👆 Toque p/ Revelar'}
             </button>
             <button 
               className="shredder-btn btn-view-mode"
@@ -229,6 +239,8 @@ export default function ShredderPuzzle({
               onMouseDown={() => setShowPreview(true)}
               onMouseUp={() => setShowPreview(false)}
               onMouseLeave={() => setShowPreview(false)}
+              onTouchStart={() => setShowPreview(true)}
+              onTouchEnd={() => setShowPreview(false)}
             >
               🖼️ Preview
             </button>
@@ -240,7 +252,12 @@ export default function ShredderPuzzle({
       {isGameMaster && showRevealControl && (
         <div className="shredder-gm-controls">
           <p className="shredder-gm-title"><Gamepad2 className="lucide-icon inline-icon" size={16} /> Controle de Revelação</p>
-          <p className="shredder-gm-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> Ctrl+Click em peças para revelar/ocultar individualmente</p>
+          <p className="shredder-gm-hint">
+            <Lightbulb className="lucide-icon inline-icon" size={16} /> 
+            {gmToggleMode 
+              ? 'Modo de toque ativo: toque diretamente em qualquer peça para alternar entre visível e oculta.'
+              : 'Ative "Toque p/ Revelar" ou use Ctrl+Click para revelar/ocultar peças individualmente.'}
+          </p>
           <div className="shredder-gm-buttons">
             <button onClick={() => handleRevealRandom(1)}>Revelar 1</button>
             <button onClick={() => handleRevealRandom(3)}>Revelar 3</button>
@@ -256,7 +273,7 @@ export default function ShredderPuzzle({
         <div className="shredder-preview-overlay">
           <div className="shredder-preview-title">🖼️ Preview - Imagem Completa</div>
           <img src={imgSrc} alt="Preview completo" className="shredder-preview-img" />
-          <div className="shredder-preview-hint">Solte o botão para fechar</div>
+          <div className="shredder-preview-hint">Solte para fechar</div>
         </div>
       )}
 
@@ -296,7 +313,8 @@ export default function ShredderPuzzle({
             'shredder-piece',
             selected === index && 'selected',
             isCorrect && 'correct',
-            !isRevealed && 'locked'
+            !isRevealed && 'locked',
+            gmToggleMode && 'gm-toggle-target'
           ].filter(Boolean).join(' ');
           
           return (
@@ -312,9 +330,9 @@ export default function ShredderPuzzle({
               }}
               title={
                 isGameMaster && !isRevealed 
-                  ? `Peça ${index + 1} - OCULTA (Ctrl+Click p/ revelar)`
+                  ? `Peça ${index + 1} - OCULTA (Clique para revelar)`
                   : isGameMaster && isRevealed
-                    ? `Peça ${index + 1}${isCorrect ? ' ✓' : ''} (Ctrl+Click p/ ocultar)`
+                    ? `Peça ${index + 1}${isCorrect ? ' ✓' : ''} (Clique para ocultar)`
                     : isRevealed 
                       ? `Parte ${index + 1}${isCorrect ? ' ✓' : ''}` 
                       : 'Peça bloqueada'
@@ -352,11 +370,11 @@ export default function ShredderPuzzle({
         <span dangerouslySetInnerHTML={{ __html: 
           isGameMaster 
             ? gmViewMode === 'all'
-              ? '🎮 <strong>GM:</strong> Vendo TODAS as peças. Use "Ver Jogador" para testar a visão dos players.'
+              ? '🎮 <strong>GM:</strong> Vendo TODAS as peças. Use "Ver Jogador" para testar a visão dos players. Ative "Toque p/ Revelar" para alternar peças sem teclado.'
               : '👥 <strong>GM:</strong> Visualizando como JOGADOR. Use os Controles GM para revelar peças.'
             : revealedPieces.size === 0
               ? '🔒 Aguarde o GM revelar peças para começar a reconstruir.'
-              : `<strong>Clique em duas peças</strong> para trocar de posição. ${revealedPieces.size}/${total} peças disponíveis.`
+              : `<strong>Toque em duas tiras</strong> para trocar de posição (Toque 1 seleciona, Toque 2 troca). ${revealedPieces.size}/${total} peças disponíveis.`
         }} />
       </div>
     </div>

@@ -21,9 +21,16 @@ const ALGOS: AlgoDef[] = [
   { id: 'a1z26', label: 'A1Z26 (1=A,2=B)' }
 ];
 
+interface FreqItem {
+  char: string;
+  count: number;
+  pct: number;
+}
+
 export default function ManualDecoder() {
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState('');
+  const [freqData, setFreqData] = useState<FreqItem[]>([]);
   const [algo, setAlgo] = useState<string | null>(null);
   const [key, setKey] = useState('');
   const [output, setOutput] = useState('');
@@ -94,7 +101,15 @@ export default function ManualDecoder() {
     for (const ch of noSpaces) {
       freqMap[ch] = (freqMap[ch] || 0) + 1;
     }
-    const freqSorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const freqSorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const totalChars = Math.max(1, noSpaces.length);
+    const parsedFreqData: FreqItem[] = freqSorted.map(([ch, count]) => ({
+      char: ch,
+      count,
+      pct: Math.round((count / totalChars) * 100),
+    }));
+    setFreqData(parsedFreqData);
+
     if (freqSorted.length) {
       facts.push('• FREQUÊNCIA (top): ' + freqSorted.map(([c, n]) => `${c}:${n}`).join(', '));
     }
@@ -191,6 +206,26 @@ export default function ManualDecoder() {
         <div className={"analysis-box technical"}>
           {analysis ? <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{analysis}</pre> : <div className="empty">// AGUARDANDO RELATÓRIO...</div>}
         </div>
+
+        {freqData.length > 0 && (
+          <div className="freq-table-container">
+            <div className="freq-table-title">DISTRIBUIÇÃO DE FREQUÊNCIAS</div>
+            <div className="freq-table-grid">
+              {freqData.map((item) => (
+                <div key={item.char} className="freq-table-card">
+                  <div className="freq-char-badge">{item.char === ' ' ? 'SPACE' : item.char}</div>
+                  <div className="freq-char-stats">
+                    <span className="freq-pct">{item.pct}%</span>
+                    <span className="freq-count">({item.count}x)</span>
+                  </div>
+                  <div className="freq-bar-bg">
+                    <div className="freq-bar-fill" style={{ width: `${Math.min(100, item.pct * 2.5)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="md-section result">

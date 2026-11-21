@@ -174,6 +174,29 @@ export default function ThermalEditor({
     setIsDragging(false);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const deltaY = e.touches[0].clientY - (rect.top + rect.height / 2);
+      const newOffset = (deltaY / rect.height) * 100;
+      setDragOffset(Math.max(-50, Math.min(50, newOffset)));
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const deltaY = e.touches[0].clientY - (rect.top + rect.height / 2);
+    const newOffset = (deltaY / rect.height) * 100;
+    const clamped = Math.max(-50, Math.min(50, newOffset));
+    setDragOffset(clamped);
+  };
+
   const handleSaveClick = () => {
     onSave({
       text: thermalText,
@@ -203,6 +226,11 @@ export default function ThermalEditor({
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleMouseUp}
+              onTouchCancel={handleMouseUp}
+              style={{ touchAction: 'none' }}
             />
             <p className="preview-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> Arraste verticalmente no canvas para mover o texto</p>
           </div>

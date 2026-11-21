@@ -114,8 +114,10 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
 
     // Draw selection
     if (selectionStart !== selectionEnd) {
-      const startX = (selectionStart / buffer.duration) * width;
-      const endX = (selectionEnd / buffer.duration) * width;
+      const minSel = Math.min(selectionStart, selectionEnd);
+      const maxSel = Math.max(selectionStart, selectionEnd);
+      const startX = (minSel / buffer.duration) * width;
+      const endX = (maxSel / buffer.duration) * width;
       
       ctx.fillStyle = 'rgba(0,243,255,0.2)';
       ctx.fillRect(startX, 0, endX - startX, height);
@@ -128,6 +130,27 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
       ctx.moveTo(endX, 0);
       ctx.lineTo(endX, height);
       ctx.stroke();
+
+      // Alças visuais touch de início e fim da seleção
+      ctx.fillStyle = '#00f3ff';
+      // Alça de início
+      ctx.beginPath();
+      ctx.arc(startX, 16, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0a0e15';
+      ctx.beginPath();
+      ctx.arc(startX, 16, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Alça de fim
+      ctx.fillStyle = '#00f3ff';
+      ctx.beginPath();
+      ctx.arc(endX, height - 16, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0a0e15';
+      ctx.beginPath();
+      ctx.arc(endX, height - 16, 4, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // Draw playhead
@@ -202,37 +225,64 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
     return () => clearInterval(interval);
   }, [isPlaying, audioContext, duration]);
 
-  // Canvas mouse events for selection
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Canvas mouse and touch events for selection
+  const handlePointerDown = (clientX: number) => {
     if (!audioBuffer) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = (x / canvas.width) * audioBuffer.duration;
+    const x = clientX - rect.left;
+    const time = Math.max(0, Math.min((x / rect.width) * audioBuffer.duration, audioBuffer.duration));
     
     setSelectionStart(time);
     setSelectionEnd(time);
     setIsSelecting(true);
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (clientX: number) => {
     if (!isSelecting || !audioBuffer) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = Math.max(0, Math.min((x / canvas.width) * audioBuffer.duration, audioBuffer.duration));
+    const x = clientX - rect.left;
+    const time = Math.max(0, Math.min((x / rect.width) * audioBuffer.duration, audioBuffer.duration));
     
     setSelectionEnd(time);
   };
 
-  const handleCanvasMouseUp = () => {
+  const handlePointerUp = () => {
     setIsSelecting(false);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    handlePointerDown(e.clientX);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    handlePointerMove(e.clientX);
+  };
+
+  const handleCanvasMouseUp = () => {
+    handlePointerUp();
+  };
+
+  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length > 0) {
+      handlePointerDown(e.touches[0].clientX);
+    }
+  };
+
+  const handleCanvasTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (isSelecting && e.touches.length > 0) {
+      if (e.cancelable) e.preventDefault();
+      handlePointerMove(e.touches[0].clientX);
+    }
+  };
+
+  const handleCanvasTouchEnd = () => {
+    handlePointerUp();
   };
 
   // Apply effects and export
@@ -440,6 +490,11 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseUp}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
+            onTouchCancel={handleCanvasTouchEnd}
+            style={{ touchAction: 'none' }}
           />
 
           <div className="transport-controls">

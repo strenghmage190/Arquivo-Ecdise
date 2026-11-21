@@ -87,10 +87,21 @@ export default function FileExplorer({ onClose }: { onClose: () => void }) {
                   {status === 'open' && <img className="file-thumb" src={`https://picsum.photos/seed/${String(c.id)}/320/160`} alt="thumb" loading="lazy" />}
                   {status === 'locked' && <div className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></div>}
                   {status === 'corrupted' && <div className="glitch-overlay" />}
-                  <div className="file-info">
-                    <h3>{status === 'locked' ? 'ARQUIVO CRIPTOGRAFADO' : (status === 'corrupted' ? 'DADOS_NÃO_EUCLIDIANOS' : String(c.title || 'SEM_NOME'))}</h3>
-                    <div style={{marginTop:6}}>
-                      <span className={`tag ${status==='corrupted'?'red':''}`}>{status === 'open' ? 'NEX '+(Math.floor(Math.random()*100))+'%' : (status==='locked' ? 'SIGILO MÁXIMO' : 'CORROMPIDO')}</span>
+                  <div className="file-info" style={{ minWidth: 0 }}>
+                    <h3 style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      minWidth: 0,
+                      margin: 0,
+                      fontSize: '14px'
+                    }}>
+                      {status === 'locked' ? 'ARQUIVO CRIPTOGRAFADO' : (status === 'corrupted' ? 'DADOS_NÃO_EUCLIDIANOS' : String(c.title || 'SEM_NOME'))}
+                    </h3>
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span className={`tag ${status==='corrupted'?'red':''}`}>
+                        {status === 'open' ? 'NEX '+(Math.floor(Math.random()*100))+'%' : (status==='locked' ? 'SIGILO MÁXIMO' : 'CORROMPIDO')}
+                      </span>
                     </div>
                   </div>
                 </div>

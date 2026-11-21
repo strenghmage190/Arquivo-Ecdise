@@ -16,6 +16,8 @@ export default function DecipherLens({ realText, cipherText, startActive = false
   const [radius, setRadius] = useState<number>(initialRadius || 60);
   const [isManualRadius, setIsManualRadius] = useState(!!initialRadius);
 
+  const [isTouch, setIsTouch] = useState(false);
+
   useEffect(() => {
     setActive(startActive);
   }, [startActive]);
@@ -54,7 +56,19 @@ export default function DecipherLens({ realText, cipherText, startActive = false
   const handleMouseMove = (e: MouseEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
+    setIsTouch(false);
     setXy({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!containerRef.current || e.touches.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const touch = e.touches[0];
+    setIsTouch(true);
+    // Vertical offset above finger (~65px) so finger never covers the revealed text
+    const touchY = touch.clientY - rect.top;
+    const touchX = touch.clientX - rect.left;
+    setXy({ x: touchX, y: touchY - 65 });
   };
 
   // if cipherText not provided, create a simple symbolized version
@@ -93,8 +107,11 @@ export default function DecipherLens({ realText, cipherText, startActive = false
         className="text-container"
         ref={containerRef}
         onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchMove}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => setXy({ x: -200, y: -200 })}
         onMouseLeave={() => setXy({ x: -200, y: -200 })}
-        style={{ cursor: active ? 'none' : 'text' }}
+        style={{ cursor: active ? 'none' : 'text', touchAction: active ? 'none' : 'auto' }}
       >
         <p className="cipher-layer">{cipher}</p>
 

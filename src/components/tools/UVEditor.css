@@ -1787,3 +1787,76 @@ body.performance-mode .uv-editor-viewport .viewport-canvas::before {
 .layer-item-wrapper {
   margin-bottom: 2px;
 }
+
+/* Mobile BottomSheet Drawer for UV Editor Panels */
+@media (max-width: 768px) {
+  .uv-editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+  }
+
+  .uv-editor-panel > .uv-tools-dock {
+    width: 100%;
+    min-width: 100%;
+    height: 48px;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 4px 8px;
+    gap: 8px;
+  }
+
+  .uv-editor-panel > .uv-editor-viewport {
+    flex: 1;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .uv-editor-panel > .uv-right-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 45vh;
+    background: rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.98);
+    border-top: 2px solid var(--accent-cyan);
+    border-left: none;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    z-index: 1200;
+    border-radius: 14px 14px 0 0;
+    transition: transform 0.25s ease-out;
+  }
+
+  .uv-right-tabs {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 14px 14px 0 0;
+  }
+
+  .uv-right-tabs .tab {
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .properties-panel,
+  .layers-panel {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

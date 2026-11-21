@@ -229,18 +229,17 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     setIsPlaying(ws.isPlaying());
   };
 
-  // Handler para arrastar overlay com efeito ghosting
-  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+  // Handler para arrastar overlay com efeito ghosting (Mouse e Touch/Pointer)
+  const startDrag = (clientX: number) => {
     const el = overlaySpectrogramRef.current;
     const wrapper = wrapperRef.current;
     if (!el || !wrapper || !baseDuration) return;
 
-    e.preventDefault();
     setIsGhosting(true);
     
     const rect = wrapper.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
-    const startX = e.clientX;
+    const startX = clientX;
     const startLeftPercent = parseFloat(el.style.left || '0');
     const overlayWidthPercent = (elRect.width / rect.width) * 100;
 
@@ -255,14 +254,25 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     el.classList.add('ghosting');
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startDrag(e.clientX);
+  };
+
+  const handleOverlayTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      startDrag(e.touches[0].clientX);
+    }
+  };
+
+  const moveDrag = (clientX: number) => {
     if (!dragState.current?.dragging) return;
     const wrapper = wrapperRef.current;
     const el = overlaySpectrogramRef.current;
     if (!wrapper || !el || !baseDuration) return;
 
     const rect = wrapper.getBoundingClientRect();
-    const deltaX = e.clientX - dragState.current.startX;
+    const deltaX = clientX - dragState.current.startX;
     const deltaPercent = (deltaX / rect.width) * 100;
     let newLeftPercent = dragState.current.startLeftPercent + deltaPercent;
 
@@ -281,7 +291,18 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseMove = (e: MouseEvent) => {
+    moveDrag(e.clientX);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (dragState.current?.dragging && e.touches.length > 0) {
+      if (e.cancelable) e.preventDefault();
+      moveDrag(e.touches[0].clientX);
+    }
+  };
+
+  const endDrag = () => {
     if (!dragState.current?.dragging) return;
     
     const el = overlaySpectrogramRef.current;
@@ -297,13 +318,27 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
     dragState.current = null;
   };
 
+  const handleMouseUp = () => {
+    endDrag();
+  };
+
+  const handleTouchEnd = () => {
+    endDrag();
+  };
+
   // Registrar event listeners globais para drag
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [baseDuration]);
 
@@ -371,6 +406,7 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
             ref={overlaySpectrogramRef}
             data-synced={isSynced}
             onMouseDown={handleOverlayMouseDown}
+            onTouchStart={handleOverlayTouchStart}
             style={{ 
               display: 'block',
               filter: overlayHighlight ? 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.5))' : 'none'
@@ -379,8 +415,14 @@ export default function AdvancedAudioLab({ baseSrc, hiddenSrc, triggerTime = 0, 
             <div className="border-2 border-purple-500/40 rounded-xl overflow-hidden">
               <ProfessionalSpectrogram audioUrl={localHiddenSrc || hiddenSrc} width={800} />
             </div>
-            {/* Handle visual para o jogador saber que pode arrastar */}
-            <div className="drag-handle-vertical" />
+            {/* Handle visual touch generoso para o jogador arrastar confortavelmente no mobile */}
+            <div 
+              className="drag-handle-vertical touch-generous-handle" 
+              onTouchStart={handleOverlayTouchStart}
+              onMouseDown={handleOverlayMouseDown}
+              role="slider"
+              aria-label="Alça de arrasto do gatilho espectral"
+            />
           </div>
         )}
 

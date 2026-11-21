@@ -49,10 +49,13 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
      return () => clearInterval(interval);
    }, []);
 
-   // Auto-scroll para a última mensagem
+   // Auto-scroll suave para a última mensagem
    useEffect(() => {
      if (chatBodyRef.current) {
-       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+       chatBodyRef.current.scrollTo({
+         top: chatBodyRef.current.scrollHeight,
+         behavior: 'smooth'
+       });
      }
    }, [chatData, unlocked]);
    

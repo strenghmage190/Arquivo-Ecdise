@@ -262,11 +262,11 @@ export default function ProfessionalSpectrogram({
     onSeek(percentage);
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const updateHoverCoordinates = (clientX: number, clientY: number) => {
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     const percentX = Math.max(0, Math.min(1, x / rect.width));
     const percentY = Math.max(0, Math.min(1, 1 - y / rect.height));
 
@@ -276,7 +276,24 @@ export default function ProfessionalSpectrogram({
     setHoverInfo({ x, y, time: timeLabel, freq: `${(freqHz / 1000).toFixed(2)} kHz` });
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    updateHoverCoordinates(e.clientX, e.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      updateHoverCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      updateHoverCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
   const handleMouseLeave = () => setHoverInfo(null);
+  const handleTouchEnd = () => setHoverInfo(null);
 
   return (
     <div className="spectrogram-container" style={hideDecorations ? { border: 'none', background: 'transparent' } : {}}>
@@ -306,11 +323,16 @@ export default function ProfessionalSpectrogram({
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{ 
           cursor: onSeek ? 'crosshair' : 'default',
           overflowX: 'scroll',
           overflowY: 'hidden',
           display: 'block',
+          touchAction: 'pan-x',
           ...(hideDecorations ? { borderColor: 'transparent', background: 'transparent' } : {})
         }}
       >
@@ -332,7 +354,14 @@ export default function ProfessionalSpectrogram({
             <>
               <div className="crosshair-v" style={{ left: `${hoverInfo.x}px` }} />
               <div className="crosshair-h" style={{ top: `${hoverInfo.y}px` }} />
-              <div className="crosshair-tooltip" style={{ left: `${hoverInfo.x + 10}px`, top: `${hoverInfo.y - 30}px` }}>
+              <div 
+                className="crosshair-tooltip touch-tooltip-above" 
+                style={{ 
+                  left: `${hoverInfo.x}px`, 
+                  top: `${Math.max(10, hoverInfo.y - 48)}px`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
                 {hoverInfo.freq} | {hoverInfo.time}
               </div>
             </>

@@ -1,4 +1,4 @@
-import { Target, Save, X, Camera, Palette } from 'lucide-react';
+import { Target, Save, X, Camera, Palette, Download } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import './UVEditor.css';
 import './ForensicChannelEditor.css';
@@ -48,6 +48,7 @@ export default function ForensicChannelEditor({
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const touchPinchRef = useRef<{ dist: number; scale: number; center: { x: number; y: number } } | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   // Load base image
@@ -231,6 +232,59 @@ export default function ForensicChannelEditor({
     setScale(newScale);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // 2 fingers: pinch-to-zoom & pan
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const center = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+      touchPinchRef.current = { dist, scale, center };
+    } else if (e.touches.length === 1) {
+      // 1 finger pan
+      const t = e.touches[0];
+      setIsPanning(true);
+      dragStartRef.current = { x: t.clientX - pan.x, y: t.clientY - pan.y };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchPinchRef.current) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const center = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+      const factor = dist / touchPinchRef.current.dist;
+      const newScale = Math.min(10, Math.max(0.1, touchPinchRef.current.scale * factor));
+      setScale(newScale);
+      
+      const dx = center.x - touchPinchRef.current.center.x;
+      const dy = center.y - touchPinchRef.current.center.y;
+      setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+      touchPinchRef.current.center = center;
+    } else if (e.touches.length === 1 && isPanning) {
+      const t = e.touches[0];
+      setPan({
+        x: t.clientX - dragStartRef.current.x,
+        y: t.clientY - dragStartRef.current.y
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchPinchRef.current = null;
+    setIsPanning(false);
+  };
+
+  const handleExportPNG = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `forensic_${targetChannel}_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   const handleSaveClick = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -256,6 +310,9 @@ export default function ForensicChannelEditor({
           <Palette size={18} className="header-icon" /> <span>Editor RGB Forense</span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button onClick={handleExportPNG} className="btn-export" title="Exportar como PNG" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Download size={14} /> Exportar PNG
+          </button>
           <button onClick={handleSaveClick} className="btn-save" title="Salvar imagem" disabled={isProcessing}>
             <Save size={14} style={{ marginRight: 4 }} /> {isProcessing ? 'Processando...' : 'Salvar'}
           </button>
@@ -273,12 +330,17 @@ export default function ForensicChannelEditor({
             inset: 0, 
             display: 'flex', 
             alignItems: 'center', 
-            justifyContent: 'center' 
+            justifyContent: 'center',
+            touchAction: 'none'
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
           onWheel={handleWheel}
           onContextMenu={(e) => e.preventDefault()}
         >

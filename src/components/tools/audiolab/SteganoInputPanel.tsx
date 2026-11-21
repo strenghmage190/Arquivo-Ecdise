@@ -145,8 +145,30 @@ function DrawTab({ onData }: { onData: (d: ImageData | null) => void }) {
     ctx.moveTo(x, y);
   };
 
+  const startPaintTouch = (e: React.TouchEvent) => {
+    painting.current = true;
+    const ctx = canvasRef.current!.getContext('2d')!;
+    const { x, y } = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
   const paint = (e: React.MouseEvent) => {
     if (!painting.current) return;
+    const ctx = canvasRef.current!.getContext('2d')!;
+    const { x, y } = getPos(e);
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : '#ffffff';
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const paintTouch = (e: React.TouchEvent) => {
+    if (!painting.current) return;
+    if (e.cancelable) e.preventDefault();
     const ctx = canvasRef.current!.getContext('2d')!;
     const { x, y } = getPos(e);
     ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
@@ -197,7 +219,11 @@ function DrawTab({ onData }: { onData: (d: ImageData | null) => void }) {
         onMouseMove={paint}
         onMouseUp={stopPaint}
         onMouseLeave={stopPaint}
-        style={{ cursor: isEraser ? 'cell' : 'crosshair' }}
+        onTouchStart={startPaintTouch}
+        onTouchMove={paintTouch}
+        onTouchEnd={stopPaint}
+        onTouchCancel={stopPaint}
+        style={{ cursor: isEraser ? 'cell' : 'crosshair', touchAction: 'none' }}
       />
     </div>
   );

@@ -61,10 +61,12 @@
 }
 
 .shredder-btn {
-  padding: 6px 12px;
+  padding: 8px 14px;
+  min-height: 44px;
+  min-width: 44px;
   background: rgba(0, 243, 255, 0.06);
   border: 1px solid rgba(0, 243, 255, 0.15);
-  border-radius: 4px;
+  border-radius: 6px;
   color: #bbb;
   font-size: 11px;
   font-weight: 600;
@@ -72,6 +74,12 @@
   cursor: pointer;
   transition: all 0.15s ease;
   text-transform: uppercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .shredder-btn:hover {
@@ -262,6 +270,15 @@
   overflow: hidden;
   max-width: 100%;
   width: 100%;
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.shredder-piece.gm-toggle-target {
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+  border-style: dashed;
 }
 
 .shredder-piece:hover {
@@ -379,16 +396,20 @@
 
 @media (max-width: 768px) {
   .shredder-puzzle-wrapper {
-    padding: 12px;
+    padding: 10px 6px;
   }
 
   .shredder-grid {
     max-width: 100%;
+    padding: 8px;
+    gap: 4px;
   }
 
   .shredder-grid.layout-horizontal {
-    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
     gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 8px;
   }
 
   .shredder-grid.layout-vertical {
@@ -396,16 +417,30 @@
   }
 
   .shredder-controls {
-    gap: 4px;
+    gap: 6px;
+    justify-content: center;
   }
 
   .shredder-btn {
-    padding: 5px 10px;
-    font-size: 10px;
+    padding: 8px 12px;
+    font-size: 11px;
+    min-height: 44px;
+  }
+
+  .shredder-gm-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .shredder-gm-buttons button {
+    min-height: 42px;
+    padding: 6px 12px;
   }
 
   .shredder-piece-lock-icon {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .shredder-piece-lock-text {

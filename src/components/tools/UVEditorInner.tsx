@@ -453,6 +453,20 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
     const handlePointerDownGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
       // debug: handlePointerDownGeneric
       try { if (typeof e.pointerId === 'number') pointerMapRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); } catch (err) {}
+
+      // If 2 pointers are down (e.g. 2 fingers on touchscreen), switch to pinch-zoom and pan
+      if (pointerMapRef.current.size === 2) {
+        if (isDrawing) {
+          stopDrawing();
+        }
+        const pts = Array.from(pointerMapRef.current.values());
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        const center = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        pinchStartRef.current = { dist, scale: scaleRef.current || 1, center, pan: { ...panRef.current } };
+        isPanningRef.current = false;
+        return;
+      }
+
       // middle (1) or right (2) button -> start panning
       if (e.button === 1 || e.button === 2) {
         isPanningRef.current = true;
@@ -460,12 +474,39 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
         try { (e.target as Element).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } catch (err) {}
         return;
       }
+
+      // 1 pointer / 1 finger: draw, erase, or tool interaction
       const handled = handleCanvasClick(e);
       // debug: handlePointerDownGeneric handled?
       if (!handled && (tool === 'draw' || tool === 'erase')) startDrawing(e);
     };
 
     const handlePointerMoveGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      // Update coordinates in pointerMap if tracking
+      try {
+        if (typeof e.pointerId === 'number' && pointerMapRef.current.has(e.pointerId)) {
+          pointerMapRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+      } catch (err) {}
+
+      // Handle 2-finger pinch-zoom and pan
+      if (pointerMapRef.current.size === 2 && pinchStartRef.current) {
+        const pts = Array.from(pointerMapRef.current.values());
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        const center = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        const factor = dist / Math.max(1, pinchStartRef.current.dist);
+        const newScale = Math.min(6, Math.max(0.2, pinchStartRef.current.scale * factor));
+        scaleRef.current = newScale;
+
+        const dx = center.x - pinchStartRef.current.center.x;
+        const dy = center.y - pinchStartRef.current.center.y;
+        panRef.current.x = pinchStartRef.current.pan.x + dx;
+        panRef.current.y = pinchStartRef.current.pan.y + dy;
+        clampPan();
+        redrawAll();
+        return;
+      }
+
       // Store latest coords as plain object (React synthetic events are pooled)
       latestMoveRef.current = { clientX: e.clientX, clientY: e.clientY, pointerId: (e as any).pointerId, buttons: (e as any).buttons };
 
@@ -531,6 +572,9 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
     const handlePointerUpGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
       // debug: handlePointerUpGeneric
       try { if (typeof e.pointerId === 'number') pointerMapRef.current.delete(e.pointerId); } catch (err) {}
+      if (pointerMapRef.current.size < 2) {
+        pinchStartRef.current = null;
+      }
       if (isPanningRef.current) {
         isPanningRef.current = false;
         panStartRef.current = null;

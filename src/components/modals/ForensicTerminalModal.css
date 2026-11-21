@@ -211,6 +211,58 @@
   border: 1px solid rgb(234 179 8 / 0.2);
 }
 
+.ftm-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ftm-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.ftm-chip {
+  background: rgba(203, 213, 225, 0.08);
+  border: 1px solid rgba(203, 213, 225, 0.2);
+  color: var(--nexus-blue, #cbd5e1);
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-family: var(--font-terminal, "Share Tech Mono", monospace);
+  min-height: 32px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ftm-chip:hover {
+  background: rgba(203, 213, 225, 0.2);
+}
+
+.ftm-chip:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 600px) {
+  .ftm-modal {
+    width: 96%;
+    max-height: 90vh;
+  }
+
+  .ftm-body {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .ftm-btn-extract {
+    min-height: 44px;
+  }
+}
+
 /* Animations */
 @keyframes ftm-fadeIn {
   from { opacity: 0; }
