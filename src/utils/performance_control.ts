@@ -40,12 +40,18 @@ export function enablePerformanceMode(preset: Preset = 'balanced') {
   } catch {}
   try { document.body.classList.add('performance-mode'); } catch {}
   applyPresetVars(preset);
+  try {
+    window.dispatchEvent(new CustomEvent('ordo:performance-mode-change', { detail: { enabled: true, preset } }));
+  } catch {}
 }
 
 export function disablePerformanceMode() {
   try { localStorage.setItem(LS_KEY, '0'); } catch {}
   try { localStorage.removeItem(LS_PRESET_KEY); } catch {}
   try { document.body.classList.remove('performance-mode'); } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent('ordo:performance-mode-change', { detail: { enabled: false } }));
+  } catch {}
 }
 
 export function togglePerformanceMode(preset: Preset = 'balanced') {
@@ -59,13 +65,18 @@ export function setExtendedMode(enabled: boolean) {
     if (enabled) document.body.classList.add('performance-mode-extended');
     else document.body.classList.remove('performance-mode-extended');
   } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent('ordo:extended-mode-change', { detail: { extended: enabled } }));
+  } catch {}
 }
 
 export function readInitialState(): { enabled: boolean; extended: boolean; preset: Preset } {
   try {
-    const enabled = localStorage.getItem(LS_KEY) === '1' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches && localStorage.getItem(LS_KEY) !== '0');
+    const isReduced = typeof window !== 'undefined' && Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const storedEnabled = localStorage.getItem(LS_KEY);
+    const enabled = storedEnabled === '1' || (isReduced && storedEnabled !== '0');
     const extended = localStorage.getItem(LS_EXT_KEY) === '1';
-    const preset = (localStorage.getItem(LS_PRESET_KEY) as Preset) || 'balanced';
+    const preset = (localStorage.getItem(LS_PRESET_KEY) as Preset) || (isReduced ? 'high' : 'balanced');
     return { enabled, extended, preset };
   } catch {
     return { enabled: false, extended: false, preset: 'balanced' };

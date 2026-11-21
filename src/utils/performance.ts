@@ -1,4 +1,3 @@
-import { Zap } from 'lucide-react';
 const performanceCSS = `/* ============================================================================
    PERFORMANCE MODE v3.0 (Funcional + Otimizado)
    ========================================================================== */
@@ -359,10 +358,19 @@ export function isPerformanceMode(): boolean {
   }
 }
 
+export function isReducedMotion(): boolean {
+  try {
+    if (typeof window === 'undefined') return false;
+    return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  } catch {
+    return false;
+  }
+}
+
 export function isExtendedPerformanceMode(): boolean {
   try {
     if (typeof window === 'undefined') return false;
-    return document.body.classList.contains('performance-mode-extended') || localStorage.getItem('extendedPerformanceMode') === '1';
+    return document.body.classList.contains('performance-mode-extended') || localStorage.getItem('extendedPerformanceMode') === '1' || isReducedMotion();
   } catch {
     return false;
   }

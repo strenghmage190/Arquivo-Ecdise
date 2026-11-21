@@ -34,6 +34,7 @@
   transform: translate3d(0, -35vh, 0) rotate(var(--sigil-rotation, 0deg));
   animation: falling-sigil var(--sigil-duration) linear var(--sigil-delay) infinite;
   user-select: none;
+  pointer-events: none;
 }
 
 .sigil-estrangeiro {
@@ -45,27 +46,27 @@
 }
 
 .falling-sigil-sangue {
-  --sigil-color: #e63946;
+  --sigil-color: var(--el-sangue, #e63946);
   --sigil-rotation: -14deg;
 }
 
 .falling-sigil-morte {
-  --sigil-color: #64748b;
+  --sigil-color: var(--el-morte-border, #64748b);
   --sigil-rotation: 10deg;
 }
 
 .falling-sigil-conhecimento {
-  --sigil-color: #eab308;
+  --sigil-color: var(--el-conhecimento, #eab308);
   --sigil-rotation: -8deg;
 }
 
 .falling-sigil-energia {
-  --sigil-color: #a855f7;
+  --sigil-color: var(--el-energia, #a855f7);
   --sigil-rotation: 16deg;
 }
 
 .falling-sigil-medo {
-  --sigil-color: #f8fafc;
+  --sigil-color: var(--el-medo, #f8fafc);
   --sigil-rotation: -5deg;
 }
 

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { validateInvestigationFile, inferMimeType } from './fileValidators';
 
 // Validação de arquivo antes do upload
 export interface FileValidation {
@@ -6,54 +7,21 @@ export interface FileValidation {
   error?: string;
 }
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
-const MAX_AUDIO_SIZE = 20 * 1024 * 1024; // 20MB
-
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
-const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm'];
+export interface UploadInvestigationOptions {
+  onProgress?: (progress: number) => void;
+  /**
+   * Se true, pula qualquer redimensionamento e recompressão canvas.
+   * ESSENCIAL para dados forenses, esteganografia LSB e arquivos onde a integridade bit-a-bit é obrigatória.
+   */
+  preserveLossless?: boolean;
+}
 
 export function validateFile(file: File, type: 'image' | 'video' | 'audio' | 'any'): FileValidation {
-  if (!file) return { valid: false, error: 'Nenhum arquivo selecionado' };
-
-  // Check size
-  const maxSize = type === 'image' ? MAX_IMAGE_SIZE : type === 'video' ? MAX_VIDEO_SIZE : type === 'audio' ? MAX_AUDIO_SIZE : MAX_VIDEO_SIZE;
-  if (file.size > maxSize) {
-    const sizeMB = (maxSize / 1024 / 1024).toFixed(0);
-    return { valid: false, error: `Arquivo muito grande. Tamanho máximo: ${sizeMB}MB` };
-  }
-
-  // Check type
-  if (type !== 'any') {
-    // Log incoming file.type for debugging (may be empty string)
-    try { console.debug('validateFile - file.type:', file.type, 'file.name:', file.name); } catch (e) {}
-
-    const allowedTypes = type === 'image' ? ALLOWED_IMAGE_TYPES : type === 'video' ? ALLOWED_VIDEO_TYPES : ALLOWED_AUDIO_TYPES;
-
-    // If file.type is empty, try to infer from file name extension
-    let typeToCheck = file.type;
-    if (!typeToCheck) {
-      const ext = (file.name || '').split('.').pop() || '';
-      const extLower = ext.toLowerCase();
-      if (extLower === 'png') typeToCheck = 'image/png';
-      else if (extLower === 'jpg' || extLower === 'jpeg') typeToCheck = 'image/jpeg';
-      else if (extLower === 'webp') typeToCheck = 'image/webp';
-      else if (extLower === 'gif') typeToCheck = 'image/gif';
-      else if (extLower === 'mp4') typeToCheck = 'video/mp4';
-      else if (extLower === 'webm') typeToCheck = 'video/webm';
-      else if (extLower === 'mov' || extLower === 'qt') typeToCheck = 'video/quicktime';
-      else if (extLower === 'mp3' || extLower === 'mpeg') typeToCheck = 'audio/mpeg';
-      else if (extLower === 'wav') typeToCheck = 'audio/wav';
-      else if (extLower === 'ogg') typeToCheck = 'audio/ogg';
-    }
-
-    if (!allowedTypes.includes(typeToCheck)) {
-      return { valid: false, error: `Tipo de arquivo não suportado: ${typeToCheck || file.type || ''}` };
-    }
-  }
-
-  return { valid: true };
+  const res = validateInvestigationFile(file, type);
+  return {
+    valid: res.valid,
+    error: res.error || res.reason
+  };
 }
 
 // Retry helper com backoff exponencial
@@ -82,11 +50,7 @@ async function retryWithBackoff<T>(
 
 /**
  * Resize/compress image in browser using canvas, returns a File or Blob.
- * Useful to call before upload to reduce payload size and improve upload time.
- * - `maxWidth`/`maxHeight` limit the output dimensions
- * - `quality` adjusts JPEG quality (0..1)
- * The function is exported so it can be reused by callers that perform client-side
- * image processing (e.g. drag-n-drop upload flows) to provide consistent resizing.
+ * Used when preserveLossless is false and standard preview compression is safe.
  */
 export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1200, quality = 0.8): Promise<File | Blob> {
   if (!file.type.startsWith('image/')) return file;
@@ -115,18 +79,16 @@ export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1
   const ctx = canvas.getContext('2d');
   if (!ctx) return file;
   
-  // Melhor qualidade de renderização para compressão
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, w, h);
 
   const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
   
-  // Compressão agressiva para arquivos grandes (>5MB)
   const fileSizeMB = file.size / (1024 * 1024);
   let adjustedQuality = quality;
   if (fileSizeMB > 5) {
-    adjustedQuality = Math.max(0.6, quality - 0.2); // Reduz qualidade para arquivos grandes
+    adjustedQuality = Math.max(0.6, quality - 0.2);
   } else if (fileSizeMB > 2) {
     adjustedQuality = Math.max(0.7, quality - 0.1);
   }
@@ -134,7 +96,6 @@ export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), outputType, adjustedQuality));
   if (!blob) return file;
   
-  // Se ainda estiver muito grande, comprimir novamente com qualidade menor
   if (blob.size > file.size && blob.size > 3 * 1024 * 1024) {
     const secondPass = await new Promise<Blob | null>((resolve) => 
       canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.6)
@@ -148,7 +109,6 @@ export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1
     }
   }
 
-  // Prefer File when available so Supabase Storage preserves filename metadata
   try {
     return new File([blob], file.name, { type: blob.type });
   } catch (e) {
@@ -156,15 +116,22 @@ export async function resizeImageFile(file: File, maxWidth = 1600, maxHeight = 1
   }
 }
 
-// Envia imagem (redimensionando/comprimindo) e retorna URL pública
+/**
+ * Envia imagem para Supabase Storage.
+ * Suporta opção preserveLossless para manter 100% dos pixels intactos (esteganografia LSB e análise forense).
+ */
 export async function uploadInvestigationImage(
   file: File, 
   investigationId: string,
-  onProgress?: (progress: number) => void
+  onProgressOrOptions?: ((progress: number) => void) | UploadInvestigationOptions
 ): Promise<string | null> {
   try {
-    // Log incoming file.type for debugging
-    try { console.debug('uploadInvestigationImage - received file.type:', file.type, 'file.name:', file.name); } catch (e) {}
+    const options: UploadInvestigationOptions = typeof onProgressOrOptions === 'function'
+      ? { onProgress: onProgressOrOptions }
+      : (onProgressOrOptions || {});
+
+    const onProgress = options.onProgress;
+    const preserveLossless = options.preserveLossless ?? false;
 
     // Validar arquivo antes de processar
     const validation = validateFile(file, 'image');
@@ -173,10 +140,16 @@ export async function uploadInvestigationImage(
     }
 
     onProgress?.(10);
-    const resized = await resizeImageFile(file);
+
+    // Se a evidência precisa de integridade bit-a-bit (LSB / forense), NÃO comprima via Canvas
+    let fileToUpload: File | Blob = file;
+    if (!preserveLossless) {
+      fileToUpload = await resizeImageFile(file);
+    }
+    
     onProgress?.(30);
 
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split('.').pop() || 'png';
     const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
     const filePath = `${investigationId}/${fileName}`;
 
@@ -185,8 +158,12 @@ export async function uploadInvestigationImage(
       onProgress?.(50);
       return await supabase.storage.from('investigation-assets').upload(
         filePath, 
-        resized as File | Blob, 
-        { cacheControl: '3600', upsert: false }
+        fileToUpload, 
+        {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type || inferMimeType(file.name) || 'application/octet-stream'
+        }
       );
     });
     
@@ -198,11 +175,13 @@ export async function uploadInvestigationImage(
     return data.publicUrl;
   } catch (error) {
     console.error('Upload falhou:', error);
-    throw error; // Propagar erro em vez de retornar null
+    throw error;
   }
 }
 
-// Upload arbitrary file (JSON, etc.) to the investigation bucket and return public URL
+/**
+ * Upload de arquivos de áudio, vídeo, JSON e binários forenses sem conversão ou compressão com perda
+ */
 export async function uploadInvestigationFile(
   file: File | Blob, 
   investigationId: string, 
@@ -210,7 +189,6 @@ export async function uploadInvestigationFile(
   onProgress?: (progress: number) => void
 ): Promise<string | null> {
   try {
-    // Validar arquivo se for File
     if (file instanceof File) {
       const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'any';
       const validation = validateFile(file, type);
@@ -235,7 +213,7 @@ export async function uploadInvestigationFile(
         { 
           cacheControl: '3600', 
           upsert: false, 
-          contentType: (file instanceof File ? file.type : undefined) 
+          contentType: (file instanceof File ? (file.type || inferMimeType(file.name) || undefined) : undefined) 
         }
       );
     });
@@ -248,8 +226,8 @@ export async function uploadInvestigationFile(
     return data.publicUrl;
   } catch (error) {
     console.error('Upload file falhou:', error);
-    throw error; // Propagar erro em vez de retornar null
+    throw error;
   }
 }
 
-export default { uploadInvestigationImage, uploadInvestigationFile };
+export default { uploadInvestigationImage, uploadInvestigationFile, resizeImageFile, validateFile };

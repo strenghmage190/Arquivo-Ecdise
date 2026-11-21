@@ -49,7 +49,11 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   }, [bootLog, onComplete]);
 
   return (
-    <div className={`boot-screen ${!loading ? 'fade-out' : ''}`}>
+    <div
+      className={`boot-screen ${!loading ? 'fade-out' : ''}`}
+      role="region"
+      aria-label="Tela de Inicialização do Sistema"
+    >
       <div className="boot-glow" aria-hidden="true" />
       <div className="boot-grid" aria-hidden="true" />
       <div className="scanline" aria-hidden="true" />
@@ -61,11 +65,17 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
             <div className="brand-sub">C.R.I.S // canal seguro</div>
           </div>
           <div className="boot-art" aria-hidden="true">
-            <img src={BOOT_ART} alt="" />
+            <img
+              src={BOOT_ART}
+              alt=""
+              width={150}
+              height={82}
+              loading="eager"
+            />
           </div>
           <div className="boot-tags">
             <span className="tag tag-primary">NO CR-07</span>
-            <span className="tag tag-accent">SINCRONIA {Math.round(progress * 100)}%</span>
+            <span className="tag tag-accent tabular-nums">SINCRONIA {Math.round(progress * 100)}%</span>
           </div>
         </div>
 
@@ -73,22 +83,27 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
           <div className="terminal">
             <div className="terminal-header">
               <span>BOOT CONSOLE</span>
-              <span className="indicator"><span className="dot pulse"></span> enlace estável</span>
+              <span className="indicator"><span className="dot pulse" aria-hidden="true"></span> enlace estável</span>
             </div>
-            <div className="terminal-lines">
+            <div
+              className="terminal-lines"
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+            >
               {lines.map((l, i) => {
                 const lineClass = l.includes('[OK]') ? 'line ok' : l.startsWith('ALERTA') ? 'line alert' : 'line';
                 return (
                   <div key={i} className={lineClass}>
-                    <span className="caret">&gt;</span>
+                    <span className="caret" aria-hidden="true">&gt;</span>
                     <span className="text">{l}</span>
                   </div>
                 );
               })}
               {loading && (
-                <div className="line typing">
+                <div className="line typing" aria-hidden="true">
                   <span className="caret">&gt;</span>
-                  <span className="text"><span className="terminal-cursor" aria-hidden="true" /></span>
+                  <span className="text"><span className="terminal-cursor" /></span>
                 </div>
               )}
             </div>
@@ -97,10 +112,17 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
           <div className="telemetry">
             <div className="telemetry-card">
               <div className="label">Sincronização</div>
-              <div className="stat-bar">
+              <div
+                className="stat-bar"
+                role="progressbar"
+                aria-valuenow={Math.round(progress * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progresso da sincronização do kernel"
+              >
                 <div className="stat-fill" style={{ width: `${progress * 100}%` }} />
               </div>
-              <div className="meta-row">
+              <div className="meta-row tabular-nums">
                 <span>Kernel</span>
                 <span>{Math.round(progress * 100)}%</span>
               </div>
@@ -129,10 +151,17 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
 
         <div className="boot-footer">
           <div className="footer-left">
-            <span className="dot pulse"></span>
+            <span className="dot pulse" aria-hidden="true"></span>
             <span>Compilando heurísticas / preparando board</span>
           </div>
-          <div className="loading-bar-container">
+          <div
+            className="loading-bar-container"
+            role="progressbar"
+            aria-valuenow={Math.round(progress * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Inicialização global do sistema"
+          >
             <div className="loading-bar" style={{ width: `${progress * 100}%` }}></div>
           </div>
         </div>
