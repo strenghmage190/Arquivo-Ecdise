@@ -1,17 +1,29 @@
 .terminal-search {
   position: fixed;
-  top: 94px;
-  right: 24px;
-  z-index: 12050;
-  width: min(380px, calc(100vw - 32px));
-  padding: 14px;
-  overflow: hidden;
+  top: max(88px, calc(env(safe-area-inset-top, 0px) + 78px));
+  right: 16px;
+  z-index: var(--z-cris, 3000);
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 120px);
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   background: var(--surface);
   color: var(--text-primary);
   font-family: var(--font-system);
-  box-shadow: 0 14px 30px rgb(0 0 0 / 46%);
+  box-shadow: 0 14px 30px rgb(0 0 0 / 55%);
+}
+
+@media (max-width: 768px) {
+  .terminal-search {
+    top: env(safe-area-inset-top, 8px);
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 70px);
+  }
 }
 
 .terminal-header,
@@ -78,11 +90,12 @@
   box-sizing: border-box;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   appearance: none;
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-system);
+  font-size: 16px;
 }
 
 .term-input::placeholder {
@@ -97,10 +110,12 @@
 
 .term-go,
 .term-cancel {
-  padding: 9px 12px;
+  min-height: var(--control-h-md, 44px);
+  padding: 8px 14px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .06em;
+  touch-action: manipulation;
 }
 
 .term-go:disabled,

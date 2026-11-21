@@ -1,4 +1,4 @@
-import { Flashlight, FolderOpen, House, LayoutPanelTop, Link2, LocateFixed, Lock, Menu, MoreHorizontal, Search, Settings, Terminal, Undo2, X } from 'lucide-react';
+import { Flashlight, FolderOpen, House, LayoutPanelTop, Link2, LocateFixed, Lock, Menu, MoreHorizontal, Redo2, Search, Settings, Terminal, Undo2, X, Zap } from 'lucide-react';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './BottomNavigationBar.css';
@@ -14,6 +14,8 @@ const MOBILE_TOOLS = [
   { id: 'reset-cam', icon: <LocateFixed size={20} />, label: 'Focar' },
   { id: 'decoder', icon: <Lock size={20} />, label: 'Decodificar' },
   { id: 'undo', icon: <Undo2 size={20} />, label: 'Desfazer' },
+  { id: 'redo', icon: <Redo2 size={20} />, label: 'Refazer' },
+  { id: 'performance', icon: <Zap size={20} />, label: 'Desempenho' },
 ];
 
 const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaster = false }) => {

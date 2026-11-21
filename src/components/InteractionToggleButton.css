@@ -1,20 +1,30 @@
 .fab-toggle-mode {
   position: fixed;
-  bottom: 80px; /* Above the Bottom Bar */
-  right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 70px);
+  right: 16px;
+  width: var(--control-h-lg, 48px);
+  height: var(--control-h-lg, 48px);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--surface, #11141b);
+  border: 1px solid var(--border, #29313d);
+  color: var(--text-primary, #f1f5f9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  transition: transform 0.1s;
+  z-index: var(--z-hud, 1000);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.fab-toggle-mode.edit-mode {
+  background: var(--institutional-red, #e63946);
+  border-color: #ff6b77;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(230, 57, 70, 0.45);
 }
 
 .fab-toggle-mode:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }

@@ -47,9 +47,9 @@
 @media (max-width: 768px) {
   .mobile-hud {
     position: fixed;
-    right: 12px;
-    bottom: 72px;
-    z-index: 20003;
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);
+    z-index: var(--z-hud, 1000);
     display: block;
   }
 
@@ -57,14 +57,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: var(--control-h-md, 44px);
+    height: var(--control-h-md, 44px);
     padding: 0;
     border: 1px solid var(--border);
-    border-radius: 0;
+    border-radius: var(--radius-sm, 4px);
     background: var(--surface);
     color: var(--text-primary);
     cursor: pointer;
+    touch-action: manipulation;
     transition: border-color 150ms, background-color 150ms;
   }
 

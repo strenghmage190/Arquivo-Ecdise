@@ -12,6 +12,7 @@ import {
   FolderOpen,
   Glasses,
   LayoutGrid,
+  LayoutPanelTop,
   Layers2,
   Lightbulb,
   Link2,
@@ -69,6 +70,9 @@ import BottomSheet from '../ui/BottomSheet';
 import usePerformanceMode from '../../utils/usePerformanceMode';
 import BottomNavigationBar from '../BottomNavigationBar';
 import ConnectionLine from '../ConnectionLine';
+import InteractionToggleButton from '../InteractionToggleButton';
+import { FloatingNudgePad } from '../ui/FloatingNudgePad';
+import { TouchContextMenu } from '../ui/TouchContextMenu';
 // Local fallback for BoardButton (avoids missing module error)
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
@@ -84,7 +88,7 @@ interface Props {
   investigationId: string;
 }
 
-const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any) => {
+const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin, uvTouchPos }: any) => {
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
 
   useEffect(() => {
@@ -109,14 +113,19 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any)
     };
   }, [isUV, boardRef]);
 
-  if (!overlayPos || !overlayPos.over) return null;
+  // Se houver toque ativo na lente UV, ele prevalece
+  const activePos = (uvTouchPos && uvTouchPos.active)
+    ? { x: uvTouchPos.x, y: uvTouchPos.y, over: true }
+    : overlayPos;
 
-  const worldX = origin.x + (overlayPos.x / zoom);
-  const worldY = origin.y + (overlayPos.y / zoom);
+  if (!activePos || !activePos.over) return null;
+
+  const worldX = origin.x + (activePos.x / zoom);
+  const worldY = origin.y + (activePos.y / zoom);
 
   if (performanceMode) {
     return (
-      <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3100 }}>
+      <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 'var(--z-uv, 800)' }}>
         <div style={{
           position: 'absolute',
           left: worldX,
@@ -146,7 +155,7 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any)
   }
 
   return (
-    <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
+    <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 'var(--z-uv, 800)' }}>
       <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
       <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(180,102,255,0.18) 40%, rgba(80,10,120,0.5) 80%, transparent 100%)`, pointerEvents: 'none' }} />
     </div>
@@ -260,10 +269,13 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [playerView, setPlayerView] = useState<boolean>(() => true);
   const isMobile = useIsMobile();
   const { width: windowWidth, height: windowHeight } = useWindowSize();
-  // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
+  // Mobile touch mode: 'pan' = move camera (1 finger pan), 'edit' = select/drag cards (2 finger pan)
   const isMobileDevice = isMobile;
-  const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
+  const [touchMode, setTouchMode] = useState<'pan' | 'edit'>(isMobileDevice ? 'pan' : 'edit');
   const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
+  const [marqueeTouchMode, setMarqueeTouchMode] = useState(false);
+  const [uvFollowTouch, setUvFollowTouch] = useState(false);
+  const [uvTouchPos, setUvTouchPos] = useState<{ x: number; y: number; active: boolean } | null>(null);
   // Pinch-to-zoom states
   const [isPinching, setIsPinching] = useState(false);
   const [initialDistance, setInitialDistance] = useState(0);
@@ -404,6 +416,25 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       await loadBoard();
     } catch (err) {
       console.error('Erro ao deletar conexão', err);
+    }
+  };
+
+  const handleChangeConnectionType = async (type: 'confirmed' | 'theory' | 'mystic') => {
+    if (!connectionContextMenu) return;
+    const color = type === 'theory' ? '#f9a825' : type === 'mystic' ? '#7e57c2' : '#c62828';
+    try {
+      await (supabase as any)
+        .from('investigation_connections')
+        .update({
+          color,
+          metadata: { type }
+        })
+        .eq('id', connectionContextMenu.id);
+      setConnectionContextMenu(null);
+      await loadBoard();
+      showToast({ id: 'conn-type-updated', message: `Conexão alterada para ${type}` });
+    } catch (err) {
+      console.error('Erro ao atualizar tipo de conexão', err);
     }
   };
 
@@ -2044,7 +2075,20 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
       {/* BARRA DE NAVEGAÇÃO MOBILE (NOVA) */}
       {isMobileDevice && (
-        <BottomNavigationBar isGameMaster={isGameMaster} />
+        <>
+          <BottomNavigationBar isGameMaster={isGameMaster} />
+          <InteractionToggleButton
+            mode={touchMode}
+            onToggle={() => {
+              setTouchMode(prev => {
+                const next = prev === 'pan' ? 'edit' : 'pan';
+                setTouchModeNotice(next === 'pan' ? 'Modo Panorâmica: arraste com 1 dedo' : 'Modo Edição: toque e mova pistas');
+                setTimeout(() => setTouchModeNotice(null), 3000);
+                return next;
+              });
+            }}
+          />
+        </>
       )}
 
       {!isMobileDevice && (
@@ -2264,15 +2308,59 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         className="corkboard-canvas"
         onTouchStart={(e) => {
           try {
+            // Se modo UV estiver ativo com Seguir o Toque, toque move a lente e trava pan
+            if (isUV && uvFollowTouch) {
+              const t0 = e.touches[0];
+              if (t0 && boardRef.current) {
+                const rect = boardRef.current.getBoundingClientRect();
+                setUvTouchPos({ x: t0.clientX - rect.left, y: t0.clientY - rect.top, active: true });
+                return;
+              }
+            }
+
+            // Marquee selection via touch
+            if (marqueeTouchMode && e.touches.length === 1 && boardRef.current) {
+              const t0 = e.touches[0];
+              const rect = boardRef.current.getBoundingClientRect();
+              const sx = t0.clientX - rect.left;
+              const sy = t0.clientY - rect.top;
+              const bx = sx / zoom + origin.x;
+              const by = sy / zoom + origin.y;
+              marqueeStartRef.current = { sx, sy, bx, by };
+              setMarqueeRect({ left: sx, top: sy, width: 0, height: 0 });
+              return;
+            }
+
             const t = (e.touches && e.touches[0]) as Touch | undefined;
             if (!t) return;
-            // start pan when touching the background (not a card) — always enabled on mobile
+            // No modo 'pan', 1 dedo move a câmera no fundo
+            // No modo 'edit', 2 dedos movem a câmera (1 dedo edita/arrasta)
             if (e.target === boardRef.current || e.target === e.currentTarget) {
-              if (e.touches.length === 1) {
+              if (touchMode === 'pan' && e.touches.length === 1) {
                 panningRef.current = { startX: t.clientX, startY: t.clientY, originX: origin.x, originY: origin.y } as any;
+              } else if (touchMode === 'edit' && e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const midX = (t1.clientX + t2.clientX) / 2;
+                const midY = (t1.clientY + t2.clientY) / 2;
+                panningRef.current = { startX: midX, startY: midY, originX: origin.x, originY: origin.y } as any;
               }
             }
           } catch (err) { /* ignore */ }
+        }}
+        onTouchMove={(e) => {
+          if (isUV && uvFollowTouch && boardRef.current) {
+            const t0 = e.touches[0];
+            if (t0) {
+              const rect = boardRef.current.getBoundingClientRect();
+              setUvTouchPos({ x: t0.clientX - rect.left, y: t0.clientY - rect.top, active: true });
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (uvTouchPos) {
+            setUvTouchPos(prev => prev ? { ...prev, active: false } : null);
+          }
         }}
         onMouseMove={(e) => {
           // UV overlay now handled by GlobalUVOverlay component natively
@@ -2320,7 +2408,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
         >
           {isUV && (
-            <GlobalUVOverlay isUV={isUV} performanceMode={performanceMode} boardRef={boardRef} zoom={zoom} origin={origin} />
+            <GlobalUVOverlay isUV={isUV} performanceMode={performanceMode} boardRef={boardRef} zoom={zoom} origin={origin} uvTouchPos={uvTouchPos} />
           )}
           {/* overflow visible prevents SVG clipping for lines that extend past view */}
           <svg className="connections-layer" style={{ overflow: 'visible' }}>
@@ -2366,7 +2454,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               className="connection-context-menu"
               style={{ top: connectionContextMenu.y, left: connectionContextMenu.x }}
             >
-              <button onClick={handleDeleteConnection}><Trash2 size={15} /> Apagar Conexão</button>
+              <div className="context-menu-title">TIPO DE CONEXÃO</div>
+              <button onClick={() => handleChangeConnectionType('confirmed')} style={{ color: '#ff6b77' }}>
+                <div style={{ width: 8, height: 8, background: '#c62828', borderRadius: '50%' }} /> Fato Confirmado
+              </button>
+              <button onClick={() => handleChangeConnectionType('theory')} style={{ color: '#f9a825' }}>
+                <div style={{ width: 8, height: 8, background: '#f9a825', borderRadius: '50%' }} /> Teoria / Hipótese
+              </button>
+              <button onClick={() => handleChangeConnectionType('mystic')} style={{ color: '#b366ff' }}>
+                <div style={{ width: 8, height: 8, background: '#7e57c2', borderRadius: '50%' }} /> Sobrenatural / Oculto
+              </button>
+              <div className="context-menu-divider" />
+              <button onClick={handleDeleteConnection} className="context-danger"><Trash2 size={15} /> Apagar Conexão</button>
             </div>
           )}
 
@@ -2390,7 +2489,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             return (
                 <div
                 key={card.id}
-                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''} ${card.is_hidden && showHiddenClues ? 'hidden-clue' : ''}`}
+                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'edit' ? 'mobile-interactive' : ''} ${card.is_hidden && showHiddenClues ? 'hidden-clue' : ''}`}
                   data-status={(card as any)?.metadata?.status || ''}
                   style={{ left: pos.x, top: pos.y, pointerEvents: 'auto' }}
                 onContextMenu={(e) => {
@@ -2453,11 +2552,24 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 }}
                 onTouchStart={(ev) => {
                   ev.stopPropagation();
+                  if (connectionMode) {
+                    onCardClickWhenConnecting(card.id);
+                    return;
+                  }
                   const t = ev.touches[0];
-                  // On touch, default to selecting this card (no modifier keys)
-                  const newSelected = [card.id];
-                  setSelectedIds(newSelected);
-                  const affected = [card.id];
+                  // If in pan touchMode, do not drag cards; let pan take precedence
+                  if (touchMode === 'pan') {
+                    // Just select on tap
+                    if (!selectedIds.includes(card.id)) {
+                      setSelectedIds([card.id]);
+                    }
+                    return;
+                  }
+                  // In edit mode:
+                  const isMulti = selectedIds.length > 1 && selectedIds.includes(card.id);
+                  const newSelected = isMulti ? selectedIds : [card.id];
+                  if (!isMulti) setSelectedIds(newSelected);
+                  const affected = newSelected;
                   const origPositions: Record<string, { x: number; y: number }> = {};
                   affected.forEach((id) => {
                     const p = localPositions[id] || (() => {
@@ -2554,7 +2666,182 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             );
           })}
 
-          {/* Sticky notes layer removed */}
+          {/* BARRA CONTEXTUAL DE MULTISSELEÇÃO / TOUCH SELECTION */}
+          {selectedIds.length > 0 && (
+            <div
+              className="selection-context-toolbar"
+              style={{
+                position: 'fixed',
+                bottom: isMobileDevice ? 'calc(env(safe-area-inset-bottom, 0px) + 64px)' : '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 'var(--z-hud, 1000)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--surface, #11141b)',
+                border: '1px solid var(--border, #29313d)',
+                borderRadius: 'var(--radius-md, 8px)',
+                padding: '8px 12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                maxWidth: '95vw',
+                overflowX: 'auto',
+              }}
+            >
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {selectedIds.length} {selectedIds.length === 1 ? 'PISTA' : 'PISTAS'}
+              </span>
+
+              {/* Status Rápido */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  className="hud-btn icon-only control-sm"
+                  style={{ minWidth: 32, minHeight: 32 }}
+                  title="Confirmar Fato"
+                  onClick={() => {
+                    selectedIds.forEach(id => toggleCardStatus(id, 'verified', []));
+                  }}
+                >
+                  <Check size={14} color="#2ecc71" />
+                </button>
+                <button
+                  type="button"
+                  className="hud-btn icon-only control-sm"
+                  style={{ minWidth: 32, minHeight: 32 }}
+                  title="Marcar Teoria"
+                  onClick={() => {
+                    selectedIds.forEach(id => toggleCardStatus(id, 'theory', []));
+                  }}
+                >
+                  <CircleHelp size={14} color="#f9a825" />
+                </button>
+                <button
+                  type="button"
+                  className="hud-btn icon-only control-sm"
+                  style={{ minWidth: 32, minHeight: 32 }}
+                  title="Descartar / Falso"
+                  onClick={() => {
+                    selectedIds.forEach(id => toggleCardStatus(id, 'false', []));
+                  }}
+                >
+                  <X size={14} color="#e63946" />
+                </button>
+              </div>
+
+              <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+
+              {/* Ordem Z */}
+              <button
+                type="button"
+                className="hud-btn icon-only control-sm"
+                style={{ minWidth: 32, minHeight: 32 }}
+                title="Trazer para frente"
+                onClick={() => {
+                  selectedIds.forEach(id => api.updateInvestigationCard(id, { z_index: 1000 }));
+                  loadBoard();
+                }}
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                type="button"
+                className="hud-btn icon-only control-sm"
+                style={{ minWidth: 32, minHeight: 32 }}
+                title="Mandar para trás"
+                onClick={() => {
+                  selectedIds.forEach(id => api.updateInvestigationCard(id, { z_index: 1 }));
+                  loadBoard();
+                }}
+              >
+                <ArrowDown size={14} />
+              </button>
+
+              {/* Botão Editar (substitui atalho 'E') quando 1 pista selecionada */}
+              {canEdit && selectedIds.length === 1 && (
+                <button
+                  type="button"
+                  className="hud-btn control-sm"
+                  style={{ minHeight: 32, padding: '0 8px', fontSize: 11 }}
+                  title="Editar pista (E)"
+                  onClick={() => {
+                    const card = cards.find(c => c.id === selectedIds[0]);
+                    if (card) handleEditCard(card);
+                  }}
+                >
+                  EDITAR
+                </button>
+              )}
+
+              {/* Botão Centralizar câmera na pista */}
+              <button
+                type="button"
+                className="hud-btn control-sm"
+                style={{ minHeight: 32, padding: '0 8px', fontSize: 11 }}
+                title="Centralizar nesta pista"
+                onClick={() => {
+                  const targetId = selectedIds[0];
+                  const center = getCardCenter(targetId);
+                  if (center) panToPosition(center.x, center.y);
+                }}
+              >
+                <LocateFixed size={14} /> FOCAR
+              </button>
+
+              {/* Excluir (se GM) */}
+              {canEdit && (
+                <button
+                  type="button"
+                  className="hud-btn icon-only control-sm context-danger"
+                  style={{ minWidth: 32, minHeight: 32, color: 'var(--institutional-red)' }}
+                  title="Excluir selecionadas"
+                  onClick={async () => {
+                    if (window.confirm(`Excluir permanentemente ${selectedIds.length} pista(s)?`)) {
+                      for (const id of selectedIds) {
+                        try { await api.deleteInvestigationCard(id); } catch (e) {}
+                      }
+                      setSelectedIds([]);
+                      await loadBoard();
+                    }
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+
+              {/* Desmarcar */}
+              <button
+                type="button"
+                className="hud-btn icon-only control-sm"
+                style={{ minWidth: 32, minHeight: 32 }}
+                title="Fechar seleção"
+                onClick={() => setSelectedIds([])}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* FloatingNudgePad para mover pistas selecionadas ou câmera no mobile */}
+          {selectedIds.length > 0 && isMobileDevice && (
+            <FloatingNudgePad
+              onNudge={(dx, dy) => {
+                setLocalPositions(prev => {
+                  const next = { ...prev };
+                  selectedIds.forEach(id => {
+                    const cur = prev[id] || { x: 100, y: 100 };
+                    next[id] = { x: cur.x + dx, y: cur.y + dy };
+                    scheduleDebouncedSave(id);
+                  });
+                  return next;
+                });
+              }}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              step={20}
+            />
+          )}
 
           {touchModeNotice && (
             <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
@@ -2610,25 +2897,116 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
               <Link2 size={16} /> {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
             </button>
-            <button onClick={() => setShowFinder(true)} className="fab-item">
+            <button onClick={() => { setShowFinder(true); setMobileMenuOpen(false); }} className="fab-item">
               <Search size={16} /> BUSCAR
             </button>
-            <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
-              <Flashlight size={16} /> LUZ UV
+            <button onClick={() => { setIsUV(!isUV); setMobileMenuOpen(false); }} className={`fab-item ${isUV?'uv-active':''}`}>
+              <Flashlight size={16} /> LUZ UV {isUV ? '(LIGADA)' : '(DESLIGADA)'}
             </button>
-            <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
-              <LocateFixed size={16} /> LOCALIZAR
+            {isUV && (
+              <button
+                onClick={() => {
+                  setUvFollowTouch(prev => !prev);
+                  showToast({ id: 'uv-touch', message: !uvFollowTouch ? 'UV: Seguir Toque ATIVADO' : 'UV: Seguir Toque DESATIVADO' });
+                  setMobileMenuOpen(false);
+                }}
+                className={`fab-item ${uvFollowTouch ? 'uv-active' : ''}`}
+              >
+                <Flashlight size={16} /> UV: SEGUIR TOQUE {uvFollowTouch ? '(ATIVO)' : '(INATIVO)'}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setMarqueeTouchMode(prev => !prev);
+                showToast({ id: 'marquee-touch', message: !marqueeTouchMode ? 'Seleção em Área: Arraste o dedo no fundo para selecionar' : 'Seleção em Área DESATIVADA' });
+                setMobileMenuOpen(false);
+              }}
+              className={`fab-item ${marqueeTouchMode ? 'active' : ''}`}
+            >
+              <LayoutGrid size={16} /> SELEÇÃO EM ÁREA (TOUCH) {marqueeTouchMode ? '(ATIVA)' : ''}
+            </button>
+            <button onClick={() => { setOrigin({x:0, y:0}); setMobileMenuOpen(false); }} className="fab-item">
+              <LocateFixed size={16} /> RESETAR CÂMERA (100%)
+            </button>
+            <button onClick={() => { setShowOrganizeMenu(true); setMobileMenuOpen(false); }} className="fab-item">
+              <LayoutPanelTop size={16} /> ORGANIZAR QUADRO...
+            </button>
+            <button onClick={() => { setDecoderOpen(true); setMobileMenuOpen(false); }} className="fab-item">
+              <Lock size={16} /> DECODIFICADOR
+            </button>
+            <button onClick={() => { setTerminalOpen(true); setMobileMenuOpen(false); }} className="fab-item">
+              <Terminal size={16} /> TERMINAL C.R.I.S.
+            </button>
+            <button onClick={() => { undo(); setMobileMenuOpen(false); }} disabled={undoStack.length === 0} className="fab-item">
+              <Undo2 size={16} /> DESFAZER
+            </button>
+            <button onClick={() => { redo(); setMobileMenuOpen(false); }} disabled={redoStack.length === 0} className="fab-item">
+              <Redo2 size={16} /> REFAZER
+            </button>
+            <button onClick={() => { togglePerformanceMode(); setMobileMenuOpen(false); }} className={`fab-item ${performanceMode ? 'active' : ''}`}>
+              <Zap size={16} /> MODO DESEMPENHO {performanceMode ? '(ATIVO)' : ''}
             </button>
             <h3>Zoom</h3>
-            {isMobileDevice ? (
-              <div style={{ padding: '8px 0', color: '#888' }}>Use dois dedos para aproximar/afastar (pinch)</div>
-            ) : (
-              <>
-                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item"><ZoomIn size={16} /> ZOOM IN</button>
-                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item"><ZoomOut size={16} /> ZOOM OUT</button>
-                <button onClick={() => resetZoom()} className="fab-item"><RotateCcw size={16} /> RESET ZOOM</button>
-              </>
-            )}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <button onClick={() => zoomOut()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><ZoomOut size={16} /> -</button>
+              <button onClick={() => resetZoom()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><RotateCcw size={16} /> 100%</button>
+              <button onClick={() => zoomIn()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><ZoomIn size={16} /> +</button>
+            </div>
+          </BottomSheet>
+
+          {/* BottomSheet de Organização */}
+          <BottomSheet isOpen={showOrganizeMenu} onClose={() => setShowOrganizeMenu(false)} title="Organizar Pistas">
+            <h3>Layout Automático</h3>
+            <button
+              onClick={() => {
+                handleAutoOrganize('timeline');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <CalendarDays size={16} /> Por Linha do Tempo (Data)
+            </button>
+            <button
+              onClick={() => {
+                handleAutoOrganize('grid');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <LayoutGrid size={16} /> Por Elemento e Tipo
+            </button>
+            <button
+              onClick={() => {
+                const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
+                const beforePositions = cards.map(c => ({ id: c.id, x: (localPositions[c.id]?.x ?? c.x ?? 0), y: (localPositions[c.id]?.y ?? c.y ?? 0) }));
+                const afterPositions: any[] = [];
+                cards.forEach((c, i) => {
+                  const col = i % 5;
+                  const row = Math.floor(i / 5);
+                  const x = 100 + col * 260;
+                  const y = 100 + row * 300;
+                  newPos[c.id] = { x, y };
+                  afterPositions.push({ id: c.id, x, y });
+                  api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
+                });
+                pushUndo({ type: 'organize', payload: { before: beforePositions, after: afterPositions } });
+                setLocalPositions(newPos);
+                setOrigin({ x: -50, y: -50 });
+                setShowOrganizeMenu(false);
+                showToast({ id: 'unstack', message: 'Cards desempilhados com sucesso!' });
+              }}
+              className="fab-item"
+            >
+              <Layers2 size={16} /> Desempilhar em Grade
+            </button>
+            <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
+              <button onClick={() => undo()} disabled={undoStack.length === 0} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}>
+                <Undo2 size={16} /> Desfazer
+              </button>
+              <button onClick={() => redo()} disabled={redoStack.length === 0} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}>
+                <Redo2 size={16} /> Refazer
+              </button>
+            </div>
           </BottomSheet>
 
           <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>

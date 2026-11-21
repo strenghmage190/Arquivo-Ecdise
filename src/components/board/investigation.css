@@ -35,7 +35,9 @@
 .investigation-board {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  width: 100vw;
+  height: 100dvh;
+  z-index: var(--z-board, 1);
   display: flex;
   overflow: hidden;
   background:
@@ -82,12 +84,12 @@ body.space-panning .corkboard-canvas:active {
   height: 16000px;
   overflow: visible;
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-connections, 10);
 }
 
 .marquee-rect {
   position: absolute;
-  z-index: var(--z-card-hover);
+  z-index: var(--z-marquee, 500);
   pointer-events: none;
   border: 1px solid var(--text-primary);
   background: rgb(232 232 234 / 7%);
@@ -98,12 +100,12 @@ body.space-panning .corkboard-canvas:active {
   top: 0;
   right: 0;
   left: 0;
-  z-index: 1200;
+  z-index: var(--z-hud, 1000);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   min-height: var(--header-height);
-  padding: 0 20px;
+  padding: env(safe-area-inset-top, 0) 20px 0 20px;
   background: #11141b;
   border-bottom: 1px solid var(--border);
 }
@@ -318,14 +320,14 @@ body.space-panning .corkboard-canvas:active {
 .board-context-menu,
 .connection-context-menu {
   position: absolute;
-  z-index: 10050;
+  z-index: var(--z-modals, 2000);
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 210px;
-  padding: 7px;
+  padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   background: var(--surface);
   box-shadow: 0 14px 30px rgb(0 0 0 / 48%);
   color: var(--text-primary);
@@ -340,7 +342,7 @@ body.space-panning .corkboard-canvas:active {
 
 .board-context-menu {
   position: fixed;
-  z-index: 11000;
+  z-index: calc(var(--z-modals, 2000) + 10);
 }
 
 .dropdown-header,
@@ -404,10 +406,10 @@ body.space-panning .corkboard-canvas:active {
 .reveal-hud,
 .touch-mode-notice {
   position: fixed;
-  z-index: 13000;
-  padding: 8px 12px;
+  z-index: var(--z-toasts, 4000);
+  padding: 8px 14px;
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-sm, 4px);
   background: var(--surface);
   color: var(--text-primary);
   font-family: var(--font-system);
@@ -415,28 +417,28 @@ body.space-panning .corkboard-canvas:active {
 }
 
 .reveal-hud {
-  top: 94px;
+  top: max(88px, calc(env(safe-area-inset-top, 0px) + 78px));
   left: 50%;
   transform: translateX(-50%);
 }
 
 .touch-mode-notice {
-  right: 20px;
-  bottom: 92px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
 }
 
 .decoder-overlay-wrapper {
   position: fixed;
-  top: 94px;
-  right: 20px;
-  z-index: 12000;
+  top: max(88px, calc(env(safe-area-inset-top, 0px) + 78px));
+  right: 16px;
+  z-index: var(--z-modals, 2000);
   display: flex;
   flex-direction: column;
-  width: min(560px, calc(100vw - 40px));
-  height: 72vh;
-  padding: 12px;
+  width: min(560px, calc(100vw - 32px));
+  height: 75dvh;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: var(--radius-md, 8px);
   background: var(--surface);
   box-shadow: 0 18px 40px rgb(0 0 0 / 55%);
 }
@@ -451,12 +453,13 @@ body.space-panning .corkboard-canvas:active {
 .global-uv-overlay,
 .global-uv-overlay-lite {
   pointer-events: none;
+  z-index: var(--z-uv, 800);
 }
 
 @media (max-width: 768px) {
   .investigation-header {
     min-height: 66px;
-    padding: 0 12px;
+    padding: env(safe-area-inset-top, 0) 12px 0 12px;
   }
 
   .case-title {
@@ -469,13 +472,14 @@ body.space-panning .corkboard-canvas:active {
 
   .touch-mode-notice {
     right: 12px;
-    bottom: 78px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
   }
 
   .decoder-overlay-wrapper {
-    top: 78px;
-    right: 12px;
-    width: calc(100vw - 24px);
-    height: calc(100dvh - 150px);
+    top: calc(env(safe-area-inset-top, 0px) + 70px);
+    right: 8px;
+    left: 8px;
+    width: auto;
+    height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 140px);
   }
 }

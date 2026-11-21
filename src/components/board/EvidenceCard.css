@@ -10,9 +10,12 @@
   box-sizing: border-box;
   width: var(--evidence-card-width);
   min-height: 286px;
+  min-width: 0;
   margin: 0;
   padding: 0;
   overflow: visible;
+  container-type: inline-size;
+  container-name: evidence-card;
   border: 1px solid var(--evidence-accent);
   border-radius: 0;
   background-color: var(--surface);
@@ -28,7 +31,7 @@
 
 .card-node {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-cards, 100);
   padding: 0 !important;
   cursor: grab;
   touch-action: none;
@@ -39,7 +42,7 @@
 }
 
 .card-node:hover {
-  z-index: 100;
+  z-index: calc(var(--z-cards, 100) + 10);
   border-color: #64748b;
 }
 
@@ -68,7 +71,7 @@
 .card-node.selected {
   outline: 1px solid var(--text-primary);
   outline-offset: 3px;
-  z-index: 101;
+  z-index: calc(var(--z-cards, 100) + 20);
 }
 
 .card-node.hidden-clue {
@@ -181,14 +184,20 @@
   flex-direction: column;
   justify-content: center;
   min-height: 80px;
+  min-width: 0;
   padding: 14px;
   text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .clue-uuid {
   color: var(--text-secondary);
   font-size: 9px;
   letter-spacing: .1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clue-info h3 {
@@ -200,6 +209,8 @@
   line-height: 1.35;
   text-transform: uppercase;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .evidence-state-stamp {
