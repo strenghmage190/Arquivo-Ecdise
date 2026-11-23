@@ -87,8 +87,14 @@ body.performance-mode * {
 }
 
 body.performance-mode button,
-body.performance-mode .nav-item {
+body.performance-mode .nav-item,
+body.performance-mode .card-node,
+body.performance-mode .clue-card,
+body.performance-mode .corkboard-canvas,
+body.performance-mode .image-zoom-wrapper,
+body.performance-mode .evidence-display-area {
   user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 /* 9. ELEMENTOS DECORATIVOS - NÃO usar display:none ou pointer-events:none globalmente */

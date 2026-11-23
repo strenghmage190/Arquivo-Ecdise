@@ -1112,6 +1112,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1 || isPinching) {
+        draggingRef.current = null;
+        return;
+      }
       const p = panningRef.current;
       const t = e.touches[0];
       if (p) {
@@ -2551,6 +2555,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   if (!ev.shiftKey && !ev.ctrlKey && !ev.metaKey) toggleSelect(card.id, false);
                 }}
                 onTouchStart={(ev) => {
+                  // Se for gesto multi-toque (ex: pinch-to-zoom com 2 dedos), não intercepta nem seleciona o card
+                  if (ev.touches.length > 1) {
+                    draggingRef.current = null;
+                    return;
+                  }
                   ev.stopPropagation();
                   if (connectionMode) {
                     onCardClickWhenConnecting(card.id);

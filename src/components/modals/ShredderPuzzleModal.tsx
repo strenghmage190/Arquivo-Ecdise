@@ -1,4 +1,4 @@
-import { Gamepad2, Check } from 'lucide-react';
+import { Gamepad2, Check, Puzzle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
@@ -62,7 +62,7 @@ export default function ShredderPuzzleModal({
         {/* Header */}
         <div className="shredder-modal-header">
           <div className="shredder-modal-title">
-            <span className="shredder-icon">🗂️</span>
+            <span className="shredder-icon"><Puzzle className="lucide-icon inline-icon" size={20} /></span>
             <div>
               <h2>{evidenceTitle}</h2>
               <p className="shredder-format">Formato: {rows}×{cols} {rows === 1 ? 'tiras horizontais' : cols === 1 ? 'tiras verticais' : 'grade'}</p>

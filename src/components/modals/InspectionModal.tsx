@@ -1,4 +1,4 @@
-import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer } from 'lucide-react';
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Puzzle } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -822,7 +822,10 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         zoom(1.5, clientX, clientY);
       }
     };
-    const onDblClickWrapper = (e: MouseEvent) => onDblClick(e.clientX, e.clientY);
+    const onDblClickWrapper = (e: MouseEvent) => {
+      e.preventDefault();
+      onDblClick(e.clientX, e.clientY);
+    };
     container.addEventListener('dblclick', onDblClickWrapper);
 
     let lastTap = 0;
@@ -921,61 +924,37 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       console.log(`🎮 isGameMaster: ${isGameMaster}`);
       console.log(`🖼️ imgSrc: ${unifiedMedia.imageUrl || currentCard.image_url}`);
 
+      const shredRows = parsedMetadata?.shred_rows || 1;
+      const shredCols = parsedMetadata?.shred_cols || 8;
+      const totalPieces = shredRows * shredCols;
+      const formatDescription = shredRows === 1 ? 'tiras horizontais' : shredCols === 1 ? 'tiras verticais' : 'grade';
+
       return (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px 20px',
-          gap: '20px'
-        }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '20px',
-            background: 'linear-gradient(160deg, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0.02))',
-            border: '1px solid rgba(0, 243, 255, 0.25)',
-            borderRadius: '12px',
-            maxWidth: '500px'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
-            <h3 style={{
-              margin: '0 0 8px',
-              color: '#e9fcff',
-              fontSize: '20px',
-              fontWeight: 700,
-              letterSpacing: '1px',
-              textTransform: 'uppercase'
-            }}>DOCUMENTO TRITURADO DETECTADO</h3>
-            <p style={{
-              margin: '0 0 16px',
-              color: '#9fc7d0',
-              fontSize: '14px',
-              lineHeight: '1.6'
-            }}>
-              Este documento foi fragmentado em <strong style={{ color: '#aef6ff' }}>{(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças</strong>.<br />
-              Configure: <strong style={{ color: '#aef6ff' }}>{parsedMetadata?.shred_rows || 1}×{parsedMetadata?.shred_cols || 8}</strong> {parsedMetadata?.shred_rows === 1 ? 'tiras horizontais' : parsedMetadata?.shred_cols === 1 ? 'tiras verticais' : 'grade'}
+        <div className="shredder-detected-container">
+          <div className="shredder-detected-card">
+            <div className="shredder-detected-icon-badge">
+              <Puzzle className="lucide-icon" size={30} />
+            </div>
+            <h3 className="shredder-detected-title">DOCUMENTO TRITURADO DETECTADO</h3>
+            <p className="shredder-detected-desc">
+              Este documento foi fragmentado em <strong className="shredder-detected-highlight">{totalPieces} peças</strong>.<br />
+              Configuração: <strong className="shredder-detected-highlight">{shredRows}×{shredCols}</strong> {formatDescription}
             </p>
             {isGameMaster && (
-              <div style={{
-                padding: '12px',
-                background: 'rgba(100, 150, 255, 0.12)',
-                border: '1px solid rgba(100, 150, 255, 0.3)',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                fontSize: '12px',
-                color: '#aaf'
-              }}>
-                <Gamepad2 className="lucide-icon inline-icon" size={16} /> <strong>MODO GM ATIVO</strong><br />
-                Você terá controle total sobre as peças reveladas
+              <div className="shredder-detected-gm-box">
+                <span className="shredder-detected-gm-badge">
+                  <Gamepad2 className="lucide-icon inline-icon" size={16} /> MODO GM ATIVO
+                </span>
+                <span>Você terá controle total sobre as peças reveladas</span>
               </div>
             )}
             <button
+              type="button"
               onClick={() => setShredderModalOpen(true)}
               className="btn-reconstructor"
             >
-              🧩 ABRIR RECONSTRUTOR
+              <Puzzle className="lucide-icon inline-icon" size={18} />
+              <span>ABRIR RECONSTRUTOR</span>
             </button>
           </div>
         </div>
@@ -1519,20 +1498,24 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           {(!isCardLocked(card) || isUnlocked || isGameMaster) ? (
             <>
               <div className="meta-info">
-                <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
-                {cardLocked && (
-                  <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}><Lock className="lucide-icon inline-icon" size={16} /></span>
-                )}
-                {hasRecord && (
-                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
-                )}
-                {currentCard.metadata?.type && <span className="type-tag">{currentCard.metadata.type}</span>}
-                {contactNameInferred && (
-                  <span className="chat-contact">{contactNameInferred}</span>
-                )}
+                <div className="meta-badge-group">
+                  <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
+                  {cardLocked && (
+                    <span className="meta-lock-badge" title="Evidência protegida"><Lock className="lucide-icon inline-icon" size={14} /></span>
+                  )}
+                  {hasRecord && (
+                    <span className="meta-record-badge" title="Prontuário disponível">🧾</span>
+                  )}
+                  {(currentCard.metadata?.type || currentCard.type) && (
+                    <span className="type-tag">{String(currentCard.metadata?.type || currentCard.type).toUpperCase()}</span>
+                  )}
+                  {contactNameInferred && (
+                    <span className="chat-contact">{contactNameInferred}</span>
+                  )}
+                </div>
 
                 {/* Toggle buttons for available media types (desktop only) */}
-                <div className="media-toggle" style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <div className="media-toggle">
                   {hasImage && (
                     <button
                       type="button"
