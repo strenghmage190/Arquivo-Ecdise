@@ -1,4 +1,4 @@
-import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Puzzle } from 'lucide-react';
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -14,6 +14,7 @@ import UniversalDecoder from '../tools/UniversalDecoder';
 import NumericKeypad from '../tools/NumericKeypad';
 import AudioViewerModal from './AudioViewerModal';
 import WaveSurfer from 'wavesurfer.js';
+import useEscapeClose from './useEscapeClose';
 import './InspectionModal.css';
 import { markPerfKeep } from '../../utils/performance';
 import { supabase } from '../../supabaseClient';
@@ -45,13 +46,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return false;
   };
 
-  const [isUnlocked, setIsUnlocked] = useState(!isCardLocked(card) || isGameMaster);
+  useEscapeClose(isOpen, onClose);
+  const initialLocked = isCardLocked(card);
+  const [isUnlocked, setIsUnlocked] = useState(!initialLocked);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [gmActiveTab, setGmActiveTab] = useState<'public' | 'hidden'>('public');
+  const [audioIsMuted, setAudioIsMuted] = useState(false);
+
   const isMounted = React.useRef(true);
   React.useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   React.useEffect(() => {
-    setIsUnlocked(!isCardLocked(card) || isGameMaster);
+    setIsUnlocked(!isCardLocked(card));
     setShowGlitchSolver(false);
+    setPasswordInput('');
+    setPasswordError(false);
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
@@ -64,6 +74,97 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [showFilters, setShowFilters] = useState(false);
   const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleUpdateStatus = async (newStatus: 'pending' | 'confirmed' | 'debunked') => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id) return;
+    try {
+      const updated = await updateInvestigationCard(cardObj.id, {
+        status: newStatus,
+        metadata: { ...(cardObj.metadata || {}), status: newStatus }
+      } as any);
+      if (isMounted.current) setServerCard(updated);
+    } catch (err) {
+      console.error('Falha ao atualizar status da pista:', err);
+    }
+  };
+
+  const handleUpdateZIndex = async (delta: number) => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id) return;
+    const currentZ = Number(cardObj.z_index ?? 1);
+    const newZ = Math.max(0, currentZ + delta);
+    try {
+      const updated = await updateInvestigationCard(cardObj.id, { z_index: newZ } as any);
+      if (isMounted.current) setServerCard(updated);
+    } catch (err) {
+      console.error('Falha ao atualizar z_index da pista:', err);
+    }
+  };
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (fileRef.current?.requestFullscreen) {
+          await fileRef.current.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      // Fallback handled by internal fullscreenOpen state
+    }
+    setFullscreenOpen(prev => !prev);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cardObj = serverCard || card;
+    const lockPass = String(cardObj?.lock_password || '').trim();
+    const entered = passwordInput.trim();
+    if (entered && lockPass && entered.toLowerCase() === lockPass.toLowerCase()) {
+      persistUnlockForCard();
+      setPasswordError(false);
+      setPasswordInput('');
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  const handleToggleAudioMute = () => {
+    const nextMuted = !audioIsMuted;
+    setAudioIsMuted(nextMuted);
+    if (audioElementRef.current) {
+      audioElementRef.current.muted = nextMuted;
+    }
+    if (waveSurferRef.current) {
+      waveSurferRef.current.setMuted(nextMuted);
+    }
+  };
+
+  const handleEvidencePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+    e.currentTarget.style.setProperty('--uv-radius', '140px');
+  };
+
+  const handleEvidenceTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 1) {
+      const t = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = t.clientX - rect.left;
+      const y = t.clientY - rect.top;
+      e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+      e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+      e.currentTarget.style.setProperty('--uv-radius', '140px');
+    }
+  };
 
   const disableAllBut = React.useCallback((mode: string) => {
     // filters
@@ -593,16 +694,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       setAudioDuration(dur);
     });
 
-    let lastUpdate = 0;
-    const updatePos = () => {
-      const now = Date.now();
-      if (now - lastUpdate > 250) {
-        setAudioPosition(ws.getCurrentTime() || 0);
-        lastUpdate = now;
-      }
-    };
-    ws.on('audioprocess', updatePos);
-    ws.on('timeupdate', updatePos);
+
 
     ws.on('play', () => setAudioIsPlaying(true));
     ws.on('pause', () => setAudioIsPlaying(false));
@@ -684,7 +776,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     if (!container.querySelector('.image-controls')) {
       const controls = document.createElement('div');
       controls.className = 'image-controls';
-      controls.innerHTML = '<button type="button" class="img-zoom-btn">+</button><button type="button" class="img-zoom-btn">−</button>';
+      controls.innerHTML = '<button type="button" class="img-zoom-btn" title="Aumentar zoom">+</button><span class="image-zoom-badge">100%</span><button type="button" class="img-zoom-btn" title="Diminuir zoom">−</button><button type="button" class="img-zoom-btn btn-reset" title="Restaurar tamanho">↺</button>';
       // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
       if (!fullscreenOpen) container.appendChild(controls);
     }
@@ -700,17 +792,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     };
 
     const updateTransform = () => {
-      transformTarget.style.width = `${state.scale * 100}%`;
-      transformTarget.style.height = `${state.scale * 100}%`;
-      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px)`;
+      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px) scale(${state.scale})`;
       transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
+      const badge = container.querySelector('.image-zoom-badge');
+      if (badge) badge.textContent = `${Math.round(state.scale * 100)}%`;
     };
 
     // --- HANDLERS DE MOUSE/TOUCH ---
 
     const onMouseDown = (e: MouseEvent | TouchEvent) => {
+      if ('button' in e && e.button !== 0) return;
+      if (e.cancelable) e.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch {}
       if (state.scale <= 1) return; // Só arrasta se tiver zoom
-      e.preventDefault();
       state.panning = true;
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -719,7 +813,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       state.startX = clientX - state.pointX;
       state.startY = clientY - state.pointY;
 
-      // ATIVA modo performance durante o movimento (pode ficar levemente borrado mas melhora fluidez)
+      // ATIVA modo performance durante o movimento
       try {
         transformTarget.style.willChange = 'transform';
       } catch (err) { }
@@ -729,7 +823,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     const onMouseMove = (e: MouseEvent | TouchEvent) => {
       if (!state.panning) return;
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -784,12 +878,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const btns = container.querySelectorAll('.img-zoom-btn');
     const btnIn = btns[0];
     const btnOut = btns[1];
+    const btnReset = btns[2];
 
     const handleIn = (e: Event) => { e.stopPropagation(); zoom(0.5); };
     const handleOut = (e: Event) => { e.stopPropagation(); zoom(-0.5); };
+    const handleReset = (e: Event) => {
+      e.stopPropagation();
+      state.scale = 1;
+      state.pointX = 0;
+      state.pointY = 0;
+      updateTransform();
+    };
 
     if (btnIn) btnIn.addEventListener('click', handleIn);
     if (btnOut) btnOut.addEventListener('click', handleOut);
+    if (btnReset) btnReset.addEventListener('click', handleReset);
 
     // Adiciona eventos ao container (para pegar o click em qualquer lugar)
     container.addEventListener('mousedown', onMouseDown);
@@ -823,7 +926,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       }
     };
     const onDblClickWrapper = (e: MouseEvent) => {
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch {}
       onDblClick(e.clientX, e.clientY);
     };
     container.addEventListener('dblclick', onDblClickWrapper);
@@ -833,7 +937,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTap;
       if (tapLength < 300 && tapLength > 0) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
+        try { window.getSelection()?.removeAllRanges(); } catch {}
         onDblClick(e.touches[0].clientX, e.touches[0].clientY);
       }
       lastTap = currentTime;
@@ -843,6 +948,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return () => {
       if (btnIn) btnIn.removeEventListener('click', handleIn);
       if (btnOut) btnOut.removeEventListener('click', handleOut);
+      if (btnReset) btnReset.removeEventListener('click', handleReset);
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mousemove', onMouseMove);
       container.removeEventListener('mouseup', onMouseUp);
@@ -857,8 +963,6 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // Cleanup transform and reset will-change so browser may re-render in full quality
       try { transformTarget.style.willChange = 'auto'; } catch (err) { }
       transformTarget.style.transform = '';
-      transformTarget.style.width = '100%';
-      transformTarget.style.height = '100%';
     };
   }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel]);
 
@@ -924,37 +1028,61 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       console.log(`🎮 isGameMaster: ${isGameMaster}`);
       console.log(`🖼️ imgSrc: ${unifiedMedia.imageUrl || currentCard.image_url}`);
 
-      const shredRows = parsedMetadata?.shred_rows || 1;
-      const shredCols = parsedMetadata?.shred_cols || 8;
-      const totalPieces = shredRows * shredCols;
-      const formatDescription = shredRows === 1 ? 'tiras horizontais' : shredCols === 1 ? 'tiras verticais' : 'grade';
-
       return (
-        <div className="shredder-detected-container">
-          <div className="shredder-detected-card">
-            <div className="shredder-detected-icon-badge">
-              <Puzzle className="lucide-icon" size={30} />
-            </div>
-            <h3 className="shredder-detected-title">DOCUMENTO TRITURADO DETECTADO</h3>
-            <p className="shredder-detected-desc">
-              Este documento foi fragmentado em <strong className="shredder-detected-highlight">{totalPieces} peças</strong>.<br />
-              Configuração: <strong className="shredder-detected-highlight">{shredRows}×{shredCols}</strong> {formatDescription}
+        <div style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px',
+          gap: '20px'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            background: 'linear-gradient(160deg, rgba(0, 243, 255, 0.08), rgba(0, 243, 255, 0.02))',
+            border: '1px solid rgba(0, 243, 255, 0.25)',
+            borderRadius: '12px',
+            maxWidth: '500px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
+            <h3 style={{
+              margin: '0 0 8px',
+              color: '#e9fcff',
+              fontSize: '20px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              textTransform: 'uppercase'
+            }}>DOCUMENTO TRITURADO DETECTADO</h3>
+            <p style={{
+              margin: '0 0 16px',
+              color: '#9fc7d0',
+              fontSize: '14px',
+              lineHeight: '1.6'
+            }}>
+              Este documento foi fragmentado em <strong style={{ color: '#aef6ff' }}>{(parsedMetadata?.shred_rows || 1) * (parsedMetadata?.shred_cols || 8)} peças</strong>.<br />
+              Configure: <strong style={{ color: '#aef6ff' }}>{parsedMetadata?.shred_rows || 1}×{parsedMetadata?.shred_cols || 8}</strong> {parsedMetadata?.shred_rows === 1 ? 'tiras horizontais' : parsedMetadata?.shred_cols === 1 ? 'tiras verticais' : 'grade'}
             </p>
             {isGameMaster && (
-              <div className="shredder-detected-gm-box">
-                <span className="shredder-detected-gm-badge">
-                  <Gamepad2 className="lucide-icon inline-icon" size={16} /> MODO GM ATIVO
-                </span>
-                <span>Você terá controle total sobre as peças reveladas</span>
+              <div style={{
+                padding: '12px',
+                background: 'rgba(100, 150, 255, 0.12)',
+                border: '1px solid rgba(100, 150, 255, 0.3)',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                color: '#aaf'
+              }}>
+                <Gamepad2 className="lucide-icon inline-icon" size={16} /> <strong>MODO GM ATIVO</strong><br />
+                Você terá controle total sobre as peças reveladas
               </div>
             )}
             <button
-              type="button"
               onClick={() => setShredderModalOpen(true)}
               className="btn-reconstructor"
             >
-              <Puzzle className="lucide-icon inline-icon" size={18} />
-              <span>ABRIR RECONSTRUTOR</span>
+              🧩 ABRIR RECONSTRUTOR
             </button>
           </div>
         </div>
@@ -1071,13 +1199,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8, flexWrap: 'wrap' }}>
             <button
               onClick={handleTogglePlay}
               className="btn-tool-tab"
-              style={{ minWidth: 110 }}
+              style={{ minWidth: 110, minHeight: 44, touchAction: 'manipulation' }}
             >
               {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
+            </button>
+
+            <button
+              onClick={handleToggleAudioMute}
+              className={`btn-tool-tab ${audioIsMuted ? 'active-red' : ''}`}
+              style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
+              title={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+              aria-label={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+            >
+              {audioIsMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
 
             <input
@@ -1087,11 +1225,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               step={0.1}
               value={Math.min(audioPosition, audioDuration || 0)}
               onChange={(e) => handleSeek(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#00f3ff' }}
+              style={{ flex: 1, accentColor: '#00f3ff', minHeight: 44, touchAction: 'pan-y' }}
               aria-label="Linha do tempo do áudio"
             />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 13, minWidth: 80, justifyContent: 'flex-end' }}>
               <span>{formatTime(audioPosition)}</span>
               <span style={{ opacity: 0.6 }}>/</span>
               <span>{formatTime(audioDuration)}</span>
@@ -1163,7 +1301,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       if (securityLocked) return renderSecurityLocked();
       return (
-        <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
+        <div
+          className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}
+          onPointerDown={handleEvidencePointerMove}
+          onPointerMove={handleEvidencePointerMove}
+          onTouchStart={handleEvidenceTouchMove}
+          onTouchMove={handleEvidenceTouchMove}
+          style={{ touchAction: 'none' }}
+        >
           <div className="grid-overlay" aria-hidden />
 
           {(() => {
@@ -1177,25 +1322,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             } catch (e) { reveal = null; }
             return (
               <>
-                <div className="image-zoom-wrapper" style={{ position: 'relative', width: '100%', height: '100%' }}>
-                  <MysteryImage
-                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                    hiddenSrc={currentCard.image_uv_url}
-                    filterLayerSrc={currentCard.image_filter_layer}
-                    filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                    revealSettings={fullscreenOnlyTreatment ? null : reveal}
-                    isUVMode={localUV}
-                    fit="contain"
-                    className="large-evidence-img"
-                    style={{ height: '100%', width: '100%' }}
-                    forensicChannel={forensicChannel}
-                    allowImageUVControl={false}
-                  />
-                  {localThermal && !fullscreenOpen && (
-                    <div className="thermal-overlay" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
-                      <canvas className="thermal-canvas" ref={thermalCanvasRef} />
-                    </div>
-                  )}
+                <div className="image-zoom-viewport">
+                  <div className="image-zoom-wrapper" style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MysteryImage
+                      baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                      hiddenSrc={currentCard.image_uv_url}
+                      filterLayerSrc={currentCard.image_filter_layer}
+                      filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                      revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                      isUVMode={localUV}
+                      fit="contain"
+                      className="large-evidence-img"
+                      style={{ height: '100%', width: '100%' }}
+                      forensicChannel={forensicChannel}
+                      allowImageUVControl={false}
+                    />
+                    {localThermal && !fullscreenOpen && (
+                      <div className="thermal-overlay" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
+                        <canvas className="thermal-canvas" ref={thermalCanvasRef} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             );
@@ -1240,7 +1387,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         <div className="inspect-file" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
           <div className="inspect-header">
             <div className="meta-info"><span className="case-stamp">EVIDÊNCIA — N/D</span></div>
-            <div className="actions"><button className="btn-close" onClick={onClose}>&times;</button></div>
+            <div className="actions"><button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button></div>
           </div>
           <div style={{ padding: 20, color: '#ccc' }}>
             <h3>Sem dados do cartão</h3>
@@ -1498,24 +1645,20 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
           {(!isCardLocked(card) || isUnlocked || isGameMaster) ? (
             <>
               <div className="meta-info">
-                <div className="meta-badge-group">
-                  <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
-                  {cardLocked && (
-                    <span className="meta-lock-badge" title="Evidência protegida"><Lock className="lucide-icon inline-icon" size={14} /></span>
-                  )}
-                  {hasRecord && (
-                    <span className="meta-record-badge" title="Prontuário disponível">🧾</span>
-                  )}
-                  {(currentCard.metadata?.type || currentCard.type) && (
-                    <span className="type-tag">{String(currentCard.metadata?.type || currentCard.type).toUpperCase()}</span>
-                  )}
-                  {contactNameInferred && (
-                    <span className="chat-contact">{contactNameInferred}</span>
-                  )}
-                </div>
+                <span className="case-stamp">EVIDÊNCIA #{String(currentCard.id || '').slice(0, 4)}</span>
+                {cardLocked && (
+                  <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}><Lock className="lucide-icon inline-icon" size={16} /></span>
+                )}
+                {hasRecord && (
+                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
+                )}
+                {currentCard.metadata?.type && <span className="type-tag">{currentCard.metadata.type}</span>}
+                {contactNameInferred && (
+                  <span className="chat-contact">{contactNameInferred}</span>
+                )}
 
                 {/* Toggle buttons for available media types (desktop only) */}
-                <div className="media-toggle">
+                <div className="media-toggle" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                   {hasImage && (
                     <button
                       type="button"
@@ -1580,7 +1723,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         setExpanderAudioSrc(String(audioSrc));
 
                         setTimeout(() => {
-                          setAudioExpanderOpen(true);
+                          if (isMounted.current) setAudioExpanderOpen(true);
                           console.log('[InspectionModal] Audio modal opened');
                           audioExpanderLockRef.current = false;
                         }, 50);
@@ -1597,6 +1740,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                 >
                   {visualMode === 'audio' ? '🎵 EXPANDIR' : visualMode === 'phone' ? '📱 EXPANDIR' : '🔍 EXPANDIR'}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-tool-tab btn-fullscreen"
+                  title="Alternar Tela Cheia"
+                  onClick={handleToggleFullscreen}
+                >
+                  <Maximize2 className="lucide-icon inline-icon" size={16} /> TELA CHEIA
                 </button>
 
                 <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}>🧪 TRATAMENTO</button>
@@ -1641,12 +1793,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 {/* Expandir button moved to main toolbar as contextual control */}
 
-                <button className="btn-close" onClick={onClose}>&times;</button>
+                <button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button>
               </div>
             </>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-              <button className="btn-close" onClick={onClose}>✖</button>
+              <button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button>
             </div>
           )}
         </div>
@@ -1654,26 +1806,66 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         {/* debug overlay removed */}
 
         {/* --- CONTEÚDO PRINCIPAL --- */}
-        {!(isUnlocked || isGameMaster) ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-            {(() => {
-              const lockPass = card.lock_password;
-              const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
-              if (isNumeric) {
-                return <NumericKeypad code={lockPass} onUnlock={persistUnlockForCard} />;
-              }
-              return (
-                <HackingTerminal
-                  correctPassword={lockPass}
-                  onUnlock={persistUnlockForCard}
-                  hint={card.description_public}
+        {cardLocked && !isUnlocked ? (
+          <div className="lock-screen-container">
+            {isGameMaster && (
+              <div className="gm-bypass-banner">
+                <div className="gm-bypass-info">
+                  <ShieldCheck size={18} />
+                  <span>MODO MESTRE ATIVO — Senha: <strong>{String(currentCard.lock_password || 'Nenhuma')}</strong></span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <button type="button" className="btn-gm-bypass" onClick={persistUnlockForCard}>
+                    ⚡ DESBLOQUEIO DE MESTRE (PERMANENTE)
+                  </button>
+                  <button type="button" className="btn-gm-bypass btn-gm-bypass-temp" onClick={() => setIsUnlocked(true)}>
+                    👁️ BYPASS TEMPORÁRIO
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="lock-password-card">
+              <Lock size={40} className="lock-icon" />
+              <h3 className="lock-title">ARQUIVO CONFIDENCIAL PROTEGIDO</h3>
+              <p className="lock-hint">{currentCard.description_public || 'Insira a credencial de segurança para descriptografar os dados desta evidência.'}</p>
+              
+              <form onSubmit={handlePasswordSubmit} className="lock-form">
+                <input
+                  type="text"
+                  className="lock-password-input"
+                  placeholder="Digite a senha de liberação..."
+                  value={passwordInput}
+                  onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                  autoCapitalize="off"
+                  autoCorrect="off"
                 />
-              );
-            })()}
+                {passwordError && <span className="lock-error-msg">ACESSO NEGADO: Credencial incorreta.</span>}
+                <button type="submit" className="lock-submit-btn">
+                  DESCRIPTOGRAFAR
+                </button>
+              </form>
+
+              {currentCard.lock_password && /^\d+$/.test(String(currentCard.lock_password)) && (
+                <div className="lock-keypad-wrapper">
+                  <NumericKeypad code={String(currentCard.lock_password)} onUnlock={persistUnlockForCard} />
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <React.Fragment>
+          <div className={`inspect-body-split ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <div className={`inspect-visual-area ${isGlitchPuzzleGlobal && showGlitchSolver ? 'is-glitching glitch-mode' : ''}`} style={{ position: 'relative' }}>
+              {visualMode !== 'phone' && (
+                <button
+                  type="button"
+                  className="btn-toggle-sidebar"
+                  onClick={() => setSidebarCollapsed(prev => !prev)}
+                  title={sidebarCollapsed ? "Expandir painel de informações" : "Recolher painel de informações (Foco total)"}
+                  aria-label={sidebarCollapsed ? "Expandir painel lateral" : "Recolher painel lateral"}
+                >
+                  {sidebarCollapsed ? '◀ DETALHES' : 'RECOLHER ▶'}
+                </button>
+              )}
               {renderVisualContent()}
               {visualMode === 'phone' && (
                 <button
@@ -1772,23 +1964,56 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               {/* audio is displayed via the 'audio' visual mode/tab now */}
             </div>
 
-            {visualMode !== 'phone' && (
-              <div className="inspect-details">
+            {visualMode !== 'phone' && !sidebarCollapsed && (
+              <aside className="inspect-details" aria-label="Detalhes da evidência">
 
                 {/* Coluna com SCROLL automático */}
                 <div className="text-col">
                   <h2>{card.title}</h2>
 
-                  <span className="desc-title">DESCRIÇÃO:</span>
-                  <p className="public-desc">
-                    {card.description_public || "Nenhuma descrição fornecida."}
-                  </p>
-
-                  {isGameMaster && card.description_hidden && (
-                    <div className="gm-note">
-                      <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
-                      {card.description_hidden}
+                  {/* Toggle Mestre: Público vs Oculto */}
+                  {isGameMaster && (
+                    <div className="gm-mode-toggle">
+                      <button
+                        type="button"
+                        className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                        onClick={() => setGmActiveTab('public')}
+                      >
+                        <Eye size={16} /> MODO PÚBLICO
+                      </button>
+                      <button
+                        type="button"
+                        className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                        onClick={() => setGmActiveTab('hidden')}
+                      >
+                        <Lock size={16} /> MODO OCULTO (MESTRE)
+                      </button>
                     </div>
+                  )}
+
+                  {(!isGameMaster || gmActiveTab === 'public') ? (
+                    <>
+                      <span className="desc-title">DESCRIÇÃO:</span>
+                      <p className="public-desc">
+                        {card.description_public || "Nenhuma descrição fornecida."}
+                      </p>
+                    </>
+                  ) : (
+                    isGameMaster && gmActiveTab === 'hidden' && (
+                      <div className="gm-hidden-section">
+                        <span className="desc-title" style={{ color: '#c6a45f' }}>
+                          <Lock className="lucide-icon inline-icon" size={16} /> DESCRIÇÃO OCULTA (CONFIDENCIAL):
+                        </span>
+                        <div className="gm-note" style={{ marginTop: 6 }}>
+                          {card.description_hidden || "Nenhuma descrição oculta registrada."}
+                        </div>
+                        {card.lock_password && (
+                          <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
+                            <strong>🔑 Senha configurada:</strong> <code>{card.lock_password}</code>
+                          </div>
+                        )}
+                      </div>
+                    )
                   )}
 
                   {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
@@ -1875,12 +2100,66 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
 
                 {/* Coluna de Botões Fixos */}
-                <div className="controls-col" style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 200, flexShrink: 0 }}>
+                <div className="controls-col">
                   {isGameMaster && (
                     <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
                       ✎ EDITAR DADOS
                     </button>
                   )}
+
+                  {/* Status da Pista */}
+                  <div className="clue-status-control">
+                    <span className="control-label" style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>STATUS DA PISTA:</span>
+                    <div className="status-button-group">
+                      <button
+                        type="button"
+                        className={`btn-status pending ${(currentCard.status === 'pending' || !currentCard.status) ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('pending')}
+                        title="Marcar como pendente"
+                      >
+                        ⏳ PENDENTE
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-status confirmed ${currentCard.status === 'confirmed' ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('confirmed')}
+                        title="Marcar como confirmada"
+                      >
+                        ✅ CONFIRMADA
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-status debunked ${currentCard.status === 'debunked' ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('debunked')}
+                        title="Marcar como descartada"
+                      >
+                        ❌ DESCARTADA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Ordem de Camada Z */}
+                  <div className="z-order-controls">
+                    <span className="control-label" style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>ORDEM Z:</span>
+                    <div className="z-button-group">
+                      <button
+                        type="button"
+                        className="btn-z-order"
+                        onClick={() => handleUpdateZIndex(1)}
+                        title="Trazer para frente"
+                      >
+                        <ArrowUp size={16} /> ELEVAR (Z: {currentCard.z_index ?? 1})
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-z-order"
+                        onClick={() => handleUpdateZIndex(-1)}
+                        title="Enviar para trás"
+                      >
+                        <ArrowDown size={16} /> REBAIXAR
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Exemplo de botão extra se for pessoa */}
                   {card.metadata?.type === 'person' && (
@@ -1896,7 +2175,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   )}
                 </div>
 
-              </div>
+              </aside>
             )}
 
             {visualMode === 'phone' && showPhoneDetails && (
@@ -1905,14 +2184,48 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
                     <div style={{ paddingRight: 10 }}>
                       <h2 style={{ color: '#f2f2f2', marginTop: 0 }}>{card.title}</h2>
-                      <span className="desc-title">DESCRIÇÃO:</span>
-                      <p className="public-desc">{card.description_public || 'Nenhuma descrição fornecida.'}</p>
 
-                      {isGameMaster && card.description_hidden && (
-                        <div className="gm-note">
-                          <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
-                          {card.description_hidden}
+                      {/* Toggle Mestre: Público vs Oculto */}
+                      {isGameMaster && (
+                        <div className="gm-mode-toggle" style={{ marginBottom: 10 }}>
+                          <button
+                            type="button"
+                            className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                            onClick={() => setGmActiveTab('public')}
+                          >
+                            <Eye size={14} /> PÚBLICO
+                          </button>
+                          <button
+                            type="button"
+                            className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                            onClick={() => setGmActiveTab('hidden')}
+                          >
+                            <Lock size={14} /> OCULTO
+                          </button>
                         </div>
+                      )}
+
+                      {(!isGameMaster || gmActiveTab === 'public') ? (
+                        <>
+                          <span className="desc-title">DESCRIÇÃO:</span>
+                          <p className="public-desc">{card.description_public || 'Nenhuma descrição fornecida.'}</p>
+                        </>
+                      ) : (
+                        isGameMaster && gmActiveTab === 'hidden' && (
+                          <div className="gm-hidden-section">
+                            <span className="desc-title" style={{ color: '#c6a45f' }}>
+                              <Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:
+                            </span>
+                            <div className="gm-note" style={{ marginTop: 6 }}>
+                              {card.description_hidden || 'Nenhuma descrição oculta registrada.'}
+                            </div>
+                            {card.lock_password && (
+                              <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
+                                <strong>🔑 Senha configurada:</strong> <code>{card.lock_password}</code>
+                              </div>
+                            )}
+                          </div>
+                        )
                       )}
 
                       {card.metadata && Object.keys(card.metadata).length > 0 && (
@@ -1949,7 +2262,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     </div>
                   </div>
 
-                  <div style={{ width: 200, flexShrink: 0 }}>
+                  <div className="controls-col">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {isGameMaster && (
                         <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
@@ -1972,7 +2285,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
               </div>
             )}
-          </React.Fragment>
+          </div>
         )}
       </div>
     </div>
@@ -2050,7 +2363,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
           {/* ÁREA DA IMAGEM (STAGE) */}
           {/* A classe fullscreen-stage é alvo do nosso useEffect de Zoom novo */}
-          <div className="fullscreen-stage" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fullscreen-stage"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={handleEvidencePointerMove}
+            onPointerMove={handleEvidencePointerMove}
+            onTouchStart={handleEvidenceTouchMove}
+            onTouchMove={handleEvidenceTouchMove}
+            style={{ touchAction: 'none' }}
+          >
             {visualMode === 'phone' ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <PhoneViewer
@@ -2145,25 +2466,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         </div>, document.body
       )}
 
-      <AudioViewerModal
-        isOpen={audioExpanderOpen}
-        onClose={() => setAudioExpanderOpen(false)}
-        audioSrc={expanderAudioSrc}
-        title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'}
-      />
+      {audioExpanderOpen && <AudioViewerModal isOpen={audioExpanderOpen} onClose={() => setAudioExpanderOpen(false)} audioSrc={expanderAudioSrc} title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'} />}
 
-      <ShredderPuzzleModal
-        isOpen={shredderModalOpen}
-        onClose={() => setShredderModalOpen(false)}
-        imgSrc={unifiedMedia.imageUrl || currentCard.image_url}
-        rows={parsedMetadata?.shred_rows || 1}
-        cols={parsedMetadata?.shred_cols || 8}
-        isGameMaster={isGameMaster}
-        investigationId={currentCard.investigation_id}
-        cardId={currentCard.id}
-        evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'}
-        onPuzzleSolved={() => setPuzzleSolved(true)}
-      />
+      {shredderModalOpen && <ShredderPuzzleModal isOpen={shredderModalOpen} onClose={() => setShredderModalOpen(false)} imgSrc={unifiedMedia.imageUrl || currentCard.image_url} rows={parsedMetadata?.shred_rows || 1} cols={parsedMetadata?.shred_cols || 8} isGameMaster={isGameMaster} investigationId={currentCard.investigation_id} cardId={currentCard.id} evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'} onPuzzleSolved={() => setPuzzleSolved(true)} />}
     </>
   );
 }

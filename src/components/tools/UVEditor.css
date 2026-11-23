@@ -195,7 +195,6 @@
     var(--primary-glow-medium),
     0 0 0 1px rgb(var(--accent-cyan-rgb), 0.06) inset;
   border-color: rgb(var(--accent-cyan-rgb), 0.18);
-  will-change: transform, box-shadow;
 }
 
 .uv-tools-dock .tool-button .icon {
@@ -204,9 +203,7 @@
 
 /* Header action buttons: compact icon-only variant (matches small squares) */
 .uv-editor-header .btn-save,
-.uv-editor-header .btn-close,
-.btn-save,
-.btn-close {
+.uv-editor-header .btn-close {
   width: 32px; /* compact square */
   height: 28px;
   min-width: 0;
@@ -228,32 +225,27 @@
 }
 
 /* Cyan / verified (save) */
-.uv-editor-header .btn-save,
-.btn-save {
+.uv-editor-header .btn-save {
   border-color: rgb(var(--nexus-blue-rgb), 0.14);
 }
 
-.uv-editor-header .btn-save:hover,
-.btn-save:hover {
+.uv-editor-header .btn-save:hover {
   background: rgb(var(--nexus-blue-rgb), 0.06);
   box-shadow: 0 0 8px rgb(var(--nexus-blue-rgb), 0.18);
 }
 
 /* Red / close */
-.uv-editor-header .btn-close,
-.btn-close {
+.uv-editor-header .btn-close {
   border-color: rgb(255 0 80 / 14%);
 }
 
-.uv-editor-header .btn-close:hover,
-.btn-close:hover {
+.uv-editor-header .btn-close:hover {
   background: rgb(255 0 80 / 6%);
   box-shadow: 0 0 8px rgb(255 0 80 / 18%);
 }
 
 /* Render icons via pseudo-elements so text can remain accessible but hidden visually */
-.uv-editor-header .btn-save::after,
-.btn-save::after {
+.uv-editor-header .btn-save::after {
   content: "✔"; /* check */
   font-size: 14px;
   color: var(--nexus-blue);
@@ -261,8 +253,7 @@
   line-height: 1;
 }
 
-.uv-editor-header .btn-close::after,
-.btn-close::after {
+.uv-editor-header .btn-close::after {
   content: "✖"; /* cross */
   font-size: 14px;
   color: rgb(255 107 136 / 100%);
@@ -272,9 +263,7 @@
 
 /* If a textual label exists inside, keep it available to screen-readers but visually hidden */
 .uv-editor-header .btn-save .label,
-.uv-editor-header .btn-close .label,
-.btn-save .label,
-.btn-close .label {
+.uv-editor-header .btn-close .label {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;
@@ -938,57 +927,214 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   }
 }
 
+/* Mobile Layers drawer & quick actions controls */
+.btn-mobile-layers {
+  display: none;
+}
+
+.mobile-drawer-header {
+  display: none;
+}
+
+.layer-quick-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 243, 255, 0.05);
+  border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+}
+
+.layer-quick-controls .quick-btn {
+  flex: 1 1 calc(33.333% - 6px);
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(20, 28, 40, 0.85);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  color: #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.layer-quick-controls .quick-btn:hover,
+.layer-quick-controls .quick-btn:active {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: #00f3ff;
+  color: #00f3ff;
+}
+
 @media (width <= 900px) {
-  /* collapse right panel to save space and make viewport dominant */
+  .btn-mobile-layers {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 6px 12px;
+    background: rgba(0, 243, 255, 0.15);
+    border: 1px solid rgba(0, 243, 255, 0.4);
+    color: #00f3ff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .uv-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
+  .mobile-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+    background: rgba(11, 15, 20, 0.95);
+    position: relative;
+  }
+
+  .drawer-handle {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+  }
+
+  .drawer-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #00f3ff;
+    text-transform: uppercase;
+    font-family: "Share Tech Mono", monospace;
+  }
+
+  .btn-close-drawer {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 60, 60, 0.3);
+    color: #ff4466;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  /* collapse right panel into slide-up BottomSheet */
   .uv-editor-panel {
-    grid-template-columns: 48px 1fr;
+    grid-template-columns: 56px 1fr;
     grid-template-areas:
       "uv-header uv-header"
       "uv-tools uv-viewport";
   }
-  .uv-right-panel {
-    display: none;
-  }
+
   .uv-tools-dock {
     position: relative;
     top: 0;
     height: auto;
-    padding: var(--space-xs);
+    width: 56px;
+    min-width: 56px;
+    padding: 8px 4px;
+    gap: 8px;
   }
+
   .uv-tools-dock .tool-button {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
+    min-width: 44px;
+    min-height: 44px;
   }
+
   .uv-editor-viewport {
     padding: 8px;
+  }
+
+  /* BottomSheet / Gaveta retrátil no mobile */
+  .uv-right-panel {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 75vh;
+    height: auto;
+    background: #0b0f14;
+    border-top: 2px solid rgba(0, 243, 255, 0.4) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+
+  .uv-right-panel.mobile-open {
+    transform: translateY(0);
+  }
+
+  .uv-editor-header .btn-save,
+  .uv-editor-header .btn-close {
+    width: auto !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 8px 12px !important;
+    color: inherit !important;
+    font-size: 13px !important;
   }
 }
 
 @media (width <= 600px) {
-  /* Mobile: stack right panel under viewport for quick access */
   .uv-editor-panel {
-    grid-template: "uv-header uv-header" 48px "uv-tools uv-viewport" 1fr "uv-tools uv-right" 260px / 40px 1fr;
+    grid-template: "uv-header uv-header" 52px "uv-tools uv-viewport" 1fr / 52px 1fr !important;
   }
-  .uv-right-panel {
-    display: block;
-    grid-area: uv-right;
-    min-width: 0;
-    height: 260px;
-    overflow: auto;
-  }
+
   .uv-tools-dock {
-    width: 40px;
-    min-width: 40px;
-    padding: 6px;
+    width: 52px;
+    min-width: 52px;
+    padding: 6px 3px;
   }
+
   .uv-tools-dock .tool-button {
-    width: 36px;
-    height: 36px;
-    border-radius: 0;
+    width: 46px;
+    height: 46px;
+    min-width: 44px;
+    min-height: 44px;
   }
+
   .uv-editor-viewport canvas {
     max-width: 100%;
-    max-height: calc(100vh - 48px - 260px - 32px);
+    max-height: calc(100dvh - 56px);
   }
 }
 
@@ -1171,13 +1317,7 @@ body.performance-mode .uv-editor-panel .primary-glow-large {
   min-width: 200px;
 }
 
-/* Hint the browser about elements that animate on hover/active to improve paint performance */
-.uv-tools-dock .tool-button,
-.layers-list .layer-item,
-.layers-panel .layers-footer .btn,
-.uv-right-tabs .tab {
-  will-change: transform, box-shadow, background;
-}
+
 
 .layers-context-menu button {
   display: block;
@@ -1368,6 +1508,12 @@ body.performance-mode .uv-editor-viewport .viewport-canvas::before {
   background: rgba(11, 15, 20, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(0, 215, 255, 0.15);
+}
+
+body.performance-mode .uv-editor-header {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(11, 15, 20, 0.98) !important;
 }
 
 .uv-header-title {
@@ -1786,77 +1932,4 @@ body.performance-mode .uv-editor-viewport .viewport-canvas::before {
 
 .layer-item-wrapper {
   margin-bottom: 2px;
-}
-
-/* Mobile BottomSheet Drawer for UV Editor Panels */
-@media (max-width: 768px) {
-  .uv-editor-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    width: 100vw;
-    position: fixed;
-    inset: 0;
-    z-index: 5000;
-  }
-
-  .uv-editor-panel > .uv-tools-dock {
-    width: 100%;
-    min-width: 100%;
-    height: 48px;
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-    padding: 4px 8px;
-    gap: 8px;
-  }
-
-  .uv-editor-panel > .uv-editor-viewport {
-    flex: 1;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .uv-editor-panel > .uv-right-panel {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-height: 45vh;
-    background: rgb(var(--nexus-dark-rgb, 11, 15, 20), 0.98);
-    border-top: 2px solid var(--accent-cyan);
-    border-left: none;
-    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    z-index: 1200;
-    border-radius: 14px 14px 0 0;
-    transition: transform 0.25s ease-out;
-  }
-
-  .uv-right-tabs {
-    display: flex;
-    overflow-x: auto;
-    border-bottom: 1px solid var(--border-color);
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 14px 14px 0 0;
-  }
-
-  .uv-right-tabs .tab {
-    padding: 10px 14px;
-    font-size: 13px;
-    white-space: nowrap;
-    text-align: center;
-  }
-
-  .properties-panel,
-  .layers-panel {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
 }

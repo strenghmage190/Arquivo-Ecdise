@@ -520,11 +520,13 @@ export function MysteryImage({
       style={{
         ...style,
         cursor: isUVMode ? 'none' : (hasSecret ? 'pointer' : 'default'),
-        // MUDANÇA 1: Fundo preto no forense para contraste correto
+        // Fundo preto no forense para contraste correto
         backgroundColor: isForensicActive ? '#000' : 'transparent',
-        // ADICIONADO: evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
+        // Evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
         touchAction: 'none' as React.CSSProperties['touchAction'],
         isolation: 'isolate' as React.CSSProperties['isolation'],
+        userSelect: 'none' as React.CSSProperties['userSelect'],
+        WebkitUserSelect: 'none' as any,
         // expose CSS vars for radius and pointer to enable CSS-only masks
         ['--uv-radius' as any]: `${RADIUS}px`,
         ['--mouse-x' as any]: `${xy.x}px`,
@@ -600,7 +602,7 @@ export function MysteryImage({
           alt="evidence"
           loading="lazy"
           draggable={false}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10, pointerEvents: 'none' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fit, filter: baseFilter, transition: 'filter 0.1s linear', zIndex: 10, pointerEvents: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
         />
       )}
 

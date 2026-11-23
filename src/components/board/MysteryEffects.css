@@ -10,6 +10,15 @@
   --uv-radius: 120px;
   --mouse-x: 0px;
   --mouse-y: 0px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.uv-container ::selection,
+.uv-container ::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
 }
 
 .static-noise,
@@ -60,4 +69,86 @@
 .card-stamp {
   letter-spacing: .08em;
   text-transform: uppercase;
+}
+
+/* EFEITO PARANORMAL: Aberração Cromática e Glitch */
+.corrompido {
+  position: relative;
+  /* Anima o container piscando de leve e mexendo na distorção do pixel */
+  animation: crt-flicker 0.15s infinite; 
+}
+
+/* Criamos um clone vermelho (Sangue/Energia) empurrado para a Esquerda */
+.corrompido::before {
+  content: attr(data-text); /* Se for texto */
+  position: absolute;
+  inset: 0;
+  left: -2px;
+  text-shadow: 2px 0 red; 
+  background: rgba(0,0,0,0);
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0); 
+  animation: noise-anim-2 3s infinite linear alternate-reverse;
+  pointer-events: none;
+}
+
+/* Criamos um clone ciano transparente empurrado para a Direita */
+.corrompido::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  left: 2px;
+  text-shadow: -2px 0 cyan;
+  background: rgba(0,0,0,0);
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0); 
+  animation: noise-anim 2s infinite linear alternate-reverse;
+  pointer-events: none;
+}
+
+@keyframes noise-anim {
+  0% { clip: rect(31px, 9999px, 86px, 0); }
+  20% { clip: rect(10px, 9999px, 12px, 0); transform: translateX(-2px) }
+  40% { clip: rect(80px, 9999px, 10px, 0); transform: translateX(2px)}
+  60% { clip: rect(15px, 9999px, 63px, 0); transform: translateX(2px)}
+  80% { clip: rect(54px, 9999px, 20px, 0); transform: translateX(-1px)}
+  100% { clip: rect(93px, 9999px, 58px, 0); transform: translateX(1px)}
+}
+
+@keyframes noise-anim-2 {
+  0% { clip: rect(65px, 9999px, 100px, 0); }
+  20% { clip: rect(3px, 9999px, 5px, 0); transform: translateX(2px)}
+  40% { clip: rect(15px, 9999px, 80px, 0); transform: translateX(-1px)}
+  60% { clip: rect(98px, 9999px, 30px, 0); transform: translateX(-2px)}
+  80% { clip: rect(12px, 9999px, 45px, 0); transform: translateX(1px)}
+  100% { clip: rect(80px, 9999px, 7px, 0); transform: translateX(-2px)}
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.95; }
+  50% { opacity: 0.88; }
+  100% { opacity: 1; filter: saturate(1.2) contrast(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .corrompido {
+    animation: none !important;
+  }
+  .corrompido::before,
+  .corrompido::after {
+    animation: none !important;
+    transform: none !important;
+    display: none !important;
+  }
+}
+
+body.performance-mode .corrompido {
+  animation: none !important;
+}
+
+body.performance-mode .corrompido::before,
+body.performance-mode .corrompido::after {
+  animation: none !important;
+  transform: none !important;
+  display: none !important;
 }
