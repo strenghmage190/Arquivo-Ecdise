@@ -286,7 +286,12 @@ export interface ClueModalContextType {
   applyTemplateData: (data: any) => void;
 }
 
-const ClueModalContext = createContext<ClueModalContextType | undefined>(undefined);
+// Persist the Context object on globalThis so Vite HMR module reloads
+// (?t=... cache-busted instances) never create a mismatched Context reference.
+const CLUE_MODAL_CONTEXT_KEY = '__ECDISE_CLUE_MODAL_CONTEXT__';
+const ClueModalContext: React.Context<ClueModalContextType | undefined> =
+  ((globalThis as Record<string, any>)[CLUE_MODAL_CONTEXT_KEY] ??=
+    createContext<ClueModalContextType | undefined>(undefined));
 
 const createInitialMediaState = (): MediaState => ({
   imgFile: null,
