@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Layer, UVTool, UVMaskMode, UVMode } from './types';
+import { Layer, UVTool, UVMaskMode, UVMode, UVBrushStyle, UVFontStyle, UVPreviewMode } from './types';
 
 export interface InlineTextEdit {
   id: string;
@@ -22,6 +22,21 @@ export interface UVEditorContextType {
   
   brushSize: number;
   setBrushSize: React.Dispatch<React.SetStateAction<number>>;
+
+  brushStyle: UVBrushStyle;
+  setBrushStyle: React.Dispatch<React.SetStateAction<UVBrushStyle>>;
+
+  drawOpacity: number; // 0-100
+  setDrawOpacity: React.Dispatch<React.SetStateAction<number>>;
+
+  neonBloom: number; // 0-100
+  setNeonBloom: React.Dispatch<React.SetStateAction<number>>;
+
+  fontStyle: UVFontStyle;
+  setFontStyle: React.Dispatch<React.SetStateAction<UVFontStyle>>;
+
+  previewMode: UVPreviewMode;
+  setPreviewMode: React.Dispatch<React.SetStateAction<UVPreviewMode>>;
   
   maskBrushSoftness: number;
   setMaskBrushSoftness: React.Dispatch<React.SetStateAction<number>>;
@@ -72,12 +87,20 @@ export function UVEditorProvider({
   const [targetChannel, setTargetChannel] = useState<'R'|'G'|'B'|undefined>(initialTargetChannel);
   
   const [tool, setTool] = useState<UVTool>('draw');
-  const [color, setColor] = useState(mode === 'filter' ? '#ffffff' : '#ff0000');
-  const [brushSize, setBrushSize] = useState(mode === 'filter' ? 18 : 6);
+  const [color, setColor] = useState(
+    mode === 'filter' ? '#ffffff' : mode === 'uv' ? '#b366ff' : '#ff0033'
+  );
+  const [brushSize, setBrushSize] = useState(mode === 'filter' ? 18 : 8);
+  const [brushStyle, setBrushStyle] = useState<UVBrushStyle>(mode === 'uv' ? 'fluorescent' : 'solid');
+  const [drawOpacity, setDrawOpacity] = useState(100);
+  const [neonBloom, setNeonBloom] = useState(mode === 'uv' ? 70 : 35);
+  const [fontStyle, setFontStyle] = useState<UVFontStyle>('mono');
+  const [previewMode, setPreviewMode] = useState<UVPreviewMode>('edit');
+
   const [maskBrushSoftness, setMaskBrushSoftness] = useState(0.6);
   const [maskBrushOpacity, setMaskBrushOpacity] = useState(1);
   const [textValue, setTextValue] = useState('');
-  const [textSize, setTextSize] = useState(24);
+  const [textSize, setTextSize] = useState(28);
   const [censorMode, setCensorMode] = useState(false);
   
   const [layers, setLayers] = useState<Layer[]>([]);
@@ -89,11 +112,16 @@ export function UVEditorProvider({
   const [inlineTextEdit, setInlineTextEdit] = useState<InlineTextEdit | null>(null);
   const [editingLayerName, setEditingLayerName] = useState<string | null>(null);
 
-  const value = {
+  const value: UVEditorContextType = {
     mode, targetChannel, setTargetChannel,
     tool, setTool,
     color, setColor,
     brushSize, setBrushSize,
+    brushStyle, setBrushStyle,
+    drawOpacity, setDrawOpacity,
+    neonBloom, setNeonBloom,
+    fontStyle, setFontStyle,
+    previewMode, setPreviewMode,
     maskBrushSoftness, setMaskBrushSoftness,
     maskBrushOpacity, setMaskBrushOpacity,
     textValue, setTextValue,

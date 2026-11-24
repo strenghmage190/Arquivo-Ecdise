@@ -2062,3 +2062,16 @@ input[type="number"].filter-number {
 
 
 .filter-range, input[type="range"] { touch-action: pan-y; }
+
+
+.inspect-quick-forensics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.inspect-quick-forensics .btn-tool-tab {
+  font-size: 12px;
+  padding: 6px 10px;
+}

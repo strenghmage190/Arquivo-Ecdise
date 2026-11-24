@@ -32,6 +32,26 @@ export interface CreateClueState {
   revealLogicMode?: string;
   glitchKeyword?: string;
   glitchRewardCode?: string;
+  hidePreviewOnBoard?: boolean;
+  mediaVisibilityAudioHidden?: string;
+  mediaVisibilityUvLayer?: string;
+  uvFile?: File | null;
+  uvPreviewUrl?: string | null;
+  glitchStartFrequency?: number;
+  glitchStartShift?: number;
+  glitchStartChromatic?: number;
+  glitchCorrectFrequency?: number;
+  glitchCorrectShift?: number;
+  glitchCorrectChromatic?: number;
+  glitchToleranceFreq?: number;
+  glitchToleranceShift?: number;
+  glitchToleranceChroma?: number;
+  chatListLength?: number;
+  displayConfig?: {
+    puzzle?: { showCorrectAnswerWhenSolved?: boolean };
+    cipher?: { showRealText?: boolean };
+    megaClue?: { showAnswer?: boolean };
+  };
 }
 
 export interface ValidationIssue {
@@ -184,6 +204,116 @@ export function validateClueDetailed(state: CreateClueState): ValidationIssue[] 
       field: 'thermalSecretText',
       tab: 'visual',
       message: 'Camada térmica ativa: defina um texto secreto ou desenhe uma camada térmica.',
+      severity: 'warning',
+    });
+  }
+
+  const hasPuzzleActive =
+    Boolean(state.securityLayerEnabled) || state.evidenceType === 'glitch_puzzle';
+
+  const hasHiddenAudio = Boolean(
+    state.audioHidden || (state.audioHiddenPreview && state.audioHiddenPreview.trim())
+  );
+  const hasUvLayer = Boolean(
+    state.uvFile || (state.uvPreviewUrl && state.uvPreviewUrl.trim())
+  );
+
+  if (
+    !hasPuzzleActive &&
+    ((hasHiddenAudio &&
+      (state.mediaVisibilityAudioHidden === 'post_solve' ||
+        state.mediaVisibilityAudioHidden === 'post_keyword')) ||
+      (hasUvLayer &&
+        (state.mediaVisibilityUvLayer === 'post_solve' ||
+          state.mediaVisibilityUvLayer === 'post_keyword')))
+  ) {
+    issues.push({
+      field: 'mediaVisibility',
+      tab: 'campos',
+      message:
+        'Áudio oculto ou camada UV está configurado para liberar apenas após resolver puzzle, mas nenhum Glitch/Firewall está ativo.',
+      severity: 'warning',
+    });
+  }
+
+  if (state.securityLayerEnabled === true && state.hidePreviewOnBoard === false) {
+    issues.push({
+      field: 'hidePreviewOnBoard',
+      tab: 'seguranca',
+      message:
+        'Firewall de sinal ativo sem "Ocultar Preview na Lousa": jogadores podem ver a mídia antes de resolver.',
+      severity: 'warning',
+    });
+  }
+
+  if (
+    hasPuzzleActive &&
+    typeof state.glitchStartFrequency === 'number' &&
+    typeof state.glitchStartShift === 'number' &&
+    typeof state.glitchStartChromatic === 'number' &&
+    typeof state.glitchCorrectFrequency === 'number' &&
+    typeof state.glitchCorrectShift === 'number' &&
+    typeof state.glitchCorrectChromatic === 'number'
+  ) {
+    const tolFreq = state.glitchToleranceFreq ?? 5;
+    const tolShift = state.glitchToleranceShift ?? 5;
+    const tolChroma = state.glitchToleranceChroma ?? 5;
+    const alreadyAligned =
+      Math.abs(state.glitchStartFrequency - state.glitchCorrectFrequency) <= tolFreq &&
+      Math.abs(state.glitchStartShift - state.glitchCorrectShift) <= tolShift &&
+      Math.abs(state.glitchStartChromatic - state.glitchCorrectChromatic) <= tolChroma;
+
+    if (alreadyAligned) {
+      issues.push({
+        field: 'glitchStart',
+        tab: state.evidenceType === 'glitch_puzzle' ? 'glitch' : 'seguranca',
+        message:
+          'Glitch: os valores iniciais já estão dentro da tolerância da solução (o puzzle abrirá resolvido).',
+        severity: 'warning',
+      });
+    }
+  }
+
+  const hasBaseAudio = Boolean(
+    state.audioBase || (state.audioBasePreview && state.audioBasePreview.trim())
+  );
+  if (hasHiddenAudio && !hasBaseAudio) {
+    issues.push({
+      field: 'audioBase',
+      tab: 'audio',
+      message: 'Áudio oculto configurado sem áudio base: adicione um áudio base para mascarar o sinal.',
+      severity: 'warning',
+    });
+  }
+
+  if (
+    state.phoneHasKeypad === true &&
+    typeof state.chatListLength === 'number' &&
+    state.chatListLength === 0
+  ) {
+    issues.push({
+      field: 'phoneChat',
+      tab: 'seguranca',
+      message: 'Celular com bloqueio ativo, mas nenhuma mensagem de chat foi adicionada.',
+      severity: 'warning',
+    });
+  }
+
+  const spoilersEnabled: string[] = [];
+  if (state.displayConfig?.puzzle?.showCorrectAnswerWhenSolved) {
+    spoilersEnabled.push('Parâmetros corretos do puzzle');
+  }
+  if (state.displayConfig?.cipher?.showRealText) {
+    spoilersEnabled.push('Texto real da cifra');
+  }
+  if (state.displayConfig?.megaClue?.showAnswer) {
+    spoilersEnabled.push('Resposta final da Mega-Pista');
+  }
+  if (spoilersEnabled.length > 0) {
+    issues.push({
+      field: 'displayConfig',
+      tab: 'display',
+      message: `Spoilers ativos em Display Config: ${spoilersEnabled.join(', ')}.`,
       severity: 'warning',
     });
   }

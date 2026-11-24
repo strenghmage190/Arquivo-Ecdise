@@ -126,6 +126,7 @@ export interface BuildCluePayloadParams {
     forensicFile: File | null;
     forensicPreviewUrl: string | null;
     forensicTargetChannel: 'R' | 'G' | 'B' | null;
+    uvAuthoringState: any;
     previewUrl: string | null;
     videoPreviewUrl: string | null;
     uvPreviewUrl: string | null;
@@ -199,6 +200,8 @@ export interface BuildCluePayloadParams {
     keyword: string;
     fontSize: number;
     positionY: number;
+    palette?: 'ironbow' | 'white_hot' | 'arctic';
+    elements?: any[];
   }>;
   phoneState?: Partial<{
     hasKeypad: boolean;
@@ -602,6 +605,7 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
       removedAudioHidden: false,
       removedGlitchFocused: false,
       removedMegaImage: false,
+      uvAuthoringState: m.uv_authoring_state || null,
     },
     cipherState: {
       isShredded: Boolean(
@@ -673,6 +677,12 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
       keyword: m.thermal_keyword || '',
       fontSize: m.thermal_font_size || 24,
       positionY: m.thermal_position_y || 50,
+      palette: m.thermal_authoring_state?.palette || m.thermal_palette || 'ironbow',
+      elements: Array.isArray(m.thermal_authoring_state?.elements)
+        ? m.thermal_authoring_state.elements
+        : Array.isArray(m.thermal_elements)
+        ? m.thermal_elements
+        : undefined,
     },
     phoneState: {
       hasKeypad: Boolean(m.phone_locked || m.phone_has_keypad),
@@ -1015,9 +1025,13 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
 
   if (uvUrl) {
     metadata.uv_layer_url = uvUrl;
+    if (media.uvAuthoringState) {
+      metadata.uv_authoring_state = media.uvAuthoringState;
+    }
   } else if (media.removedUv) {
     delete metadata.uv_layer_url;
     delete metadata.hidden_uv_url;
+    delete metadata.uv_authoring_state;
   }
 
   if (audHidUrl) {
@@ -1094,6 +1108,18 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     }
     metadata.thermal_font_size = thermal.fontSize || 24;
     metadata.thermal_position_y = thermal.positionY ?? 50;
+    if (thermal.elements && Array.isArray(thermal.elements)) {
+      metadata.thermal_authoring_state = {
+        version: 1,
+        palette: thermal.palette || 'ironbow',
+        elements: thermal.elements,
+      };
+    } else if (thermal.palette) {
+      metadata.thermal_authoring_state = {
+        ...(existingMeta.thermal_authoring_state || { version: 1, elements: [] }),
+        palette: thermal.palette,
+      };
+    }
     if (isDuplicate) {
       metadata.thermal_unlocked = false;
     }
@@ -1101,6 +1127,7 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     metadata.thermal = false;
     delete metadata.thermal_secret_text;
     delete metadata.thermal_keyword;
+    delete metadata.thermal_authoring_state;
   }
 
   // Chat / Fake Phone (sanitized, stored both top-level and in metadata)
@@ -1510,6 +1537,8 @@ export function serializePublicClueCard(card: Record<string, any>): Record<strin
     delete publicMeta.thermal_secret_text;
     delete publicMeta.thermal_keyword;
   }
+  delete publicMeta.uv_authoring_state;
+  delete publicMeta.thermal_authoring_state;
 
   const showRealText = Boolean(publicMeta.display_config?.cipher?.showRealText);
   if (!showRealText) {

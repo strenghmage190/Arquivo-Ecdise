@@ -30,7 +30,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.fakeDate}
-            onChange={(e) => setMetadataState(s => ({ ...s, fakeDate: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, fakeDate: e.target.value }))}
             placeholder="Ex: 14/10/1998 04:22"
           />
         </div>
@@ -42,7 +42,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.fakeLocation}
-            onChange={(e) => setMetadataState(s => ({ ...s, fakeLocation: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, fakeLocation: e.target.value }))}
             placeholder="Ex: 48°52.6′S 123°23.6′W"
           />
         </div>
@@ -55,7 +55,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.fakeMetaCam}
-            onChange={(e) => setMetadataState(s => ({ ...s, fakeMetaCam: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, fakeMetaCam: e.target.value }))}
             placeholder="Ex: Canon EOS 5D"
           />
         </div>
@@ -65,7 +65,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.fakeMetaOwner}
-            onChange={(e) => setMetadataState(s => ({ ...s, fakeMetaOwner: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, fakeMetaOwner: e.target.value }))}
             placeholder="Ex: J. Doe"
           />
         </div>
@@ -85,7 +85,7 @@ export default function TabMetadata() {
         <textarea
           className="cc-input"
           value={metadataState.technicalNote}
-          onChange={(e) => setMetadataState(s => ({ ...s, technicalNote: e.target.value }))}
+          onChange={(e) => setMetadataState((s) => ({ ...s, technicalNote: e.target.value }))}
           rows={2}
           placeholder="Ex: Arquivo recuperado do setor B..."
         />
@@ -100,7 +100,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.stamp}
-            onChange={(e) => setMetadataState(s => ({ ...s, stamp: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, stamp: e.target.value }))}
             placeholder="Ex: CONFIDENCIAL"
           />
         </div>
@@ -112,7 +112,7 @@ export default function TabMetadata() {
             type="text"
             className="cc-input"
             value={metadataState.externalLink}
-            onChange={(e) => setMetadataState(s => ({ ...s, externalLink: e.target.value }))}
+            onChange={(e) => setMetadataState((s) => ({ ...s, externalLink: e.target.value }))}
             placeholder="Ex: https://..."
           />
         </div>
@@ -130,7 +130,7 @@ export default function TabMetadata() {
           <input
             type="checkbox"
             checked={personState.isPerson}
-            onChange={(e) => setPersonState(s => ({ ...s, isPerson: e.target.checked }))}
+            onChange={(e) => setPersonState((s) => ({ ...s, isPerson: e.target.checked }))}
           />
           <span className="checkmark"></span>
           Ativar Dossiê
@@ -141,61 +141,59 @@ export default function TabMetadata() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '15px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid rgba(100,150,255,0.2)' }}>
           <div className="cc-field">
             <label className="cc-label">Nome Completo</label>
-            <input 
+            <input
               className="cc-input"
-              value={personState.name} 
-              onChange={e => setPersonState(s => ({ ...s, name: e.target.value }))} 
+              value={personState.name}
+              onChange={(e) => setPersonState((s) => ({ ...s, name: e.target.value }))}
             />
           </div>
-          
+
           <div style={{ display: 'flex', gap: '15px' }}>
             <div className="cc-field" style={{ flex: 1 }}>
               <label className="cc-label">Idade / Data de Nasc.</label>
-              <input 
+              <input
                 className="cc-input"
-                value={personState.age} 
-                onChange={e => setPersonState(s => ({ ...s, age: e.target.value }))} 
+                value={personState.age}
+                onChange={(e) => setPersonState((s) => ({ ...s, age: e.target.value }))}
               />
             </div>
             <div className="cc-field" style={{ flex: 1 }}>
               <label className="cc-label">Status</label>
-              <select 
+              <select
                 className="cc-input"
-                value={personState.status} 
-                onChange={e => setPersonState(s => ({ ...s, status: e.target.value }))}
+                value={personState.status || 'UNKNOWN'}
+                onChange={(e) => setPersonState((s) => ({ ...s, status: e.target.value }))}
                 style={{ width: '100%', padding: '6px' }}
               >
-                <option value="">Selecione...</option>
-                <option value="Vivo">Vivo</option>
-                <option value="Desaparecido">Desaparecido</option>
-                <option value="Morto">Morto</option>
-                <option value="Suspeito">Suspeito</option>
+                <option value="UNKNOWN">Desconhecido / Suspeito</option>
+                <option value="ALIVE">Vivo</option>
+                <option value="MIA">Desaparecido</option>
+                <option value="DEAD">Morto</option>
               </select>
             </div>
           </div>
 
           <div className="cc-field">
             <label className="cc-label">Profissão / Cargo</label>
-            <input 
+            <input
               className="cc-input"
-              value={personState.profession} 
-              onChange={e => setPersonState(s => ({ ...s, profession: e.target.value }))} 
+              value={personState.profession}
+              onChange={(e) => setPersonState((s) => ({ ...s, profession: e.target.value }))}
             />
           </div>
 
           <div className="cc-field">
             <label className="cc-label">Detalhes Adicionais (Descrição)</label>
-            <textarea 
+            <textarea
               className="cc-input"
-              rows={4} 
+              rows={4}
               style={{ width: '100%' }}
-              value={personState.details} 
-              onChange={e => setPersonState(s => ({ ...s, details: e.target.value }))} 
+              value={personState.details}
+              onChange={(e) => setPersonState((s) => ({ ...s, details: e.target.value }))}
             />
           </div>
         </div>
       )}
-
     </div>
   );
 }

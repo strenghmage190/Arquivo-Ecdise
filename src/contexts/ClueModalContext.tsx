@@ -15,6 +15,8 @@ import {
   mergeFieldVisibilityConfig,
   normalizePersonStatus,
 } from '../utils/cluePayloadBuilder';
+import type { UVAuthoringState } from '../components/tools/uveditor/types';
+import type { ThermalElement, ThermalPalette } from '../components/tools/ThermalEditor';
 
 export type { DisplayConfig, FilterTransformRect };
 export { defaultDisplayConfig };
@@ -42,6 +44,8 @@ export interface ThermalConfig {
   keyword: string;
   fontSize: number;
   positionY: number;
+  palette?: ThermalPalette;
+  elements?: ThermalElement[];
 }
 
 export interface ChatEntry {
@@ -117,6 +121,7 @@ export interface MediaState {
   forensicFile: File | null;
   forensicPreviewUrl: string | null;
   forensicTargetChannel: 'R' | 'G' | 'B' | null;
+  uvAuthoringState?: UVAuthoringState | null;
   previewUrl: string | null;
   videoPreviewUrl: string | null;
   uvPreviewUrl: string | null;
@@ -197,10 +202,27 @@ export const defaultMediaVisibility: MediaVisibility = {
   uvLayer: 'post_keyword',
 };
 
+export type ClueArchetype =
+  | 'quick'
+  | 'forensic_doc'
+  | 'secret_audio'
+  | 'puzzle_lock'
+  | 'fake_phone'
+  | 'mega_clue'
+  | 'complete';
+
+export type CreatorMode = 'quick' | 'complete';
+
 export interface ClueModalContextType {
   investigationId: string;
   activeTab: string;
   setActiveTab: (tabId: string) => void;
+  creatorMode: CreatorMode;
+  setCreatorMode: React.Dispatch<React.SetStateAction<CreatorMode>>;
+  isDuplicateMode: boolean;
+  setIsDuplicateMode: React.Dispatch<React.SetStateAction<boolean>>;
+  duplicateSourceCard: any | null;
+  setDuplicateSourceCard: React.Dispatch<React.SetStateAction<any | null>>;
 
   coreState: CoreState;
   setCoreState: React.Dispatch<React.SetStateAction<CoreState>>;
@@ -258,6 +280,8 @@ export interface ClueModalContextType {
 
   resetForm: (options?: { defaultHidden?: boolean }) => void;
   loadExistingCard: (card: any) => void;
+  loadCardAsDuplicate: (card: any) => void;
+  applyArchetype: (archetype: ClueArchetype) => void;
   getTemplateSnapshot: () => Record<string, any>;
   applyTemplateData: (data: any) => void;
 }
@@ -276,6 +300,7 @@ const createInitialMediaState = (): MediaState => ({
   forensicFile: null,
   forensicPreviewUrl: null,
   forensicTargetChannel: null,
+  uvAuthoringState: null,
   previewUrl: null,
   videoPreviewUrl: null,
   uvPreviewUrl: null,
@@ -305,6 +330,9 @@ export const ClueModalProvider: React.FC<{
   investigationId?: string;
 }> = ({ children, investigationId = '' }) => {
   const [activeTab, setActiveTab] = useState<string>('geral');
+  const [creatorMode, setCreatorMode] = useState<CreatorMode>('complete');
+  const [isDuplicateMode, setIsDuplicateMode] = useState<boolean>(false);
+  const [duplicateSourceCard, setDuplicateSourceCard] = useState<any | null>(null);
 
   const [coreState, setCoreState] = useState<CoreState>({
     title: '',
@@ -397,6 +425,8 @@ export const ClueModalProvider: React.FC<{
     keyword: '',
     fontSize: 24,
     positionY: 50,
+    palette: 'ironbow',
+    elements: undefined,
   });
 
   const [phoneState, setPhoneState] = useState<PhoneState>({
@@ -562,6 +592,8 @@ export const ClueModalProvider: React.FC<{
       keyword: '',
       fontSize: 24,
       positionY: 50,
+      palette: 'ironbow',
+      elements: undefined,
     });
     setFilterConfig({
       brightness: 100,
@@ -585,6 +617,8 @@ export const ClueModalProvider: React.FC<{
     setMediaVisibility(defaultMediaVisibility);
     setInsights([]);
     setCardStatus(null);
+    setIsDuplicateMode(false);
+    setDuplicateSourceCard(null);
   };
 
   const loadExistingCard = (card: any) => {
@@ -605,6 +639,60 @@ export const ClueModalProvider: React.FC<{
     setMediaVisibility(hydrated.mediaVisibility);
     setInsights(hydrated.insights);
     setCardStatus(hydrated.cardStatus);
+    setIsDuplicateMode(false);
+    setDuplicateSourceCard(null);
+  };
+
+  const loadCardAsDuplicate = (card: any) => {
+    if (!card) return;
+    loadExistingCard(card);
+    setCoreState((prev) => ({
+      ...prev,
+      title: `${card.title || prev.title || 'Evidência'} (Cópia)`,
+    }));
+    setCardStatus(null);
+    setIsDuplicateMode(true);
+    setDuplicateSourceCard(card);
+  };
+
+  const applyArchetype = (archetype: ClueArchetype) => {
+    switch (archetype) {
+      case 'quick':
+        setCreatorMode('quick');
+        setActiveTab('geral');
+        break;
+      case 'forensic_doc':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('visual');
+        break;
+      case 'secret_audio':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('audio');
+        break;
+      case 'puzzle_lock':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'glitch_puzzle' }));
+        setSecurityState((prev) => ({ ...prev, securityLayerEnabled: true }));
+        setActiveTab('glitch');
+        break;
+      case 'fake_phone':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('seguranca');
+        break;
+      case 'mega_clue':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'mega_clue' }));
+        setActiveTab('mega');
+        break;
+      case 'complete':
+      default:
+        setCreatorMode('complete');
+        setActiveTab('geral');
+        break;
+    }
   };
 
   const getTemplateSnapshot = (): Record<string, any> => ({
@@ -907,6 +995,12 @@ export const ClueModalProvider: React.FC<{
         investigationId,
         activeTab,
         setActiveTab,
+        creatorMode,
+        setCreatorMode,
+        isDuplicateMode,
+        setIsDuplicateMode,
+        duplicateSourceCard,
+        setDuplicateSourceCard,
         coreState,
         setCoreState,
         securityState,
@@ -945,6 +1039,8 @@ export const ClueModalProvider: React.FC<{
         revokeUrl,
         resetForm,
         loadExistingCard,
+        loadCardAsDuplicate,
+        applyArchetype,
         getTemplateSnapshot,
         applyTemplateData,
       }}

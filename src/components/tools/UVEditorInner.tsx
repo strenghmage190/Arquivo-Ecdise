@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import './UVEditor.css';
 import { LayersPanel } from '../LayersPanel';
 import { markPerfKeep } from '../../utils/perf_helpers';
@@ -6,52 +6,171 @@ import {
   Radio,
   Palette,
   Eye,
+  EyeOff,
+  Flashlight,
+  PenTool,
   Save,
   X,
-  MousePointer,
-  Pencil,
-  Eraser,
-  Image as ImageIcon,
-  Type,
   Target,
   Sparkles,
-  Layers,
+  Upload,
+  RotateCw,
+  SlidersHorizontal,
+  Stamp,
+  Layers as LayersIcon,
+  Sun,
+  BookmarkPlus,
 } from 'lucide-react';
 
 import { UVToolbar } from './uveditor/UVToolbar';
-
+import { UVStampsPanel } from './uveditor/UVStampsPanel';
 import { useUVEditor } from './uveditor/UVEditorContext';
-import { Layer } from './uveditor/types';
+import {
+  Layer,
+  UVTool,
+  UV_FONT_STYLES,
+  UVFontStyle,
+  UVPreviewMode,
+  UVBrushStyle,
+  UVAuthoringState,
+  SerializedUVLayer,
+  getCanvasFont,
+} from './uveditor/types';
+import { UVStampDef, UV_STAMPS, loadStampImage } from './uveditor/uvStamps';
+import { useDirtyGuard } from '../../hooks/useDirtyGuard';
 import toast from 'react-hot-toast';
 
 interface UVEditorProps {
   baseImageUrl: string;
-  onSave: (file: File, meta?: { targetChannel?: 'R' | 'G' | 'B' }) => void;
+  onSave: (
+    file: File,
+    meta?: { targetChannel?: 'R' | 'G' | 'B'; uvAuthoringState?: UVAuthoringState }
+  ) => void;
   onClose: () => void;
   mode?: 'uv' | 'filter' | 'rgb' | 'thermal';
   initialImageFile?: File | null;
+  initialAuthoringState?: UVAuthoringState | null;
   showForensicControls?: boolean;
+}
+
+interface UVStylePreset {
+  id: string;
+  label: string;
+  color: string;
+  brushStyle: UVBrushStyle;
+  neonBloom: number;
+  drawOpacity: number;
+  fontStyle: UVFontStyle;
+  custom?: boolean;
+}
+
+const BUILTIN_UV_PRESETS: UVStylePreset[] = [
+  {
+    id: 'neon-classic',
+    label: 'Neon Clássico',
+    color: '#b366ff',
+    brushStyle: 'fluorescent',
+    neonBloom: 75,
+    drawOpacity: 100,
+    fontStyle: 'mono',
+  },
+  {
+    id: 'ritual-blood',
+    label: 'Sangue Ritual',
+    color: '#ff0033',
+    brushStyle: 'fluorescent',
+    neonBloom: 85,
+    drawOpacity: 95,
+    fontStyle: 'runic',
+  },
+  {
+    id: 'ghost-ink',
+    label: 'Tinta Fantasma',
+    color: '#00ffff',
+    brushStyle: 'solid',
+    neonBloom: 45,
+    drawOpacity: 55,
+    fontStyle: 'handwritten',
+  },
+];
+
+const UV_PRESETS_KEY = 'ecdise_uv_presets_v1';
+
+function serializeLayersToAuthoringState(
+  layerList: Layer[],
+  baseWidth?: number,
+  baseHeight?: number
+): UVAuthoringState {
+  const serialized: SerializedUVLayer[] = layerList
+    .filter((l) => l.id !== '__base_image' && l.type !== 'group')
+    .map((l) => {
+      let drawingDataUrl: string | undefined;
+      if (l.type === 'drawing' && l.drawingCanvas) {
+        try {
+          drawingDataUrl = l.drawingCanvas.toDataURL('image/png');
+        } catch {}
+      } else if (l.type === 'image' && !l.isStamp && l.img?.src) {
+        drawingDataUrl = l.img.src;
+      }
+      return {
+        id: l.id,
+        type: l.type === 'text' ? 'text' : l.type === 'image' ? 'image' : 'drawing',
+        name: l.name,
+        visible: l.visible,
+        opacity: l.opacity,
+        locked: l.locked,
+        blendMode: l.blendMode,
+        x: l.x ?? 0,
+        y: l.y ?? 0,
+        width: l.width,
+        height: l.height,
+        rotation: l.rotation ?? 0,
+        scale: l.scale,
+        text: l.text,
+        size: l.size,
+        color: l.color,
+        fontStyle: l.fontStyle,
+        neonIntensity: l.bloom,
+        isStamp: l.isStamp,
+        stampId: l.stampId,
+        stampColor: l.stampColor,
+        drawingDataUrl,
+      };
+    });
+
+  return {
+    version: 1,
+    baseWidth,
+    baseHeight,
+    layers: serialized,
+  };
 }
 
 const COLOR_PALETTES = {
   uv: [
-    { label: 'Magenta', hex: '#b366ff', glow: '0 0 10px #b366ff' },
-    { label: 'Ciano', hex: '#00ffff', glow: '0 0 10px #00ffff' },
-    { label: 'Vermelho', hex: '#ff0033', glow: '0 0 10px #ff0033' },
-    { label: 'Verde Neon', hex: '#39ff14', glow: '0 0 10px #39ff14' },
-    { label: 'Rosa Quente', hex: '#ff10f0', glow: '0 0 10px #ff10f0' },
+    { label: 'Violeta UV', hex: '#b366ff', glow: '0 0 10px #b366ff' },
+    { label: 'Ciano Forense', hex: '#00ffff', glow: '0 0 10px #00ffff' },
+    { label: 'Sangue Neon', hex: '#ff0033', glow: '0 0 10px #ff0033' },
+    { label: 'Verde Químico', hex: '#39ff14', glow: '0 0 10px #39ff14' },
+    { label: 'Rosa UV', hex: '#ff10f0', glow: '0 0 10px #ff10f0' },
     { label: 'Azul Elétrico', hex: '#0080ff', glow: '0 0 10px #0080ff' },
-    { label: 'Amarelo Neon', hex: '#ffff00', glow: '0 0 10px #ffff00' },
-    { label: 'Laranja Neon', hex: '#ff6600', glow: '0 0 10px #ff6600' },
+    { label: 'Amarelo Conhecimento', hex: '#ffff00', glow: '0 0 10px #ffff00' },
+    { label: 'Laranja Alerta', hex: '#ff6600', glow: '0 0 10px #ff6600' },
+  ],
+  rgb: [
+    { label: 'Vermelho Puro', hex: '#ff0000', glow: '0 0 10px #ff0000' },
+    { label: 'Verde Puro', hex: '#00ff00', glow: '0 0 10px #00ff00' },
+    { label: 'Azul Puro', hex: '#0000ff', glow: '0 0 10px #0000ff' },
+    { label: 'Branco', hex: '#ffffff', glow: '0 0 8px #ffffff' },
   ],
   filter: [
     { label: 'Branco', hex: '#ffffff', glow: '0 0 10px #fff' },
     { label: 'Cinza', hex: '#cccccc', glow: '0 0 8px #ccc' },
-    { label: 'Branco Transparente', hex: 'rgba(255,255,255,0.5)', glow: '0 0 5px rgba(255,255,255,0.5)' },
+    { label: 'Branco Translúcido', hex: '#e2e8f0', glow: '0 0 5px #e2e8f0' },
     { label: 'Cinza Escuro', hex: '#888888', glow: '0 0 5px #888' },
   ],
   thermal: [
-    { label: 'Branco Quente (Mais Frio)', hex: '#ffffff', glow: '0 0 10px #fff' },
+    { label: 'Branco Quente', hex: '#ffffff', glow: '0 0 10px #fff' },
     { label: 'Amarelo Quente', hex: '#ffe600', glow: '0 0 10px #ffe600' },
     { label: 'Laranja Quente', hex: '#ff6600', glow: '0 0 10px #ff6600' },
     { label: 'Vermelho Quente', hex: '#ff0000', glow: '0 0 10px #ff0000' },
@@ -61,92 +180,213 @@ const COLOR_PALETTES = {
   ],
 };
 
-export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', initialImageFile, showForensicControls = false }: UVEditorProps) {
+const isShapeTool = (t: UVTool): boolean =>
+  t === 'line' || t === 'arrow' || t === 'ellipse' || t === 'rect';
+
+export function UVEditorInner({
+  baseImageUrl,
+  onSave,
+  onClose,
+  mode = 'rgb',
+  initialImageFile,
+  initialAuthoringState,
+}: UVEditorProps) {
   const {
-    tool, setTool,
-    color, setColor,
-    brushSize, setBrushSize,
-    maskBrushSoftness, setMaskBrushSoftness,
-    maskBrushOpacity, setMaskBrushOpacity,
-    textValue, setTextValue,
-    textSize, setTextSize,
-    censorMode, setCensorMode,
-    layers, setLayers,
-    selectedLayer, setSelectedLayer,
-    maskPaintMode, setMaskPaintMode,
-    maskUseEraser, setMaskUseEraser,
-    inlineTextEdit, setInlineTextEdit,
-    editingLayerName, setEditingLayerName,
+    tool,
+    setTool,
+    color,
+    setColor,
+    brushSize,
+    setBrushSize,
+    brushStyle,
+    setBrushStyle,
+    drawOpacity,
+    setDrawOpacity,
+    neonBloom,
+    setNeonBloom,
+    fontStyle,
+    setFontStyle,
+    previewMode,
+    setPreviewMode,
+    maskBrushSoftness,
+    setMaskBrushSoftness,
+    maskBrushOpacity,
+    setMaskBrushOpacity,
+    textValue,
+    setTextValue,
+    textSize,
+    setTextSize,
+    censorMode,
+    setCensorMode,
+    layers,
+    setLayers,
+    selectedLayer,
+    setSelectedLayer,
+    maskPaintMode,
+    setMaskPaintMode,
+    maskUseEraser,
+    setMaskUseEraser,
+    inlineTextEdit,
+    setInlineTextEdit,
+    editingLayerName,
+    setEditingLayerName,
     setTargetChannel,
-    targetChannel
+    targetChannel,
   } = useUVEditor();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
-  const [imageScale, setImageScale] = useState(1);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Layers support: placed texts/images (editable)
-
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [isDraggingLayer, setIsDraggingLayer] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
-  const dragOffsetRef = useRef<{ox:number, oy:number} | null>(null);
-  const resizeStartRef = useRef<{x:number, y:number, width:number, height:number, scale:number, minX?: number, minY?: number} | null>(null);
-  
+  const dragOffsetRef = useRef<{ ox: number; oy: number } | null>(null);
+  const resizeStartRef = useRef<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    scale: number;
+    minX?: number;
+    minY?: number;
+  } | null>(null);
 
-  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
-  const [dragOverLayerId, setDragOverLayerId] = useState<string | null>(null);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [showAddLayerMenu, setShowAddLayerMenu] = useState(false);
+  const prevToolRef = useRef<UVTool | null>(null);
+  const [maskCursor, setMaskCursor] = useState<{
+    x: number;
+    y: number;
+    size: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, size: 20, visible: false });
 
-  const prevToolRef = useRef<typeof tool | null>(null);
-  const [maskCursor, setMaskCursor] = useState<{ x: number; y: number; size: number; visible: boolean }>({ x: 0, y: 0, size: 20, visible: false });
-  const [expandedSections, setExpandedSections] = useState({
-    tools: true,
-    colors: true,
-    layers: true,
-    properties: true
+  type RightTab = 'properties' | 'stamps' | 'layers';
+  const [activeRightTab, setActiveRightTab] = useState<RightTab>('properties');
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [flashlightRadius, setFlashlightRadius] = useState(135);
+  const snapGuidesRef = useRef<{ x: boolean; y: boolean }>({ x: false, y: false });
+  const [drawMutationCount, setDrawMutationCount] = useState(0);
+  const [customPresets, setCustomPresets] = useState<UVStylePreset[]>(() => {
+    try {
+      const raw = localStorage.getItem(UV_PRESETS_KEY);
+      return raw ? (JSON.parse(raw) as UVStylePreset[]) : [];
+    } catch {
+      return [];
+    }
   });
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  const dirtyFingerprint = useMemo(
+    () =>
+      JSON.stringify({
+        drawMutationCount,
+        layers: layers
+          .filter((l) => l.id !== '__base_image')
+          .map((l) => ({
+            id: l.id,
+            visible: l.visible,
+            opacity: l.opacity,
+            locked: l.locked,
+            x: l.x,
+            y: l.y,
+            width: l.width,
+            height: l.height,
+            rotation: l.rotation,
+            scale: l.scale,
+            text: l.text,
+            size: l.size,
+            color: l.color,
+            fontStyle: l.fontStyle,
+            bloom: l.bloom,
+            stampId: l.stampId,
+            stampColor: l.stampColor,
+          })),
+      }),
+    [layers, drawMutationCount]
+  );
+  const baselineFingerprintRef = useRef<string | null>(null);
+  const isDirty =
+    baselineFingerprintRef.current !== null &&
+    dirtyFingerprint !== baselineFingerprintRef.current;
 
-  // inline canvas text edit state
+  const { guardClose } = useDirtyGuard({
+    isDirty,
+    onClose,
+    listenEscape: !inlineTextEdit,
+    message: 'Você tem alterações não salvas no Editor UV. Deseja descartar e fechar?',
+  });
 
-  
-  // RAF optimization for draw
+  // Refs synced with latest state for RAF / pointer callbacks
+  const layersRef = useRef<Layer[]>(layers);
+  layersRef.current = layers;
+  const selectedLayerRef = useRef<string | null>(selectedLayer);
+  selectedLayerRef.current = selectedLayer;
+  const previewModeRef = useRef<UVPreviewMode>(previewMode);
+  previewModeRef.current = previewMode;
+  const flashlightRadiusRef = useRef<number>(flashlightRadius);
+  flashlightRadiusRef.current = flashlightRadius;
+  const flashlightPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Shape drawing refs
+  const shapeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const shapeCurrentRef = useRef<{ x: number; y: number; shiftKey?: boolean } | null>(null);
+  const isDrawingShapeRef = useRef<boolean>(false);
+
+  // Stroke backup for cancelling accidental 1-finger stroke when 2nd finger lands
+  const preStrokeImageDataRef = useRef<{
+    canvas: HTMLCanvasElement;
+    data: ImageData;
+  } | null>(null);
+
+  // RAF / pointer / viewport refs
   const rafIdRef = useRef<number | null>(null);
   const lastMouseEventRef = useRef<any | null>(null);
   const redrawRafIdRef = useRef<number | null>(null);
   const redrawScheduledRef = useRef<boolean>(false);
   const lastRedrawRef = useRef<number>(0);
   const redrawTimeoutRef = useRef<number | null>(null);
-  // Throttle/schedule pointermove processing to avoid flooding redraws
   const moveScheduledRef = useRef<boolean>(false);
-  const latestMoveRef = useRef<{clientX:number, clientY:number, pointerId?: number, buttons?: number} | null>(null);
-  const REDRAW_MIN_MS = 16; // ~60fps
-  // Track created object URLs so we can revoke them on unmount
+  const latestMoveRef = useRef<{
+    clientX: number;
+    clientY: number;
+    pointerId?: number;
+    buttons?: number;
+    shiftKey?: boolean;
+  } | null>(null);
+  const REDRAW_MIN_MS = 16;
+
   const objectUrlsRef = useRef<string[]>([]);
   const dprRef = useRef<number>(1);
-  const debugPointerOverlayRef = useRef<boolean>(true);
-  const cssWidthRef = useRef<number | null>(null);
-  const cssHeightRef = useRef<number | null>(null);
+  const cssWidthRef = useRef<number>(800);
+  const cssHeightRef = useRef<number>(600);
   const activePointerIdRef = useRef<number | null>(null);
-  const pointerMapRef = useRef<Map<number, {x:number,y:number}>>(new Map());
-  const pinchStartRef = useRef<any | null>(null);
-  const panRef = useRef<{x:number,y:number}>({ x: 0, y: 0 });
+  const pointerMapRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStartRef = useRef<{
+    distance: number;
+    center: { x: number; y: number };
+    startScale: number;
+    startPan: { x: number; y: number };
+  } | null>(null);
+  const panRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const scaleRef = useRef<number>(1);
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const strokeStartRef = useRef<{x:number,y:number} | null>(null);
-  const strokePointsRef = useRef<Array<{x:number,y:number}>>([]);
+  const strokeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const strokePointsRef = useRef<Array<{ x: number; y: number }>>([]);
   const drawingTargetCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingMaskRef = useRef<boolean>(false);
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+  const hoveredHandleRef = useRef<string | null>(null);
+
+  // Undo / Redo
+  const undoStackRef = useRef<any[]>([]);
+  const redoStackRef = useRef<any[]>([]);
+  const HISTORY_LIMIT = 50;
+  const [undoAvailable, setUndoAvailable] = useState(false);
+  const [redoAvailable, setRedoAvailable] = useState(false);
+
+  const colors = COLOR_PALETTES[mode] || COLOR_PALETTES.uv;
 
   const handleTargetChannelChange = (channel: 'R' | 'G' | 'B') => {
     setTargetChannel(channel);
@@ -154,44 +394,66 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
 
   // Helper: get base image bounds in canvas "world" (CSS pixel) coordinates
   const getImageBounds = () => {
-    try {
-      const base = layers.find(l => l.id === '__base_image');
-      // Ensure base image exists and is loaded
-      if (!base || !base.img) return null;
-      if (!(base.img.complete || (base.img as any).naturalWidth > 0)) return null;
-      const imgW = (base.img.naturalWidth || base.img.width || 0) * (base.scale || 1);
-      const imgH = (base.img.naturalHeight || base.img.height || 0) * (base.scale || 1);
-      const left = (base.x || 0) - imgW / 2;
-      const top = (base.y || 0) - imgH / 2;
-      const right = (base.x || 0) + imgW / 2;
-      const bottom = (base.y || 0) + imgH / 2;
-      return { left, top, right, bottom, width: imgW, height: imgH, centerX: base.x || 0, centerY: base.y || 0 };
-    } catch (e) { return null; }
+    const w = cssWidthRef.current || 800;
+    const h = cssHeightRef.current || 600;
+    return {
+      left: 0,
+      top: 0,
+      right: w,
+      bottom: h,
+      width: w,
+      height: h,
+      centerX: w / 2,
+      centerY: h / 2,
+    };
   };
 
-  // Helpers for soft mask brush
   const hexToRgb = (hex: string) => {
     try {
       if (hex.startsWith('rgba')) {
         const m = hex.match(/rgba\((\d+),(\d+),(\d+),(\d*\.?\d+)\)/);
-        if (m) return { r: parseInt(m[1]), g: parseInt(m[2]), b: parseInt(m[3]), a: parseFloat(m[4]) };
+        if (m)
+          return {
+            r: parseInt(m[1], 10),
+            g: parseInt(m[2], 10),
+            b: parseInt(m[3], 10),
+            a: parseFloat(m[4]),
+          };
       }
       if (hex.startsWith('rgb')) {
         const m = hex.match(/rgb\((\d+),(\d+),(\d+)\)/);
-        if (m) return { r: parseInt(m[1]), g: parseInt(m[2]), b: parseInt(m[3]), a: 1 };
+        if (m)
+          return {
+            r: parseInt(m[1], 10),
+            g: parseInt(m[2], 10),
+            b: parseInt(m[3], 10),
+            a: 1,
+          };
       }
       let h = hex.replace('#', '');
-      if (h.length === 3) h = h.split('').map(c => c + c).join('');
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
       const bigint = parseInt(h, 16);
       return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255, a: 1 };
-    } catch (e) { return { r: 0, g: 0, b: 0, a: 1 }; }
+    } catch {
+      return { r: 179, g: 102, b: 255, a: 1 };
+    }
   };
 
-  const drawSoftStroke = (ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, radius: number, hexColor: string, softness: number, opacity: number) => {
+  const drawSoftStroke = (
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    radius: number,
+    hexColor: string,
+    _softness: number,
+    opacity: number
+  ) => {
     const dx = x1 - x0;
     const dy = y1 - y0;
     const dist = Math.hypot(dx, dy) || 1;
-    const step = Math.max(1, Math.floor(radius * 0.3));
+    const step = Math.max(1, Math.floor(radius * 0.25));
     const steps = Math.max(1, Math.ceil(dist / step));
     const rgb = hexToRgb(hexColor || '#000000');
     const innerAlpha = opacity * (rgb.a || 1);
@@ -199,35 +461,192 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
       const t = i / steps;
       const px = x0 + dx * t;
       const py = y0 + dy * t;
-      const r = radius / 2;
+      const r = Math.max(1, radius / 2);
       const g = ctx.createRadialGradient(px, py, 0, px, py, r);
       g.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${innerAlpha})`);
       g.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = g as any;
+      ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.fill();
     }
   };
 
-  // Clamp pan so the base image always covers the viewport (prevents panning into empty space)
+  // Fluorescent soft UV brush segment renderer
+  const drawFluorescentSegment = (
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    size: number,
+    hexColor: string,
+    opacityPercent: number,
+    bloomPercent: number
+  ) => {
+    const op = Math.max(0.02, Math.min(1, opacityPercent / 100));
+    const bl = Math.max(0, Math.min(1, bloomPercent / 100));
+    const rgb = hexToRgb(hexColor);
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.max(1, size * 0.22);
+    const steps = Math.max(1, Math.ceil(dist / step));
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Outer soft radial fluorescent halo
+    const haloRadius = Math.max(2, size * (0.75 + bl * 0.85));
+    for (let i = 0; i <= steps; i++) {
+      const t = steps === 0 ? 0 : i / steps;
+      const px = x0 + dx * t;
+      const py = y0 + dy * t;
+      const grad = ctx.createRadialGradient(px, py, 0, px, py, haloRadius);
+      grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${(0.42 * op).toFixed(3)})`);
+      grad.addColorStop(0.45, `rgba(${rgb.r},${rgb.g},${rgb.b},${(0.22 * op * (0.5 + bl * 0.5)).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(px, py, haloRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Bright luminous inner core
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(1, size * 0.48);
+    ctx.strokeStyle = `rgba(255,255,255,${(0.32 * op * (0.4 + bl * 0.6)).toFixed(3)})`;
+    ctx.shadowColor = hexColor;
+    ctx.shadowBlur = Math.max(4, bl * 24);
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  // Shape drawing helper (shared between live preview & commit)
+  const drawShapeOnContext = (
+    ctx: CanvasRenderingContext2D,
+    shapeTool: UVTool,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts: {
+      color: string;
+      lineWidth: number;
+      opacity: number;
+      bloom: number;
+      brushStyle: 'solid' | 'fluorescent';
+      shiftKey?: boolean;
+    }
+  ) => {
+    let endX = x1;
+    let endY = y1;
+    if (opts.shiftKey) {
+      const dx = endX - x0;
+      const dy = endY - y0;
+      if (shapeTool === 'ellipse' || shapeTool === 'rect') {
+        const side = Math.max(Math.abs(dx), Math.abs(dy));
+        endX = x0 + Math.sign(dx || 1) * side;
+        endY = y0 + Math.sign(dy || 1) * side;
+      } else {
+        // snap line/arrow to 45 deg increments
+        const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+        const len = Math.hypot(dx, dy);
+        endX = x0 + Math.cos(angle) * len;
+        endY = y0 + Math.sin(angle) * len;
+      }
+    }
+
+    const op = Math.max(0, Math.min(1, opts.opacity / 100));
+    const bl = Math.max(0, Math.min(1, opts.bloom / 100));
+    const blurPx = opts.brushStyle === 'fluorescent' ? Math.max(8, bl * 32) : bl * 22;
+
+    const strokeCurrentPath = () => {
+      ctx.stroke();
+      if (opts.brushStyle === 'fluorescent' && bl > 0.1) {
+        ctx.save();
+        ctx.lineWidth = Math.max(1, opts.lineWidth * 0.45);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.45 * op).toFixed(3)})`;
+        ctx.shadowBlur = blurPx * 0.6;
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+
+    ctx.save();
+    ctx.globalAlpha = op;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = opts.color;
+    ctx.fillStyle = opts.color;
+    ctx.lineWidth = Math.max(1, opts.lineWidth);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = opts.color;
+    ctx.shadowBlur = blurPx;
+
+    if (shapeTool === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(endX, endY);
+      strokeCurrentPath();
+    } else if (shapeTool === 'arrow') {
+      const angle = Math.atan2(endY - y0, endX - x0);
+      const headLen = Math.max(14, opts.lineWidth * 3.2);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(endX, endY);
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - headLen * Math.cos(angle - Math.PI / 6),
+        endY - headLen * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - headLen * Math.cos(angle + Math.PI / 6),
+        endY - headLen * Math.sin(angle + Math.PI / 6)
+      );
+      strokeCurrentPath();
+    } else if (shapeTool === 'ellipse') {
+      const cx = (x0 + endX) / 2;
+      const cy = (y0 + endY) / 2;
+      const rx = Math.max(1, Math.abs(endX - x0) / 2);
+      const ry = Math.max(1, Math.abs(endY - y0) / 2);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      strokeCurrentPath();
+    } else if (shapeTool === 'rect') {
+      const rx = Math.min(x0, endX);
+      const ry = Math.min(y0, endY);
+      const rw = Math.abs(endX - x0);
+      const rh = Math.abs(endY - y0);
+      ctx.beginPath();
+      ctx.rect(rx, ry, rw, rh);
+      strokeCurrentPath();
+    }
+
+    ctx.restore();
+  };
+
+  // Clamp pan so base image stays reachable
   const clampPan = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const bounds = getImageBounds();
-    if (!bounds) return;
     const s = scaleRef.current || 1;
-    const viewportW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-    const viewportH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
+    const viewportW = cssWidthRef.current || canvas.width / (dprRef.current || 1);
+    const viewportH = cssHeightRef.current || canvas.height / (dprRef.current || 1);
 
-    // compute allowed pan range so image edges at least cover viewport
     const minPanX = viewportW - s * (bounds.centerX + bounds.width / 2);
     const maxPanX = -s * (bounds.centerX - bounds.width / 2);
     const minPanY = viewportH - s * (bounds.centerY + bounds.height / 2);
     const maxPanY = -s * (bounds.centerY - bounds.height / 2);
 
-    // if image is smaller than viewport at current scale, center it
     if (minPanX > maxPanX) {
       panRef.current.x = (minPanX + maxPanX) / 2;
     } else {
@@ -240,117 +659,308 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
     }
   };
 
-  // NOVO E CORRIGIDO: Helper para converter coordenadas do mouse para o canvas
-  const getCanvasCoordinates = (e: React.PointerEvent | React.MouseEvent | any): { x: number, y: number } => {
+  const resetView = () => {
+    scaleRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+    redrawAll();
+  };
+
+  // Convert client pointer coords -> canvas world coords (object-fit: contain aware)
+  const getCanvasCoordinates = (e: { clientX?: number; clientY?: number }): { x: number; y: number } => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
     try {
-        const rect = canvas.getBoundingClientRect();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (e.clientX || 0) - rect.left;
+      const mouseY = (e.clientY || 0) - rect.top;
 
-        // Posição do mouse relativa ao elemento canvas (em pixels de CSS)
-        const mouseX = (e.clientX || 0) - rect.left;
-        const mouseY = (e.clientY || 0) - rect.top;
+      const displayWidth = rect.width || 1;
+      const displayHeight = rect.height || 1;
+      const bufferWidth = canvas.width / (dprRef.current || 1);
+      const bufferHeight = canvas.height / (dprRef.current || 1);
 
-        // O tamanho real do canvas na tela (pode ser esticado pelo CSS)
-        const displayWidth = rect.width;
-        const displayHeight = rect.height;
+      const canvasAspect = bufferWidth / bufferHeight;
+      const displayAspect = displayWidth / displayHeight;
 
-        // A resolução interna do canvas (o buffer de desenho)
-        const bufferWidth = canvas.width / (dprRef.current || 1);
-        const bufferHeight = canvas.height / (dprRef.current || 1);
-        
-        // Com 'object-fit: contain', a imagem renderizada preserva seu aspect ratio e é centralizada
-        const canvasAspect = bufferWidth / bufferHeight;
-        const displayAspect = displayWidth / displayHeight;
-        
-        let renderedWidth = displayWidth;
-        let renderedHeight = displayHeight;
-        let renderedLeft = 0;
-        let renderedTop = 0;
-        
-        if (canvasAspect > displayAspect) {
-          // Canvas é mais largo que o container; a altura é "letterboxed" (bordas em cima e embaixo)
-          renderedHeight = displayWidth / canvasAspect;
-          renderedTop = (displayHeight - renderedHeight) / 2;
-        } else {
-          // Canvas é mais alto que o container; a largura é "letterboxed" (bordas laterais)
-          renderedWidth = displayHeight * canvasAspect;
-          renderedLeft = (displayWidth - renderedWidth) / 2;
-        }
-        
-        // Ajusta a posição do mouse para ser relativa apenas à área realmente renderizada da imagem
-        const adjustedMouseX = mouseX - renderedLeft;
-        const adjustedMouseY = mouseY - renderedTop;
+      let renderedWidth = displayWidth;
+      let renderedHeight = displayHeight;
+      let renderedLeft = 0;
+      let renderedTop = 0;
 
-        const correctedX = adjustedMouseX * (bufferWidth / renderedWidth);
-        const correctedY = adjustedMouseY * (bufferHeight / renderedHeight);
+      if (canvasAspect > displayAspect) {
+        renderedHeight = displayWidth / canvasAspect;
+        renderedTop = (displayHeight - renderedHeight) / 2;
+      } else {
+        renderedWidth = displayHeight * canvasAspect;
+        renderedLeft = (displayWidth - renderedWidth) / 2;
+      }
 
-        const scale = scaleRef.current || 1;
-        const pan = panRef.current || { x: 0, y: 0 };
+      const adjustedMouseX = mouseX - renderedLeft;
+      const adjustedMouseY = mouseY - renderedTop;
 
-        // Aplica o inverso do pan e do zoom para obter as coordenadas do "mundo" do canvas
-        const worldX = (correctedX - pan.x) / scale;
-        const worldY = (correctedY - pan.y) / scale;
+      const correctedX = adjustedMouseX * (bufferWidth / renderedWidth);
+      const correctedY = adjustedMouseY * (bufferHeight / renderedHeight);
 
-        // debug logging disabled
+      const scale = scaleRef.current || 1;
+      const pan = panRef.current || { x: 0, y: 0 };
 
-        return { x: worldX, y: worldY };
-    } catch (err) {
-        console.error("Falha ao calcular coordenadas do canvas:", err);
-        return { x: 0, y: 0 };
+      return {
+        x: (correctedX - pan.x) / scale,
+        y: (correctedY - pan.y) / scale,
+      };
+    } catch {
+      return { x: 0, y: 0 };
     }
   };
 
-  const colors = COLOR_PALETTES[mode];
-  const handleColorChange = (newColor: string) => {
-    try {
-      setColor(newColor);
-      // if there's an active drawing layer, update its context strokeStyle so changes take effect immediately
-      if (selectedLayer) {
-        const layer = layers.find(l => l.id === selectedLayer);
-        if (layer && layer.type === 'drawing' && layer.drawingCanvas) {
-          const ctx = layer.drawingCanvas.getContext('2d');
-          if (ctx) {
-            if (censorMode) ctx.strokeStyle = '#000000'; else ctx.strokeStyle = newColor;
-            // shadow settings
-            if (!censorMode) {
-              ctx.shadowColor = mode === 'filter' ? 'rgba(255,255,255,0.9)' : newColor;
-            }
-          }
+  // Measure layer bounds in unrotated world space
+  const getLayerBounds = (
+    layer: Layer,
+    ctx: CanvasRenderingContext2D | null
+  ): { x: number; y: number; w: number; h: number } | null => {
+    if (layer.type === 'image' && layer.img) {
+      const w = (layer.img.naturalWidth || layer.width || 100) * (layer.scale || 1);
+      const h = (layer.img.naturalHeight || layer.height || 100) * (layer.scale || 1);
+      return { x: (layer.x || 0) - w / 2, y: (layer.y || 0) - h / 2, w, h };
+    }
+    if (layer.type === 'text') {
+      const size = Math.max(8, layer.size || textSize);
+      const lines = (layer.text || '').split('\n');
+      let maxW = size * 2;
+      if (ctx) {
+        ctx.save();
+        ctx.font = getCanvasFont(size, layer.fontStyle || 'mono');
+        for (const line of lines) {
+          maxW = Math.max(maxW, ctx.measureText(line).width);
         }
+        ctx.restore();
       }
-    } catch (e) { /* handleColorChange error suppressed */ }
+      const h = Math.max(1, lines.length) * size * 1.25;
+      return { x: layer.x || 0, y: layer.y || 0, w: maxW, h };
+    }
+    return null;
   };
-  const hoveredHandleRef = useRef<string | null>(null);
-  const undoStackRef = useRef<any[]>([]);
-  const redoStackRef = useRef<any[]>([]);
-  const HISTORY_LIMIT = 50;
-  const [undoAvailable, setUndoAvailable] = useState(false);
-  const [redoAvailable, setRedoAvailable] = useState(false);
 
+  const mapBlendOp = (blendMode?: string): GlobalCompositeOperation => {
+    switch ((blendMode || '').toLowerCase()) {
+      case 'multiply':
+        return 'multiply';
+      case 'screen':
+        return 'screen';
+      case 'overlay':
+        return 'overlay';
+      case 'add':
+        return 'lighter';
+      case 'darken':
+        return 'darken';
+      case 'lighten':
+        return 'lighten';
+      default:
+        return 'source-over';
+    }
+  };
+
+  // Unified layer renderer (used by redrawAll, flashlight simulation, and clean PNG export)
+  const drawLayerToContext = (
+    ctxToDraw: CanvasRenderingContext2D,
+    layer: Layer,
+    clearW: number,
+    clearH: number
+  ) => {
+    const bloomVal = typeof layer.bloom === 'number' ? layer.bloom : 0;
+
+    switch (layer.type) {
+      case 'image':
+        if (layer.img && layer.img.complete && (layer.img.naturalWidth || layer.img.width) > 0) {
+          const w = (layer.img.naturalWidth || layer.width || 100) * (layer.scale || 1);
+          const h = (layer.img.naturalHeight || layer.height || 100) * (layer.scale || 1);
+          const cx = layer.x || 0;
+          const cy = layer.y || 0;
+          const rot = layer.rotation || 0;
+
+          ctxToDraw.save();
+          ctxToDraw.translate(cx, cy);
+          if (rot) ctxToDraw.rotate(rot);
+          if (bloomVal > 0) {
+            ctxToDraw.shadowColor = layer.stampColor || layer.color || '#b366ff';
+            ctxToDraw.shadowBlur = (bloomVal / 100) * 28;
+          }
+          ctxToDraw.drawImage(layer.img, -w / 2, -h / 2, w, h);
+          if (bloomVal > 50) {
+            // Secondary glow pass for strong neon stamps
+            ctxToDraw.shadowBlur = (bloomVal / 100) * 14;
+            ctxToDraw.drawImage(layer.img, -w / 2, -h / 2, w, h);
+          }
+          ctxToDraw.restore();
+        }
+        break;
+
+      case 'text':
+        if (layer.text) {
+          const size = Math.max(8, layer.size || textSize);
+          const fontStr = getCanvasFont(size, layer.fontStyle || 'mono');
+          const lines = layer.text.split('\n');
+          const textColor = layer.color || color;
+
+          ctxToDraw.save();
+          ctxToDraw.font = fontStr;
+          ctxToDraw.textBaseline = 'top';
+          ctxToDraw.fillStyle = textColor;
+
+          let maxW = 0;
+          for (const line of lines) {
+            maxW = Math.max(maxW, ctxToDraw.measureText(line).width);
+          }
+          const totalH = lines.length * size * 1.25;
+          const ox = layer.x || 0;
+          const oy = layer.y || 0;
+          const cx = ox + maxW / 2;
+          const cy = oy + totalH / 2;
+          const rot = layer.rotation || 0;
+
+          if (rot) {
+            ctxToDraw.translate(cx, cy);
+            ctxToDraw.rotate(rot);
+            ctxToDraw.translate(-cx, -cy);
+          }
+
+          if (bloomVal > 0) {
+            ctxToDraw.shadowColor = textColor;
+            ctxToDraw.shadowBlur = (bloomVal / 100) * 26;
+          }
+
+          lines.forEach((line, idx) => {
+            const ly = oy + idx * size * 1.25;
+            ctxToDraw.fillText(line, ox, ly);
+            if (bloomVal > 45) {
+              ctxToDraw.shadowBlur = (bloomVal / 100) * 12;
+              ctxToDraw.fillText(line, ox, ly);
+            }
+          });
+          ctxToDraw.restore();
+        }
+        break;
+
+      case 'drawing':
+        if (layer.drawingCanvas) {
+          ctxToDraw.drawImage(layer.drawingCanvas, 0, 0, clearW, clearH);
+        }
+        break;
+
+      case 'group':
+        if (layer.childrenData && Array.isArray(layer.childrenData)) {
+          ctxToDraw.save();
+          ctxToDraw.translate(layer.x || 0, layer.y || 0);
+          ctxToDraw.scale(layer.scale || 1, layer.scale || 1);
+          for (const child of layer.childrenData) {
+            if (!child.visible) continue;
+            ctxToDraw.save();
+            ctxToDraw.globalAlpha = (child.opacity ?? 100) / 100;
+            ctxToDraw.globalCompositeOperation = mapBlendOp(child.blendMode);
+            drawLayerToContext(ctxToDraw, child, clearW, clearH);
+            ctxToDraw.restore();
+          }
+          ctxToDraw.restore();
+        }
+        break;
+    }
+  };
+
+  // Render a list of layers (with masks) onto target context
+  const renderLayersList = (
+    ctx: CanvasRenderingContext2D,
+    list: Layer[],
+    clearW: number,
+    clearH: number,
+    dpr: number,
+    applyViewportTransform: boolean
+  ) => {
+    for (const layer of list) {
+      if (!layer.visible) continue;
+
+      if (layer.mask) {
+        try {
+          const temp = document.createElement('canvas');
+          temp.width = Math.round(clearW * dpr);
+          temp.height = Math.round(clearH * dpr);
+          const tctx = temp.getContext('2d');
+          if (!tctx) continue;
+          tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          tctx.save();
+          tctx.globalAlpha = (layer.opacity ?? 100) / 100;
+          drawLayerToContext(tctx, layer, clearW, clearH);
+          tctx.restore();
+
+          tctx.globalCompositeOperation = 'destination-in';
+          tctx.drawImage(layer.mask, 0, 0, clearW, clearH);
+          tctx.globalCompositeOperation = 'source-over';
+
+          ctx.save();
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = mapBlendOp(layer.blendMode);
+          ctx.drawImage(temp, 0, 0, clearW, clearH);
+          ctx.restore();
+        } catch {
+          // ignore mask failure
+        }
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = (layer.opacity ?? 100) / 100;
+      ctx.globalCompositeOperation = mapBlendOp(layer.blendMode);
+      drawLayerToContext(ctx, layer, clearW, clearH);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
+    }
+    void applyViewportTransform;
+  };
+
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor);
+    const selId = selectedLayerRef.current;
+    if (selId) {
+      setLayers((prev) =>
+        prev.map((l) => {
+          if (l.id !== selId) return l;
+          if (l.type === 'text') return { ...l, color: newColor };
+          return l;
+        })
+      );
+    }
+  };
+
+  // History serialization
   const serializeState = () => {
     try {
       const serializeLayer = (l: Layer): any => {
         const copy: any = { ...l };
-        if (l.img && (l as any).img.src) copy.imgSrc = (l as any).img.src;
+        if (l.img && l.img.src) copy.imgSrc = l.img.src;
         delete copy.img;
         if (l.drawingCanvas) {
-          try { copy.drawingData = l.drawingCanvas.toDataURL(); } catch (e) { copy.drawingData = null; }
+          try {
+            copy.drawingData = l.drawingCanvas.toDataURL();
+          } catch {
+            copy.drawingData = null;
+          }
         }
         if (l.mask) {
-          try { copy.maskData = (l.mask as HTMLCanvasElement).toDataURL(); } catch (e) { copy.maskData = null; }
+          try {
+            copy.maskData = l.mask.toDataURL();
+          } catch {
+            copy.maskData = null;
+          }
         }
-        // handle group children recursively
-        if ((l as any).childrenData && Array.isArray((l as any).childrenData)) {
-          copy.childrenData = (l as any).childrenData.map((c: Layer) => serializeLayer(c));
+        if (l.childrenData && Array.isArray(l.childrenData)) {
+          copy.childrenData = l.childrenData.map((c: Layer) => serializeLayer(c));
         }
-        delete copy.cachedCanvas;
         return copy;
       };
-      const layersCopy = layers.map(l => serializeLayer(l));
-      return { layers: layersCopy };
-    } catch (e) { return { layers: [] }; }
+      return { layers: layersRef.current.map((l) => serializeLayer(l)) };
+    } catch {
+      return { layers: [] };
+    }
   };
 
   const restoreState = (snapshot: any) => {
@@ -358,198 +968,75 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
       const canvas = canvasRef.current;
       if (!canvas) return;
       const dpr = dprRef.current || 1;
-      const cssW = cssWidthRef.current || (canvas.width / dpr);
-      const cssH = cssHeightRef.current || (canvas.height / dpr);
+      const cssW = cssWidthRef.current || canvas.width / dpr;
+      const cssH = cssHeightRef.current || canvas.height / dpr;
 
-      const restoredLayers: Layer[] = snapshot.layers.map((s: any) => {
-        const buildLayer = (src: any): any => {
-          const base: any = { ...src };
-          if (src.imgSrc) {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = src.imgSrc;
-            base.img = img;
-          }
-          if (src.drawingData) {
-            try {
-              const c = document.createElement('canvas');
-              c.width = Math.round(cssW * dpr);
-              c.height = Math.round(cssH * dpr);
-              const ctx = c.getContext('2d');
-              if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-              const img = new Image();
-              img.onload = () => { try { ctx?.drawImage(img, 0, 0); redrawAll(); } catch (e) {} };
-              img.src = src.drawingData;
-              base.drawingCanvas = c;
-            } catch (e) {}
-          }
-          if (src.maskData) {
-            try {
-              const mc = document.createElement('canvas');
-              mc.width = Math.round(cssW * dpr);
-              mc.height = Math.round(cssH * dpr);
-              const mctx = mc.getContext('2d');
-              if (mctx) mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-              const mimg = new Image();
-              mimg.onload = () => { try { mctx?.drawImage(mimg, 0, 0); redrawAll(); } catch (e) {} };
-              mimg.src = src.maskData;
-              base.mask = mc;
-            } catch (e) {}
-          }
-          if (src.childrenData && Array.isArray(src.childrenData)) {
-            base.childrenData = src.childrenData.map((c: any) => buildLayer(c));
-          }
-          delete base.imgSrc;
-          delete base.drawingData;
-          delete base.cachedCanvas;
-          return base as Layer;
-        };
-        return buildLayer(s);
-      });
-
-      setLayers(restoredLayers);
-      // no global offscreen drawing to restore; drawings are stored per-layer
-      redrawAll();
-    } catch (e) {}
-  };
-
-    // Pan / zoom refs & handlers
-    const isPanningRef = useRef(false);
-    const panStartRef = useRef<{x:number,y:number}|null>(null);
-
-    const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      // require Ctrl/Cmd for zoom to avoid hijacking scroll
-      if (!(e.ctrlKey || e.metaKey)) return;
-      e.preventDefault();
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const prevScale = scaleRef.current || 1;
-      const delta = -e.deltaY;
-      const factor = Math.exp(delta * 0.001);
-      const newScale = Math.min(4, Math.max(0.2, prevScale * factor));
-
-      // map mouse position to world coordinates (before transform)
-      const worldX = (mouseX - panRef.current.x) / prevScale;
-      const worldY = (mouseY - panRef.current.y) / prevScale;
-
-      // compute new pan so that world point stays under the cursor
-      const newPanX = mouseX - worldX * newScale;
-      const newPanY = mouseY - worldY * newScale;
-
-      scaleRef.current = newScale;
-      panRef.current.x = newPanX;
-      panRef.current.y = newPanY;
-
-      // ensure pan stays within visible image bounds
-      clampPan();
-      redrawAll();
-    };
-
-    const handlePointerDownGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      // debug: handlePointerDownGeneric
-      try { if (typeof e.pointerId === 'number') pointerMapRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); } catch (err) {}
-      // middle (1) or right (2) button -> start panning
-      if (e.button === 1 || e.button === 2) {
-        isPanningRef.current = true;
-        panStartRef.current = { x: e.clientX, y: e.clientY };
-        try { (e.target as Element).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } catch (err) {}
-        return;
-      }
-      const handled = handleCanvasClick(e);
-      // debug: handlePointerDownGeneric handled?
-      if (!handled && (tool === 'draw' || tool === 'erase')) startDrawing(e);
-    };
-
-    const handlePointerMoveGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      // Store latest coords as plain object (React synthetic events are pooled)
-      latestMoveRef.current = { clientX: e.clientX, clientY: e.clientY, pointerId: (e as any).pointerId, buttons: (e as any).buttons };
-
-      // Lightweight logging — keep frequency low to avoid console spam
-      if (isPanningRef.current) {
-        // debug: panning scheduled
-      } else {
-        // debug: move scheduled
-      }
-
-      // If a processing RAF is already scheduled, we'll let it pick up the latestMoveRef
-      if (moveScheduledRef.current) return;
-      moveScheduledRef.current = true;
-
-      requestAnimationFrame(() => {
-        moveScheduledRef.current = false;
-        const m = latestMoveRef.current;
-        if (!m) return;
-
-        // Process panning immediately with the latest coordinates
-        if (isPanningRef.current && panStartRef.current) {
-          const dx = m.clientX - panStartRef.current.x;
-          const dy = m.clientY - panStartRef.current.y;
-          panStartRef.current = { x: m.clientX, y: m.clientY };
-          panRef.current.x += dx;
-          panRef.current.y += dy;
-          clampPan();
-          redrawAll();
-          return;
+      const buildLayer = (src: any): Layer => {
+        const base: any = { ...src };
+        if (src.imgSrc) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => redrawAll();
+          img.src = src.imgSrc;
+          base.img = img;
         }
-        // update cursor overlay position
-        try {
-          const canvasEl = canvasRef.current;
-          const containerEl = canvasContainerRef.current;
-          const rect = canvasEl?.getBoundingClientRect();
-          const containerRect = containerEl?.getBoundingClientRect();
-          if (rect && canvasEl && containerRect) {
-            const displayWidth = rect.width;
-            const displayHeight = rect.height;
-            const bufferWidth = canvasEl.width / (dprRef.current || 1);
-            const bufferHeight = canvasEl.height / (dprRef.current || 1);
-            
-            const canvasAspect = bufferWidth / bufferHeight;
-            const displayAspect = displayWidth / displayHeight;
-            
-            let renderedWidth = displayWidth;
-            if (canvasAspect < displayAspect) {
-              renderedWidth = displayHeight * canvasAspect;
-            }
-            
-            const objectFitScale = renderedWidth / bufferWidth;
-            const visualSize = brushSize * objectFitScale * (scaleRef.current || 1);
+        if (src.drawingData) {
+          const c = document.createElement('canvas');
+          c.width = Math.round(cssW * dpr);
+          c.height = Math.round(cssH * dpr);
+          const ctx = c.getContext('2d');
+          if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const img = new Image();
+          img.onload = () => {
+            try {
+              ctx?.drawImage(img, 0, 0, cssW, cssH);
+              redrawAll();
+            } catch {}
+          };
+          img.src = src.drawingData;
+          base.drawingCanvas = c;
+        }
+        if (src.maskData) {
+          const mc = document.createElement('canvas');
+          mc.width = Math.round(cssW * dpr);
+          mc.height = Math.round(cssH * dpr);
+          const mctx = mc.getContext('2d');
+          if (mctx) mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const mimg = new Image();
+          mimg.onload = () => {
+            try {
+              mctx?.drawImage(mimg, 0, 0, cssW, cssH);
+              redrawAll();
+            } catch {}
+          };
+          mimg.src = src.maskData;
+          base.mask = mc;
+        }
+        if (src.childrenData && Array.isArray(src.childrenData)) {
+          base.childrenData = src.childrenData.map((c: any) => buildLayer(c));
+        }
+        delete base.imgSrc;
+        delete base.drawingData;
+        delete base.maskData;
+        return base as Layer;
+      };
 
-            setMaskCursor({ x: m.clientX - containerRect.left, y: m.clientY - containerRect.top, size: visualSize, visible: true });
-          }
-        } catch (e) {}
-
-        // Not panning — forward a plain object to draw which expects minimal mouse fields
-        draw({ clientX: m.clientX, clientY: m.clientY, pointerId: m.pointerId, buttons: m.buttons });
-      });
-    };
-
-    const handlePointerUpGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      // debug: handlePointerUpGeneric
-      try { if (typeof e.pointerId === 'number') pointerMapRef.current.delete(e.pointerId); } catch (err) {}
-      if (isPanningRef.current) {
-        isPanningRef.current = false;
-        panStartRef.current = null;
-        try { (e.target as Element).releasePointerCapture?.(e.pointerId); } catch (err) {}
-        return;
-      }
-      stopDrawing();
-    };
+      const restoredLayers: Layer[] = snapshot.layers.map((s: any) => buildLayer(s));
+      setLayers(restoredLayers);
+      redrawAll();
+    } catch {}
+  };
 
   const pushHistory = () => {
     try {
       const snap = serializeState();
       undoStackRef.current.push(snap);
       if (undoStackRef.current.length > HISTORY_LIMIT) undoStackRef.current.shift();
-      // clear redo on new action
       redoStackRef.current = [];
       setUndoAvailable(undoStackRef.current.length > 0);
       setRedoAvailable(false);
-    } catch (e) {}
+      setDrawMutationCount((c) => c + 1);
+    } catch {}
   };
 
   const undo = () => {
@@ -557,13 +1044,11 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
       if (undoStackRef.current.length === 0) return;
       const snap = undoStackRef.current.pop();
       if (!snap) return;
-      // push current to redo
-      const cur = serializeState();
-      redoStackRef.current.push(cur);
+      redoStackRef.current.push(serializeState());
       restoreState(snap);
       setUndoAvailable(undoStackRef.current.length > 0);
       setRedoAvailable(redoStackRef.current.length > 0);
-    } catch (e) {}
+    } catch {}
   };
 
   const redo = () => {
@@ -571,324 +1056,61 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
       if (redoStackRef.current.length === 0) return;
       const snap = redoStackRef.current.pop();
       if (!snap) return;
-      const cur = serializeState();
-      undoStackRef.current.push(cur);
+      undoStackRef.current.push(serializeState());
       restoreState(snap);
       setUndoAvailable(undoStackRef.current.length > 0);
       setRedoAvailable(redoStackRef.current.length > 0);
-    } catch (e) {}
+    } catch {}
   };
 
-  const historyFileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const exportHistory = () => {
-    try {
-      const payload = JSON.stringify({ undo: undoStackRef.current, redo: redoStackRef.current });
-      const blob = new Blob([payload], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `uv_history_${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      try { URL.revokeObjectURL(url); } catch (e) {}
-    } catch (e) {}
-  };
-
-  const importHistoryFile = (file: File | null) => {
-    if (!file) return;
-    const fr = new FileReader();
-    fr.onload = () => {
-      try {
-        const txt = String(fr.result || '');
-        const parsed = JSON.parse(txt);
-        undoStackRef.current = Array.isArray(parsed.undo) ? parsed.undo : [];
-        redoStackRef.current = Array.isArray(parsed.redo) ? parsed.redo : [];
-        setUndoAvailable(undoStackRef.current.length > 0);
-        setRedoAvailable(redoStackRef.current.length > 0);
-      } catch (e) {}
-    };
-    fr.readAsText(file);
-  };
-
-  // Keyboard shortcuts for undo/redo
-  useEffect(() => {
-    const handler = (ev: KeyboardEvent) => {
-      const mod = ev.ctrlKey || ev.metaKey;
-      if (!mod) return;
-      if (ev.key.toLowerCase() === 'z') {
-        ev.preventDefault();
-        if (ev.shiftKey) redo(); else undo();
-      } else if (ev.key.toLowerCase() === 'y') {
-        ev.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  // Shortcuts for brush/mask quick actions (x toggles eraser, [/] adjust brush, b toggles mask paint mode)
-  useEffect(() => {
-    const handler = (ev: KeyboardEvent) => {
-      const target = ev.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      if (ev.key === 'x') {
-        ev.preventDefault();
-        setMaskUseEraser(prev => !prev);
-      } else if (ev.key === '[') {
-        ev.preventDefault();
-        setBrushSize(s => Math.max(1, (s || 1) - 1));
-      } else if (ev.key === ']') {
-        ev.preventDefault();
-        setBrushSize(s => Math.min(500, (s || 1) + 1));
-      } else if (ev.key.toLowerCase() === 'b') {
-        ev.preventDefault();
-        setMaskPaintMode(m => m === 'hide' ? 'reveal' : 'hide');
-      } else if (ev.key.toLowerCase() === 'm') {
-        // toggle mask edit for selected layer
-        ev.preventDefault();
-        if (selectedLayer) try { toggleEditMask(selectedLayer); } catch (e) {}
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [selectedLayer]);
-
-  // Paste logic: automatically create a new image layer from clipboard images
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            e.preventDefault();
-            const url = URL.createObjectURL(file);
-            objectUrlsRef.current.push(url);
-            
-            const img = new Image();
-            img.onload = () => {
-              const cssW = cssWidthRef.current || 800;
-              const cssH = cssHeightRef.current || 600;
-              const id = `layer-paste-${Date.now()}`;
-              
-              const newLayer: Layer = {
-                id,
-                type: 'image',
-                name: 'Imagem Colada',
-                visible: true,
-                opacity: 100,
-                locked: false,
-                x: cssW / 2,
-                y: cssH / 2,
-                scale: 1,
-                img: img
-              };
-              
-              try {
-                // Generate a preview dataURL for the thumbnail
-                const thumbW = 64;
-                const thumbH = Math.round((img.naturalHeight || img.height || cssH) * (thumbW / (img.naturalWidth || img.width || cssW)));
-                const c = document.createElement('canvas');
-                c.width = thumbW;
-                c.height = Math.max(1, thumbH);
-                const ctx = c.getContext('2d');
-                if (ctx) {
-                  ctx.drawImage(img, 0, 0, c.width, c.height);
-                  (newLayer as any).preview = c.toDataURL();
-                }
-              } catch (err) {}
-              
-              setLayers(prev => [newLayer, ...prev]);
-              setSelectedLayer(id);
-              redrawAll();
-              try { setTimeout(() => pushHistory(), 0); } catch(err){}
-            };
-            img.src = url;
-            break;
-          }
-        }
-      }
-    };
-    
-    document.addEventListener('paste', handlePaste);
-    return () => {
-      document.removeEventListener('paste', handlePaste);
-    };
-  }, []);
-
-  // Cleanup RAF on unmount
-  useEffect(() => {
-    const cancelAllRafs = () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-      if (redrawRafIdRef.current !== null) {
-        cancelAnimationFrame(redrawRafIdRef.current);
-        redrawRafIdRef.current = null;
-      }
-    };
-
-    return () => {
-      cancelAllRafs();
-    };
-  }, []);
-
-  useEffect(() => {
+  // Create or find an unlocked drawing layer synchronously
+  const ensureDrawingLayer = (): Layer | null => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    try { console.debug('UVEditor: useEffect start', { baseImageUrl, initialImageFile }); } catch (e) {}
-    // Try loading with CORS first, then retry without crossOrigin on failure
-    let img: HTMLImageElement = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = baseImageUrl;
-    img.onload = () => {
-      try { console.debug('UVEditor: base image loaded', { src: baseImageUrl, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight }); } catch (e) {}
-      const maxWidth = 800;
-      const scale = Math.min(1, maxWidth / img.naturalWidth);
-      const dpr = window.devicePixelRatio || 1;
-      dprRef.current = dpr;
-      // Set canvas pixel size taking DPR into account, keep CSS size as expected
-      const cssWidth = Math.round(img.naturalWidth * scale);
-      const cssHeight = Math.round(img.naturalHeight * scale);
-      cssWidthRef.current = cssWidth;
-      cssHeightRef.current = cssHeight;
-      canvas.width = Math.round(cssWidth * dpr);
-      canvas.height = Math.round(cssHeight * dpr);
-      canvas.style.width = `${cssWidth}px`;
-      canvas.style.height = `${cssHeight}px`;
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      try { console.debug('UVEditor init', { canvasWidth: canvas.width, canvasHeight: canvas.height, mode, baseImageUrl }); } catch(e) {}
-      // offscreen drawing canvas removed: drawings are stored in per-layer canvases
-      if (ctx) ctx.clearRect(0, 0, cssWidth, cssHeight);
-      // if an initial image file (e.g. glitch) was provided, add it as an image layer centered
-      if (initialImageFile) {
-        const url = URL.createObjectURL(initialImageFile);
-        objectUrlsRef.current.push(url);
-        const img2 = new Image();
-        img2.crossOrigin = 'anonymous';
-        img2.src = url;
-        img2.onload = () => {
-          try {
-            const id = `layer-${Date.now()}`;
-            const naturalW = img2.naturalWidth || img2.width || 100;
-            const scaleToFit = Math.min(1, canvas.width / naturalW, canvas.height / (img2.naturalHeight || img2.height || 100));
-            // prepare preview for the new layer
-            let previewData: string | undefined = undefined;
-            try {
-              const thumbW = 64;
-              const thumbH = Math.max(1, Math.round((img2.naturalHeight || img2.height || 100) * (thumbW / naturalW)));
-              const tc = document.createElement('canvas');
-              tc.width = thumbW;
-              tc.height = thumbH;
-              const tctx = tc.getContext('2d');
-              if (tctx) tctx.drawImage(img2, 0, 0, tc.width, tc.height);
-              previewData = tc.toDataURL();
-            } catch (e) {}
-
-            setLayers(prev => [...prev, { 
-              id, 
-              type: 'image', 
-              name: 'Imagem Inicial',
-              visible: true,
-              opacity: 100,
-              locked: false,
-              x: (cssWidthRef.current || (canvas.width / (dprRef.current||1))) / 2, 
-              y: (cssHeightRef.current || (canvas.height / (dprRef.current||1))) / 2, 
-              img: img2, 
-              scale: scaleToFit 
-            , preview: previewData }]);
-            setSelectedLayer(id);
-            redrawAll();
-            try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-            try { console.debug('UVEditor: initialImageFile layer added', { id, src: img2.src, naturalWidth: img2.naturalWidth, naturalHeight: img2.naturalHeight }); } catch(e) {}
-          } catch (e) {
-            // ignore
-          }
-        };
-        img2.onerror = () => { try { console.error('UVEditor: failed to load initialImageFile', { src: url }); } catch(e) {} };
-        // cleanup object url when component unmounts
-        const cleanup = () => { try { URL.revokeObjectURL(url); } catch (e) {};
-          const idx = objectUrlsRef.current.indexOf(url); if (idx >= 0) objectUrlsRef.current.splice(idx, 1);
-        };
-        // schedule cleanup on unmount
-        (canvas as any).__initialImageCleanup = cleanup;
+    if (!canvas) return null;
+    const currentLayers = layersRef.current;
+    const sel = currentLayers.find((l) => l.id === selectedLayerRef.current);
+    if (sel && !sel.locked && (sel.type === 'drawing' || sel.isEditingMask)) {
+      return sel;
+    }
+    // Find topmost unlocked drawing layer (excluding __base_image)
+    for (let i = currentLayers.length - 1; i >= 0; i--) {
+      const l = currentLayers[i];
+      if (l.id !== '__base_image' && l.type === 'drawing' && !l.locked && l.drawingCanvas) {
+        setSelectedLayer(l.id);
+        return l;
       }
-    img.onerror = () => {
-      try { console.warn('UVEditor: base image load with crossOrigin failed, retrying without crossOrigin', { src: baseImageUrl }); } catch (e) {}
-      // Retry without crossOrigin in case remote server doesn't permit anonymous CORS
-      const img2 = new Image();
-      img2.onload = img.onload;
-      img2.onerror = () => { try { console.error('UVEditor: failed to load baseImageUrl', { src: baseImageUrl }); } catch(e) {} };
-      img = img2;
-      try { img.src = baseImageUrl; } catch (e) { try { console.error('UVEditor: setting retry src failed', e); } catch (e2) {} }
-    };
-      // Ensure base image is available as a locked background layer so it's always rendered
-        try {
-        setLayers(prev => {
-          const exists = prev.some(l => l.id === '__base_image');
-          if (exists) { try { console.debug('UVEditor: __base_image already exists, skipping add'); } catch(e) {} return prev; }
-          
-          const m = document.createElement('canvas');
-          const dpr = dprRef.current || 1;
-          m.width = Math.round(cssWidth * dpr);
-          m.height = Math.round(cssHeight * dpr);
-          const mctx = m.getContext('2d');
-          if (mctx) {
-            mctx.fillStyle = '#ffffff';
-            mctx.fillRect(0, 0, m.width, m.height);
-            mctx.drawImage(img, 0, 0, m.width, m.height);
-          }
+    }
+    // Auto-create a fresh UV drawing layer
+    const dpr = dprRef.current || 1;
+    const cssW = cssWidthRef.current || canvas.width / dpr;
+    const cssH = cssHeightRef.current || canvas.height / dpr;
+    const drawCanvas = document.createElement('canvas');
+    drawCanvas.width = Math.round(cssW * dpr);
+    drawCanvas.height = Math.round(cssH * dpr);
+    const drawCtx = drawCanvas.getContext('2d');
+    if (drawCtx) drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-          const baseLayer: Layer = {
-            id: '__base_image',
-            type: 'drawing',
-            name: 'Plano de Fundo',
-            visible: true,
-            opacity: 100,
-            locked: true,
-            x: 0,
-            y: 0,
-            drawingCanvas: m,
-          };
-          try { console.debug('UVEditor: adding __base_image layer as drawing'); } catch(e) {}
-          // generate a small preview dataURL for layer thumbnails
-          try {
-            const thumbW = 64;
-            const thumbH = Math.round((img.naturalHeight || img.height || cssHeight) * (thumbW / (img.naturalWidth || img.width || cssWidth)));
-            const c = document.createElement('canvas');
-            c.width = thumbW;
-            c.height = Math.max(1, thumbH);
-            const ctx = c.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, c.width, c.height);
-              (baseLayer as any).preview = c.toDataURL();
-            }
-          } catch (e) {}
-          return [baseLayer, ...prev];
-        });
-      } catch (e) {}
+    const id = `layer-draw-${Date.now()}`;
+    const newLayer: Layer = {
+      id,
+      type: 'drawing',
+      name: `Camada UV ${currentLayers.filter((l) => l.type === 'drawing' && l.id !== '__base_image').length + 1}`,
+      visible: true,
+      opacity: 100,
+      locked: false,
+      drawingCanvas: drawCanvas,
+      x: 0,
+      y: 0,
     };
-    return () => {
-      // revoke any initial image url
-      const cleanup = (canvasRef.current as any)?.__initialImageCleanup;
-      if (cleanup && typeof cleanup === 'function') cleanup();
-    };
-  }, [baseImageUrl, initialImageFile]);
+    layersRef.current = [...currentLayers, newLayer];
+    setLayers((prev) => [...prev, newLayer]);
+    setSelectedLayer(id);
+    return newLayer;
+  };
 
-  // redraw main canvas from layers (simplified, direct draw)
-  const redrawAll = () => {
+  // Main canvas redraw
+  const redrawAll = useCallback(() => {
     if (redrawScheduledRef.current) return;
-    try { console.debug('redrawAll requested', { layersCount: layers.length, pendingRAF: redrawScheduledRef.current }); } catch (e) {}
     try {
       const now = performance.now();
       const since = now - (lastRedrawRef.current || 0);
@@ -901,7 +1123,7 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
         }
         return;
       }
-    } catch (e) {}
+    } catch {}
 
     redrawScheduledRef.current = true;
     redrawRafIdRef.current = requestAnimationFrame(() => {
@@ -909,2224 +1131,2017 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
       redrawRafIdRef.current = null;
 
       const canvas = canvasRef.current;
-      if (!canvas) {
-        try { console.warn('redrawAll: no canvasRef'); } catch (e) {}
-        return;
-      }
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      try {
-        const hasBase = layers.some(l => l.id === '__base_image');
-        if (!hasBase) console.warn('redrawAll: no __base_image layer present');
-      } catch (e) {}
+      const dpr = dprRef.current || 1;
+      const clearW = cssWidthRef.current || canvas.width / dpr;
+      const clearH = cssHeightRef.current || canvas.height / dpr;
+      const zoom = scaleRef.current || 1;
+      const p = panRef.current || { x: 0, y: 0 };
+      const curLayers = layersRef.current;
+      const curPreview = previewModeRef.current;
 
-      const clearW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-      const clearH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
+      // 1. Reset transform to DPR baseline, clear, apply pan & zoom
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, clearW, clearH);
+      ctx.translate(p.x, p.y);
+      ctx.scale(zoom, zoom);
 
-      // 1. Apply DPR baseline, clear, then apply pan & zoom to canvas context (not DOM)
-      try {
-        const dpr = dprRef.current || 1;
-        const zoom = scaleRef.current || 1;
-        const p = panRef.current || { x: 0, y: 0 };
-        // reset transform to DPR baseline so coordinates are in CSS pixels
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        // clear full CSS-area
-        ctx.clearRect(0, 0, clearW, clearH);
-        // apply pan & zoom in CSS-pixel space
-        ctx.translate(p.x, p.y);
-        ctx.scale(zoom, zoom);
-      } catch (e) {}
+      const baseLayer = curLayers.find((l) => l.id === '__base_image');
+      const secretLayers = curLayers.filter((l) => l.id !== '__base_image');
 
-      // 3. Draw layers from bottom to top
-      const mapBlendOp = (mode?: string) => {
-        switch ((mode || '').toLowerCase()) {
-          case 'multiply': return 'multiply';
-          case 'screen': return 'screen';
-          case 'overlay': return 'overlay';
-          case 'add': return 'lighter';
-          case 'darken': return 'darken';
-          case 'lighten': return 'lighten';
-          default: return 'source-over';
+      if (curPreview === 'naked') {
+        // [Olho Nu / Sem UV] — ONLY base image, simulating player view without flashlight
+        if (baseLayer && baseLayer.visible) {
+          renderLayersList(ctx, [baseLayer], clearW, clearH, dpr, true);
         }
-      };
-
-      for (const layer of layers) {
-        if (!layer.visible) continue;
-
-        // if layer has a mask, draw into an offscreen canvas, apply the mask, then composite
-        const useMask = !!layer.mask;
-
-        if (useMask) {
-          try {
-            // temp canvas in buffer pixels
-            const temp = document.createElement('canvas');
-            temp.width = canvas.width;
-            temp.height = canvas.height;
-            const tctx = temp.getContext('2d');
-            if (!tctx) continue;
-            // set same DPR baseline on temp
-            tctx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
-            // apply pan & zoom so drawing aligns
-            const s = scaleRef.current || 1;
-            const p = panRef.current || { x: 0, y: 0 };
-            tctx.translate(p.x, p.y);
-            tctx.scale(s, s);
-
-            // draw layer into temp context
-            tctx.save();
-            tctx.globalAlpha = (layer.opacity || 100) / 100;
-            const drawInto = (ctxToDraw: CanvasRenderingContext2D) => {
-              switch (layer.type) {
-                case 'image':
-                  if (layer.img && layer.img.complete) {
-                    const w = (layer.img.naturalWidth || layer.img.width) * (layer.scale || 1);
-                    const h = (layer.img.naturalHeight || layer.img.height) * (layer.scale || 1);
-                    ctxToDraw.drawImage(layer.img, (layer.x || 0) - w / 2, (layer.y || 0) - h / 2, w, h);
-                  }
-                  break;
-                case 'text':
-                  if (layer.text) {
-                    ctxToDraw.fillStyle = layer.color || color;
-                    ctxToDraw.font = `${Math.max(8, layer.size || textSize)}px serif`;
-                    ctxToDraw.textBaseline = 'top';
-                    ctxToDraw.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-                  }
-                  break;
-                case 'drawing':
-                  if (layer.drawingCanvas) {
-                    ctxToDraw.drawImage(layer.drawingCanvas, 0, 0);
-                  }
-                  break;
-                case 'group':
-                  if (layer.childrenData && Array.isArray(layer.childrenData)) {
-                    const gx = layer.x || 0;
-                    const gy = layer.y || 0;
-                    const gscale = layer.scale || 1;
-                    ctxToDraw.save();
-                    ctxToDraw.translate(gx, gy);
-                    ctxToDraw.scale(gscale, gscale);
-                    for (const child of layer.childrenData) {
-                      try {
-                        ctxToDraw.save();
-                        ctxToDraw.globalAlpha = (child.opacity || 100) / 100;
-                        if (child.type === 'text') {
-                          ctxToDraw.fillStyle = child.color || color;
-                          ctxToDraw.font = `${Math.max(8, child.size || textSize)}px serif`;
-                          ctxToDraw.textBaseline = 'top';
-                          ctxToDraw.fillText(child.text || '', child.x || 0, child.y || 0);
-                        } else if (child.type === 'image' && child.img) {
-                          const w = child.img.naturalWidth * (child.scale || 1);
-                          const h = child.img.naturalHeight * (child.scale || 1);
-                          ctxToDraw.drawImage(child.img, (child.x || 0) - w / 2, (child.y || 0) - h / 2, w, h);
-                        } else if (child.type === 'drawing' && child.drawingCanvas) {
-                          ctxToDraw.drawImage(child.drawingCanvas, 0, 0);
-                        }
-                        ctxToDraw.restore();
-                      } catch (e) {}
-                    }
-                    ctxToDraw.restore();
-                  }
-                  break;
-              }
-            };
-
-            drawInto(tctx);
-            tctx.restore();
-
-            // apply mask: keep only parts where mask is white/opaque
-            try {
-              tctx.globalCompositeOperation = 'destination-in';
-              // draw mask stretched to temp canvas
-              tctx.drawImage(layer.mask as HTMLCanvasElement, 0, 0, temp.width / (dprRef.current || 1), temp.height / (dprRef.current || 1));
-              tctx.globalCompositeOperation = 'source-over';
-            } catch (e) {}
-
-            // Composite temp onto main ctx with blend mode
-            try {
-              ctx.save();
-              ctx.globalAlpha = 1; // already applied in temp
-              ctx.globalCompositeOperation = mapBlendOp(layer.blendMode);
-              // draw temp canvas into main (temp is in buffer pixels)
-              ctx.drawImage(temp, 0, 0, temp.width / (dprRef.current || 1), temp.height / (dprRef.current || 1));
-              ctx.restore();
-            } catch (e) {
-              console.error('redrawAll: composite masked layer failed', e);
-            }
-          } catch (e) {
-            console.error('redrawAll: failed applying mask for layer', layer.id, e);
-          }
-          continue; // next layer
+      } else if (curPreview === 'flashlight') {
+        // [Testar Lanterna UV] — Base image darkened slightly + radial circular UV reveal mask
+        if (baseLayer && baseLayer.visible) {
+          renderLayersList(ctx, [baseLayer], clearW, clearH, dpr, true);
         }
 
-        // No mask: draw directly with blend mode
+        // Dim ambient light so UV glow pops realistically
         ctx.save();
-        ctx.globalAlpha = (layer.opacity || 100) / 100;
-        ctx.globalCompositeOperation = mapBlendOp(layer.blendMode);
-        switch (layer.type) {
-          case 'image':
-            if (layer.img) {
-              try {
-                if (!layer.img.complete || ((layer.img as any).naturalWidth || 0) === 0) {
-                  console.warn('redrawAll: image layer not ready for drawing (skipping)', { id: layer.id, src: (layer.img && (layer.img as any).src) || null });
-                  break;
-                }
-                const w = (layer.img.naturalWidth || layer.img.width) * (layer.scale || 1);
-                const h = (layer.img.naturalHeight || layer.img.height) * (layer.scale || 1);
-                ctx.drawImage(layer.img, (layer.x || 0) - w / 2, (layer.y || 0) - h / 2, w, h);
-              } catch (err) {
-                console.error('redrawAll: error drawing image layer', { id: layer.id, err });
-              }
-            }
-            break;
-          case 'text':
-            if (layer.text) {
-              ctx.fillStyle = layer.color || color;
-              ctx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-              ctx.textBaseline = 'top';
-              ctx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-            }
-            break;
-          case 'drawing':
-            if (layer.drawingCanvas) {
-              ctx.drawImage(layer.drawingCanvas, 0, 0);
-            }
-            break;
-          case 'group':
-            if (layer.childrenData && Array.isArray(layer.childrenData)) {
-              // apply group's blend mode to its children composite
-              ctx.save();
-              const gx = layer.x || 0;
-              const gy = layer.y || 0;
-              const gscale = layer.scale || 1;
-              ctx.translate(gx, gy);
-              ctx.scale(gscale, gscale);
-              for (const child of layer.childrenData) {
-                try {
-                  ctx.save();
-                  ctx.globalAlpha = (child.opacity || 100) / 100;
-                  if (child.type === 'text') {
-                    ctx.fillStyle = child.color || color;
-                    ctx.font = `${Math.max(8, child.size || textSize)}px serif`;
-                    ctx.textBaseline = 'top';
-                    ctx.fillText(child.text || '', child.x || 0, child.y || 0);
-                  } else if (child.type === 'image' && child.img) {
-                    const w = child.img.naturalWidth * (child.scale || 1);
-                    const h = child.img.naturalHeight * (child.scale || 1);
-                    ctx.drawImage(child.img, (child.x || 0) - w / 2, (child.y || 0) - h / 2, w, h);
-                  } else if (child.type === 'drawing' && child.drawingCanvas) {
-                    ctx.drawImage(child.drawingCanvas, 0, 0);
-                  }
-                  ctx.restore();
-                } catch (e) {}
-              }
-              ctx.restore();
-            }
-            break;
-        }
-        // reset composite op
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.restore();
-      }
-
-      // 3.5 Apply RGB Mode Forensic Multiply Mask
-      if (mode === 'rgb') {
-        ctx.save();
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = targetChannel === 'R' ? '#ff0000' : targetChannel === 'G' ? '#00ff00' : '#0000ff';
+        ctx.fillStyle = 'rgba(6, 4, 16, 0.42)';
         ctx.fillRect(0, 0, clearW, clearH);
         ctx.restore();
-      }
 
-      // 3.6 Draw mask outside base image to visually indicate non-interactive area
-      try {
-        const ib = getImageBounds();
-        if (ib) {
+        const spot = flashlightPosRef.current || { x: clearW / 2, y: clearH / 2 };
+        const radius = flashlightRadiusRef.current || 135;
+
+        // Render all secret UV layers to offscreen buffer
+        const uvBuf = document.createElement('canvas');
+        uvBuf.width = Math.round(clearW * dpr);
+        uvBuf.height = Math.round(clearH * dpr);
+        const uvCtx = uvBuf.getContext('2d');
+        if (uvCtx) {
+          uvCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          renderLayersList(uvCtx, secretLayers, clearW, clearH, dpr, false);
+
+          // Apply soft radial circular mask around flashlight beam
+          uvCtx.globalCompositeOperation = 'destination-in';
+          const maskGrad = uvCtx.createRadialGradient(
+            spot.x,
+            spot.y,
+            radius * 0.15,
+            spot.x,
+            spot.y,
+            radius
+          );
+          maskGrad.addColorStop(0, 'rgba(255,255,255,1)');
+          maskGrad.addColorStop(0.68, 'rgba(255,255,255,0.94)');
+          maskGrad.addColorStop(0.9, 'rgba(255,255,255,0.35)');
+          maskGrad.addColorStop(1, 'rgba(255,255,255,0)');
+          uvCtx.fillStyle = maskGrad;
+          uvCtx.fillRect(0, 0, clearW, clearH);
+          uvCtx.globalCompositeOperation = 'source-over';
+
+          // Subtle UV purple beam illumination over the base image
           ctx.save();
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.36)';
-
+          const beamGrad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, radius);
+          beamGrad.addColorStop(0, 'rgba(168, 85, 247, 0.24)');
+          beamGrad.addColorStop(0.65, 'rgba(124, 58, 237, 0.14)');
+          beamGrad.addColorStop(1, 'rgba(88, 28, 135, 0)');
+          ctx.globalCompositeOperation = 'screen';
+          ctx.fillStyle = beamGrad;
           ctx.beginPath();
-          // Path for the outer rectangle (the full canvas)
-          ctx.rect(0, 0, clearW, clearH);
-          // Path for the inner rectangle (the image)
-          ctx.rect(ib.left, ib.top, ib.width, ib.height);
+          ctx.arc(spot.x, spot.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
 
-          // Fill using the 'evenodd' rule, which fills the space between the two rectangles
-          // without affecting the content inside the inner rectangle.
-          // Note: pass the fill rule string to `fill` for broad browser support.
-          (ctx as any).fill('evenodd');
+          // Composite revealed UV ink
+          ctx.save();
+          ctx.drawImage(uvBuf, 0, 0, clearW, clearH);
+          ctx.restore();
 
-          // Draw a subtle border around the image area
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(ib.left + 1, ib.top + 1, ib.width - 2, ib.height - 2);
+          // Tactical UV lens ring
+          ctx.save();
+          ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)';
+          ctx.lineWidth = Math.max(1, 1.5 / zoom);
+          ctx.setLineDash([6 / zoom, 5 / zoom]);
+          ctx.beginPath();
+          ctx.arc(spot.x, spot.y, radius, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
-      } catch (e) {
-        console.error("Error drawing image bounds mask:", e);
-      }
+      } else {
+        // [Edição Mestre] — Full authoring view
+        renderLayersList(ctx, curLayers, clearW, clearH, dpr, true);
 
-      // 4. Draw selection and handles (NOVA VERSÃO COM ROTAÇÃO)
-      if (selectedLayer) {
-        const s = layers.find(l => l.id === selectedLayer);
-        if (s && (s.type === 'image' || s.type === 'text')) {
-          ctx.save(); // Salva o estado do contexto (antes de qualquer transformação)
+        // Live shape preview while dragging
+        if (isDrawingShapeRef.current && shapeStartRef.current && shapeCurrentRef.current) {
+          drawShapeOnContext(
+            ctx,
+            tool,
+            shapeStartRef.current.x,
+            shapeStartRef.current.y,
+            shapeCurrentRef.current.x,
+            shapeCurrentRef.current.y,
+            {
+              color,
+              lineWidth: brushSize,
+              opacity: drawOpacity,
+              bloom: neonBloom,
+              brushStyle,
+              shiftKey: shapeCurrentRef.current.shiftKey,
+            }
+          );
+        }
 
-          // Calcula os limites (bounds) da camada em seu estado não rotacionado
-          let bounds = { x: 0, y: 0, w: 0, h: 0 };
-          if (s.type === 'image' && s.img) {
-            const w = s.img.naturalWidth * (s.scale || 1);
-            const h = s.img.naturalHeight * (s.scale || 1);
-            bounds = { x: (s.x || 0) - w / 2, y: (s.y || 0) - h / 2, w, h };
-          } else if (s.type === 'text') {
-            ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-            const measure = ctx.measureText(s.text || '');
-            const w = measure.width;
-            const h = (s.size || textSize) * 1.2; // Aproximação da altura
-            bounds = { x: s.x || 0, y: s.y || 0, w, h };
+        // RGB Mode Forensic Multiply Preview
+        if (mode === 'rgb') {
+          ctx.save();
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.fillStyle =
+            targetChannel === 'R' ? '#ff0000' : targetChannel === 'G' ? '#00ff00' : '#0000ff';
+          ctx.fillRect(0, 0, clearW, clearH);
+          ctx.restore();
+        }
+
+        // Selection bounding box & rotation/resize handles
+        const selId = selectedLayerRef.current;
+        if (selId) {
+          const s = curLayers.find((l) => l.id === selId);
+          if (s && !s.locked && (s.type === 'image' || s.type === 'text')) {
+            const bounds = getLayerBounds(s, ctx);
+            if (bounds) {
+              ctx.save();
+              const layerCenterX = bounds.x + bounds.w / 2;
+              const layerCenterY = bounds.y + bounds.h / 2;
+              const rotation = s.rotation || 0;
+
+              ctx.translate(layerCenterX, layerCenterY);
+              ctx.rotate(rotation);
+              ctx.translate(-layerCenterX, -layerCenterY);
+
+              const handleRadius = Math.max(5, 8 / zoom);
+              const strokeW = Math.max(1, 1.75 / zoom);
+
+              ctx.strokeStyle = '#c084fc';
+              ctx.setLineDash([6 / zoom, 4 / zoom]);
+              ctx.lineWidth = strokeW;
+              ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+
+              ctx.fillStyle = '#0b0c10';
+              ctx.strokeStyle = '#00ffff';
+              ctx.setLineDash([]);
+              ctx.lineWidth = strokeW;
+
+              const corners = [
+                { x: bounds.x, y: bounds.y },
+                { x: bounds.x + bounds.w, y: bounds.y },
+                { x: bounds.x, y: bounds.y + bounds.h },
+                { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
+              ];
+              corners.forEach((h) => {
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, handleRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+              });
+
+              // Rotation handle above top center
+              const rotOffset = Math.max(24, 28 / zoom);
+              const rotPos = { x: bounds.x + bounds.w / 2, y: bounds.y - rotOffset };
+              ctx.beginPath();
+              ctx.moveTo(bounds.x + bounds.w / 2, bounds.y);
+              ctx.lineTo(rotPos.x, rotPos.y);
+              ctx.stroke();
+
+              ctx.fillStyle = '#a855f7';
+              ctx.beginPath();
+              ctx.arc(rotPos.x, rotPos.y, handleRadius, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.restore();
+            }
           }
+        }
 
-          const layerCenterX = bounds.x + bounds.w / 2;
-          const layerCenterY = bounds.y + bounds.h / 2;
-          const rotation = s.rotation || 0;
-
-          // Aplica a rotação ao redor do centro da camada
-          ctx.translate(layerCenterX, layerCenterY);
-          ctx.rotate(rotation);
-          ctx.translate(-layerCenterX, -layerCenterY);
-
-          // Desenha a caixa de seleção pontilhada
-          ctx.strokeStyle = '#00ffff';
-          ctx.setLineDash([6, 4]);
-          // make stroke and handles constant screen-size regardless of zoom
-          const screenHandleSize = 10; // px on screen
-          const handleSizeWorld = Math.max(2, screenHandleSize / (scaleRef.current || 1));
-          const strokeWidthWorld = Math.max(0.5, 2 / (scaleRef.current || 1));
-          ctx.lineWidth = strokeWidthWorld;
-          ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
-
-          // Desenha os manipuladores (handles)
-          ctx.fillStyle = '#00ffff';
-          ctx.strokeStyle = '#ffffff';
-          ctx.setLineDash([]);
-          ctx.lineWidth = strokeWidthWorld;
-
-          // Manipuladores de redimensionamento nos cantos
-          const handles = {
-            nw: { x: bounds.x, y: bounds.y },
-            ne: { x: bounds.x + bounds.w, y: bounds.y },
-            sw: { x: bounds.x, y: bounds.y + bounds.h },
-            se: { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
-          };
-          
-          Object.values(handles).forEach(handle => {
+        // Magnetic center guide lines
+        if (snapGuidesRef.current.x || snapGuidesRef.current.y) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(0, 255, 255, 0.85)';
+          ctx.lineWidth = Math.max(1, 1.5 / zoom);
+          ctx.setLineDash([6 / zoom, 4 / zoom]);
+          if (snapGuidesRef.current.x) {
             ctx.beginPath();
-            ctx.arc(handle.x, handle.y, Math.max(2, handleSizeWorld / 2), 0, Math.PI * 2);
-            ctx.fill();
+            ctx.moveTo(clearW / 2, 0);
+            ctx.lineTo(clearW / 2, clearH);
             ctx.stroke();
-          });
-
-          // NOVO: Manipulador de Rotação
-          const rotationHandle = { x: bounds.x + bounds.w / 2, y: bounds.y - 25 };
-          ctx.beginPath();
-          ctx.moveTo(bounds.x + bounds.w / 2, bounds.y);
-          ctx.lineTo(rotationHandle.x, rotationHandle.y);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(rotationHandle.x, rotationHandle.y, Math.max(2, handleSizeWorld / 2), 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-
-          ctx.restore(); // Restaura o contexto para o estado sem rotação
+          }
+          if (snapGuidesRef.current.y) {
+            ctx.beginPath();
+            ctx.moveTo(0, clearH / 2);
+            ctx.lineTo(clearW, clearH / 2);
+            ctx.stroke();
+          }
+          ctx.restore();
         }
       }
 
-      // brush preview cursor: draw after handles so it isn't painted into layers
       try {
-        if ((tool === 'draw' || tool === 'erase') && lastMouseEventRef.current) {
-          const pos = getCanvasCoordinates(lastMouseEventRef.current);
-          if (pos) {
-            ctx.save();
-            // preview fill and stroke
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-            ctx.lineWidth = Math.max(1, 1 / (scaleRef.current || 1));
-            const r = (brushSize || 8) / 2;
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-      } catch (e) {}
-
-      try { lastRedrawRef.current = performance.now(); } catch(e) { lastRedrawRef.current = Date.now(); }
+        lastRedrawRef.current = performance.now();
+      } catch {
+        lastRedrawRef.current = Date.now();
+      }
     });
-  };
+  }, [tool, color, brushSize, drawOpacity, neonBloom, brushStyle, mode, targetChannel]);
 
+  // Redraw when layers, previewMode, flashlightRadius, or selection changes
   useEffect(() => {
-    if (!imageFile) return;
-    const img = new Image();
-    // For blob/object URLs we don't need crossOrigin; setting it can sometimes interfere in some browsers
-    try { img.crossOrigin = 'anonymous'; } catch (e) {}
-    const url = URL.createObjectURL(imageFile);
-    objectUrlsRef.current.push(url);
-    img.src = url;
-    img.onload = () => {
-      try { console.debug('UVEditor: imageFile loaded', { name: imageFile.name, src: img.src, w: img.naturalWidth, h: img.naturalHeight }); } catch (e) {}
-      setImageEl(img);
-      try { setTool('placeImage'); } catch (e) {}
-    };
-    img.onerror = (err) => {
-      console.warn('UVEditor: image load error with objectURL, falling back to FileReader', err);
-      // fallback: use FileReader to read as dataURL
-      try {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          img.src = dataUrl;
-        };
-        reader.onerror = (rerr) => { console.error('UVEditor: FileReader error', rerr); };
-        reader.readAsDataURL(imageFile);
-      } catch (e) { console.error('UVEditor: fallback FileReader failed', e); }
-    };
-    return () => { try { URL.revokeObjectURL(url); } catch(e) {};
-      const idx = objectUrlsRef.current.indexOf(url); if (idx >= 0) objectUrlsRef.current.splice(idx, 1);
-    };
-  }, [imageFile]);
+    redrawAll();
+  }, [layers, previewMode, flashlightRadius, selectedLayer, redrawAll]);
 
-  // Revoke any leftover object URLs on unmount
+  // Initialize base image & default UV drawing layer
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let img: HTMLImageElement = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = baseImageUrl;
+
+    const handleLoaded = () => {
+      const maxWidth = 960;
+      const scale = Math.min(1, maxWidth / (img.naturalWidth || 800));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dprRef.current = dpr;
+
+      const cssWidth = Math.max(100, Math.round((img.naturalWidth || 800) * scale));
+      const cssHeight = Math.max(100, Math.round((img.naturalHeight || 600) * scale));
+      cssWidthRef.current = cssWidth;
+      cssHeightRef.current = cssHeight;
+
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+      }
+
+      flashlightPosRef.current = { x: cssWidth / 2, y: cssHeight / 2 };
+
+      // Build base image layer + default unlocked UV drawing layer
+      setLayers((prev) => {
+        if (prev.some((l) => l.id === '__base_image')) return prev;
+
+        const m = document.createElement('canvas');
+        m.width = Math.round(cssWidth * dpr);
+        m.height = Math.round(cssHeight * dpr);
+        const mctx = m.getContext('2d');
+        if (mctx) {
+          mctx.drawImage(img, 0, 0, m.width, m.height);
+        }
+
+        const baseLayer: Layer = {
+          id: '__base_image',
+          type: 'drawing',
+          name: 'Plano de Fundo',
+          visible: true,
+          opacity: 100,
+          locked: true,
+          x: 0,
+          y: 0,
+          drawingCanvas: m,
+        };
+
+        try {
+          const thumbW = 64;
+          const thumbH = Math.max(
+            1,
+            Math.round((img.naturalHeight || cssHeight) * (thumbW / (img.naturalWidth || cssWidth)))
+          );
+          const c = document.createElement('canvas');
+          c.width = thumbW;
+          c.height = thumbH;
+          const tctx = c.getContext('2d');
+          if (tctx) {
+            tctx.drawImage(img, 0, 0, c.width, c.height);
+            baseLayer.preview = c.toDataURL();
+          }
+        } catch {}
+
+        if (initialAuthoringState && Array.isArray(initialAuthoringState.layers) && initialAuthoringState.layers.length > 0) {
+          const restoredLayers: Layer[] = initialAuthoringState.layers.map((sl) => {
+            if (sl.type === 'text') {
+              return {
+                id: sl.id,
+                type: 'text',
+                name: sl.name,
+                visible: sl.visible,
+                opacity: sl.opacity,
+                locked: sl.locked,
+                blendMode: sl.blendMode,
+                x: sl.x,
+                y: sl.y,
+                width: sl.width,
+                height: sl.height,
+                rotation: sl.rotation,
+                scale: sl.scale,
+                text: sl.text || '',
+                size: sl.size || 28,
+                color: sl.color || '#b366ff',
+                fontStyle: sl.fontStyle || 'mono',
+                bloom: sl.neonIntensity ?? 70,
+              };
+            }
+            if (sl.type === 'drawing') {
+              const dc = document.createElement('canvas');
+              dc.width = Math.round(cssWidth * dpr);
+              dc.height = Math.round(cssHeight * dpr);
+              const dctx = dc.getContext('2d');
+              if (dctx) dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+              if (sl.drawingDataUrl) {
+                const dImg = new Image();
+                dImg.onload = () => {
+                  const ctx2 = dc.getContext('2d');
+                  if (ctx2) {
+                    ctx2.save();
+                    ctx2.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx2.drawImage(dImg, 0, 0, dc.width, dc.height);
+                    ctx2.restore();
+                    redrawAll();
+                  }
+                };
+                dImg.src = sl.drawingDataUrl;
+              }
+              return {
+                id: sl.id,
+                type: 'drawing',
+                name: sl.name,
+                visible: sl.visible,
+                opacity: sl.opacity,
+                locked: sl.locked,
+                blendMode: sl.blendMode,
+                x: sl.x,
+                y: sl.y,
+                rotation: sl.rotation,
+                drawingCanvas: dc,
+              };
+            }
+            const layerObj: Layer = {
+              id: sl.id,
+              type: 'image',
+              name: sl.name,
+              visible: sl.visible,
+              opacity: sl.opacity,
+              locked: sl.locked,
+              blendMode: sl.blendMode,
+              x: sl.x,
+              y: sl.y,
+              width: sl.width,
+              height: sl.height,
+              rotation: sl.rotation,
+              scale: sl.scale ?? 1,
+              color: sl.color,
+              bloom: sl.neonIntensity ?? 70,
+              isStamp: sl.isStamp,
+              stampId: sl.stampId,
+              stampColor: sl.stampColor,
+            };
+            if (sl.isStamp && sl.stampId) {
+              const stampDef = UV_STAMPS.find((s) => s.id === sl.stampId);
+              if (stampDef) {
+                loadStampImage(stampDef, sl.stampColor || sl.color || '#b366ff').then((sImg) => {
+                  setLayers((cur) =>
+                    cur.map((item) => (item.id === sl.id ? { ...item, img: sImg } : item))
+                  );
+                  redrawAll();
+                });
+              }
+            } else if (sl.drawingDataUrl) {
+              const rImg = new Image();
+              rImg.onload = () => {
+                setLayers((cur) =>
+                  cur.map((item) => (item.id === sl.id ? { ...item, img: rImg } : item))
+                );
+                redrawAll();
+              };
+              rImg.src = sl.drawingDataUrl;
+            }
+            return layerObj;
+          });
+          setSelectedLayer(restoredLayers[0]?.id ?? null);
+          return [baseLayer, ...restoredLayers, ...prev];
+        }
+
+        // Default unlocked UV layer so Mestre can paint immediately
+        const drawCanvas = document.createElement('canvas');
+        drawCanvas.width = Math.round(cssWidth * dpr);
+        drawCanvas.height = Math.round(cssHeight * dpr);
+        const dctx = drawCanvas.getContext('2d');
+        if (dctx) dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const defaultDrawId = `layer-uv-default-${Date.now()}`;
+        const defaultDrawLayer: Layer = {
+          id: defaultDrawId,
+          type: 'drawing',
+          name: mode === 'uv' ? 'Camada UV 1' : 'Camada Secreta 1',
+          visible: true,
+          opacity: 100,
+          locked: false,
+          x: 0,
+          y: 0,
+          drawingCanvas: drawCanvas,
+        };
+
+        setSelectedLayer(defaultDrawId);
+        return [baseLayer, defaultDrawLayer, ...prev];
+      });
+
+      setTimeout(() => {
+        baselineFingerprintRef.current = JSON.stringify({
+          drawMutationCount: 0,
+          layers: layersRef.current
+            .filter((l) => l.id !== '__base_image')
+            .map((l) => ({
+              id: l.id,
+              visible: l.visible,
+              opacity: l.opacity,
+              locked: l.locked,
+              x: l.x,
+              y: l.y,
+              width: l.width,
+              height: l.height,
+              rotation: l.rotation,
+              scale: l.scale,
+              text: l.text,
+              size: l.size,
+              color: l.color,
+              fontStyle: l.fontStyle,
+              bloom: l.bloom,
+              stampId: l.stampId,
+              stampColor: l.stampColor,
+            })),
+        });
+      }, 60);
+
+      if (initialImageFile) {
+        addImageLayerFromFile(initialImageFile, 'Imagem Inicial');
+      }
+    };
+
+    img.onload = handleLoaded;
+    img.onerror = () => {
+      const retry = new Image();
+      retry.onload = () => {
+        img = retry;
+        handleLoaded();
+      };
+      retry.src = baseImageUrl;
+    };
+  }, [baseImageUrl, initialImageFile]);
+
+  // Cleanup URLs & RAFs on unmount
   useEffect(() => {
     return () => {
-      try {
-        objectUrlsRef.current.forEach(u => { try { URL.revokeObjectURL(u); } catch(e) {} });
-      } catch (e) {}
+      objectUrlsRef.current.forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {}
+      });
       objectUrlsRef.current = [];
-      // offscreen drawing removed; no global offscreen to clean
-      // clear any pending redraw timeout
-      try {
-        if (redrawTimeoutRef.current != null) {
-          clearTimeout(redrawTimeoutRef.current);
-          redrawTimeoutRef.current = null;
-        }
-      } catch (e) {}
-      // cancel any pending RAFs
-      try { if (rafIdRef.current != null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; } } catch (e) {}
-      try { if (redrawRafIdRef.current != null) { cancelAnimationFrame(redrawRafIdRef.current); redrawRafIdRef.current = null; } } catch (e) {}
-      // release pointer capture if active
-      try {
-        const pid = activePointerIdRef.current;
-        const canvasEl = canvasRef.current;
-        if (canvasEl && pid != null) {
-          try { (canvasEl as any).releasePointerCapture?.(pid); } catch (e) {}
-        }
-        activePointerIdRef.current = null;
-      } catch (e) {}
+      if (redrawTimeoutRef.current != null) clearTimeout(redrawTimeoutRef.current);
+      if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
+      if (redrawRafIdRef.current != null) cancelAnimationFrame(redrawRafIdRef.current);
     };
   }, []);
 
-  // redraw when layers change
-  useEffect(() => { redrawAll(); }, [layers]);
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return;
+      }
+      const mod = ev.ctrlKey || ev.metaKey;
+      if (mod && ev.key.toLowerCase() === 'z') {
+        ev.preventDefault();
+        if (ev.shiftKey) redo();
+        else undo();
+      } else if (mod && ev.key.toLowerCase() === 'y') {
+        ev.preventDefault();
+        redo();
+      } else if (ev.key === '[') {
+        ev.preventDefault();
+        setBrushSize((s) => Math.max(1, (s || 1) - 2));
+      } else if (ev.key === ']') {
+        ev.preventDefault();
+        setBrushSize((s) => Math.min(200, (s || 1) + 2));
+      } else if (ev.key === 'Delete' || ev.key === 'Backspace') {
+        const selId = selectedLayerRef.current;
+        if (selId && selId !== '__base_image') {
+          const sel = layersRef.current.find((l) => l.id === selId);
+          if (sel && !sel.locked && (sel.type === 'image' || sel.type === 'text')) {
+            ev.preventDefault();
+            deleteLayer(selId);
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
-  const getCtx = (): CanvasRenderingContext2D | null => canvasRef.current?.getContext('2d') || null;
+  // Paste image from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return;
+      }
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            addImageLayerFromFile(file, 'Imagem Colada');
+            break;
+          }
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
 
-  
+  // Mark performance-keep
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const cleanup = markPerfKeep(root);
+    return () => {
+      try {
+        cleanup();
+      } catch {}
+    };
+  }, []);
 
-  const startDrawing = (e: React.PointerEvent | React.MouseEvent | any) => {
-    // startDrawing invoked
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.classList.toggle('tool-draw', previewMode === 'edit' && tool === 'draw');
+    root.classList.toggle('tool-erase', previewMode === 'edit' && tool === 'erase');
+  }, [tool, previewMode]);
+
+  // Insert SVG stamp layer
+  const handleInsertStamp = async (stamp: UVStampDef, stampColor: string) => {
+    try {
+      const img = await loadStampImage(stamp, stampColor);
+      const cssW = cssWidthRef.current || 800;
+      const cssH = cssHeightRef.current || 600;
+      const targetMax = Math.min(cssW, cssH) * 0.36;
+      const baseScale = Math.min(1, targetMax / Math.max(img.naturalWidth || stamp.width, img.naturalHeight || stamp.height));
+
+      const id = `layer-stamp-${Date.now()}`;
+      const newLayer: Layer = {
+        id,
+        type: 'image',
+        name: `Carimbo: ${stamp.name}`,
+        visible: true,
+        opacity: drawOpacity,
+        locked: false,
+        x: cssW / 2,
+        y: cssH / 2,
+        rotation: 0,
+        scale: Math.max(0.2, baseScale),
+        width: img.naturalWidth || stamp.width,
+        height: img.naturalHeight || stamp.height,
+        img,
+        isStamp: true,
+        stampId: stamp.id,
+        stampColor,
+        bloom: neonBloom,
+        preview: img.src,
+      };
+
+      setPreviewMode('edit');
+      setLayers((prev) => [...prev, newLayer]);
+      setSelectedLayer(id);
+      setTool('select');
+      setMobilePanelOpen(false);
+      redrawAll();
+      setTimeout(() => pushHistory(), 0);
+      toast.success(`Carimbo "${stamp.name}" inserido!`);
+    } catch {
+      toast.error('Erro ao carregar carimbo SVG.');
+    }
+  };
+
+  // Add image layer from File (Import Image / Camera)
+  const addImageLayerFromFile = (file: File, customName?: string) => {
+    const url = URL.createObjectURL(file);
+    objectUrlsRef.current.push(url);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const cssW = cssWidthRef.current || 800;
+      const cssH = cssHeightRef.current || 600;
+      const natW = img.naturalWidth || img.width || 300;
+      const natH = img.naturalHeight || img.height || 300;
+      const fitScale = Math.min(1, (cssW * 0.65) / natW, (cssH * 0.65) / natH);
+
+      let previewData: string | undefined;
+      try {
+        const thumbW = 64;
+        const thumbH = Math.max(1, Math.round(natH * (thumbW / natW)));
+        const c = document.createElement('canvas');
+        c.width = thumbW;
+        c.height = thumbH;
+        const tctx = c.getContext('2d');
+        if (tctx) {
+          tctx.drawImage(img, 0, 0, thumbW, thumbH);
+          previewData = c.toDataURL();
+        }
+      } catch {}
+
+      const id = `layer-img-${Date.now()}`;
+      const newLayer: Layer = {
+        id,
+        type: 'image',
+        name: customName || file.name.replace(/\.[^/.]+$/, '') || 'Imagem UV',
+        visible: true,
+        opacity: drawOpacity,
+        locked: false,
+        x: cssW / 2,
+        y: cssH / 2,
+        rotation: 0,
+        scale: fitScale,
+        width: natW,
+        height: natH,
+        img,
+        bloom: Math.round(neonBloom * 0.5),
+        blendMode: 'normal',
+        preview: previewData,
+      };
+
+      setPreviewMode('edit');
+      setLayers((prev) => [...prev, newLayer]);
+      setSelectedLayer(id);
+      setTool('select');
+      setMobilePanelOpen(false);
+      redrawAll();
+      setTimeout(() => pushHistory(), 0);
+      toast.success('Imagem adicionada! Arraste para posicionar.');
+    };
+    img.src = url;
+  };
+
+  // Start freehand brush/eraser stroke
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas) { return; }
-    if (tool !== 'draw' && tool !== 'erase') { return; }
+    if (!canvas) return;
+    if (tool !== 'draw' && tool !== 'erase') return;
 
-    const activeLayer = layers.find(l => l.id === selectedLayer);
-
-    // Validation
-    if (!activeLayer) {
-      try { toast.error('Selecione ou crie uma camada para desenhar.'); } catch (e) {}
-      return;
-    }
-    if (activeLayer.locked) {
-      try { toast.error('A camada selecionada está bloqueada.'); } catch (e) {}
-      return;
-    }
-    if (activeLayer.type !== 'drawing' && !activeLayer.isEditingMask) {
-      try { toast.error('Rasterize a camada primeiro para poder desenhá-la.'); } catch (e) {}
-      return;
-    }
+    const activeLayer = ensureDrawingLayer();
+    if (!activeLayer) return;
 
     let targetCanvas: HTMLCanvasElement | null = null;
-
     if (activeLayer.isEditingMask) {
-      const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-      const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
+      const dpr = dprRef.current || 1;
+      const cssW = cssWidthRef.current || canvas.width / dpr;
+      const cssH = cssHeightRef.current || canvas.height / dpr;
       if (!activeLayer.mask) {
         const m = document.createElement('canvas');
-        m.width = Math.round(cssW * (dprRef.current || 1));
-        m.height = Math.round(cssH * (dprRef.current || 1));
+        m.width = Math.round(cssW * dpr);
+        m.height = Math.round(cssH * dpr);
         const mctx = m.getContext('2d');
         if (mctx) {
-          mctx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
+          mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           mctx.fillStyle = '#ffffff';
-          mctx.fillRect(0, 0, m.width / (dprRef.current || 1), m.height / (dprRef.current || 1));
+          mctx.fillRect(0, 0, cssW, cssH);
         }
-        setLayers(prev => prev.map(l => l.id === activeLayer.id ? { ...l, mask: m } : l));
+        setLayers((prev) => prev.map((l) => (l.id === activeLayer.id ? { ...l, mask: m } : l)));
         activeLayer.mask = m;
-        try { setTimeout(() => pushHistory(), 0); } catch (e) {}
       }
       targetCanvas = activeLayer.mask || null;
     } else if (activeLayer.type === 'drawing' && activeLayer.drawingCanvas) {
       targetCanvas = activeLayer.drawingCanvas;
     }
-    
-    // O restante da função continua como antes, mas usando o targetCanvas definido
+
     if (!targetCanvas) return;
     const octx = targetCanvas.getContext('2d');
-    if (!octx) { return; }
+    if (!octx) return;
+
     const { x, y } = getCanvasCoordinates(e);
-    // Prevent starting a stroke outside the base image bounds
+
+    // Save pre-stroke snapshot in case a 2nd finger lands for pinch-zoom
     try {
-      const ib = getImageBounds();
-      if (ib) {
-          if (x < ib.left || x > ib.right || y < ib.top || y > ib.bottom) {
-          return;
-        }
-      }
-    } catch (e) {}
-    
-    // initialize smoothing state and target reference
+      preStrokeImageDataRef.current = {
+        canvas: targetCanvas,
+        data: octx.getImageData(0, 0, targetCanvas.width, targetCanvas.height),
+      };
+    } catch {
+      preStrokeImageDataRef.current = null;
+    }
+
     strokeStartRef.current = { x, y };
     strokePointsRef.current = [{ x, y }];
     drawingTargetCanvasRef.current = targetCanvas;
-    drawingMaskRef.current = !!(activeLayer && activeLayer.isEditingMask);
-    octx.beginPath();
-    octx.moveTo(x, y);
-    octx.lineCap = 'round';
-    octx.lineJoin = 'round';
-    octx.lineWidth = brushSize;
-    if (activeLayer && activeLayer.isEditingMask) {
-      // painting mask: draw black to hide, white to reveal
+    drawingMaskRef.current = !!activeLayer.isEditingMask;
+
+    if (activeLayer.isEditingMask) {
       const paintHide = maskPaintMode === 'hide';
-      // if user used eraser tool, invert the paint behavior
-      const colorForMask = tool === 'erase' ? (paintHide ? '#ffffff' : '#000000') : (paintHide ? '#000000' : '#ffffff');
-      octx.globalCompositeOperation = 'source-over';
+      const colorForMask =
+        tool === 'erase' ? (paintHide ? '#ffffff' : '#000000') : paintHide ? '#000000' : '#ffffff';
+      drawSoftStroke(octx, x, y, x, y, brushSize, colorForMask, maskBrushSoftness, maskBrushOpacity);
+    } else if (tool === 'erase') {
+      octx.save();
+      octx.globalCompositeOperation = 'destination-out';
+      octx.globalAlpha = 1;
       octx.shadowBlur = 0;
-      octx.strokeStyle = colorForMask;
-      octx.lineWidth = brushSize;
+      octx.beginPath();
+      octx.arc(x, y, Math.max(1, brushSize / 2), 0, Math.PI * 2);
+      octx.fill();
+      octx.restore();
+    } else if (brushStyle === 'fluorescent' && !censorMode) {
+      drawFluorescentSegment(octx, x, y, x, y, brushSize, color, drawOpacity, neonBloom);
     } else {
-      if (tool === 'erase') {
-        octx.globalCompositeOperation = 'destination-out';
-        octx.shadowBlur = 0;
-      } else {
-        octx.globalCompositeOperation = 'source-over';
-        if (censorMode) {
-          octx.strokeStyle = '#000000';
-          octx.shadowBlur = 0;
-        } else {
-          octx.strokeStyle = color;
-          octx.shadowColor = mode === 'filter' ? 'rgba(255,255,255,0.9)' : color;
-          octx.shadowBlur = mode === 'filter' ? 8 : 15;
-        }
-      }
+      octx.save();
+      octx.globalCompositeOperation = 'source-over';
+      octx.globalAlpha = Math.max(0.02, drawOpacity / 100);
+      octx.fillStyle = censorMode ? '#000000' : color;
+      octx.shadowColor = censorMode ? 'transparent' : color;
+      octx.shadowBlur = censorMode ? 0 : (neonBloom / 100) * 24;
+      octx.beginPath();
+      octx.arc(x, y, Math.max(1, brushSize / 2), 0, Math.PI * 2);
+      octx.fill();
+      octx.restore();
     }
+
     setIsDrawing(true);
     try {
-      if (typeof (e.pointerId) === 'number') {
-        canvas.setPointerCapture?.(e.pointerId);
-        activePointerIdRef.current = e.pointerId;
-      }
-    } catch (err) {}
+      canvas.setPointerCapture?.(e.pointerId);
+      activePointerIdRef.current = e.pointerId;
+    } catch {}
     redrawAll();
   };
 
-  const handleCanvasDoubleClick = (e: React.MouseEvent | React.PointerEvent) => {
-    // convert to world coords and find topmost text layer under cursor
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const coords = getCanvasCoordinates(e as any);
-    const x = coords.x, y = coords.y;
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const layer = layers[i];
-      if (!layer.visible) continue;
-      if (layer.locked) continue;
-      if (layer.type === 'text') {
-        const ctx = getCtx();
-        if (!ctx) continue;
-        ctx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-        const measure = ctx.measureText(layer.text || '');
-        const w = measure.width;
-        const h = (layer.size || textSize) * 1.2;
-        const left = layer.x || 0;
-        const top = layer.y || 0;
-        if (x >= left && x <= left + w && y >= top && y <= top + h) {
-          // compute CSS pixel position for overlay
-          const s = scaleRef.current || 1;
-          const p = panRef.current || { x: 0, y: 0 };
-          const cssX = (layer.x || 0) * s + p.x;
-          const cssY = (layer.y || 0) * s + p.y;
-          const fontSize = (layer.size || textSize) * s;
-          setInlineTextEdit({ id: layer.id, value: layer.text || '', cssX, cssY, fontSize });
-          // focus will be handled by the rendered input via useEffect
-          return;
-        }
-      }
+  // Abort accidental 1-finger stroke when 2nd finger touches for pinch/pan
+  const cancelActiveStrokeForPinch = () => {
+    if (isDrawing && preStrokeImageDataRef.current) {
+      try {
+        const { canvas: tc, data } = preStrokeImageDataRef.current;
+        const tctx = tc.getContext('2d');
+        if (tctx) tctx.putImageData(data, 0, 0);
+      } catch {}
     }
+    preStrokeImageDataRef.current = null;
+    setIsDrawing(false);
+    isDrawingShapeRef.current = false;
+    shapeStartRef.current = null;
+    shapeCurrentRef.current = null;
+    drawingTargetCanvasRef.current = null;
+    setIsDraggingLayer(false);
+    setIsResizing(false);
+    setIsRotating(false);
+    redrawAll();
   };
 
-  const handleCanvasClick = (e: React.PointerEvent | React.MouseEvent | any): boolean => {
+  // Handle canvas click (selection, handles, text placement)
+  const handleCanvasClick = (e: React.PointerEvent<HTMLCanvasElement>): boolean => {
     const canvas = canvasRef.current;
     if (!canvas) return false;
-    const ctx = getCtx();
+    const ctx = canvas.getContext('2d');
     if (!ctx) return false;
     const { x, y } = getCanvasCoordinates(e);
-    // Do not allow interactions outside the base image
-    try {
-      const ib = getImageBounds();
-      if (ib) {
-        if (x < ib.left || x > ib.right || y < ib.top || y > ib.bottom) {
-          setSelectedLayer(null);
-          return false;
-        }
-      }
-    } catch (err) {}
-    
-    // If user is in placement mode, prioritize placing the new item even if clicking over existing layers
-    if (tool === 'placeText' && textValue) {
-      const id = `layer-${Date.now()}`;
+
+    if (tool === 'placeText') {
+      const content = textValue.trim() || 'TEXTO UV';
+      const id = `layer-txt-${Date.now()}`;
       const newLayer: Layer = {
         id,
         type: 'text',
-        name: textValue.substring(0, 20) || 'Texto',
+        name: content.substring(0, 20),
         visible: true,
-        opacity: 100,
+        opacity: drawOpacity,
         locked: false,
         x,
         y,
-        text: textValue,
+        rotation: 0,
+        text: content,
         size: textSize,
-        color
+        color,
+        fontStyle,
+        bloom: neonBloom,
       };
-      // placing new text layer
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
+      setLayers((prev) => [...prev, newLayer]);
+      setSelectedLayer(id);
+      setTool('select');
       setTextValue('');
       redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-      return true;
-    }
-    if ((tool as any) === 'placeImage') {
-      if (!imageEl) {
-        try { console.warn('handleCanvasClick: placeImage requested but imageEl is null (still loading?)'); } catch (e) {}
-        // Consume the click so drawing doesn't start while waiting for the image
-        return true;
-      }
-      if (!(imageEl.complete) || ((imageEl as any).naturalWidth || 0) === 0) {
-        try { console.warn('handleCanvasClick: placeImage requested but imageEl not fully loaded yet', { src: (imageEl as any).src }); } catch (e) {}
-        return true;
-      }
-      const id = `layer-${Date.now()}`;
-      const newLayer: Layer = {
-        id,
-        type: 'image',
-        name: 'Imagem ' + (layers.filter(l => l.type === 'image').length + 1),
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x,
-        y,
-        img: imageEl,
-        scale: imageScale
-      };
-      // placing new image layer
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
-      setImageFile(null);
-      setImageEl(null);
-      redrawAll();
+      setTimeout(() => pushHistory(), 0);
       return true;
     }
 
-    // Se estiver usando ferramentas de desenho, o clique NUNCA deve auto-selecionar camadas
-    // nem interagir com handles de redimensionamento. Ele deve vazar para startDrawing().
-    if (tool === 'draw' || tool === 'erase') {
+    if (tool === 'draw' || tool === 'erase' || isShapeTool(tool)) {
       return false;
     }
 
-    // Check if clicking on resize/rotation handle of selected layer (rotation-aware)
-    if (selectedLayer) {
-      const s = layers.find(l => l.id === selectedLayer);
-      if (s) {
-        if (s.locked) return false;
-        let bounds = { x: 0, y: 0, w: 0, h: 0 };
-        if (s.type === 'image' && s.img) {
-          const w = s.img.naturalWidth * (s.scale || 1);
-          const h = s.img.naturalHeight * (s.scale || 1);
-          bounds = { x: s.x - w / 2, y: s.y - h / 2, w, h };
-        } else if (s.type === 'text') {
-          ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-          const measure = ctx.measureText(s.text || '');
-          const w = measure.width;
-          const h = (s.size || textSize) * 1.2;
-          bounds = { x: s.x, y: s.y, w, h };
-        } else if (s.type === 'group' && s.childrenData && Array.isArray(s.childrenData)) {
-          // fallback to previous group bbox calculation
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          const gscale = s.scale || 1;
-          for (const child of s.childrenData) {
+    // Check resize / rotation handles of currently selected layer
+    const curSelId = selectedLayerRef.current;
+    if (curSelId) {
+      const s = layersRef.current.find((l) => l.id === curSelId);
+      if (s && !s.locked && (s.type === 'image' || s.type === 'text')) {
+        const bounds = getLayerBounds(s, ctx);
+        if (bounds) {
+          const rotation = s.rotation || 0;
+          const layerCenterX = bounds.x + bounds.w / 2;
+          const layerCenterY = bounds.y + bounds.h / 2;
+          const dx = x - layerCenterX;
+          const dy = y - layerCenterY;
+          const cosR = Math.cos(-rotation);
+          const sinR = Math.sin(-rotation);
+          const localX = layerCenterX + (dx * cosR - dy * sinR);
+          const localY = layerCenterY + (dx * sinR + dy * cosR);
+
+          const zoom = scaleRef.current || 1;
+          const hitR = Math.max(16, 22 / zoom);
+          const rotOffset = Math.max(24, 28 / zoom);
+
+          const rotHandle = { x: bounds.x + bounds.w / 2, y: bounds.y - rotOffset };
+          if (Math.hypot(localX - rotHandle.x, localY - rotHandle.y) <= hitR) {
+            setIsRotating(true);
             try {
-              if (child.type === 'text') {
-                ctx.font = `${Math.max(8, child.size || textSize)}px serif`;
-                const m = ctx.measureText(child.text || '');
-                const cw = m.width;
-                const ch = (child.size || textSize) * 1.2;
-                const left = (child.x || 0);
-                const top = (child.y || 0);
-                minX = Math.min(minX, left);
-                minY = Math.min(minY, top);
-                maxX = Math.max(maxX, left + cw);
-                maxY = Math.max(maxY, top + ch);
-              } else if (child.type === 'image' && child.img) {
-                const cw = child.img.naturalWidth * (child.scale || 1);
-                const ch = child.img.naturalHeight * (child.scale || 1);
-                const left = (child.x || 0) - cw/2;
-                const top = (child.y || 0) - ch/2;
-                minX = Math.min(minX, left);
-                minY = Math.min(minY, top);
-                maxX = Math.max(maxX, left + cw);
-                maxY = Math.max(maxY, top + ch);
-              } else if (child.type === 'drawing') {
-                const cssW = cssWidthRef.current || 0;
-                const cssH = cssHeightRef.current || 0;
-                minX = Math.min(minX, child.x || 0);
-                minY = Math.min(minY, child.y || 0);
-                maxX = Math.max(maxX, (child.x || 0) + cssW);
-                maxY = Math.max(maxY, (child.y || 0) + cssH);
-              }
-            } catch (e) {}
-          }
-          if (minX === Infinity) { minX = 0; minY = 0; maxX = 0; maxY = 0; }
-          const w = (maxX - minX) * gscale;
-          const h = (maxY - minY) * gscale;
-          bounds = { x: s.x + minX * gscale, y: s.y + minY * gscale, w, h };
-        }
-
-        // Transform mouse into layer-local coordinates to account for rotation
-        const rotation = s.rotation || 0;
-        const layerCenterX = bounds.x + bounds.w / 2;
-        const layerCenterY = bounds.y + bounds.h / 2;
-        const dx = x - layerCenterX;
-        const dy = y - layerCenterY;
-        const cosR = Math.cos(-rotation);
-        const sinR = Math.sin(-rotation);
-        const localMouseX = layerCenterX + (dx * cosR - dy * sinR);
-        const localMouseY = layerCenterY + (dx * sinR + dy * cosR);
-
-        const handleSize = 14;
-
-        // Check rotation handle (above the top-center)
-        const rotationHandlePos = { x: bounds.x + bounds.w / 2, y: bounds.y - 25 };
-        if (Math.hypot(localMouseX - rotationHandlePos.x, localMouseY - rotationHandlePos.y) <= handleSize) {
-          setIsRotating(true);
-          try { (e.target as Element).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } catch (err) {}
-          return true;
-        }
-
-        // Check resize handles in local space
-        const handles = [
-          { x: bounds.x, y: bounds.y, pos: 'nw' },
-          { x: bounds.x + bounds.w, y: bounds.y, pos: 'ne' },
-          { x: bounds.x, y: bounds.y + bounds.h, pos: 'sw' },
-          { x: bounds.x + bounds.w, y: bounds.y + bounds.h, pos: 'se' },
-        ];
-
-        for (const handle of handles) {
-          const dist = Math.hypot(localMouseX - handle.x, localMouseY - handle.y);
-          if (dist <= handleSize) {
-            // Start resizing
-            setIsResizing(true);
-            setResizeHandle(handle.pos);
-            if (s.type === 'image' && s.img) {
-              resizeStartRef.current = {
-                x: s.x,
-                y: s.y,
-                width: s.img.naturalWidth * (s.scale || 1),
-                height: s.img.naturalHeight * (s.scale || 1),
-                scale: s.scale || 1
-              };
-            } else if (s.type === 'text') {
-              resizeStartRef.current = {
-                x: s.x,
-                y: s.y,
-                width: 0,
-                height: 0,
-                scale: s.size || textSize
-              };
-            } else if (s.type === 'group' && s.childrenData) {
-              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-              for (const child of s.childrenData) {
-                try {
-                  if (child.type === 'text') {
-                    const measure = ctx.measureText(child.text || '');
-                    const childW = measure.width;
-                    const childH = (child.size || textSize) * 1.2;
-                    const left = (child.x || 0);
-                    const top = (child.y || 0) - childH / 2;
-                    minX = Math.min(minX, left);
-                    minY = Math.min(minY, top);
-                    maxX = Math.max(maxX, left + childW);
-                    maxY = Math.max(maxY, top + childH);
-                  } else if (child.type === 'image' && child.img) {
-                    const childW = child.img.naturalWidth * (child.scale || 1);
-                    const childH = child.img.naturalHeight * (child.scale || 1);
-                    const left = (child.x || 0) - childW / 2;
-                    const top = (child.y || 0) - childH / 2;
-                    minX = Math.min(minX, left);
-                    minY = Math.min(minY, top);
-                    maxX = Math.max(maxX, left + childW);
-                    maxY = Math.max(maxY, top + childH);
-                  } else if (child.type === 'drawing') {
-                    const cssW = cssWidthRef.current || 0;
-                    const cssH = cssHeightRef.current || 0;
-                    minX = Math.min(minX, child.x || 0);
-                    minY = Math.min(minY, child.y || 0);
-                    maxX = Math.max(maxX, (child.x || 0) + cssW);
-                    maxY = Math.max(maxY, (child.y || 0) + cssH);
-                  }
-                } catch (e) {}
-              }
-              if (minX === Infinity) { minX = 0; minY = 0; maxX = 0; maxY = 0; }
-              const w = maxX - minX;
-              const h = maxY - minY;
-              resizeStartRef.current = {
-                x: s.x,
-                y: s.y,
-                width: w,
-                height: h,
-                minX,
-                minY,
-                scale: s.scale || 1
-              };
-            }
-            try { (e.target as Element).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } catch (err) {}
+              canvas.setPointerCapture?.(e.pointerId);
+              activePointerIdRef.current = e.pointerId;
+            } catch {}
             return true;
+          }
+
+          const corners = [
+            { x: bounds.x, y: bounds.y, pos: 'nw' },
+            { x: bounds.x + bounds.w, y: bounds.y, pos: 'ne' },
+            { x: bounds.x, y: bounds.y + bounds.h, pos: 'sw' },
+            { x: bounds.x + bounds.w, y: bounds.y + bounds.h, pos: 'se' },
+          ];
+          for (const h of corners) {
+            if (Math.hypot(localX - h.x, localY - h.y) <= hitR) {
+              setIsResizing(true);
+              setResizeHandle(h.pos);
+              if (s.type === 'image' && s.img) {
+                resizeStartRef.current = {
+                  x: s.x || 0,
+                  y: s.y || 0,
+                  width: (s.img.naturalWidth || s.width || 100) * (s.scale || 1),
+                  height: (s.img.naturalHeight || s.height || 100) * (s.scale || 1),
+                  scale: s.scale || 1,
+                };
+              } else {
+                resizeStartRef.current = {
+                  x: s.x || 0,
+                  y: s.y || 0,
+                  width: bounds.w,
+                  height: bounds.h,
+                  scale: s.size || textSize,
+                };
+              }
+              try {
+                canvas.setPointerCapture?.(e.pointerId);
+                activePointerIdRef.current = e.pointerId;
+              } catch {}
+              return true;
+            }
           }
         }
       }
     }
-    
-    // if clicking on an existing layer, select it (unless locked)
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const layer = layers[i];
-      if (!layer.visible) continue; // skip invisible layers
-      if (layer.locked) continue; // skip locked layers for selection
-      if (layer.type === 'image' && layer.img) {
-        const w = layer.img.naturalWidth * (layer.scale || 1);
-        const h = layer.img.naturalHeight * (layer.scale || 1);
-        const left = layer.x - w/2;
-        const top = layer.y - h/2;
-        if (x >= left && x <= left + w && y >= top && y <= top + h) {
-          // select image layer
-          setSelectedLayer(layer.id);
-          // prepare drag offset and start dragging immediately
-          dragOffsetRef.current = { ox: x - layer.x, oy: y - layer.y };
-          setIsDraggingLayer(true);
-          // capture pointer so we keep receiving pointer events during drag
-          try { if (typeof e.pointerId === 'number') { const canvasEl = canvasRef.current; if (canvasEl) { (canvasEl as any).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } } } catch (err) {}
-          return true;
-        }
-      } else if (layer.type === 'text') {
-        const size = layer.size || textSize;
-        const measure = ctx.measureText(layer.text || '');
-        const w = measure.width;
-        const h = size * 1.2;
-        const left = layer.x;
-        const top = layer.y;
-        if (x >= left && x <= left + w && y >= top && y <= top + h) {
-          // select text layer
-          setSelectedLayer(layer.id);
-          dragOffsetRef.current = { ox: x - layer.x, oy: y - layer.y };
-          setIsDraggingLayer(true);
-          try { if (typeof e.pointerId === 'number') { const canvasEl = canvasRef.current; if (canvasEl) { (canvasEl as any).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } } } catch (err) {}
-          return true;
-        }
-      } else if (layer.type === 'drawing' && layer.drawingCanvas) {
-        // drawing layers typically cover the whole canvas; allow selecting/detecting them
-        const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-        const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
-        const left = layer.x || 0;
-        const top = layer.y || 0;
-        if (x >= left && x <= left + cssW && y >= top && y <= top + cssH) {
-          // Perform alpha hit-test on drawing canvas for pixel-accurate selection
-          try {
-            const dpr = dprRef.current || 1;
-            const px = Math.round(x * dpr);
-            const py = Math.round(y * dpr);
-            const dc = layer.drawingCanvas as HTMLCanvasElement;
-            const dctx = dc.getContext('2d');
-            if (dctx) {
-              const data = dctx.getImageData(px, py, 1, 1).data;
-              const alpha = data[3] || 0;
-              if (alpha < 10) {
-                // transparent pixel — do not select this layer, continue searching below
-                continue;
-              }
-            }
-          } catch (e) {
-            // fallback to bounding-box selection on error
-          }
 
-          // select drawing layer
+    // Hit-test layers from top to bottom (rotation-aware for images/stamps/text)
+    const curLayers = layersRef.current;
+    for (let i = curLayers.length - 1; i >= 0; i--) {
+      const layer = curLayers[i];
+      if (!layer.visible || layer.locked) continue;
+      if (layer.type === 'image' || layer.type === 'text') {
+        const bounds = getLayerBounds(layer, ctx);
+        if (!bounds) continue;
+        const rot = layer.rotation || 0;
+        const cx = bounds.x + bounds.w / 2;
+        const cy = bounds.y + bounds.h / 2;
+        const dx = x - cx;
+        const dy = y - cy;
+        const localX = cx + (dx * Math.cos(-rot) - dy * Math.sin(-rot));
+        const localY = cy + (dx * Math.sin(-rot) + dy * Math.cos(-rot));
+
+        if (
+          localX >= bounds.x - 6 &&
+          localX <= bounds.x + bounds.w + 6 &&
+          localY >= bounds.y - 6 &&
+          localY <= bounds.y + bounds.h + 6
+        ) {
           setSelectedLayer(layer.id);
           dragOffsetRef.current = { ox: x - (layer.x || 0), oy: y - (layer.y || 0) };
           setIsDraggingLayer(true);
-          try { if (typeof e.pointerId === 'number') { const canvasEl = canvasRef.current; if (canvasEl) { (canvasEl as any).setPointerCapture?.(e.pointerId); activePointerIdRef.current = e.pointerId; } } } catch (err) {}
-
+          try {
+            canvas.setPointerCapture?.(e.pointerId);
+            activePointerIdRef.current = e.pointerId;
+          } catch {}
           return true;
         }
       }
     }
 
-    // placing new items
-    if (tool === 'placeText' && textValue) {
-      const id = `layer-${Date.now()}`;
-      const newLayer: Layer = { 
-        id, 
-        type: 'text', 
-        name: textValue.substring(0, 20) || 'Texto',
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x, 
-        y, 
-        text: textValue, 
-        size: textSize, 
-        color 
-      };
-      // placing new text layer
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
-      setTextValue('');
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-      return true;
-    }
-
-    if ((tool as any) === 'placeImage' && imageEl) {
-      // if image is not yet fully loaded, wait for it and then place
-      if (!(imageEl.complete && (imageEl as any).naturalWidth > 0)) {
-        // image not complete yet, deferring placement
-        const img = imageEl;
-        const onload = () => {
-          try {
-            const id = `layer-${Date.now()}`;
-            const scale = imageScale;
-            const newLayer: Layer = {
-              id,
-              type: 'image',
-              name: 'Imagem ' + (layers.filter(l => l.type === 'image').length + 1),
-              visible: true,
-              opacity: 100,
-              locked: false,
-              x,
-              y,
-              img: img,
-              scale
-            };
-            setLayers(prev => [...prev, newLayer]);
-            try { console.debug('handleCanvasClick: deferred image placed', { id, src: img.src }); } catch(e) {}
-            redrawAll();
-            try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-          } catch (e) {}
-          img.removeEventListener('load', onload);
-          img.removeEventListener('error', onerror);
-        };
-        const onerror = () => {
-          try { console.error('handleCanvasClick: deferred image failed to load', { src: img.src }); } catch(e) {}
-          img.removeEventListener('load', onload);
-          img.removeEventListener('error', onerror);
-        };
-        img.addEventListener('load', onload);
-        img.addEventListener('error', onerror);
-        // keep tool in placeImage so user can click again if needed
-        return true;
-      }
-
-      const id = `layer-${Date.now()}`;
-      const newLayer: Layer = {
-        id,
-        type: 'image',
-        name: 'Imagem ' + (layers.filter(l => l.type === 'image').length + 1),
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x,
-        y,
-        img: imageEl,
-        scale: imageScale
-      };
-      // placing new image layer
-      setLayers(prev => [...prev, newLayer]);
-      setTool('draw');
-      setImageFile(null);
-      setImageEl(null);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-      return true;
-    }
-    // if clicked on empty space, clear selection and indicate we did not handle placement
-    // clear selection
     setSelectedLayer(null);
     return false;
   };
 
-  const draw = (e: React.PointerEvent | React.MouseEvent | any) => {
-    // draw invoked
-    // Salva o último evento de ponteiro/mouse
-    lastMouseEventRef.current = e;
-    
-    // Se já tem um RAF agendado, não agenda outro
-    if (rafIdRef.current !== null) { return; }
-    
-    // Agenda processamento no próximo frame
-    rafIdRef.current = requestAnimationFrame(() => {
-      rafIdRef.current = null;
-      
-      const mouseEvent = lastMouseEventRef.current;
-      if (!mouseEvent) return;
-      
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const { x, y } = getCanvasCoordinates(mouseEvent);
-      // Hover detection for resize handles (only when not drawing)
-      if (!isDrawing && selectedLayer) {
-        const s = layers.find(l => l.id === selectedLayer);
-        if (s && !s.locked) {
-          let bounds = { x: 0, y: 0, w: 0, h: 0 };
-          if (s.type === 'image' && s.img) {
-            const w = s.img.naturalWidth * (s.scale || 1);
-            const h = s.img.naturalHeight * (s.scale || 1);
-            bounds = { x: s.x - w/2, y: s.y - h/2, w, h };
-          } else if (s.type === 'text') {
-            const ctx = getCtx();
-            if (ctx) ctx.font = `${Math.max(8, s.size || textSize)}px serif`;
-            const measure = ctx?.measureText(s.text || '') || { width: 0 };
-            const w = measure.width;
-            const h = (s.size || textSize) * 1.2;
-            bounds = { x: s.x, y: s.y, w, h };
-          }
+  // Pointer handlers on canvas
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
 
-          const handles = [
-            { x: bounds.x - 6, y: bounds.y - 6, pos: 'nw' },
-            { x: bounds.x + bounds.w + 6, y: bounds.y - 6, pos: 'ne' },
-            { x: bounds.x - 6, y: bounds.y + bounds.h + 6, pos: 'sw' },
-            { x: bounds.x + bounds.w + 6, y: bounds.y + bounds.h + 6, pos: 'se' },
-          ];
-          let found: string | null = null;
-          const hitRadius = 14;
-          for (const h of handles) {
-            const dist = Math.hypot(x - h.x, y - h.y);
-            if (dist <= hitRadius) { found = h.pos; break; }
-          }
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-          // rotation handle (above top-center)
-          const rotationHandlePos = { x: bounds.x + bounds.w / 2, y: bounds.y - 25 };
-          const rotDist = Math.hypot(x - rotationHandlePos.x, y - rotationHandlePos.y);
-          const canvasEl = canvasRef.current;
-          let cursorToSet = 'crosshair';
-          if (rotDist <= hitRadius) {
-            found = null; // prioritize rotation handle
-            hoveredHandleRef.current = 'rotation';
-            cursorToSet = 'grab';
-          } else if (found) {
-            hoveredHandleRef.current = found;
-            if (found === 'nw' || found === 'se') cursorToSet = 'nwse-resize';
-            else if (found === 'ne' || found === 'sw') cursorToSet = 'nesw-resize';
-          } else {
-            // if pointer is inside bounds, show move cursor
-            if (x >= bounds.x && x <= bounds.x + bounds.w && y >= bounds.y && y <= bounds.y + bounds.h) {
-              hoveredHandleRef.current = null;
-              cursorToSet = 'move';
-            } else {
-              hoveredHandleRef.current = null;
-              cursorToSet = 'crosshair';
-            }
-          }
-          const prev = hoveredHandleRef.current;
-          if (canvasEl) canvasEl.style.cursor = cursorToSet;
-          if (prev !== hoveredHandleRef.current) redrawAll();
-        }
+    const prevScale = scaleRef.current || 1;
+    const factor = Math.exp(-e.deltaY * 0.0012);
+    const newScale = Math.min(4, Math.max(0.4, prevScale * factor));
+
+    const worldX = (mouseX - panRef.current.x) / prevScale;
+    const worldY = (mouseY - panRef.current.y) / prevScale;
+
+    scaleRef.current = newScale;
+    panRef.current.x = mouseX - worldX * newScale;
+    panRef.current.y = mouseY - worldY * newScale;
+    clampPan();
+    redrawAll();
+  };
+
+  const handlePointerDownGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    pointerMapRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // If 2nd finger lands -> abort any accidental stroke and start pinch/pan
+    if (pointerMapRef.current.size >= 2) {
+      cancelActiveStrokeForPinch();
+      return;
+    }
+
+    // Middle or right button -> pan
+    if (e.button === 1 || e.button === 2) {
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      try {
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+        activePointerIdRef.current = e.pointerId;
+      } catch {}
+      return;
+    }
+
+    // Preview mode interactions
+    if (previewModeRef.current === 'naked') {
+      return;
+    }
+    if (previewModeRef.current === 'flashlight') {
+      flashlightPosRef.current = getCanvasCoordinates(e);
+      try {
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+        activePointerIdRef.current = e.pointerId;
+      } catch {}
+      redrawAll();
+      return;
+    }
+
+    // Shape tool start
+    if (isShapeTool(tool)) {
+      const pos = getCanvasCoordinates(e);
+      shapeStartRef.current = pos;
+      shapeCurrentRef.current = { ...pos, shiftKey: e.shiftKey };
+      isDrawingShapeRef.current = true;
+      try {
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+        activePointerIdRef.current = e.pointerId;
+      } catch {}
+      redrawAll();
+      return;
+    }
+
+    const handled = handleCanvasClick(e);
+    if (!handled && (tool === 'draw' || tool === 'erase')) {
+      startDrawing(e);
+    }
+  };
+
+  const handlePointerMoveGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (pointerMapRef.current.has(e.pointerId)) {
+      pointerMapRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // 2-finger pinch-zoom + pan
+    if (pointerMapRef.current.size >= 2) {
+      const pts = Array.from(pointerMapRef.current.values());
+      const a = pts[0];
+      const b = pts[1];
+      const dist = Math.max(10, Math.hypot(b.x - a.x, b.y - a.y));
+      const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+      if (!pinchStartRef.current) {
+        pinchStartRef.current = {
+          distance: dist,
+          center,
+          startScale: scaleRef.current || 1,
+          startPan: { ...panRef.current },
+        };
+      } else {
+        const ps = pinchStartRef.current;
+        const ratio = dist / ps.distance;
+        const newScale = Math.max(0.4, Math.min(4, ps.startScale * ratio));
+        const dx = center.x - ps.center.x;
+        const dy = center.y - ps.center.y;
+        scaleRef.current = newScale;
+        panRef.current = {
+          x: ps.startPan.x + dx,
+          y: ps.startPan.y + dy,
+        };
+        clampPan();
+        redrawAll();
       }
-      
-      // Handle resizing
-      if (isResizing && selectedLayer && resizeHandle && resizeStartRef.current) {
-        const s = layers.find(l => l.id === selectedLayer);
-        if (s) {
-          const startData = resizeStartRef.current;
-          const shift = !!(lastMouseEventRef.current && lastMouseEventRef.current.shiftKey);
+      return;
+    }
 
-          if (s.type === 'image' && s.img) {
-            // Calculate new scale based on handle movement
-            const dxRaw = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-            const dyRaw = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-            let delta = Math.max(dxRaw, dyRaw);
-            if (shift) {
-              // keep aspect ratio: use the dominant absolute delta but preserve sign
-              const sign = Math.sign(Math.abs(dxRaw) >= Math.abs(dyRaw) ? dxRaw : dyRaw) || 1;
-              delta = sign * Math.max(Math.abs(dxRaw), Math.abs(dyRaw));
-            }
-            const newScale = Math.max(0.05, startData.scale + (delta / Math.max(1, s.img.naturalWidth)));
+    latestMoveRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      pointerId: e.pointerId,
+      buttons: e.buttons,
+      shiftKey: e.shiftKey,
+    };
 
-            setLayers(prev => prev.map(l => 
-              l.id === selectedLayer ? { ...l, scale: newScale } : l
-            ));
-          } else if (s.type === 'text') {
-            // For text, resize means changing font size
-            const dxRaw = resizeHandle.includes('e') ? (x - startData.x) : (startData.x - x);
-            const dyRaw = resizeHandle.includes('s') ? (y - startData.y) : (startData.y - y);
-            let delta = Math.max(dxRaw, dyRaw);
-            if (shift) {
-              delta = Math.sign(Math.abs(dxRaw) >= Math.abs(dyRaw) ? dxRaw : dyRaw) * Math.max(Math.abs(dxRaw), Math.abs(dyRaw));
-            }
-            const newSize = Math.max(8, Math.min(400, startData.scale + delta / 2));
+    if (moveScheduledRef.current) return;
+    moveScheduledRef.current = true;
 
-            setLayers(prev => prev.map(l => 
-              l.id === selectedLayer ? { ...l, size: Math.round(newSize) } : l
-            ));
-          } else if (s.type === 'group' && s.childrenData) {
-            // Compute group's scale change based on pointer delta relative to start bbox
-            const dx = x - startData.x;
-            const dy = y - startData.y;
-            const startW = startData.width || 1;
-            const startH = startData.height || 1;
-            const minX = (startData as any).minX || 0;
-            const minY = (startData as any).minY || 0;
-            // choose anchor point based on handle (in group-local coords)
-            let anchorX = minX, anchorY = minY;
-            if (resizeHandle === 'ne') { anchorX = minX + startW; anchorY = minY; }
-            if (resizeHandle === 'se') { anchorX = minX + startW; anchorY = minY + startH; }
-            if (resizeHandle === 'nw') { anchorX = minX; anchorY = minY; }
-            if (resizeHandle === 'sw') { anchorX = minX; anchorY = minY + startH; }
-            const startDist = Math.hypot(anchorX, anchorY) || Math.max(startW, startH);
-            const curDist = Math.hypot(anchorX + dx, anchorY + dy);
-            const scaleFactor = curDist / Math.max(1, startDist);
-            const newScale = Math.max(0.2, Math.min(4, (startData.scale || 1) * scaleFactor));
+    requestAnimationFrame(() => {
+      moveScheduledRef.current = false;
+      const m = latestMoveRef.current;
+      if (!m) return;
 
-            // adjust group origin so the anchor point stays stationary in global coords
-            const oldScale = startData.scale || 1;
-            const oldGx = startData.x;
-            const oldGy = startData.y;
-            const anchorLocalX = anchorX;
-            const anchorLocalY = anchorY;
-            const newGx = oldGx + anchorLocalX * (oldScale - newScale);
-            const newGy = oldGy + anchorLocalY * (oldScale - newScale);
-
-            setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, scale: newScale, x: newGx, y: newGy } : l));
-          }
-
-          redrawAll();
-        }
-        return;
-      }
-      
-      // Handle drawing
-        if (isDrawing) {
-        // Draw on the selected drawing layer or, if editing mask, on the mask canvas
-        let targetCanvas: HTMLCanvasElement | null = null;
-        if (selectedLayer) {
-          const layer = layers.find(l => l.id === selectedLayer);
-          if (layer) {
-            if (layer.type === 'drawing' && layer.drawingCanvas) targetCanvas = layer.drawingCanvas;
-            else if (layer.isEditingMask && layer.mask) targetCanvas = layer.mask;
-          }
-        }
-        const off = targetCanvas;
-        if (!off) { return; }
-        const ctx = off.getContext('2d');
-        if (!ctx) { return; }
-        // Enforce image bounds while drawing. If pointer leaves image, stop the stroke.
-        try {
-          const ib = getImageBounds();
-            if (ib) {
-            if (x < ib.left || x > ib.right || y < ib.top || y > ib.bottom) {
-              stopDrawing();
-              return;
-            }
-          }
-        } catch (e) {}
-
-        // If we are drawing into a mask, use soft brush circles along the stroke
-        if (drawingMaskRef.current) {
-          try {
-            const paintHide = maskPaintMode === 'hide';
-            const colorForMask = maskUseEraser ? (paintHide ? '#ffffff' : '#000000') : (paintHide ? '#000000' : '#ffffff');
-            const last = strokePointsRef.current[strokePointsRef.current.length - 1] || { x, y };
-            drawSoftStroke(ctx, last.x, last.y, x, y, brushSize, colorForMask, maskBrushSoftness, maskBrushOpacity);
-            strokePointsRef.current.push({ x, y });
-            redrawAll();
-            return;
-          } catch (err) { /* draw mask error suppressed */ }
-        }
-
-        // Otherwise, normal path-based stroke for drawing layers
-        try {
-          ctx.lineTo(x, y);
-        } catch (e) {
-          ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+      if (isPanningRef.current && panStartRef.current) {
+        const dx = m.clientX - panStartRef.current.x;
+        const dy = m.clientY - panStartRef.current.y;
+        panStartRef.current = { x: m.clientX, y: m.clientY };
+        panRef.current.x += dx;
+        panRef.current.y += dy;
+        clampPan();
         redrawAll();
         return;
       }
+
+      // Flashlight tracking (mouse hover or touch drag)
+      if (previewModeRef.current === 'flashlight') {
+        flashlightPosRef.current = getCanvasCoordinates(m);
+        redrawAll();
+        return;
+      }
+
+      if (previewModeRef.current === 'naked') return;
+
+      // Update brush cursor overlay
+      try {
+        const canvasEl = canvasRef.current;
+        const containerEl = canvasContainerRef.current;
+        const rect = canvasEl?.getBoundingClientRect();
+        const containerRect = containerEl?.getBoundingClientRect();
+        if (rect && canvasEl && containerRect) {
+          const bufferWidth = canvasEl.width / (dprRef.current || 1);
+          const bufferHeight = canvasEl.height / (dprRef.current || 1);
+          const canvasAspect = bufferWidth / bufferHeight;
+          const displayAspect = rect.width / rect.height;
+          const renderedWidth =
+            canvasAspect < displayAspect ? rect.height * canvasAspect : rect.width;
+          const objectFitScale = renderedWidth / bufferWidth;
+          const visualSize = Math.max(6, brushSize * objectFitScale * (scaleRef.current || 1));
+          setMaskCursor({
+            x: m.clientX - containerRect.left,
+            y: m.clientY - containerRect.top,
+            size: visualSize,
+            visible: true,
+          });
+        }
+      } catch {}
+
+      // Shape drag update
+      if (isDrawingShapeRef.current && shapeStartRef.current) {
+        const pos = getCanvasCoordinates(m);
+        shapeCurrentRef.current = { ...pos, shiftKey: m.shiftKey };
+        redrawAll();
+        return;
+      }
+
+      draw(m);
     });
   };
 
-  const stopDrawing = () => {
-    // stopDrawing invoked
-    if (!isDrawing) { return; }
-    // Determine the target canvas (drawing layer or mask) and finish the stroke.
-    const targetCanvas = drawingTargetCanvasRef.current || (selectedLayer ? (layers.find(l => l.id === selectedLayer && l.type === 'drawing')?.drawingCanvas || (layers.find(l => l.id === selectedLayer)?.mask || null)) : null);
-    const ctx = targetCanvas?.getContext('2d') || null;
-    if (ctx) {
-      // finishing path on target canvas
-      const shift = !!(lastMouseEventRef.current && lastMouseEventRef.current.shiftKey);
-      if (shift && strokeStartRef.current && lastMouseEventRef.current) {
-        try {
-          const start = strokeStartRef.current;
-          const end = getCanvasCoordinates(lastMouseEventRef.current);
-          ctx.beginPath();
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.lineWidth = brushSize;
-          if (tool === 'erase') ctx.globalCompositeOperation = 'destination-out';
-          else ctx.globalCompositeOperation = 'source-over';
-          ctx.moveTo(start.x, start.y);
-          ctx.lineTo(end.x, end.y);
-          ctx.stroke();
-          ctx.closePath();
-        } catch (e) { console.error('stopDrawing: failed to draw straight line', e); }
-      } else {
-        try { ctx.closePath(); } catch (e) {}
-      }
-    } else {
-      // no ctx to close on selected layer
+  const handlePointerUpGeneric = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    pointerMapRef.current.delete(e.pointerId);
+    if (pointerMapRef.current.size < 2) {
+      pinchStartRef.current = null;
     }
+
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      panStartRef.current = null;
+      try {
+        (e.target as Element).releasePointerCapture?.(e.pointerId);
+      } catch {}
+      return;
+    }
+
+    // Commit shape to drawing layer
+    if (isDrawingShapeRef.current && shapeStartRef.current && shapeCurrentRef.current) {
+      const start = shapeStartRef.current;
+      const end = shapeCurrentRef.current;
+      isDrawingShapeRef.current = false;
+      shapeStartRef.current = null;
+      shapeCurrentRef.current = null;
+
+      if (Math.hypot(end.x - start.x, end.y - start.y) >= 2) {
+        const activeLayer = ensureDrawingLayer();
+        const targetCanvas = activeLayer?.drawingCanvas;
+        const octx = targetCanvas?.getContext('2d');
+        if (octx) {
+          drawShapeOnContext(octx, tool, start.x, start.y, end.x, end.y, {
+            color,
+            lineWidth: brushSize,
+            opacity: drawOpacity,
+            bloom: neonBloom,
+            brushStyle,
+            shiftKey: end.shiftKey,
+          });
+          setTimeout(() => pushHistory(), 0);
+        }
+      }
+      redrawAll();
+      try {
+        (e.target as Element).releasePointerCapture?.(e.pointerId);
+      } catch {}
+      return;
+    }
+
+    stopDrawing();
+  };
+
+  const draw = (mouseEvent: any) => {
+    lastMouseEventRef.current = mouseEvent;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const { x, y } = getCanvasCoordinates(mouseEvent);
+
+    // Handle resizing selected image/stamp/text
+    if (isResizing && selectedLayerRef.current && resizeHandle && resizeStartRef.current) {
+      const selId = selectedLayerRef.current;
+      const s = layersRef.current.find((l) => l.id === selId);
+      if (s) {
+        const startData = resizeStartRef.current;
+        const dxRaw = resizeHandle.includes('e') ? x - startData.x : startData.x - x;
+        const dyRaw = resizeHandle.includes('s') ? y - startData.y : startData.y - y;
+        const delta = Math.max(dxRaw, dyRaw);
+
+        if (s.type === 'image' && s.img) {
+          const baseDim = Math.max(40, s.img.naturalWidth || s.width || 100);
+          const newScale = Math.max(0.08, Math.min(5, startData.scale + delta / baseDim));
+          setLayers((prev) => prev.map((l) => (l.id === selId ? { ...l, scale: newScale } : l)));
+        } else if (s.type === 'text') {
+          const newSize = Math.max(10, Math.min(240, Math.round(startData.scale + delta / 2)));
+          setLayers((prev) => prev.map((l) => (l.id === selId ? { ...l, size: newSize } : l)));
+        }
+        redrawAll();
+      }
+      return;
+    }
+
+    // Handle active freehand drawing
+    if (isDrawing) {
+      const targetCanvas = drawingTargetCanvasRef.current;
+      if (!targetCanvas) return;
+      const ctx = targetCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const last = strokePointsRef.current[strokePointsRef.current.length - 1] || { x, y };
+
+      if (drawingMaskRef.current) {
+        const paintHide = maskPaintMode === 'hide';
+        const colorForMask = maskUseEraser
+          ? paintHide
+            ? '#ffffff'
+            : '#000000'
+          : paintHide
+          ? '#000000'
+          : '#ffffff';
+        drawSoftStroke(ctx, last.x, last.y, x, y, brushSize, colorForMask, maskBrushSoftness, maskBrushOpacity);
+      } else if (tool === 'erase') {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = brushSize;
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.restore();
+      } else if (brushStyle === 'fluorescent' && !censorMode) {
+        drawFluorescentSegment(ctx, last.x, last.y, x, y, brushSize, color, drawOpacity, neonBloom);
+      } else {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = Math.max(0.02, drawOpacity / 100);
+        ctx.strokeStyle = censorMode ? '#000000' : color;
+        ctx.shadowColor = censorMode ? 'transparent' : color;
+        ctx.shadowBlur = censorMode ? 0 : (neonBloom / 100) * 24;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = brushSize;
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      strokePointsRef.current.push({ x, y });
+      redrawAll();
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
     drawingTargetCanvasRef.current = null;
     strokeStartRef.current = null;
     strokePointsRef.current = [];
-    // snapshot history after finishing a stroke
-    try { setTimeout(() => pushHistory(), 0); } catch (e) { /* pushHistory failed */ }
-    // release any pointer capture
-    try {
-      const canvas = canvasRef.current;
-      if (canvas && (window as any).PointerEvent) {
-        // iterate active pointers is not exposed; attempt to release generically
-        // best-effort: release all pointer captures by querying stored pointerId on lastMouseEventRef
-        const last = lastMouseEventRef.current;
-        if (last && typeof last.pointerId === 'number') {
-          try { canvas.releasePointerCapture(last.pointerId); } catch (e) {}
-        }
-      }
-    } catch (e) {}
+    preStrokeImageDataRef.current = null;
+    setTimeout(() => pushHistory(), 0);
   };
 
-  // drag handling for selected layer
+  // Window-level pointer move/up for smooth layer dragging & rotation
   useEffect(() => {
-    let rafId: number | null = null;
-    let lastPointerEvent: PointerEvent | null = null;
-
     const handleMove = (ev: PointerEvent) => {
-      // update pointer map if tracked
-      try { if (pointerMapRef.current.has(ev.pointerId)) pointerMapRef.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); } catch (e) {}
+      if (pointerMapRef.current.size >= 2) return;
+      if (!isDraggingLayer && !isRotating) return;
 
-      // pinch/pan handling when 2+ pointers
-      if (pointerMapRef.current.size >= 2) {
-        const ids = Array.from(pointerMapRef.current.keys());
-        const a = pointerMapRef.current.get(ids[0])!;
-        const b = pointerMapRef.current.get(ids[1])!;
-        if (a && b) {
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const distance = Math.hypot(dx, dy);
-          const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-          if (!pinchStartRef.current) {
-            pinchStartRef.current = {
-              distance,
-              center,
-              startScale: scaleRef.current,
-              startPan: { ...panRef.current }
-            };
+      const selId = selectedLayerRef.current;
+      if (!selId) return;
+      const { x, y } = getCanvasCoordinates(ev);
+
+      if (isDraggingLayer) {
+        let nextX = x - (dragOffsetRef.current?.ox || 0);
+        let nextY = y - (dragOffsetRef.current?.oy || 0);
+        const cssW = cssWidthRef.current || 800;
+        const cssH = cssHeightRef.current || 600;
+        const ctx = canvasRef.current?.getContext('2d') || null;
+        const curLayer = layersRef.current.find((l) => l.id === selId);
+        let snapX = false;
+        let snapY = false;
+        if (curLayer) {
+          const previewLayer = { ...curLayer, x: nextX, y: nextY };
+          const bounds = getLayerBounds(previewLayer, ctx);
+          if (bounds) {
+            const cx = bounds.x + bounds.w / 2;
+            const cy = bounds.y + bounds.h / 2;
+            const threshold = 8 / (scaleRef.current || 1);
+            if (Math.abs(cx - cssW / 2) <= threshold) {
+              nextX += cssW / 2 - cx;
+              snapX = true;
+            }
+            if (Math.abs(cy - cssH / 2) <= threshold) {
+              nextY += cssH / 2 - cy;
+              snapY = true;
+            }
           }
-          const ps = pinchStartRef.current;
-          const newScaleRaw = (distance / ps.distance) * ps.startScale;
-          const newScale = Math.max(0.2, Math.min(4, newScaleRaw));
-          // Apply new scale (keep pan unchanged for simplicity)
-          scaleRef.current = newScale;
-          redrawAll();
-          return;
         }
-      } else {
-        pinchStartRef.current = null;
+        snapGuidesRef.current = { x: snapX, y: snapY };
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id !== selId
+              ? l
+              : {
+                  ...l,
+                  x: nextX,
+                  y: nextY,
+                }
+          )
+        );
+        redrawAll();
+      } else if (isRotating) {
+        const s = layersRef.current.find((l) => l.id === selId);
+        const ctx = canvasRef.current?.getContext('2d') || null;
+        if (s) {
+          const bounds = getLayerBounds(s, ctx);
+          const cx = bounds ? bounds.x + bounds.w / 2 : s.x || 0;
+          const cy = bounds ? bounds.y + bounds.h / 2 : s.y || 0;
+          // Offset by +PI/2 because rotation handle is at the top (-PI/2)
+          const newRotation = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+          setLayers((prev) =>
+            prev.map((l) => (l.id === selId ? { ...l, rotation: newRotation } : l))
+          );
+          redrawAll();
+        }
       }
-
-      lastPointerEvent = ev;
-
-      if (!isDraggingLayer && !isResizing && !isRotating) return;
-
-      if (rafId !== null) return;
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-
-        if (!lastPointerEvent) return;
-        const e = lastPointerEvent;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const rawX = e.clientX - rect.left;
-        const rawY = e.clientY - rect.top;
-        const scale = scaleRef.current || 1;
-        const x = rawX / scale;
-        const y = rawY / scale;
-
-        if (isDraggingLayer && selectedLayer) {
-          setLayers(prev => prev.map(l => l.id !== selectedLayer ? l : { ...l, x: x - (dragOffsetRef.current?.ox||0), y: y - (dragOffsetRef.current?.oy||0) }));
-          redrawAll();
-          return;
-        }
-
-        if (isRotating && selectedLayer) {
-          const s = layers.find(l => l.id === selectedLayer);
-          if (s) {
-            const layerCenterX = s.x || 0;
-            const layerCenterY = s.y || 0;
-            const newRotation = Math.atan2(y - layerCenterY, x - layerCenterX);
-            setLayers(prev => prev.map(l => l.id === selectedLayer ? { ...l, rotation: newRotation } : l));
-            redrawAll();
-          }
-          return;
-        }
-      });
     };
 
-    const handleUp = (ev?: PointerEvent) => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      // remove from pointer map
-      try { if (ev && typeof ev.pointerId === 'number') pointerMapRef.current.delete(ev.pointerId); } catch (e) {}
+    const handleUp = (ev: PointerEvent) => {
+      pointerMapRef.current.delete(ev.pointerId);
       if (pointerMapRef.current.size < 2) pinchStartRef.current = null;
-      if (isDraggingLayer) setIsDraggingLayer(false);
+
+      let changed = false;
+      if (isDraggingLayer) {
+        setIsDraggingLayer(false);
+        snapGuidesRef.current = { x: false, y: false };
+        redrawAll();
+        changed = true;
+      }
       if (isResizing) {
         setIsResizing(false);
         setResizeHandle(null);
         resizeStartRef.current = null;
+        changed = true;
       }
       if (isRotating) {
         setIsRotating(false);
+        changed = true;
       }
-      // push history when a drag/resize finishes
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-      // release pointer capture if any
+      if (changed) {
+        setTimeout(() => pushHistory(), 0);
+      }
       try {
-        const canvasEl = canvasRef.current;
         const pid = activePointerIdRef.current;
-        if (canvasEl && pid !== null && typeof pid === 'number') {
-          (canvasEl as any).releasePointerCapture?.(pid);
+        if (canvasRef.current && pid != null) {
+          canvasRef.current.releasePointerCapture?.(pid);
         }
         activePointerIdRef.current = null;
-      } catch (e) {}
+      } catch {}
     };
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
     window.addEventListener('pointercancel', handleUp);
     return () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
       window.removeEventListener('pointercancel', handleUp);
     };
-  }, [isDraggingLayer, isResizing, isRotating, selectedLayer, layers]);
+  }, [isDraggingLayer, isResizing, isRotating, redrawAll]);
 
-  const handleFinish = () => {
+  // Double-click text layer to edit inline
+  const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (previewModeRef.current !== 'edit') return;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    // ensure latest drawing + layers are rendered
-    redrawAll();
-    
-    // Em vez de zerar os canais, mesclamos a edição no canal alvo da imagem base!
-    if (mode === 'rgb') {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        try {
-          // Pega a imagem combinada (Base + Desenho do usuário)
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const data = imgData.data;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const { x, y } = getCanvasCoordinates(e);
 
-          // Precisamos dos pixels puros da imagem base para restaurar os canais não afetados
-          const baseCanvas = document.createElement('canvas');
-          baseCanvas.width = canvas.width;
-          baseCanvas.height = canvas.height;
-          const baseCtx = baseCanvas.getContext('2d');
-          
-          if (baseCtx) {
-            const dpr = dprRef.current || 1;
-            const p = panRef.current || { x: 0, y: 0 };
-            const zoom = scaleRef.current || 1;
-            baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            baseCtx.translate(p.x, p.y);
-            baseCtx.scale(zoom, zoom);
-            
-            const baseLayer = layers.find(l => l.id === '__base_image');
-            if (baseLayer && baseLayer.img) {
-              const w = (baseLayer.img.naturalWidth || baseLayer.img.width) * (baseLayer.scale || 1);
-              const h = (baseLayer.img.naturalHeight || baseLayer.img.height) * (baseLayer.scale || 1);
-              baseCtx.drawImage(baseLayer.img, (baseLayer.x || 0) - w / 2, (baseLayer.y || 0) - h / 2, w, h);
-            }
-            
-            const baseData = baseCtx.getImageData(0, 0, canvas.width, canvas.height);
-            const bData = baseData.data;
+    for (let i = layersRef.current.length - 1; i >= 0; i--) {
+      const layer = layersRef.current[i];
+      if (!layer.visible || layer.locked || layer.type !== 'text') continue;
+      const bounds = getLayerBounds(layer, ctx);
+      if (
+        bounds &&
+        x >= bounds.x &&
+        x <= bounds.x + bounds.w &&
+        y >= bounds.y &&
+        y <= bounds.y + bounds.h
+      ) {
+        const s = scaleRef.current || 1;
+        const p = panRef.current || { x: 0, y: 0 };
+        setInlineTextEdit({
+          id: layer.id,
+          value: layer.text || '',
+          cssX: (layer.x || 0) * s + p.x,
+          cssY: (layer.y || 0) * s + p.y,
+          fontSize: (layer.size || textSize) * s,
+        });
+        return;
+      }
+    }
+  };
 
-            // Transfere os canais intocados da imagem base para a imagem final, 
-            // mantendo as edições feitas apenas no canal alvo.
-            for (let i = 0; i < data.length; i += 4) {
-              if (targetChannel === 'R') { 
-                data[i + 1] = bData[i + 1]; // restaura Green
-                data[i + 2] = bData[i + 2]; // restaura Blue
-              }
-              else if (targetChannel === 'G') { 
-                data[i] = bData[i];         // restaura Red
-                data[i + 2] = bData[i + 2]; // restaura Blue
-              }
-              else if (targetChannel === 'B') { 
-                data[i] = bData[i];         // restaura Red
-                data[i + 1] = bData[i + 1]; // restaura Green
-              }
-              // O canal Alpha original do baseLayer pode ser mantido ou podemos deixar o atual. 
-              // Melhor manter o original para não sumir o fundo.
-              data[i + 3] = bData[i + 3];
+  // Clean PNG export (NO handles, NO flashlight mask, NO zoom/pan distortion)
+  const handleFinish = () => {
+    const dpr = dprRef.current || 1;
+    const cssW = cssWidthRef.current || 800;
+    const cssH = cssHeightRef.current || 600;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = Math.round(cssW * dpr);
+    exportCanvas.height = Math.round(cssH * dpr);
+    const ectx = exportCanvas.getContext('2d');
+    if (!ectx) return;
+
+    ectx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ectx.clearRect(0, 0, cssW, cssH);
+
+    // Render all visible layers cleanly (base image + drawings + shapes + texts + stamps + images)
+    renderLayersList(ectx, layersRef.current, cssW, cssH, dpr, false);
+
+    // Forensic RGB channel merge (100% backwards-compatible)
+    if (mode === 'rgb' && targetChannel) {
+      try {
+        const imgData = ectx.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
+        const data = imgData.data;
+
+        const baseCanvas = document.createElement('canvas');
+        baseCanvas.width = exportCanvas.width;
+        baseCanvas.height = exportCanvas.height;
+        const baseCtx = baseCanvas.getContext('2d');
+        const baseLayer = layersRef.current.find((l) => l.id === '__base_image');
+        if (baseCtx && baseLayer) {
+          baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          drawLayerToContext(baseCtx, baseLayer, cssW, cssH);
+          const bData = baseCtx.getImageData(0, 0, exportCanvas.width, exportCanvas.height).data;
+          for (let i = 0; i < data.length; i += 4) {
+            if (targetChannel === 'R') {
+              data[i + 1] = bData[i + 1];
+              data[i + 2] = bData[i + 2];
+            } else if (targetChannel === 'G') {
+              data[i] = bData[i];
+              data[i + 2] = bData[i + 2];
+            } else if (targetChannel === 'B') {
+              data[i] = bData[i];
+              data[i + 1] = bData[i + 1];
             }
-            ctx.putImageData(imgData, 0, 0);
+            data[i + 3] = bData[i + 3];
           }
-        } catch (e) {
-          console.error("Error applying forensic RGB merge", e);
+          ectx.putImageData(imgData, 0, 0);
         }
+      } catch (err) {
+        console.error('Error applying forensic RGB merge', err);
       }
     }
 
-    canvas.toBlob((blob) => {
+    exportCanvas.toBlob((blob) => {
       if (!blob) return;
       const timestamp = Date.now();
-      const prefix = mode === 'rgb' ? 'forensic_rgb' : mode === 'filter' ? 'filter' : mode === 'thermal' ? 'thermal' : 'uv';
-      const suffix = mode === 'rgb' ? `_${targetChannel}` : '';
+      const prefix =
+        mode === 'rgb'
+          ? 'forensic_rgb'
+          : mode === 'filter'
+          ? 'filter'
+          : mode === 'thermal'
+          ? 'thermal'
+          : 'uv';
+      const suffix = mode === 'rgb' && targetChannel ? `_${targetChannel}` : '';
       const filename = `${prefix}_layer${suffix}_${timestamp}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
-      
-      const meta: { targetChannel?: 'R' | 'G' | 'B' } = {};
-      if (mode === 'rgb') {
+
+      const uvAuthoringState = serializeLayersToAuthoringState(
+        layersRef.current,
+        cssW,
+        cssH
+      );
+      const meta: { targetChannel?: 'R' | 'G' | 'B'; uvAuthoringState?: UVAuthoringState } = {
+        uvAuthoringState,
+      };
+      if (mode === 'rgb' && targetChannel) {
         meta.targetChannel = targetChannel;
       }
-      
-      console.log('📤 Exportando:', { filename, mode, channel: mode === 'rgb' ? targetChannel : 'N/A' });
-      try { 
-        onSave(file, meta); 
-      } catch (e) { 
-        console.error('Erro ao salvar arquivo:', e);
-        try { onSave(file); } catch (e) {} 
+
+      baselineFingerprintRef.current = dirtyFingerprint;
+      try {
+        onSave(file, meta);
+      } catch {
+        onSave(file);
       }
-    });
+    }, 'image/png');
   };
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    // clear any drawing canvases attached to layers (we use per-layer canvases now)
-    // free any drawing canvases attached to layers
-    setLayers(prev => {
-      prev.forEach(l => {
-        if (l.type === 'drawing' && l.drawingCanvas) {
-          try { l.drawingCanvas.width = 0; l.drawingCanvas.height = 0; } catch (e) {}
-        }
-        if (l.type === 'image' && l.img && l.img.src && l.img.src.startsWith('blob:')) {
-          try { URL.revokeObjectURL(l.img.src); } catch (e) {}
-          const idx = objectUrlsRef.current.indexOf(l.img.src);
-          if (idx >= 0) objectUrlsRef.current.splice(idx, 1);
-        }
-        // clear any cached raster canvas
-        try { if ((l as any).cachedCanvas) { ((l as any).cachedCanvas as HTMLCanvasElement).width = 0; ((l as any).cachedCanvas as HTMLCanvasElement).height = 0; } } catch (e) {}
-      });
-      return [];
-    });
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-  };
+  const handleFitToBaseProportion = () => {
+    resetView();
+    const cssW = cssWidthRef.current || 800;
+    const cssH = cssHeightRef.current || 600;
+    const selId = selectedLayerRef.current;
+    if (!selId || selId === '__base_image') return;
 
-  const deleteLayer = (id: string) => {
-    setLayers(prev => {
-      // try remove top-level
-      const removed = prev.find(l => l.id === id);
-      if (removed) {
-        let next = prev.filter(l => l.id !== id);
-        if (removed.type === 'drawing' && removed.drawingCanvas) {
-          try { removed.drawingCanvas.width = 0; removed.drawingCanvas.height = 0; } catch (e) {}
+    setLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== selId) return l;
+        if (l.type === 'image') {
+          const baseW = l.width || l.img?.naturalWidth || 160;
+          const baseH = l.height || l.img?.naturalHeight || 160;
+          const targetRatio = Math.min((cssW * 0.72) / baseW, (cssH * 0.72) / baseH);
+          const nextScale = Math.max(0.1, Math.min(3, Number(targetRatio.toFixed(2))));
+          return {
+            ...l,
+            x: (cssW - baseW * nextScale) / 2,
+            y: (cssH - baseH * nextScale) / 2,
+            scale: nextScale,
+            rotation: 0,
+          };
         }
-        if (removed.type === 'image' && removed.img && removed.img.src && removed.img.src.startsWith('blob:')) {
-          try { URL.revokeObjectURL(removed.img.src); } catch (e) {}
-          const idx = objectUrlsRef.current.indexOf(removed.img.src);
-          if (idx >= 0) objectUrlsRef.current.splice(idx, 1);
-        }
-        try { if ((removed as any).cachedCanvas) { ((removed as any).cachedCanvas as HTMLCanvasElement).width = 0; ((removed as any).cachedCanvas as HTMLCanvasElement).height = 0; } } catch (e) {}
-        if (removed.type === 'group' && removed.childrenData && Array.isArray(removed.childrenData)) {
-          const absChildren = removed.childrenData.map(c => ({ ...c, x: (c.x || 0) + (removed.x || 0), y: (c.y || 0) + (removed.y || 0) }));
-          next = [...next, ...absChildren];
-        }
-        return next;
-      }
-      // otherwise, try to remove from group children
-      return prev.map(l => {
-        if (l.type === 'group' && l.childrenData) {
-          const kids = l.childrenData.filter(c => c.id !== id);
-          if (kids.length !== l.childrenData.length) {
-            return { ...l, childrenData: kids } as Layer;
-          }
+        if (l.type === 'text') {
+          return {
+            ...l,
+            x: cssW / 2,
+            y: cssH / 2,
+            rotation: 0,
+          };
         }
         return l;
-      });
+      })
+    );
+    setTimeout(() => pushHistory(), 0);
+  };
+
+  const applyUVPreset = (preset: UVStylePreset) => {
+    setColor(preset.color);
+    setBrushStyle(preset.brushStyle);
+    setNeonBloom(preset.neonBloom);
+    setDrawOpacity(preset.drawOpacity);
+    setFontStyle(preset.fontStyle);
+    if (selectedLayer && selectedLayer !== '__base_image') {
+      setLayers((prev) =>
+        prev.map((l) =>
+          l.id === selectedLayer
+            ? {
+                ...l,
+                color: preset.color,
+                stampColor: l.isStamp ? preset.color : l.stampColor,
+                bloom: preset.neonBloom,
+                opacity: preset.drawOpacity,
+                fontStyle: l.type === 'text' ? preset.fontStyle : l.fontStyle,
+              }
+            : l
+        )
+      );
+    }
+  };
+
+  const handleSaveCustomUVPreset = () => {
+    const name = window.prompt('Nome do preset UV:');
+    if (!name || !name.trim()) return;
+    const nextPreset: UVStylePreset = {
+      id: `custom-uv-${Date.now()}`,
+      label: name.trim(),
+      color,
+      brushStyle,
+      neonBloom,
+      drawOpacity,
+      fontStyle,
+      custom: true,
+    };
+    const updated = [...customPresets, nextPreset];
+    setCustomPresets(updated);
+    try {
+      localStorage.setItem(UV_PRESETS_KEY, JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handleDeleteCustomUVPreset = (id: string) => {
+    const updated = customPresets.filter((p) => p.id !== id);
+    setCustomPresets(updated);
+    try {
+      localStorage.setItem(UV_PRESETS_KEY, JSON.stringify(updated));
+    } catch {}
+  };
+
+  // Layer management actions
+  const deleteLayer = (id: string) => {
+    if (id === '__base_image') return;
+    setLayers((prev) => {
+      const removed = prev.find((l) => l.id === id);
+      if (removed) {
+        if (removed.type === 'drawing' && removed.drawingCanvas) {
+          removed.drawingCanvas.width = 0;
+          removed.drawingCanvas.height = 0;
+        }
+        return prev.filter((l) => l.id !== id);
+      }
+      return prev.map((l) =>
+        l.type === 'group' && l.childrenData
+          ? { ...l, childrenData: l.childrenData.filter((c) => c.id !== id) }
+          : l
+      );
     });
-    // clear selection if needed (use functional setter to avoid stale value)
-    setSelectedLayer(prev => prev === id ? null : prev);
-    // allow useEffect([layers]) to redraw after state update
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setSelectedLayer((prev) => (prev === id ? null : prev));
+    setTimeout(() => pushHistory(), 0);
   };
 
   const selectLayer = (id: string) => {
     setSelectedLayer(id);
-    setTool('draw');
+    const found = layersRef.current.find((l) => l.id === id);
+    if (found && (found.type === 'image' || found.type === 'text')) {
+      setTool('select');
+    } else if (found && found.type === 'drawing' && !found.locked) {
+      setTool('draw');
+    }
     redrawAll();
   };
-
-  // Delegated click handler: allow clicking anywhere in a layer row to select it.
-  // This augments the per-element handlers and ensures the whole row fills visually.
-  useEffect(() => {
-    const root = document.querySelector('.layers-list');
-    if (!root) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const row = target.closest?.('.layer-item') as HTMLElement | null;
-      if (!row) return;
-      // ignore clicks on interactive items
-      if (target.closest('button, a, input, textarea, .layer-item-actions, .group-toggle-btn')) return;
-      const layerId = row.getAttribute('data-layer-id');
-      if (!layerId) return;
-      // select the layer (single-select behavior)
-      selectLayer(layerId);
-    };
-    root.addEventListener('click', handler);
-    return () => root.removeEventListener('click', handler);
-  }, [layers]);
 
   const addEmptyTextLayer = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const id = `layer-${Date.now()}`;
-    const newLayer: Layer = { 
-      id, 
+    const cssW = cssWidthRef.current || 800;
+    const cssH = cssHeightRef.current || 600;
+    const id = `layer-txt-${Date.now()}`;
+    const newLayer: Layer = {
+      id,
       type: 'text',
-      name: 'Novo Texto',
+      name: textValue.trim() || 'Texto UV',
       visible: true,
-      opacity: 100,
+      opacity: drawOpacity,
       locked: false,
-      x: (cssWidthRef.current || (canvas.width / (dprRef.current || 1))) / 2, 
-      y: (cssHeightRef.current || (canvas.height / (dprRef.current || 1))) / 2, 
-      text: 'Novo Texto', 
-      size: textSize, 
-      color 
+      x: cssW * 0.35,
+      y: cssH * 0.45,
+      rotation: 0,
+      text: textValue.trim() || 'Pista Oculta',
+      size: textSize,
+      color,
+      fontStyle,
+      bloom: neonBloom,
     };
-    setLayers(prev => [...prev, newLayer]);
+    setLayers((prev) => [...prev, newLayer]);
     setSelectedLayer(id);
-    setShowAddLayerMenu(false);
-    // mark this new layer cache to be built on next redraw
-    
+    setTool('select');
     redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-  };
-
-  const addImageLayerFromFile = (file: File) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const url = URL.createObjectURL(file);
-    objectUrlsRef.current.push(url);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-      const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
-
-      const maxW = cssW * 0.8;
-      const maxH = cssH * 0.8;
-      let w = img.naturalWidth || img.width || 300;
-      let h = img.naturalHeight || img.height || 300;
-
-      if (w > maxW || h > maxH) {
-        const ratio = Math.min(maxW / w, maxH / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-
-      const x = Math.round(cssW / 2);
-      const y = Math.round(cssH / 2);
-      const id = `layer-${Date.now()}`;
-      const name = file.name.replace(/\.[^/.]+$/, '') || 'Imagem';
-
-      const newLayer: Layer = {
-        id,
-        type: 'image',
-        name,
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x,
-        y,
-        scale: 1,
-        width: w,
-        height: h,
-        img,
-        blendMode: 'normal',
-      };
-
-      setLayers(prev => [...prev, newLayer]);
-      setSelectedLayer(id);
-      setTool('select');
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    };
-    img.src = url;
+    setTimeout(() => pushHistory(), 0);
   };
 
   const addEmptyDrawingLayer = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const id = `layer-${Date.now()}`;
-    
-    // Create an offscreen canvas for this drawing layer
+    const dpr = dprRef.current || 1;
+    const cssW = cssWidthRef.current || 800;
+    const cssH = cssHeightRef.current || 600;
     const drawCanvas = document.createElement('canvas');
-    const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-    const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
-    drawCanvas.width = Math.round(cssW * (dprRef.current || 1));
-    drawCanvas.height = Math.round(cssH * (dprRef.current || 1));
+    drawCanvas.width = Math.round(cssW * dpr);
+    drawCanvas.height = Math.round(cssH * dpr);
     const drawCtx = drawCanvas.getContext('2d');
-    if (drawCtx) drawCtx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
-    
-    const newLayer: Layer = { 
-      id, 
+    if (drawCtx) drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const id = `layer-draw-${Date.now()}`;
+    const newLayer: Layer = {
+      id,
       type: 'drawing',
-      name: 'Desenho ' + (layers.filter(l => l.type === 'drawing').length + 1),
+      name: `Camada UV ${layers.filter((l) => l.type === 'drawing' && l.id !== '__base_image').length + 1}`,
       visible: true,
       opacity: 100,
       locked: false,
       drawingCanvas: drawCanvas,
       x: 0,
-      y: 0
+      y: 0,
     };
-    setLayers(prev => [...prev, newLayer]);
+    setLayers((prev) => [...prev, newLayer]);
     setSelectedLayer(id);
-    setShowAddLayerMenu(false);
     setTool('draw');
-    
     redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setTimeout(() => pushHistory(), 0);
   };
 
   const toggleLayerVisibility = (id: string) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, visible: !l.visible };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, visible: !c.visible } : c) } as Layer;
-      }
-      return l;
-    }));
-    
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
+    );
+    setTimeout(() => pushHistory(), 0);
   };
 
   const toggleLayerLock = (id: string) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, locked: !l.locked };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, locked: !c.locked } : c) } as Layer;
-      }
-      return l;
-    }));
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    if (id === '__base_image') return;
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)));
+    setTimeout(() => pushHistory(), 0);
   };
 
   const updateLayerOpacity = (id: string, opacity: number) => {
     const clamped = Math.max(0, Math.min(100, opacity));
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, opacity: clamped };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, opacity: clamped } : c) } as Layer;
-      }
-      return l;
-    }));
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, opacity: clamped } : l)));
+    setTimeout(() => pushHistory(), 0);
   };
 
   const renameLayer = (id: string, newName: string) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, name: newName };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, name: newName } : c) } as Layer;
-      }
-      return l;
-    }));
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, name: newName } : l)));
     setEditingLayerName(null);
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setTimeout(() => pushHistory(), 0);
+  };
+
+  const duplicateLayer = (id: string) => {
+    const idx = layers.findIndex((l) => l.id === id);
+    if (idx < 0 || id === '__base_image') return;
+    const layer = layers[idx];
+    const newId = `layer-${Date.now()}`;
+    const dup: Layer = {
+      ...layer,
+      id: newId,
+      name: `${layer.name} (cópia)`,
+      x: (layer.x || 0) + 20,
+      y: (layer.y || 0) + 20,
+    };
+    setLayers((prev) => [...prev.slice(0, idx + 1), dup, ...prev.slice(idx + 1)]);
+    setSelectedLayer(newId);
+    setTimeout(() => pushHistory(), 0);
   };
 
   const rasterizeLayer = (id: string) => {
-    const layerIndex = layers.findIndex(l => l.id === id);
+    const layerIndex = layers.findIndex((l) => l.id === id);
     if (layerIndex === -1) return;
     const l = layers[layerIndex];
     if (l.type === 'drawing' || l.type === 'group') {
-      try { toast.error('Apenas camadas de Imagem e Texto podem ser rasterizadas.'); } catch (e) {}
+      toast.error('Apenas camadas de Imagem, Carimbo ou Texto podem ser rasterizadas.');
       return;
     }
-    
     const dpr = dprRef.current || 1;
+    const cssW = cssWidthRef.current || 800;
+    const cssH = cssHeightRef.current || 600;
     const cvs = document.createElement('canvas');
-    cvs.width = Math.round((cssWidthRef.current || 800) * dpr);
-    cvs.height = Math.round((cssHeightRef.current || 600) * dpr);
+    cvs.width = Math.round(cssW * dpr);
+    cvs.height = Math.round(cssH * dpr);
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
-    
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    
-    if (l.type === 'image' && l.img) {
-      const imgEl = l.img as HTMLImageElement;
-      const imgWidth = (imgEl.naturalWidth || imgEl.width) * (l.scale || 1);
-      const imgHeight = (imgEl.naturalHeight || imgEl.height) * (l.scale || 1);
-      const drawX = (l.x || 0) - imgWidth / 2;
-      const drawY = (l.y || 0) - imgHeight / 2;
-      ctx.drawImage(imgEl, drawX, drawY, imgWidth, imgHeight);
-    } else if (l.type === 'text' && l.text) {
-      ctx.font = `${l.size || 24}px Inter, sans-serif`;
-      ctx.fillStyle = l.color || '#ffffff';
-      ctx.textBaseline = 'top';
-      const lines = l.text.split('\n');
-      lines.forEach((line, i) => {
-        ctx.fillText(line, l.x || 0, (l.y || 0) + i * (l.size || 24) * 1.2);
-      });
-    }
-    
+    drawLayerToContext(ctx, l, cssW, cssH);
+
     const newLayer: Layer = {
       ...l,
       type: 'drawing',
       x: 0,
       y: 0,
+      rotation: 0,
       scale: 1,
       drawingCanvas: cvs,
       img: undefined,
       text: undefined,
       size: undefined,
     };
-    
-    setLayers(prev => {
+    setLayers((prev) => {
       const next = [...prev];
       next[layerIndex] = newLayer;
       return next;
     });
-    
-    try { toast.success(`Camada "${l.name}" rasterizada com sucesso.`); } catch (e) {}
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    toast.success(`Camada "${l.name}" rasterizada.`);
+    setTimeout(() => pushHistory(), 0);
   };
-
-  const duplicateLayer = (id: string) => {
-    // duplicate either a top-level layer or a child inside a group
-    const topIndex = layers.findIndex(l => l.id === id);
-    if (topIndex >= 0) {
-      const layer = layers[topIndex];
-      const newId = `layer-${Date.now()}`;
-      const duplicated: Layer = { ...layer, id: newId, name: layer.name + ' (cópia)', x: (layer.x || 0) + 20, y: (layer.y || 0) + 20 };
-      setLayers(prev => [...prev.slice(0, topIndex + 1), duplicated, ...prev.slice(topIndex + 1)]);
-      setSelectedLayer(newId);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-      return;
-    }
-    // search groups
-    for (let gi = 0; gi < layers.length; gi++) {
-      const g = layers[gi];
-      if (g.type === 'group' && g.childrenData) {
-        const childIndex = g.childrenData.findIndex(c => c.id === id);
-        if (childIndex >= 0) {
-          const child = g.childrenData[childIndex];
-          const newId = `layer-${Date.now()}`;
-          const duplicated: Layer = { ...child, id: newId, name: child.name + ' (cópia)', x: (child.x || 0) + 20, y: (child.y || 0) + 20 } as Layer;
-          setLayers(prev => prev.map((l, idx) => {
-            if (idx === gi && l.type === 'group' && l.childrenData) {
-              const newChildren = [...l.childrenData.slice(0, childIndex + 1), duplicated, ...l.childrenData.slice(childIndex + 1)];
-              return { ...l, childrenData: newChildren } as Layer;
-            }
-            return l;
-          }));
-          setSelectedLayer(newId);
-          redrawAll();
-          try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-          return;
-        }
-      }
-    }
-  };
-
-
 
   const createGroup = (checkedIds: string[]) => {
-    try {
-      if (!checkedIds || checkedIds.length < 2) return;
-      const selectedLayers = layers.filter(l => checkedIds.includes(l.id));
-      if (selectedLayers.length < 2) return;
-      // compute centroid
-      const cx = selectedLayers.reduce((s, l) => s + (l.x || 0), 0) / selectedLayers.length;
-      const cy = selectedLayers.reduce((s, l) => s + (l.y || 0), 0) / selectedLayers.length;
-      // make children relative
-      const childrenData = selectedLayers.map(l => ({ ...l, x: (l.x || 0) - cx, y: (l.y || 0) - cy }));
-      // remove originals from top-level
-      const remaining = layers.filter(l => !checkedIds.includes(l.id));
-      const groupLayer: Layer = {
-        id: `group-${Date.now()}`,
-        type: 'group',
-        name: 'Grupo',
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x: cx,
-        y: cy,
-        scale: 1,
-        childrenData
-      } as any;
-      setLayers([...remaining, groupLayer]);
-      
-      setSelectedLayer(groupLayer.id);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    } catch (e) {}
-  };
-
-  const ungroupLayer = (id: string) => {
-    try {
-      const grp = layers.find(l => l.id === id && l.type === 'group');
-      if (!grp || !grp.childrenData) return;
-      const absChildren = grp.childrenData.map(c => ({ ...c, x: (c.x || 0) + (grp.x || 0), y: (c.y || 0) + (grp.y || 0) }));
-      // remove group and add children back at group's position
-      const remaining = layers.filter(l => l.id !== id);
-      setLayers([...remaining, ...absChildren]);
-      
-      if (selectedLayer === id) setSelectedLayer(null);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    } catch (e) {}
-  };
-
-  const mergeDown = (id: string) => {
-    const index = layers.findIndex(l => l.id === id);
-    if (index <= 0) return; // can't merge if it's the bottom layer
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    // Create temporary canvas to merge layers
-    const tempCanvas = document.createElement('canvas');
-    const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-    const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
-    tempCanvas.width = Math.round(cssW * (dprRef.current || 1));
-    tempCanvas.height = Math.round(cssH * (dprRef.current || 1));
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) tempCtx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
-    if (!tempCtx) return;
-    
-    const lowerLayer = layers[index - 1];
-    const upperLayer = layers[index];
-    
-    // Draw lower layer
-    tempCtx.globalAlpha = (lowerLayer.opacity || 100) / 100;
-    if (lowerLayer.type === 'image' && lowerLayer.img) {
-      const w = lowerLayer.img.naturalWidth * (lowerLayer.scale || 1);
-      const h = lowerLayer.img.naturalHeight * (lowerLayer.scale || 1);
-      tempCtx.drawImage(lowerLayer.img, (lowerLayer.x || 0) - w/2, (lowerLayer.y || 0) - h/2, w, h);
-    }
-    
-    // Draw upper layer on top
-    tempCtx.globalAlpha = (upperLayer.opacity || 100) / 100;
-    if (upperLayer.type === 'image' && upperLayer.img) {
-      const w = upperLayer.img.naturalWidth * (upperLayer.scale || 1);
-      const h = upperLayer.img.naturalHeight * (upperLayer.scale || 1);
-      tempCtx.drawImage(upperLayer.img, (upperLayer.x || 0) - w/2, (upperLayer.y || 0) - h/2, w, h);
-    }
-    
-    // Create merged image
-    const mergedImg = new Image();
-    mergedImg.src = tempCanvas.toDataURL();
-    mergedImg.onload = () => {
-      const mergedLayer: Layer = {
-        id: `layer-${Date.now()}`,
-        type: 'image',
-        name: `${lowerLayer.name} + ${upperLayer.name}`,
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x: (cssWidthRef.current || (canvas.width / (dprRef.current || 1))) / 2,
-        y: (cssHeightRef.current || (canvas.height / (dprRef.current || 1))) / 2,
-        img: mergedImg,
-        scale: 1
-      };
-      
-      setLayers(prev => [
-        ...prev.slice(0, index - 1),
-        mergedLayer,
-        ...prev.slice(index + 1)
-      ]);
-      
-      setSelectedLayer(mergedLayer.id);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    const valid = checkedIds.filter((id) => id !== '__base_image');
+    if (valid.length < 2) return;
+    const selected = layers.filter((l) => valid.includes(l.id));
+    if (selected.length < 2) return;
+    const cx = selected.reduce((sum, l) => sum + (l.x || 0), 0) / selected.length;
+    const cy = selected.reduce((sum, l) => sum + (l.y || 0), 0) / selected.length;
+    const childrenData = selected.map((l) => ({
+      ...l,
+      x: (l.x || 0) - cx,
+      y: (l.y || 0) - cy,
+    }));
+    const remaining = layers.filter((l) => !valid.includes(l.id));
+    const groupLayer: Layer = {
+      id: `group-${Date.now()}`,
+      type: 'group',
+      name: 'Grupo',
+      visible: true,
+      opacity: 100,
+      locked: false,
+      x: cx,
+      y: cy,
+      scale: 1,
+      childrenData,
     };
-  };
-
-  const mergeVisible = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const tempCanvas = document.createElement('canvas');
-    const cssW = cssWidthRef.current || (canvas.width / (dprRef.current || 1));
-    const cssH = cssHeightRef.current || (canvas.height / (dprRef.current || 1));
-    tempCanvas.width = Math.round(cssW * (dprRef.current || 1));
-    tempCanvas.height = Math.round(cssH * (dprRef.current || 1));
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) tempCtx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
-    if (!tempCtx) return;
-    
-    // Draw all visible layers
-    for (const layer of layers) {
-      if (!layer.visible) continue;
-      
-      tempCtx.globalAlpha = (layer.opacity || 100) / 100;
-      
-      if (layer.type === 'text') {
-        tempCtx.fillStyle = layer.color || color;
-        tempCtx.font = `${Math.max(8, layer.size || textSize)}px serif`;
-        tempCtx.textBaseline = 'top';
-        tempCtx.fillText(layer.text || '', layer.x || 0, layer.y || 0);
-      } else if (layer.type === 'image' && layer.img) {
-        const w = layer.img.naturalWidth * (layer.scale || 1);
-        const h = layer.img.naturalHeight * (layer.scale || 1);
-        tempCtx.drawImage(layer.img, (layer.x || 0) - w/2, (layer.y || 0) - h/2, w, h);
-      }
-    }
-    
-    const mergedImg = new Image();
-    mergedImg.src = tempCanvas.toDataURL();
-    mergedImg.onload = () => {
-      const mergedLayer: Layer = {
-        id: `layer-${Date.now()}`,
-        type: 'image',
-        name: 'Camadas Mescladas',
-        visible: true,
-        opacity: 100,
-        locked: false,
-        x: (cssWidthRef.current || (canvas.width / (dprRef.current || 1))) / 2,
-        y: (cssHeightRef.current || (canvas.height / (dprRef.current || 1))) / 2,
-        img: mergedImg,
-        scale: 1
-      };
-      
-      setLayers([mergedLayer]);
-      
-      setSelectedLayer(mergedLayer.id);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    };
+    setLayers([...remaining, groupLayer]);
+    setSelectedLayer(groupLayer.id);
+    setTimeout(() => pushHistory(), 0);
   };
 
   const moveLayer = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return;
-    const newLayers = [...layers];
-    const [movedLayer] = newLayers.splice(fromIndex, 1);
-    newLayers.splice(toIndex, 0, movedLayer);
-    setLayers(newLayers);
-    
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-  };
-
-  const updateLayerById = (prev: Layer[], id: string, updater: (layer: Layer) => Layer) => {
-    return prev.map(l => {
-      if (l.id === id) return updater(l);
-      if (l.type === 'group' && l.childrenData && Array.isArray(l.childrenData)) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? updater(c) : c) } as Layer;
-      }
-      return l;
-    });
+    const next = [...layers];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLayers(next);
+    setTimeout(() => pushHistory(), 0);
   };
 
   const batchDelete = (ids: string[]) => {
-    setLayers(prev => {
-      // cleanup resources for removed layers (drawingCanvas, blob URLs, cachedCanvas)
-      const removed = prev.filter(l => ids.includes(l.id));
-      removed.forEach(l => {
-        try {
-          if (l.type === 'drawing' && l.drawingCanvas) { l.drawingCanvas.width = 0; l.drawingCanvas.height = 0; }
-        } catch (e) {}
-        try {
-          if (l.type === 'image' && l.img && (l as any).img.src && (l as any).img.src.startsWith('blob:')) {
-            try { URL.revokeObjectURL((l as any).img.src); } catch (e) {}
-            const idx = objectUrlsRef.current.indexOf((l as any).img.src);
-            if (idx >= 0) objectUrlsRef.current.splice(idx, 1);
-          }
-        } catch (e) {}
-        try { if ((l as any).cachedCanvas) { ((l as any).cachedCanvas as HTMLCanvasElement).width = 0; ((l as any).cachedCanvas as HTMLCanvasElement).height = 0; } } catch (e) {}
-      });
-
-      // remove from top-level and from any group children
-      const top = prev.filter(l => !ids.includes(l.id));
-      const result = top.map(l => l.type === 'group' && l.childrenData ? { ...l, childrenData: l.childrenData!.filter(c => !ids.includes(c.id)) } : l);
-      return result;
-    });
-    // clear selection if any removed
-    setSelectedLayer(prev => (prev && ids.includes(prev) ? null : prev));
-    // allow useEffect([layers]) to redraw after state update
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    const safeIds = ids.filter((id) => id !== '__base_image');
+    setLayers((prev) => prev.filter((l) => !safeIds.includes(l.id)));
+    setSelectedLayer((prev) => (prev && safeIds.includes(prev) ? null : prev));
+    setTimeout(() => pushHistory(), 0);
   };
 
   const batchLock = (ids: string[]) => {
-    setLayers(prev => prev.map(l => {
-      if (ids.includes(l.id)) return { ...l, locked: true };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => ids.includes(c.id) ? { ...c, locked: true } : c) } as Layer;
-      }
-      return l;
-    }));
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) => prev.map((l) => (ids.includes(l.id) ? { ...l, locked: true } : l)));
   };
 
   const batchUnlock = (ids: string[]) => {
-    setLayers(prev => prev.map(l => {
-      if (ids.includes(l.id)) return { ...l, locked: false };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => ids.includes(c.id) ? { ...c, locked: false } : c) } as Layer;
-      }
-      return l;
-    }));
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) =>
+      prev.map((l) => (ids.includes(l.id) && l.id !== '__base_image' ? { ...l, locked: false } : l))
+    );
   };
 
   const addMaskToLayer = (id: string, mask: HTMLCanvasElement) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, mask };
-      if (l.type === 'group' && l.childrenData) {
-        return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, mask } : c) } as Layer;
-      }
-      return l;
-    }));
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, mask } : l)));
+    setTimeout(() => pushHistory(), 0);
   };
 
-  const invertMask = (id: string) => {
-    const layer = layers.find(l => l.id === id);
-    if (!layer || !layer.mask) return;
-    try {
-      const m = layer.mask;
-      const mctx = m.getContext('2d');
-      if (!mctx) return;
-      const w = m.width;
-      const h = m.height;
-      const img = mctx.getImageData(0, 0, w, h);
-      const data = img.data;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = 255 - data[i];
-        data[i+1] = 255 - data[i+1];
-        data[i+2] = 255 - data[i+2];
-        // alpha left intact
-      }
-      mctx.putImageData(img, 0, 0);
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    } catch (e) {}
-  };
-
-  const clearMask = (id: string) => {
-    const layer = layers.find(l => l.id === id);
-    if (!layer) return;
-    try {
-      if (!layer.mask) {
-        // nothing to clear
-        return;
-      }
-      const m = layer.mask;
-      const mctx = m.getContext('2d');
-      if (!mctx) return;
-      mctx.setTransform(dprRef.current || 1, 0, 0, dprRef.current || 1, 0, 0);
-      mctx.fillStyle = '#ffffff';
-      mctx.fillRect(0, 0, m.width / (dprRef.current || 1), m.height / (dprRef.current || 1));
-      redrawAll();
-      try { setTimeout(() => pushHistory(), 0); } catch (e) {}
-    } catch (e) {}
-  };
-
-  const setLayerBlendMode = (id: string, mode: string) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, blendMode: mode } as Layer;
-      if (l.type === 'group' && l.childrenData) {
-        // also allow child to have blend mode if id matches
-        const updatedChildren = l.childrenData.map(c => c.id === id ? { ...c, blendMode: mode } : c);
-        return { ...l, childrenData: updatedChildren } as Layer;
-      }
-      return l;
-    }));
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+  const setLayerBlendMode = (id: string, blendMode: string) => {
+    setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, blendMode } : l)));
+    setTimeout(() => pushHistory(), 0);
   };
 
   const toggleEditMask = (id: string) => {
-    setLayers(prev => prev.map(l => {
-      if (l.id === id) return { ...l, isEditingMask: !l.isEditingMask } as Layer;
-      if (l.type === 'group' && l.childrenData) return { ...l, childrenData: l.childrenData.map(c => c.id === id ? { ...c, isEditingMask: !c.isEditingMask } : c) } as Layer;
-      return l;
-    }));
-    redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, isEditingMask: !l.isEditingMask } : l))
+    );
   };
 
-  const handleReorder = (source: { droppableId: string; index: number }, destination: { droppableId: string; index: number }) => {
-    setLayers(prev => {
-      // shallow copy top-level and children arrays
-      const newLayers = prev.map(l => l.type === 'group' ? { ...l, childrenData: l.childrenData ? [...l.childrenData] : [] } : { ...l });
-
-      const isTop = (droppableId: string) => droppableId === 'layers-list';
-
-      let moved: Layer | undefined;
-
-      // remove from source
-      if (isTop(source.droppableId)) {
-        moved = newLayers.splice(source.index, 1)[0];
-      } else {
-        const gid = source.droppableId.replace(/^group-/, '');
-        const group = newLayers.find(g => g.id === gid || g.id === `group-${gid}`);
-        if (!group || group.type !== 'group' || !group.childrenData) return prev;
-        moved = group.childrenData.splice(source.index, 1)[0];
-      }
-
-      if (!moved) return prev;
-
-      // insert into destination
-      if (isTop(destination.droppableId)) {
-        newLayers.splice(destination.index, 0, moved);
-      } else {
-        const gid = destination.droppableId.replace(/^group-/, '');
-        const group = newLayers.find(g => g.id === gid || g.id === `group-${gid}`) as any;
-        if (!group) {
-          // fallback: push to top
-          newLayers.splice(destination.index, 0, moved);
-        } else {
-          group.childrenData = group.childrenData || [];
-          group.childrenData.splice(destination.index, 0, moved);
-        }
-      }
-
-      return newLayers;
-    });
+  const invertMask = (id: string) => {
+    const layer = layers.find((l) => l.id === id);
+    if (!layer || !layer.mask) return;
+    const mctx = layer.mask.getContext('2d');
+    if (!mctx) return;
+    const img = mctx.getImageData(0, 0, layer.mask.width, layer.mask.height);
+    for (let i = 0; i < img.data.length; i += 4) {
+      img.data[i] = 255 - img.data[i];
+      img.data[i + 1] = 255 - img.data[i + 1];
+      img.data[i + 2] = 255 - img.data[i + 2];
+    }
+    mctx.putImageData(img, 0, 0);
     redrawAll();
-    try { setTimeout(() => pushHistory(), 0); } catch (e) {}
   };
 
-  const getToolInstructions = () => {
-    switch (tool) {
-      case 'placeImage':
-        return {
-          title: 'Inserir Imagem',
-          steps: [
-            ['1', 'Clique no botão "Imagem" para selecionar'],
-            ['2', 'Escolha uma imagem do seu PC'],
-            ['3', 'Ajuste a escala (10%-200%)'],
-            ['4', 'Clique no canvas para colocar'],
-          ],
-        };
-      case 'draw':
-        return { title: 'Desenhar', steps: [['1', 'Clique e arraste para desenhar'], ['2', 'Segure Shift para linha reta']] };
-      case 'erase':
-        return { title: 'Borracha', steps: [['1', 'Clique e arraste para apagar'], ['2', 'Segure Shift para linha reta']] };
-      default:
-        return null;
+  const clearMask = (id: string) => {
+    const layer = layers.find((l) => l.id === id);
+    if (!layer || !layer.mask) return;
+    const mctx = layer.mask.getContext('2d');
+    if (!mctx) return;
+    mctx.fillStyle = '#ffffff';
+    mctx.fillRect(0, 0, layer.mask.width, layer.mask.height);
+    redrawAll();
+  };
+
+  const handleReorder = (
+    source: { droppableId: string; index: number },
+    destination: { droppableId: string; index: number }
+  ) => {
+    if (source.droppableId === 'layers-list' && destination.droppableId === 'layers-list') {
+      moveLayer(source.index, destination.index);
     }
   };
 
-  const handleSaveClick = () => {
-    try {
-      // Export current canvas and deliver via onSave with proper metadata
-      const meta: { targetChannel?: 'R' | 'G' | 'B' } = {};
-      if (mode === 'rgb') {
-        meta.targetChannel = targetChannel;
-        console.log('💾 Salvando com canal RGB:', targetChannel);
-      }
-      handleFinish();
-    } catch (e) {
-      console.error('Erro ao salvar:', e);
-      try { onSave(new File([], 'uv-export.png'), { targetChannel }); } catch (e) { try { onSave(new File([], 'uv-export.png')); } catch (e) {} }
-    }
-  };
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    try {
-      root.classList.toggle('tool-draw', tool === 'draw');
-      root.classList.toggle('tool-erase', tool === 'erase');
-    } catch (e) {}
-  }, [tool]);
-
-  // Ensure UV editor preserves critical filters/animations when performance mode is active
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const cleanup = markPerfKeep(root);
-    return () => {
-      try { cleanup(); } catch (e) {}
-    };
-  }, []);
+  const activeLayerObj = layers.find((l) => l.id === selectedLayer) || null;
+  const isTransformableSelected =
+    activeLayerObj &&
+    !activeLayerObj.locked &&
+    (activeLayerObj.type === 'image' || activeLayerObj.type === 'text');
 
   return (
-    <div className="uv-editor-panel" ref={rootRef}>
+    <div className={`uv-editor-panel uv-mode-${previewMode}`} ref={rootRef}>
+      {/* HEADER WITH 3-MODE LIVE SIMULATOR */}
       <div className="uv-editor-header">
         <div className="uv-header-title">
           {mode === 'rgb' ? (
-            <><Radio size={18} className="header-icon icon-rgb" /> <span>Editor RGB Forense</span></>
+            <>
+              <Radio size={17} className="header-icon icon-rgb" /> <span>Editor RGB Forense</span>
+            </>
           ) : mode === 'filter' ? (
-            <><Palette size={18} className="header-icon icon-filter" /> <span>Editor de Filtros</span></>
+            <>
+              <Palette size={17} className="header-icon icon-filter" /> <span>Editor de Filtros</span>
+            </>
           ) : mode === 'thermal' ? (
-            <><Sparkles size={18} className="header-icon icon-thermal" /> <span>Editor Termal</span></>
+            <>
+              <Sparkles size={17} className="header-icon icon-thermal" /> <span>Editor Termal</span>
+            </>
           ) : (
-            <><Eye size={18} className="header-icon icon-uv" /> <span>Editor UV</span></>
+            <>
+              <Eye size={17} className="header-icon icon-uv" /> <span>Editor UV // C.R.I.S.</span>
+            </>
           )}
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button onClick={handleSaveClick} className="btn-save" title="Salvar imagem"><Save size={14} style={{ marginRight: 4 }} /> Salvar</button>
-          <button onClick={onClose} className="btn-close" title="Fechar editor"><X size={14} style={{ marginRight: 4 }} /> Fechar</button>
+
+        {/* 3-Mode Live Simulator Toggle */}
+        <div className="uv-preview-switcher" role="tablist" aria-label="Simulador Ao Vivo">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={previewMode === 'edit'}
+            className={`uv-preview-btn ${previewMode === 'edit' ? 'active' : ''}`}
+            onClick={() => setPreviewMode('edit')}
+            title="Visão de autoria com camadas, seleção e ferramentas ativas"
+          >
+            <PenTool size={14} />
+            <span>Edição Mestre</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={previewMode === 'naked'}
+            className={`uv-preview-btn ${previewMode === 'naked' ? 'active' : ''}`}
+            onClick={() => setPreviewMode('naked')}
+            title="Exibe apenas a imagem base sem a camada UV (visão do jogador sem lanterna)"
+          >
+            <EyeOff size={14} />
+            <span>Olho Nu / Sem UV</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={previewMode === 'flashlight'}
+            className={`uv-preview-btn uv-preview-btn--uv ${previewMode === 'flashlight' ? 'active' : ''}`}
+            onClick={() => {
+              if (!flashlightPosRef.current) {
+                flashlightPosRef.current = {
+                  x: (cssWidthRef.current || 800) / 2,
+                  y: (cssHeightRef.current || 600) / 2,
+                };
+              }
+              setPreviewMode('flashlight');
+            }}
+            title="Arraste o cursor ou o dedo para testar a lanterna UV em tempo real"
+          >
+            <Flashlight size={14} />
+            <span>Testar Lanterna UV</span>
+          </button>
+        </div>
+
+        <div className="uv-header-actions">
+          <button
+            type="button"
+            className="uv-mobile-panel-toggle"
+            onClick={() => setMobilePanelOpen((v) => !v)}
+            aria-label="Alternar painel de propriedades e carimbos"
+          >
+            <SlidersHorizontal size={15} />
+            <span>{mobilePanelOpen ? 'Canvas' : 'Painel'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleFitToBaseProportion}
+            className="uv-preview-btn"
+            title="Centralizar e encaixar na proporção da imagem base"
+          >
+            <span>📐 Encaixar na Proporção da Base</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleFinish}
+            className="uv-action-save"
+            title="Salvar camada UV"
+          >
+            <Save size={14} /> <span>Salvar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => guardClose()}
+            className="uv-action-close"
+            title="Fechar editor"
+          >
+            <X size={15} />
+          </button>
         </div>
       </div>
 
-      <UVToolbar onAddImageLayer={addImageLayerFromFile} />
+      {/* LEFT / TOP TOOLBAR */}
+      <UVToolbar
+        onAddImageLayer={(f) => addImageLayerFromFile(f)}
+        onUndo={undo}
+        onRedo={redo}
+        undoAvailable={undoAvailable}
+        redoAvailable={redoAvailable}
+        onResetView={resetView}
+        onOpenStamps={() => {
+          setActiveRightTab('stamps');
+          setMobilePanelOpen(true);
+        }}
+        stampsActive={activeRightTab === 'stamps'}
+      />
 
+      {/* CENTER VIEWPORT */}
       <div className="uv-editor-viewport">
-        <div ref={canvasContainerRef} className="viewport-canvas">
+        {previewMode === 'naked' && (
+          <div className="uv-sim-banner uv-sim-banner--naked">
+            <EyeOff size={14} /> Modo Olho Nu — Simulando visão do agente sem lanterna UV
+          </div>
+        )}
+        {previewMode === 'flashlight' && (
+          <div className="uv-sim-banner uv-sim-banner--uv">
+            <Flashlight size={14} />
+            <span>Arraste o cursor ou o dedo sobre a imagem</span>
+            <label className="uv-sim-radius">
+              <span>Raio</span>
+              <input
+                type="range"
+                min={50}
+                max={280}
+                value={flashlightRadius}
+                onChange={(e) => setFlashlightRadius(Number(e.target.value))}
+              />
+            </label>
+          </div>
+        )}
+
+        <div ref={canvasContainerRef} className="viewport-canvas" style={{ touchAction: 'none' }}>
           <canvas
             ref={canvasRef}
             width={800}
@@ -3134,21 +3149,37 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
             onPointerDown={handlePointerDownGeneric}
             onPointerMove={handlePointerMoveGeneric}
             onPointerUp={handlePointerUpGeneric}
-            onPointerCancel={handlePointerUpGeneric as any}
+            onPointerCancel={handlePointerUpGeneric}
+            onPointerLeave={() => setMaskCursor((prev) => ({ ...prev, visible: false }))}
             onWheel={handleWheel}
-            onDoubleClick={(e) => handleCanvasDoubleClick(e)}
-            style={{ touchAction: 'none', cursor: tool === 'draw' ? 'crosshair' : tool === 'erase' ? 'cell' : tool === 'select' ? 'default' : 'default', display: 'block' }}
+            onDoubleClick={handleCanvasDoubleClick}
+            onContextMenu={(e) => e.preventDefault()}
+            style={{
+              touchAction: 'none',
+              cursor:
+                previewMode === 'flashlight'
+                  ? 'none'
+                  : previewMode === 'naked'
+                  ? 'default'
+                  : tool === 'select'
+                  ? 'default'
+                  : 'crosshair',
+              display: 'block',
+            }}
           />
-          {inlineTextEdit ? (
+
+          {inlineTextEdit && (
             <textarea
               autoFocus
               defaultValue={inlineTextEdit.value}
               onBlur={(ev) => {
-                const newText = (ev.target as HTMLTextAreaElement).value;
-                setLayers(prev => prev.map(l => l.id === inlineTextEdit.id ? { ...l, text: newText } : l));
+                const newText = ev.target.value;
+                setLayers((prev) =>
+                  prev.map((l) => (l.id === inlineTextEdit.id ? { ...l, text: newText } : l))
+                );
                 setInlineTextEdit(null);
                 redrawAll();
-                try { setTimeout(() => pushHistory(), 0); } catch (e) {}
+                setTimeout(() => pushHistory(), 0);
               }}
               onKeyDown={(ev) => {
                 if (ev.key === 'Enter' && !ev.shiftKey) {
@@ -3161,222 +3192,577 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
               }}
               style={{
                 position: 'absolute',
-                left: inlineTextEdit.cssX + 'px',
-                top: inlineTextEdit.cssY + 'px',
-                fontSize: inlineTextEdit.fontSize + 'px',
-                background: 'transparent',
-                color: 'white',
-                border: '1px solid rgba(255,255,255,0.12)',
-                padding: 4,
-                minWidth: 80,
-                maxWidth: 600,
-                resize: 'vertical',
-                outline: 'none'
+                left: `${inlineTextEdit.cssX}px`,
+                top: `${inlineTextEdit.cssY}px`,
+                fontSize: `${inlineTextEdit.fontSize}px`,
+                background: 'rgba(11, 12, 16, 0.85)',
+                color: '#fff',
+                border: '1px solid #a855f7',
+                padding: 6,
+                minWidth: 120,
+                maxWidth: 460,
+                outline: 'none',
+                zIndex: 1300,
               }}
             />
-          ) : null}
-          {maskCursor.visible && (tool === 'draw' || tool === 'erase' || tool === 'placeText' || tool === 'placeImage') ? (
-            <div
-              className="mask-cursor"
-              style={{ left: maskCursor.x + 'px', top: maskCursor.y + 'px', width: maskCursor.size + 'px', height: maskCursor.size + 'px' }}
-            />
-          ) : null}
-          {tool === 'select' && selectedLayer ? (() => {
-            const l = layers.find(l => l.id === selectedLayer);
-            if (!l) return null;
-            const s = scaleRef.current || 1;
-            const p = panRef.current || { x: 0, y: 0 };
-            const left = (l.x || 0) * s + p.x;
-            const top = (l.y || 0) * s + p.y;
-            let width = 0;
-            let height = 0;
-            if (l.type === 'image' && l.img) {
-              width = (l.img.naturalWidth || l.width || 0) * (l.scale || 1) * s;
-              height = (l.img.naturalHeight || l.height || 0) * (l.scale || 1) * s;
-            } else if (l.type === 'text') {
-              width = ((l.text?.length || 0) * (l.size || 16) * 0.6) * s;
-              height = (l.size || 16) * 1.2 * s;
-            }
-            if (width === 0) return null;
-            return (
-              <div 
-                className="transform-bounding-box"
+          )}
+
+          {previewMode === 'edit' &&
+            maskCursor.visible &&
+            (tool === 'draw' || tool === 'erase') && (
+              <div
+                className="mask-cursor"
                 style={{
-                  left: left - width/2,
-                  top: top - height/2,
-                  width,
-                  height
+                  left: `${maskCursor.x}px`,
+                  top: `${maskCursor.y}px`,
+                  width: `${maskCursor.size}px`,
+                  height: `${maskCursor.size}px`,
                 }}
-              >
-                <div className="transform-handle" style={{ left: 0, top: 0, cursor: 'nwse-resize' }} />
-                <div className="transform-handle" style={{ left: '100%', top: 0, cursor: 'nesw-resize' }} />
-                <div className="transform-handle" style={{ left: 0, top: '100%', cursor: 'nesw-resize' }} />
-                <div className="transform-handle" style={{ left: '100%', top: '100%', cursor: 'nwse-resize' }} />
-              </div>
-            );
-          })() : null}
+              />
+            )}
         </div>
       </div>
 
-      <div className="uv-right-panel">
-        <div className="uv-right-tabs">
-          <div className={`tab ${expandedSections.colors ? 'active' : ''}`} onClick={() => toggleSection('colors')}>Cores</div>
-          <div className={`tab ${expandedSections.layers ? 'active' : ''}`} onClick={() => toggleSection('layers')}>Camadas</div>
-          <div className={`tab ${expandedSections.properties ? 'active' : ''}`} onClick={() => toggleSection('properties')}>Propriedades</div>
+      {/* RIGHT PANEL: PROPERTIES / STAMPS / LAYERS */}
+      <div className={`uv-right-panel ${mobilePanelOpen ? 'mobile-open' : ''}`}>
+        <div className="uv-right-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeRightTab === 'properties'}
+            className={`tab ${activeRightTab === 'properties' ? 'active' : ''}`}
+            onClick={() => setActiveRightTab('properties')}
+          >
+            <SlidersHorizontal size={13} /> Propriedades
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeRightTab === 'stamps'}
+            className={`tab ${activeRightTab === 'stamps' ? 'active' : ''}`}
+            onClick={() => setActiveRightTab('stamps')}
+          >
+            <Stamp size={13} /> Carimbos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeRightTab === 'layers'}
+            className={`tab ${activeRightTab === 'layers' ? 'active' : ''}`}
+            onClick={() => setActiveRightTab('layers')}
+          >
+            <LayersIcon size={13} /> Camadas ({layers.length})
+          </button>
         </div>
 
-        <div className="properties-panel">
-          {expandedSections.colors && (
-            <div style={{marginBottom:12}}>
-              <label>Paleta</label>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8}}>
-                <div style={{width:28,height:28,borderRadius:6,background:color,border:'1px solid rgba(0,0,0,0.2)'}} title={`Cor atual: ${color}`} />
-                <input type="color" value={color} onChange={e => handleColorChange(e.target.value)} aria-label="Selecionar cor" />
-              </div>
-            </div>
-          )}
+        {activeRightTab === 'stamps' && (
+          <div className="properties-panel uv-panel-scroll">
+            <UVStampsPanel onInsertStamp={handleInsertStamp} />
+          </div>
+        )}
 
-          {/* Canal RGB - Sempre visível em modo RGB */}
-          {expandedSections.properties && mode === 'rgb' && (
-            <div className="rgb-channel-container">
-              <label className="rgb-channel-title">
-                <Target size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Canal Alvo RGB
-              </label>
-              <div className="rgb-channel-desc">
-                Escolha qual canal de cor receberá os dados forenses:
-              </div>
-              <div className="rgb-channel-group">
+        {activeRightTab === 'properties' && (
+          <div className="properties-panel uv-panel-scroll">
+            {/* Explicit Import Image / Camera CTA */}
+            <div className="uv-prop-card">
+              <button
+                type="button"
+                className="uv-import-cta"
+                onClick={() => importInputRef.current?.click()}
+              >
+                <Upload size={15} />
+                <span>Importar Imagem / Câmera</span>
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) addImageLayerFromFile(f);
+                  if (importInputRef.current) importInputRef.current.value = '';
+                }}
+              />
+            </div>
+
+            {/* UV Style Presets */}
+            <div className="uv-prop-card">
+              <div className="uv-prop-label-row">
+                <label>
+                  <Sparkles size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                  Presets de Estilo
+                </label>
                 <button
                   type="button"
-                  onClick={() => handleTargetChannelChange('R')}
-                  className={`rgb-channel-btn rgb-channel-btn--r ${targetChannel === 'R' ? 'active' : ''}`}
-                  aria-pressed={targetChannel === 'R'}
+                  className="uv-seg-btn"
+                  style={{ flex: '0 0 auto', padding: '2px 8px', fontSize: 11 }}
+                  onClick={handleSaveCustomUVPreset}
+                  title="Salvar estilo atual no navegador"
                 >
-                  <span className="channel-dot channel-dot--r" /> R (Red)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTargetChannelChange('G')}
-                  className={`rgb-channel-btn rgb-channel-btn--g ${targetChannel === 'G' ? 'active' : ''}`}
-                  aria-pressed={targetChannel === 'G'}
-                >
-                  <span className="channel-dot channel-dot--g" /> G (Green)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTargetChannelChange('B')}
-                  className={`rgb-channel-btn rgb-channel-btn--b ${targetChannel === 'B' ? 'active' : ''}`}
-                  aria-pressed={targetChannel === 'B'}
-                >
-                  <span className="channel-dot channel-dot--b" /> B (Blue)
+                  <BookmarkPlus size={11} /> Salvar
                 </button>
               </div>
-              <div className="rgb-channel-status">
-                Canal selecionado: <strong className={`channel-tag channel-tag--${targetChannel.toLowerCase()}`}>{targetChannel}</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {[...BUILTIN_UV_PRESETS, ...customPresets].map((preset) => (
+                  <span key={preset.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    <button
+                      type="button"
+                      className="uv-seg-btn"
+                      style={{ flex: '0 0 auto', padding: '4px 8px', fontSize: 11 }}
+                      onClick={() => applyUVPreset(preset)}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: preset.color,
+                          display: 'inline-block',
+                          marginRight: 4,
+                        }}
+                      />
+                      {preset.label}
+                    </button>
+                    {preset.custom && (
+                      <button
+                        type="button"
+                        className="uv-seg-btn"
+                        style={{ flex: '0 0 auto', padding: '4px 5px', fontSize: 10 }}
+                        onClick={() => handleDeleteCustomUVPreset(preset.id)}
+                        title="Excluir preset"
+                      >
+                        <X size={10} />
+                      </button>
+                    )}
+                  </span>
+                ))}
               </div>
             </div>
-          )}
-          
-          {expandedSections.properties && (
-            <div style={{marginTop:12}}>
-              <label>Tamanho do pincel</label>
-              <input className="uv-range" type="range" min={1} max={200} value={brushSize} onChange={e => setBrushSize(Number((e.target as HTMLInputElement).value))} />
-            </div>
-          )}
-          {expandedSections.properties && (
-            <div style={{marginTop:12}}>
-              <label>Máscara: Suavidade do Pincel</label>
-              <input className="uv-range" type="range" min={0} max={1} step={0.01} value={maskBrushSoftness} onChange={e => setMaskBrushSoftness(Number((e.target as HTMLInputElement).value))} />
-              <label style={{marginTop:8}}>Máscara: Opacidade do Pincel</label>
-              <input className="uv-range" type="range" min={0.05} max={1} step={0.01} value={maskBrushOpacity} onChange={e => setMaskBrushOpacity(Number((e.target as HTMLInputElement).value))} />
-            </div>
-          )}
-          {/* Selected layer UI moved into LayersPanel for a single, unified layers area */}
-          {expandedSections.properties && tool === 'placeText' && (
-            <div style={{marginTop:12}}>
-              <label>Texto a inserir</label>
-              <input type="text" value={textValue} onChange={e => setTextValue(e.target.value)} placeholder="Digite o texto e clique no canvas" style={{width:'100%',boxSizing:'border-box',marginTop:6}} />
-              <label style={{marginTop:8}}>Tamanho do texto</label>
-              <input type="number" min={8} max={200} value={textSize} onChange={e => setTextSize(Number((e.target as HTMLInputElement).value))} style={{width: '100%'}} />
-              <div style={{display:'flex',gap:8,marginTop:8}}>
-                <button onClick={() => { /* keep tool as placeText, user must click canvas to place */ }} >Pronto — clique no canvas</button>
-                <button onClick={() => { setTextValue(''); setTool('draw'); }}>Cancelar</button>
+
+            {/* Color Palette */}
+            <div className="uv-prop-card">
+              <div className="uv-prop-label-row">
+                <label>Cor Fluorescente / Tinta</label>
+                <span className="uv-prop-value">{color.toUpperCase()}</span>
+              </div>
+              <div className="uv-swatches-grid">
+                {colors.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    className={`uv-swatch-btn ${color.toLowerCase() === c.hex.toLowerCase() ? 'active' : ''}`}
+                    style={{ backgroundColor: c.hex, boxShadow: c.glow }}
+                    onClick={() => handleColorChange(c.hex)}
+                    title={c.label}
+                    aria-label={c.label}
+                  />
+                ))}
+                <label className="uv-swatch-picker" title="Cor personalizada">
+                  <input
+                    type="color"
+                    value={color.startsWith('#') ? color : '#b366ff'}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    aria-label="Cor personalizada"
+                  />
+                  <span>+</span>
+                </label>
               </div>
             </div>
-          )}
 
-          {expandedSections.properties && tool === 'placeImage' && (
-            <div style={{marginTop:12}}>
-              <label>Selecionar imagem</label>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { const f = (e.target as HTMLInputElement).files ? (e.target as HTMLInputElement).files![0] : null; setImageFile(f); }} style={{display:'block',marginTop:6}} />
-              <label style={{marginTop:8}}>Escala</label>
-              <input type="range" min={0.1} max={3} step={0.05} value={imageScale} onChange={e => setImageScale(Number((e.target as HTMLInputElement).value))} />
-              {imageEl ? (
-                <div style={{marginTop:8}}>
-                  <div style={{fontSize:12,opacity:0.8}}>Pré-visualização</div>
-                  <img src={imageEl.src} alt="preview" loading="lazy" style={{maxWidth:'100%', marginTop:6}} />
-                </div>
-              ) : (
-                <div style={{marginTop:8, fontSize:13, opacity:0.9}}>Carregando imagem... Aguarde antes de clicar no canvas.</div>
-              )}
-              <div style={{display:'flex',gap:8,marginTop:8}}>
-                <button onClick={() => { /* user should click canvas to place */ }} disabled={!imageEl}>Pronto — clique no canvas</button>
-                <button onClick={() => { setImageFile(null); setImageEl(null); if (fileInputRef.current) fileInputRef.current.value = ''; setTool('draw'); }}>Cancelar</button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <LayersPanel
-          layers={layers}
-          selectedLayer={selectedLayer}
-          editingLayerName={editingLayerName}
-          onSelectLayer={(id, multi) => selectLayer(id)}
-          onDeleteLayer={deleteLayer}
-          onDuplicateLayer={duplicateLayer}
-          onToggleVisibility={toggleLayerVisibility}
-          onToggleLock={toggleLayerLock}
-          onRenameLayer={renameLayer}
-          onSetEditingLayerName={(id) => setEditingLayerName(id)}
-          onMoveLayer={moveLayer}
-          onUpdateLayerOpacity={updateLayerOpacity}
-          onCreateGroup={createGroup}
-          onAddDrawingLayer={addEmptyDrawingLayer}
-          onAddTextLayer={addEmptyTextLayer}
-          onAddImageLayer={addImageLayerFromFile}
-          onBatchDelete={batchDelete}
-          onBatchLock={batchLock}
-          onBatchUnlock={batchUnlock}
-          onAddMaskToLayer={addMaskToLayer}
-          onSetLayerBlendMode={setLayerBlendMode}
-          onToggleMaskEdit={toggleEditMask}
-          onRasterizeLayer={rasterizeLayer}
-          onReorder={handleReorder}
-        />
-
-        {/** Mask editing controls shown when user toggles mask edit on selected layer */}
-        {selectedLayer && (() => {
-          const layer = layers.find(l => l.id === selectedLayer);
-          if (!layer || !layer.isEditingMask) return null;
-          return (
-            <div style={{padding:12, borderTop:'1px dashed rgba(255,255,255,0.04)', marginTop:8}}>
-              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
-                <strong>Editar Máscara</strong>
-                <div style={{marginLeft:'auto',display:'flex',gap:8}}>
-                  <button onClick={() => invertMask(layer.id)}>Inverter</button>
-                  <button onClick={() => clearMask(layer.id)}>Limpar</button>
+            {/* RGB Forensic Channel Selector */}
+            {mode === 'rgb' && (
+              <div className="rgb-channel-container">
+                <label className="rgb-channel-title">
+                  <Target size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Canal Alvo RGB
+                </label>
+                <div className="rgb-channel-group">
+                  {(['R', 'G', 'B'] as const).map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => handleTargetChannelChange(ch)}
+                      className={`rgb-channel-btn rgb-channel-btn--${ch.toLowerCase()} ${targetChannel === ch ? 'active' : ''}`}
+                      aria-pressed={targetChannel === ch}
+                    >
+                      <span className={`channel-dot channel-dot--${ch.toLowerCase()}`} /> {ch}
+                    </button>
+                  ))}
                 </div>
               </div>
-                  <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                    <label style={{fontSize:13}}>Modo pintura:</label>
-                    <select value={maskPaintMode} onChange={e => setMaskPaintMode(e.target.value as any)}>
-                      <option value="hide">Pintar (esconder)</option>
-                      <option value="reveal">Pintar (mostrar)</option>
-                    </select>
-                    <label style={{fontSize:13, marginLeft:12}}>Tamanho</label>
-                    <input type="range" min={1} max={200} value={brushSize} onChange={e => setBrushSize(Number((e.target as HTMLInputElement).value))} />
-                    <button onClick={() => {
-                      // toggle eraser mode for mask editing (temporarily switch main tool)
+            )}
+
+            {/* Brush Style & Size */}
+            <div className="uv-prop-card">
+              <div className="uv-prop-label-row">
+                <label>Tipo de Pincel</label>
+              </div>
+              <div className="uv-segmented-row">
+                <button
+                  type="button"
+                  className={`uv-seg-btn ${brushStyle === 'fluorescent' ? 'active' : ''}`}
+                  onClick={() => setBrushStyle('fluorescent')}
+                >
+                  <Sparkles size={13} /> Suave Fluorescente
+                </button>
+                <button
+                  type="button"
+                  className={`uv-seg-btn ${brushStyle === 'solid' ? 'active' : ''}`}
+                  onClick={() => setBrushStyle('solid')}
+                >
+                  <PenTool size={13} /> Sólido Clássico
+                </button>
+              </div>
+
+              <div className="uv-slider-block">
+                <div className="uv-prop-label-row">
+                  <label>Espessura / Pincel</label>
+                  <span className="uv-prop-value">{brushSize}px</span>
+                </div>
+                <input
+                  className="uv-range"
+                  type="range"
+                  min={1}
+                  max={120}
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="uv-slider-block">
+                <div className="uv-prop-label-row">
+                  <label>Opacidade</label>
+                  <span className="uv-prop-value">{drawOpacity}%</span>
+                </div>
+                <input
+                  className="uv-range"
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={drawOpacity}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setDrawOpacity(val);
+                    if (isTransformableSelected && activeLayerObj) {
+                      setLayers((prev) =>
+                        prev.map((l) => (l.id === activeLayerObj.id ? { ...l, opacity: val } : l))
+                      );
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="uv-slider-block">
+                <div className="uv-prop-label-row">
+                  <label>
+                    <Sun size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                    Intensidade Neon / Bloom
+                  </label>
+                  <span className="uv-prop-value">{neonBloom}%</span>
+                </div>
+                <input
+                  className="uv-range"
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={neonBloom}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setNeonBloom(val);
+                    if (isTransformableSelected && activeLayerObj) {
+                      setLayers((prev) =>
+                        prev.map((l) => (l.id === activeLayerObj.id ? { ...l, bloom: val } : l))
+                      );
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Diegetic Text Controls (shown for placeText tool OR selected text layer) */}
+            {(tool === 'placeText' || activeLayerObj?.type === 'text') && (
+              <div className="uv-prop-card">
+                <div className="uv-prop-label-row">
+                  <label>Texto UV &amp; Fonte Diegética</label>
+                </div>
+
+                {tool === 'placeText' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <input
+                      type="text"
+                      className="uv-text-input"
+                      value={textValue}
+                      onChange={(e) => setTextValue(e.target.value)}
+                      placeholder="Digite o texto e clique no canvas..."
+                    />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button type="button" className="uv-seg-btn active" onClick={addEmptyTextLayer}>
+                        Inserir no Centro
+                      </button>
+                      <button
+                        type="button"
+                        className="uv-seg-btn"
+                        onClick={() => {
+                          setTextValue('');
+                          setTool('select');
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="uv-font-grid">
+                  {UV_FONT_STYLES.map((opt) => {
+                    const currentFont: UVFontStyle =
+                      activeLayerObj?.type === 'text'
+                        ? activeLayerObj.fontStyle || 'mono'
+                        : fontStyle;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`uv-font-btn ${currentFont === opt.id ? 'active' : ''}`}
+                        onClick={() => {
+                          setFontStyle(opt.id);
+                          if (activeLayerObj?.type === 'text') {
+                            setLayers((prev) =>
+                              prev.map((l) =>
+                                l.id === activeLayerObj.id ? { ...l, fontStyle: opt.id } : l
+                              )
+                            );
+                          }
+                        }}
+                      >
+                        <span className="uv-font-title">{opt.label}</span>
+                        <span
+                          className="uv-font-sample"
+                          style={{
+                            fontFamily: opt.fontFamily,
+                            fontStyle: opt.fontStyleCss || 'normal',
+                            letterSpacing: `${opt.letterSpacing || 0}px`,
+                          }}
+                        >
+                          {opt.sample}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="uv-slider-block">
+                  <div className="uv-prop-label-row">
+                    <label>Tamanho da Fonte</label>
+                    <span className="uv-prop-value">
+                      {activeLayerObj?.type === 'text' ? activeLayerObj.size || textSize : textSize}px
+                    </span>
+                  </div>
+                  <input
+                    className="uv-range"
+                    type="range"
+                    min={12}
+                    max={160}
+                    value={activeLayerObj?.type === 'text' ? activeLayerObj.size || textSize : textSize}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setTextSize(val);
+                      if (activeLayerObj?.type === 'text') {
+                        setLayers((prev) =>
+                          prev.map((l) => (l.id === activeLayerObj.id ? { ...l, size: val } : l))
+                        );
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Transform Controls for Selected Stamp / Image / Text */}
+            {isTransformableSelected && activeLayerObj && (
+              <div className="uv-prop-card">
+                <div className="uv-prop-label-row">
+                  <label>Objeto Selecionado: {activeLayerObj.name}</label>
+                </div>
+
+                {activeLayerObj.type === 'image' && (
+                  <div className="uv-slider-block">
+                    <div className="uv-prop-label-row">
+                      <label>Escala</label>
+                      <span className="uv-prop-value">
+                        {Math.round((activeLayerObj.scale || 1) * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      className="uv-range"
+                      type="range"
+                      min={0.1}
+                      max={3}
+                      step={0.05}
+                      value={activeLayerObj.scale || 1}
+                      onChange={(e) => {
+                        const s = Number(e.target.value);
+                        setLayers((prev) =>
+                          prev.map((l) => (l.id === activeLayerObj.id ? { ...l, scale: s } : l))
+                        );
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="uv-slider-block">
+                  <div className="uv-prop-label-row">
+                    <label>
+                      <RotateCw size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                      Rotação
+                    </label>
+                    <span className="uv-prop-value">
+                      {Math.round(((activeLayerObj.rotation || 0) * 180) / Math.PI)}°
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      className="uv-range"
+                      type="range"
+                      min={-180}
+                      max={180}
+                      value={Math.round(((activeLayerObj.rotation || 0) * 180) / Math.PI)}
+                      onChange={(e) => {
+                        const rad = (Number(e.target.value) * Math.PI) / 180;
+                        setLayers((prev) =>
+                          prev.map((l) =>
+                            l.id === activeLayerObj.id ? { ...l, rotation: rad } : l
+                          )
+                        );
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="uv-seg-btn"
+                      style={{ flex: '0 0 auto', padding: '4px 7px', fontSize: 11 }}
+                      onClick={() =>
+                        setLayers((prev) =>
+                          prev.map((l) =>
+                            l.id === activeLayerObj.id
+                              ? { ...l, rotation: (l.rotation || 0) - Math.PI / 2 }
+                              : l
+                          )
+                        )
+                      }
+                      title="Rotacionar -90°"
+                    >
+                      -90°
+                    </button>
+                    <button
+                      type="button"
+                      className="uv-seg-btn"
+                      style={{ flex: '0 0 auto', padding: '4px 8px', fontSize: 11 }}
+                      onClick={() =>
+                        setLayers((prev) =>
+                          prev.map((l) => (l.id === activeLayerObj.id ? { ...l, rotation: 0 } : l))
+                        )
+                      }
+                    >
+                      0°
+                    </button>
+                    <button
+                      type="button"
+                      className="uv-seg-btn"
+                      style={{ flex: '0 0 auto', padding: '4px 7px', fontSize: 11 }}
+                      onClick={() =>
+                        setLayers((prev) =>
+                          prev.map((l) =>
+                            l.id === activeLayerObj.id
+                              ? { ...l, rotation: (l.rotation || 0) + Math.PI / 2 }
+                              : l
+                          )
+                        )
+                      }
+                      title="Rotacionar +90°"
+                    >
+                      +90°
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mode === 'filter' && (
+              <div className="uv-prop-card">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={censorMode}
+                    onChange={(e) => setCensorMode(e.target.checked)}
+                  />
+                  <span>Modo Censura (Preto Sólido)</span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeRightTab === 'layers' && (
+          <div className="properties-panel uv-panel-scroll">
+            <LayersPanel
+              layers={layers}
+              selectedLayer={selectedLayer}
+              editingLayerName={editingLayerName}
+              onSelectLayer={(id) => selectLayer(id)}
+              onDeleteLayer={deleteLayer}
+              onDuplicateLayer={duplicateLayer}
+              onToggleVisibility={toggleLayerVisibility}
+              onToggleLock={toggleLayerLock}
+              onRenameLayer={renameLayer}
+              onSetEditingLayerName={(id) => setEditingLayerName(id)}
+              onMoveLayer={moveLayer}
+              onUpdateLayerOpacity={updateLayerOpacity}
+              onCreateGroup={createGroup}
+              onAddDrawingLayer={addEmptyDrawingLayer}
+              onAddTextLayer={addEmptyTextLayer}
+              onAddImageLayer={(f) => addImageLayerFromFile(f)}
+              onBatchDelete={batchDelete}
+              onBatchLock={batchLock}
+              onBatchUnlock={batchUnlock}
+              onAddMaskToLayer={addMaskToLayer}
+              onSetLayerBlendMode={setLayerBlendMode}
+              onToggleMaskEdit={toggleEditMask}
+              onRasterizeLayer={rasterizeLayer}
+              onReorder={handleReorder}
+            />
+
+            {activeLayerObj?.isEditingMask && (
+              <div className="uv-prop-card" style={{ marginTop: 8 }}>
+                <div className="uv-prop-label-row">
+                  <strong>Editar Máscara</strong>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button type="button" className="uv-seg-btn" onClick={() => invertMask(activeLayerObj.id)}>
+                      Inverter
+                    </button>
+                    <button type="button" className="uv-seg-btn" onClick={() => clearMask(activeLayerObj.id)}>
+                      Limpar
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className={`uv-seg-btn ${maskPaintMode === 'hide' ? 'active' : ''}`}
+                    onClick={() => setMaskPaintMode('hide')}
+                  >
+                    Esconder
+                  </button>
+                  <button
+                    type="button"
+                    className={`uv-seg-btn ${maskPaintMode === 'reveal' ? 'active' : ''}`}
+                    onClick={() => setMaskPaintMode('reveal')}
+                  >
+                    Revelar
+                  </button>
+                  <button
+                    type="button"
+                    className={`uv-seg-btn ${maskUseEraser ? 'active' : ''}`}
+                    onClick={() => {
                       if (!maskUseEraser) {
                         prevToolRef.current = tool;
                         setTool('erase');
@@ -3386,14 +3772,46 @@ export function UVEditorInner({ baseImageUrl, onSave, onClose, mode = 'rgb', ini
                         if (prevToolRef.current) setTool(prevToolRef.current);
                         prevToolRef.current = null;
                       }
-                    }} style={{marginLeft:8}}>{maskUseEraser ? 'Usando Borracha' : 'Usar Borracha'}</button>
-                    <div style={{marginLeft:'auto', fontSize:12, opacity:0.85}}>Use pincel/borracha para pintar a máscara</div>
+                    }}
+                  >
+                    Borracha
+                  </button>
+                </div>
+                <div className="uv-slider-block">
+                  <div className="uv-prop-label-row">
+                    <label>Suavidade Máscara</label>
+                    <span className="uv-prop-value">{Math.round(maskBrushSoftness * 100)}%</span>
                   </div>
-            </div>
-          );
-        })()}
+                  <input
+                    className="uv-range"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={maskBrushSoftness}
+                    onChange={(e) => setMaskBrushSoftness(Number(e.target.value))}
+                  />
+                </div>
+                <div className="uv-slider-block">
+                  <div className="uv-prop-label-row">
+                    <label>Opacidade Máscara</label>
+                    <span className="uv-prop-value">{Math.round(maskBrushOpacity * 100)}%</span>
+                  </div>
+                  <input
+                    className="uv-range"
+                    type="range"
+                    min={0.05}
+                    max={1}
+                    step={0.05}
+                    value={maskBrushOpacity}
+                    onChange={(e) => setMaskBrushOpacity(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
     </div>
   );
 }

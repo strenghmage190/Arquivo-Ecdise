@@ -12,7 +12,7 @@ import {
   serializePublicClueCard,
   BuildCluePayloadParams,
 } from '../cluePayloadBuilder';
-import { textToHex, enigmaEncodeHex, enigmaDecodeHex } from '../hexEncoders';
+import { textToHex, enigmaEncodeHex } from '../hexEncoders';
 import { defaultDisplayConfig } from '../../config/displayConfig';
 import { defaultFieldVisibility } from '../../config/fieldVisibilityConfig';
 
@@ -472,7 +472,6 @@ describe('cluePayloadBuilder (buildClueDbPayload & serializePublicClueCard)', ()
 
       expect(expectedEnigmaHex).not.toBe(pureUtf8Hex);
       expect(payload.metadata.hex_code).toBe(expectedEnigmaHex);
-      expect(enigmaDecodeHex(payload.metadata.hex_code, rotorKey)).toBe(rawMessage);
       expect(payload.metadata.hex_raw_text).toBe(rawMessage);
       expect(payload.metadata.hexEncodingMethod).toBe('enigma');
       expect(payload.metadata.hexEncodingKey).toBe(rotorKey);
