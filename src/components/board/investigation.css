@@ -466,7 +466,8 @@ body.space-panning .corkboard-canvas:active {
     font-size: 21px;
   }
 
-  .investigation-toolbar {
+  .investigation-toolbar,
+  .investigation-sidebar {
     display: none;
   }
 
@@ -482,4 +483,195 @@ body.space-panning .corkboard-canvas:active {
     width: auto;
     height: calc(100dvh - env(safe-area-inset-bottom, 0px) - 140px);
   }
+}
+
+/* -- NOVO LAYOUT STANDALONE (Desktop >= 769px) -- */
+@media (min-width: 769px) {
+  .investigation-board {
+    display: grid !important;
+    grid-template-rows: var(--header-height, 64px) 1fr 52px;
+    grid-template-columns: 56px 1fr;
+    grid-template-areas:
+      "hdr hdr"
+      "side board"
+      "tbar tbar";
+  }
+
+  .investigation-header {
+    grid-area: hdr;
+    position: static !important;
+    height: var(--header-height, 64px);
+    min-height: var(--header-height, 64px);
+  }
+
+  .corkboard-canvas {
+    grid-area: board;
+    position: relative !important;
+  }
+
+  .investigation-toolbar {
+    grid-area: tbar;
+    position: static !important;
+    transform: none !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid var(--border) !important;
+    background: rgb(15 17 23 / 98%) !important;
+    padding: 0 16px !important;
+    box-shadow: none !important;
+    width: 100%;
+  }
+
+  .investigation-toolbar::before {
+    display: none !important;
+  }
+}
+
+.investigation-sidebar {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: var(--z-hud, 1000);
+  overflow-y: auto;
+}
+
+.sdiv {
+  width: 28px;
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.tbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 44px;
+  padding: 6px 0;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: all 120ms;
+}
+
+.tbtn:hover,
+.tbtn.on {
+  border-color: #545458;
+  background: #1b1b1e;
+  color: var(--text-primary);
+}
+
+.tbtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.note-node {
+  position: absolute;
+  width: 220px;
+  min-height: 140px;
+  background: #fcd34d;
+  color: #1e293b;
+  font-family: var(--font-system);
+  padding: 12px;
+  box-shadow: 2px 4px 12px rgb(0 0 0 / 50%);
+  z-index: 10;
+  font-size: 13px;
+  transform: translate(-50%, -50%);
+}
+
+.note-node::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 20px 20px;
+  border-color: transparent transparent #eab308 transparent;
+}
+
+.note-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  opacity: 0.6;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+
+.note-content {
+  outline: none;
+  min-height: 100px;
+}
+
+.n-close {
+  background: rgb(0 0 0 / 10%);
+  border: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+}
+
+.n-close:hover {
+  background: rgb(0 0 0 / 20%);
+}
+
+.qa-panel {
+  position: absolute;
+  background: rgb(20 20 20 / 95%);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: var(--z-modals, 2000);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 50%);
+  pointer-events: auto;
+}
+
+.qa-panel button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+
+.qa-panel button:hover {
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+}
+
+.qa-panel button.danger:hover {
+  background: rgb(230 57 70 / 20%);
+  color: #e63946;
 }

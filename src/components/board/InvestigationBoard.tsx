@@ -8,6 +8,7 @@ import {
   CircleHelp,
   Crown,
   Eye,
+  FileText,
   Flashlight,
   FolderOpen,
   Glasses,
@@ -20,6 +21,7 @@ import {
   LocateFixed,
   Mail,
   Menu,
+  Pin,
   Plus,
   Redo2,
   RotateCcw,
@@ -169,6 +171,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   // Context menu state for connection right-click
   const [connectionContextMenu, setConnectionContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
+  const [pins, setPins] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<{id: string, type: 'pin', x: number, y: number} | null>(null);
+  const [noteMode, setNoteMode] = useState(false);
+  const [pinMode, setPinMode] = useState(false);
+  const [pinType, setPinType] = useState<'vermelho'|'azul'|'verde'>('vermelho');
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -2095,178 +2102,165 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         </>
       )}
 
+      {/* SIDEBAR (ESTILO STANDALONE) */}
+      {!isMobileDevice && (
+        <nav className="investigation-sidebar" aria-label="Ferramentas do Quadro">
+          <button className={`tbtn ${!connectionMode && !noteMode && !pinMode && !isUV ? 'on' : ''}`} onClick={() => {setConnectionMode(false); setNoteMode(false); setPinMode(false); setIsUV(false);}} title="Mover (V)">
+            <LocateFixed size={18} />MOVER
+          </button>
+          {canEdit && (
+            <>
+              <button className="tbtn" onClick={() => setCreateModalOpen(true)} title="Pista (P)">
+                <Plus size={18} />PISTA
+              </button>
+              <button className={`tbtn ${noteMode ? 'on' : ''}`} onClick={() => {setConnectionMode(false); setPinMode(false); setNoteMode(true);}} title="Nota (N)">
+                <FileText size={18} />NOTA
+              </button>
+              <button className={`tbtn ${pinMode ? 'on' : ''}`} onClick={() => {setConnectionMode(false); setNoteMode(false); setPinMode(true);}} title="Pin">
+                <Pin size={18} />PIN
+              </button>
+            </>
+          )}
+          <div className="sdiv" />
+          <button className={`tbtn ${connectionMode ? 'on' : ''}`} onClick={() => {setNoteMode(false); setPinMode(false); setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; });}} title="Conectar (C)">
+            <Link2 size={18} />FIO
+          </button>
+          <div className="sdiv" />
+          <button className={`tbtn ${terminalOpen ? 'on' : ''}`} onClick={() => setTerminalOpen(!terminalOpen)} title="Terminal C.R.I.S.">
+            <Terminal size={18} />TERMINAL
+          </button>
+          <button className={`tbtn ${showFinder ? 'on' : ''}`} onClick={() => setShowFinder(!showFinder)} title="Buscar (Ctrl+F)">
+            <Search size={18} />LUPA
+          </button>
+        </nav>
+      )}
+
       {!isMobileDevice && (
         <div 
           className="investigation-toolbar" 
           data-game-master={isGameMaster ? 'true' : 'false'} 
           data-player-view={playerView ? 'true' : 'false'}
+          style={{ justifyContent: 'space-between' }}
         >
-        {/* Grupo 1: Ações Principais */}
-        <div className="toolbar-group">
-          {/* Criar Nova Evidência - Apenas para GM e quando NÃO está em playerView */}
-          {canEdit && (
-            <button 
-              className="hud-btn primary" 
-              onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
-              data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
-              data-gm-only="true"
-            >
-              <Settings size={16} /> HUB DE CRIAÇÃO
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {canEdit && (
+              <button 
+                className="hud-btn primary" 
+                onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
+                data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
+                data-gm-only="true"
+                style={{ fontWeight: 700, letterSpacing: '0.06em' }}
+              >
+                <Plus size={14} /> NOVA PISTA
+              </button>
+            )}
 
-          {isGameMaster && (
-            <>
-              <button className="hud-btn icon-only" onClick={async () => {
-                 try {
-                   const invite = await api.createInviteLink(investigationId);
-                   if (invite?.invite_code) {
-                     const url = `${window.location.origin}/invite/${invite.invite_code}`;
-                     setInviteLink(url);
+            {isGameMaster && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button className="hud-btn icon-only" onClick={async () => {
+                   try {
+                     const invite = await api.createInviteLink(investigationId);
+                     if (invite?.invite_code) {
+                       const url = `${window.location.origin}/invite/${invite.invite_code}`;
+                       setInviteLink(url);
+                     }
+                   } catch (e) {
+                     console.error('Falha ao gerar link de convite', e);
+                     alert('Falha ao gerar link de convite');
                    }
-                 } catch (e) {
-                   console.error('Falha ao gerar link de convite', e);
-                   alert('Falha ao gerar link de convite');
-                 }
-                 setInviteOpen(true);
-              }} data-tooltip="Convidar jogadores" data-gm-only="true"><Mail size={16} /></button>
-              <button 
-                 className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
-                 onClick={() => setPlayerView(!playerView)}
-                 data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
-                 data-gm-only="true"
-              >
-                 {playerView ? <Eye size={16} /> : <Glasses size={16} />}
-              </button>
-              <button 
-                 className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
-                 onClick={() => setShowHiddenClues(!showHiddenClues)}
-                 data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
-                 data-gm-only="true"
-              >
-                 <Eye size={16} />
-              </button>
-              <button 
-                 className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
-                 onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
-                 data-tooltip="GM Overwatch - Painel de Controle"
-                 data-gm-only="true"
-              >
-                 <Crown size={16} />
-              </button>
-            </>
-          )}
-        </div>
+                   setInviteOpen(true);
+                }} data-tooltip="Convidar jogadores" data-gm-only="true" aria-label="Convidar jogadores"><Mail size={16} /></button>
+                <button 
+                   className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
+                   onClick={() => setPlayerView(!playerView)}
+                   data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
+                   data-gm-only="true"
+                   aria-label={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
+                >
+                   {playerView ? <Eye size={16} /> : <Glasses size={16} />}
+                </button>
+                <button 
+                   className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
+                   onClick={() => setShowHiddenClues(!showHiddenClues)}
+                   data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
+                   data-gm-only="true"
+                   aria-label={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas"}
+                >
+                   <Eye size={16} />
+                </button>
+                <button 
+                   className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
+                   onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
+                   data-tooltip="GM Overwatch - Painel de Controle"
+                   data-gm-only="true"
+                   aria-label="GM Overwatch"
+                >
+                   <Crown size={16} />
+                </button>
+              </div>
+            )}
 
-        {/* Grupo 2: Ferramentas */}
-        <div className="toolbar-group">
-          <button 
-            className={`hud-btn icon-only connection ${connectionMode ? 'active' : ''}`} 
-            onClick={() => setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; })} 
-            data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
-          >
-            <Link2 size={16} />
-          </button>
+            {connectionMode && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className={`hud-btn ${connectionType==='confirmed'?'active':''}`} onClick={() => {setConnectionType('confirmed'); setConnectionColor('#c62828');}} aria-label="Conexão do tipo Fato">FATO</button>
+                <button className={`hud-btn ${connectionType==='theory'?'active':''}`} onClick={() => {setConnectionType('theory'); setConnectionColor('#f9a825');}} aria-label="Conexão do tipo Teoria">TEORIA</button>
+                <button className={`hud-btn ${connectionType==='mystic'?'active':''}`} onClick={() => {setConnectionType('mystic'); setConnectionColor('#7e57c2');}} aria-label="Conexão do tipo Sobrenatural">SOBRENATURAL</button>
+              </div>
+            )}
 
-          {connectionMode && (
-            <>
-              <button 
-                className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
-                style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid var(--border)':'none' }}
-                data-tooltip="Fato"
-              >
-                <div style={{width:10, height:10, background:'#c62828'}} />
-              </button>
-              <button 
-                className="hud-btn icon-only"
-                onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
-                style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid var(--border)':'none' }}
-                data-tooltip="Teoria"
-              >
-                <div style={{width:10, height:10, background:'#f9a825'}} />
-              </button>
-              <button 
-                className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
-                style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid var(--border)':'none' }}
-                data-tooltip="Sobrenatural"
-              >
-                <div style={{width:10, height:10, background:'#7e57c2'}} />
-              </button>
-            </>
-          )}
-
-          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto"><Lock size={16} /></button>
-        </div>
-
-        {/* Grupo 3: Organização & Edição */}
-        <div className="toolbar-group">
-          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search size={16} /></button>
-          <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar"><Layers2 size={16} /></button>
-            {showOrganizeMenu && (
-              <div className="dropdown-menu">
-                <div className="dropdown-header">Organizar</div>
-                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><CalendarDays size={15} /> Por Data</button>
-                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
-                <button onClick={() => {
-                  const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
-                  cards.forEach((c, i) => {
-                    const col = i % 5;
-                    const row = Math.floor(i / 5);
-                    const x = 100 + col * 260;
-                    const y = 100 + row * 300;
-                    newPos[c.id] = { x, y };
-                    api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
-                  });
-                  setLocalPositions(newPos);
-                  setOrigin({ x: -50, y: -50 });
-                  setShowOrganizeMenu(false);
-                }}><Layers2 size={15} /> Desempilhar</button>
+            {pinMode && (
+              <div style={{ display: 'flex', gap: 6, marginLeft: 8, alignItems: 'center' }}>
+                 <div role="button" tabIndex={0} aria-label="Pino vermelho" onClick={() => setPinType('vermelho')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('vermelho'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#e63946', cursor: 'pointer', border: pinType === 'vermelho' ? '2px solid white' : 'none'}} />
+                 <div role="button" tabIndex={0} aria-label="Pino azul" onClick={() => setPinType('azul')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('azul'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#3b82f6', cursor: 'pointer', border: pinType === 'azul' ? '2px solid white' : 'none'}} />
+                 <div role="button" tabIndex={0} aria-label="Pino verde" onClick={() => setPinType('verde')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('verde'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#eab308', cursor: 'pointer', border: pinType === 'verde' ? '2px solid white' : 'none'}} />
               </div>
             )}
           </div>
 
-          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer"><Undo2 size={16} /></button>
-          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer"><Redo2 size={16} /></button>
-        </div>
-
-        {/* Grupo 4: Ferramentas Avançadas */}
-        <div className="toolbar-group">
-
-          {/* Post-it button removed */}
-          
-          <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas"><Settings size={16} /></button>
-            {showToolsMenu && (
-              <div className="dropdown-menu">
-                <div className="dropdown-header">Ferramentas</div>
-                <button onClick={() => { setIsUV(!isUV); setShowToolsMenu(false); }} className={isUV ? 'active-uv' : ''}>
-                  <Flashlight size={15} /> Luz UV {isUV ? '(Ativa)' : ''}
-                </button>
-                <button onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}>
-                  <Terminal size={15} /> Terminal C.R.I.S.
-                </button>
-              </div>
-            )}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} title="Luz UV" aria-label="Alternar Luz Ultravioleta (UV)" aria-pressed={isUV}><Flashlight size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto" aria-label="Decodificador de Texto"><Lock size={16} /></button>
+            <div style={{ position: 'relative' }}>
+              <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar" aria-label="Organizar"><Layers2 size={16} /></button>
+              {showOrganizeMenu && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-header">Organizar</div>
+                  <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><CalendarDays size={15} /> Por Data</button>
+                  <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
+                  <button onClick={() => {
+                    const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
+                    cards.forEach((c, i) => {
+                      const col = i % 5;
+                      const row = Math.floor(i / 5);
+                      const x = 100 + col * 260;
+                      const y = 100 + row * 300;
+                      newPos[c.id] = { x, y };
+                      api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
+                    });
+                    setLocalPositions(newPos);
+                    setOrigin({ x: -50, y: -50 });
+                    setShowOrganizeMenu(false);
+                  }}><Layers2 size={15} /> Desempilhar</button>
+                </div>
+              )}
+            </div>
+            <button
+              className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
+              onClick={togglePerformanceMode}
+              data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
+              aria-label="Alternar Modo Performance"
+            >
+              <Zap size={16} />
+            </button>
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 6px' }} />
+            <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} title="Desfazer" aria-label="Desfazer última alteração"><Undo2 size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} title="Refazer" aria-label="Refazer última alteração"><Redo2 size={16} /></button>
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 6px' }} />
+            <button className="hud-btn icon-only" onClick={zoomOut} title="Diminuir Zoom" aria-label="Diminuir Zoom do Quadro"><ZoomOut size={16} /></button>
+            <span className="tabular-nums toolbar-zoom-value" style={{ fontSize: 11, fontWeight: 700, width: 42, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
+            <button className="hud-btn icon-only" onClick={zoomIn} title="Aumentar Zoom" aria-label="Aumentar Zoom do Quadro"><ZoomIn size={16} /></button>
+            <button className="hud-btn icon-only" onClick={resetZoom} title="Resetar Zoom" aria-label="Redefinir Zoom para 100%"><RotateCcw size={16} /></button>
           </div>
-          <button
-            className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
-            onClick={togglePerformanceMode}
-            data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
-          >
-            <Zap size={16} />
-          </button>
-        </div>
-
-        {/* Grupo 5: Zoom */}
-        <div className="toolbar-group" style={{ marginLeft: 'auto', padding: '0 8px', minWidth: 120, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
-          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir"><ZoomOut size={16} /></button>
-          <span className="toolbar-zoom-value">{(zoom * 100).toFixed(0)}%</span>
-          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar"><ZoomIn size={16} /></button>
-          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset"><RotateCcw size={16} /></button>
-        </div>
         </div>
       )}
 
@@ -2374,8 +2368,27 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           if (e.target === boardRef.current || e.target === e.currentTarget) {
             // close any open context menu when clicking the background
             setContextMenu(null);
+            setSelectedItem(null);
             const board = boardRef.current?.getBoundingClientRect();
             if (!board) return;
+            const sx = e.clientX - board.left;
+            const sy = e.clientY - board.top;
+            const worldX = origin.x + sx / zoom;
+            const worldY = origin.y + sy / zoom;
+
+            if (noteMode) {
+              const newNote = { id: Date.now().toString(), x: worldX, y: worldY, text: '', color: '#fcd34d' };
+              setNotes([...notes, newNote]);
+              setNoteMode(false);
+              return;
+            }
+            if (pinMode) {
+              const newPin = { id: Date.now().toString(), x: worldX, y: worldY, type: pinType };
+              setPins([...pins, newPin]);
+              setPinMode(false);
+              return;
+            }
+
             const isLeft = e.button === 0;
             const isMiddle = e.button === 1;
             // Shift + left-drag => marquee selection
@@ -2675,13 +2688,152 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             );
           })}
 
+          {notes.map(note => (
+            <div 
+              key={`note-${note.id}`} 
+              className="note-node" 
+              style={{ left: note.x, top: note.y }}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setSelectedItem(null);
+                const target = e.currentTarget;
+                target.setPointerCapture(e.pointerId);
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const origX = note.x;
+                const origY = note.y;
+                const onMove = (ev: PointerEvent) => {
+                  const dx = (ev.clientX - startX) / zoom;
+                  const dy = (ev.clientY - startY) / zoom;
+                  setNotes(prev => prev.map(n => n.id === note.id ? { ...n, x: origX + dx, y: origY + dy } : n));
+                };
+                const onUp = (ev: PointerEvent) => {
+                  target.removeEventListener('pointermove', onMove);
+                  target.removeEventListener('pointerup', onUp);
+                  target.releasePointerCapture(ev.pointerId);
+                };
+                target.addEventListener('pointermove', onMove);
+                target.addEventListener('pointerup', onUp);
+              }}
+            >
+              <div className="note-hdr">
+                <span>NOTA</span>
+                <button className="n-close" onClick={() => setNotes(notes.filter(n => n.id !== note.id))}>x</button>
+              </div>
+              <div className="note-content" contentEditable suppressContentEditableWarning onBlur={(e) => {
+                const text = e.currentTarget.textContent;
+                setNotes(notes.map(n => n.id === note.id ? { ...n, text } : n));
+              }} onPointerDown={(e) => e.stopPropagation()}>{note.text}</div>
+            </div>
+          ))}
+
+          {pins.map(pin => {
+            const size = pin.size || 24;
+            let pPos = { x: pin.x, y: pin.y };
+            if (pin.attachedTo && localPositionsRef.current[pin.attachedTo]) {
+              pPos = { 
+                x: localPositionsRef.current[pin.attachedTo].x + pin.offsetX, 
+                y: localPositionsRef.current[pin.attachedTo].y + pin.offsetY 
+              };
+            }
+            return (
+              <div 
+                key={`pin-${pin.id}`} 
+                className="pin-3d" 
+                style={{ position: 'absolute', left: pPos.x, top: pPos.y, width: size, height: size, background: `url(/pins/pin-${pin.type}.png) no-repeat center center / contain`, transform: 'translate(-50%, -100%)', zIndex: 5000, cursor: 'pointer' }} 
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPins(pins.filter(p => p.id !== pin.id));
+                  if (selectedItem?.id === pin.id) setSelectedItem(null);
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (connectionMode) {
+                    onCardClickWhenConnecting(`pin-${pin.id}`);
+                    return;
+                  }
+                  if (e.button === 0) setSelectedItem({ id: pin.id, type: 'pin', x: pPos.x, y: pPos.y });
+                  const target = e.currentTarget;
+                  target.setPointerCapture(e.pointerId);
+                  const startX = e.clientX;
+                  const startY = e.clientY;
+                  const origX = pPos.x;
+                  const origY = pPos.y;
+                  let moved = false;
+                  const onMove = (ev: PointerEvent) => {
+                    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) moved = true;
+                    const dx = (ev.clientX - startX) / zoom;
+                    const dy = (ev.clientY - startY) / zoom;
+                    setPins(prev => prev.map(p => p.id === pin.id ? { ...p, x: origX + dx, y: origY + dy, attachedTo: undefined } : p));
+                    if (moved) setSelectedItem(null);
+                  };
+                  const onUp = (ev: PointerEvent) => {
+                    target.removeEventListener('pointermove', onMove);
+                    target.removeEventListener('pointerup', onUp);
+                    target.releasePointerCapture(ev.pointerId);
+                    if (moved) {
+                      const dx = (ev.clientX - startX) / zoom;
+                      const dy = (ev.clientY - startY) / zoom;
+                      const finalX = origX + dx;
+                      const finalY = origY + dy;
+                      const CARD_W = 220; const CARD_H = 160;
+                      const parentCard = cards.find(c => {
+                        const cPos = localPositionsRef.current[c.id] || { x: c.x || 100, y: c.y || 100 };
+                        return finalX >= cPos.x && finalX <= cPos.x + CARD_W && finalY >= cPos.y && finalY <= cPos.y + CARD_H;
+                      });
+                      if (parentCard) {
+                        const cPos = localPositionsRef.current[parentCard.id] || { x: parentCard.x || 100, y: parentCard.y || 100 };
+                        setPins(prev => prev.map(p => p.id === pin.id ? { ...p, x: finalX, y: finalY, attachedTo: parentCard.id, offsetX: finalX - cPos.x, offsetY: finalY - cPos.y } : p));
+                      }
+                    }
+                  };
+                  target.addEventListener('pointermove', onMove);
+                  target.addEventListener('pointerup', onUp);
+                }}
+              />
+            );
+          })}
+
+          {selectedItem && selectedItem.type === 'pin' && (
+            <div 
+              className="pin-context-menu" 
+              style={{ position: 'absolute', left: selectedItem.x + 20, top: selectedItem.y - 40, background: '#1c1917', color: '#fff', padding: 16, borderRadius: 12, zIndex: 9999, width: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', border: '1px solid #333' }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', marginBottom: 12, color: '#fcd34d' }}>ALFINETE</div>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontWeight: 700 }}>COR</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'vermelho'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#e63946', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'vermelho' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'azul'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#3b82f6', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'azul' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'verde'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#eab308', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'verde' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontWeight: 700, marginTop: 12 }}>TAMANHO</div>
+              <input 
+                type="range" min="12" max="64" 
+                value={pins.find(p=>p.id===selectedItem.id)?.size || 24} 
+                onChange={(e) => setPins(pins.map(p => p.id === selectedItem.id ? {...p, size: parseInt(e.target.value)} : p))} 
+                style={{ width: '100%', marginBottom: 16 }} 
+              />
+              <button 
+                onClick={() => { setPins(pins.filter(p => p.id !== selectedItem.id)); setSelectedItem(null); }}
+                style={{ width: '100%', padding: '10px 0', background: '#c62828', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+              >
+                Apagar alfinete
+              </button>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 12, lineHeight: 1.4 }}>
+                Arraste o alfinete para outro item. Botão direito também apaga.
+              </div>
+            </div>
+          )}
+
           {/* BARRA CONTEXTUAL DE MULTISSELEÇÃO / TOUCH SELECTION */}
           {selectedIds.length > 0 && (
             <div
               className="selection-context-toolbar"
               style={{
                 position: 'fixed',
-                bottom: isMobileDevice ? 'calc(env(safe-area-inset-bottom, 0px) + 64px)' : '24px',
+                bottom: isMobileDevice ? 'calc(env(safe-area-inset-bottom, 0px) + 64px)' : '64px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 'var(--z-hud, 1000)',
