@@ -3,7 +3,7 @@ import './NumericKeypad.css';
 
 interface NumericKeypadProps {
   code: string | number;
-  onUnlock?: () => void;
+  onUnlock?: (unlockedCode?: string) => void;
   onInput?: (value: string) => void;
 }
 
@@ -23,7 +23,8 @@ export default function NumericKeypad({ code, onUnlock, onInput }: NumericKeypad
     if (!String(code)) return;
     if (input === String(code)) {
       setStatus('success');
-      setTimeout(() => { onUnlock && onUnlock(); }, 450);
+      const matched = input;
+      setTimeout(() => { onUnlock && onUnlock(matched); }, 450);
     } else {
       setStatus('error');
       setTimeout(() => { setInput(''); setStatus('locked'); onInput && onInput(''); }, 900);

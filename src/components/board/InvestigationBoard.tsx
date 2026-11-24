@@ -92,6 +92,14 @@ import ConnectionLine from '../ConnectionLine';
 import InteractionToggleButton from '../InteractionToggleButton';
 import { FloatingNudgePad } from '../ui/FloatingNudgePad';
 import { TouchContextMenu } from '../ui/TouchContextMenu';
+import {
+  getUnlockedCodes,
+  markCardSeen,
+  PLAYER_TRACKING_EVENT,
+  recordUnlockedCode,
+  shouldShowNewBadge,
+  UnlockedCodeEntry,
+} from '../../utils/playerTracking';
 // Local fallback for BoardButton (avoids missing module error)
 const CrosshairIconProxy = () => <LocateFixed size={18} />;
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
@@ -369,6 +377,21 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [unlockingCard, setUnlockingCard] = useState<any | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [decoderOpen, setDecoderOpen] = useState(false);
+  const [decoderInitialInput, setDecoderInitialInput] = useState<string>('');
+  const [decoderInitialMode, setDecoderInitialMode] = useState<string | undefined>(undefined);
+  const [inspectInitialForensicMode, setInspectInitialForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
+  const [codesPanelOpen, setCodesPanelOpen] = useState(false);
+  const [, setTrackingVersion] = useState(0);
+  const [unlockedCodes, setUnlockedCodes] = useState<UnlockedCodeEntry[]>(() =>
+    investigationId ? getUnlockedCodes(investigationId) : []
+  );
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [quickNotePos, setQuickNotePos] = useState<{ x: number; y: number } | null>(null);
+  const [quickNoteTitle, setQuickNoteTitle] = useState('');
+  const [quickNoteText, setQuickNoteText] = useState('');
+  const [quickNoteColor, setQuickNoteColor] = useState('#fef08a');
+  const [quickNoteTag, setQuickNoteTag] = useState('Teoria');
+  const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
@@ -406,7 +429,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [decoderUnlocked, setDecoderUnlocked] = useState(false);
   const [showDecoderModal, setShowDecoderModal] = useState(false);
   const [showCodePrompt, setShowCodePrompt] = useState(false);
-  const anyModalOpen = modalOpen || createModalOpen || inviteOpen || Boolean(inspectCard) || Boolean(unlockingCard) || terminalOpen || decoderOpen || showDecoderModal || showCodePrompt || sketchOpen;
+  const anyModalOpen = modalOpen || createModalOpen || inviteOpen || Boolean(inspectCard) || Boolean(unlockingCard) || terminalOpen || decoderOpen || showDecoderModal || showCodePrompt || sketchOpen || quickNoteOpen || codesPanelOpen;
+
+  useEffect(() => {
+    if (!investigationId) return;
+    const refreshTracking = () => {
+      setUnlockedCodes(getUnlockedCodes(investigationId));
+      setTrackingVersion((v) => v + 1);
+    };
+    refreshTracking();
+    window.addEventListener(PLAYER_TRACKING_EVENT, refreshTracking);
+    return () => window.removeEventListener(PLAYER_TRACKING_EVENT, refreshTracking);
+  }, [investigationId]);
 
   // Hide HUD/header overlays while any modal is active
   useEffect(() => {
@@ -1906,7 +1940,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return Boolean(lockedFlag || password);
   };
 
-  const openEvidenceViewer = useCallback((card: any) => {
+  const openEvidenceViewer = useCallback((card: any, initialForensic: 'none' | 'channel' | 'hex' | 'lens' | 'decoder' = 'none') => {
     try {
       const pos = localPositionsRef.current[card?.id];
       if (pos) {
@@ -1917,8 +1951,165 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     } catch {
       // ignore centering failures
     }
+    if (card?.id && investigationId) {
+      markCardSeen(String(investigationId), String(card.id), { isGameMaster, playerView });
+    }
+    setInspectInitialForensicMode(initialForensic);
     setInspectCard(card);
-  }, []);
+  }, [investigationId, isGameMaster, playerView]);
+
+  const getSafeDecoderText = useCallback((card: any): string => {
+    if (!card) return '';
+    const meta = parseCardMetadata(card);
+    if (!canEdit && isCardLocked(card, meta)) return '';
+    return String(meta?.cipher_text || card?.description_public || '');
+  }, [canEdit]);
+
+  const handleSendCardToDecoder = useCallback((card: any) => {
+    const safeText = getSafeDecoderText(card);
+    if (!safeText && !canEdit && isCardLocked(card, parseCardMetadata(card))) {
+      showToast({ id: 'decoder-locked', message: 'Desbloqueie a evidência antes de enviar para o Decoder.' }, 3000);
+      return;
+    }
+    setDecoderInitialInput(safeText);
+    setDecoderInitialMode(undefined);
+    setDecoderOpen(true);
+  }, [getSafeDecoderText, canEdit, showToast]);
+
+  const handleOpenCardInHex = useCallback((card: any) => {
+    const meta = parseCardMetadata(card);
+    if (!canEdit && isCardLocked(card, meta)) {
+      handleCardOpen(card);
+      return;
+    }
+    const hydratedMedia = resolveUnifiedMedia(card, meta, { revealBase: true });
+    openEvidenceViewer({ ...card, ...hydratedMedia, metadata: meta }, 'hex');
+  }, [canEdit, openEvidenceViewer]);
+
+  const getViewportCenterWorldPos = useCallback(() => {
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
+    const viewH = boardRect?.height ?? window.innerHeight;
+    const CARD_W = 220;
+    const CARD_H = 160;
+    return {
+      x: Math.round(originRef.current.x + (viewW / 2) / zoom - CARD_W / 2),
+      y: Math.round(originRef.current.y + (viewH / 2) / zoom - CARD_H / 2),
+    };
+  }, [windowWidth, zoom]);
+
+  const handleOpenQuickNote = useCallback((pos?: { x: number; y: number }) => {
+    if (!canEdit) return;
+    setQuickNotePos(pos || getViewportCenterWorldPos());
+    setQuickNoteTitle('');
+    setQuickNoteText('');
+    setQuickNoteColor('#fef08a');
+    setQuickNoteTag('Teoria');
+    setQuickNoteOpen(true);
+  }, [canEdit, getViewportCenterWorldPos]);
+
+  const handleCreateQuickNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canEdit || !investigationId) return;
+    const title = quickNoteTitle.trim() || 'Nota Rápida';
+    const text = quickNoteText.trim();
+    if (!text) {
+      showToast({ id: 'quick-note-empty', message: 'Escreva o texto da nota.' }, 2500);
+      return;
+    }
+    setQuickNoteSaving(true);
+    try {
+      const pos = quickNotePos || getViewportCenterWorldPos();
+      const created: any = await api.createInvestigationCard({
+        investigation_id: investigationId,
+        title,
+        description_public: text,
+        x: pos.x,
+        y: pos.y,
+        type: 'text',
+        is_hidden: false,
+        tags: quickNoteTag ? [quickNoteTag] : [],
+        insights: [],
+        metadata: {
+          quick_note: true,
+          note_color: quickNoteColor,
+          theory_tag: quickNoteTag,
+        },
+      } as any);
+      setQuickNoteOpen(false);
+      await loadBoard();
+      if (created?.id) {
+        setLastCreatedId(created.id);
+        setTimeout(() => setLastCreatedId(null), 5000);
+      }
+      showToast({ id: 'quick-note-ok', message: '📝 Nota rápida adicionada ao quadro!' }, 2500);
+    } catch (err) {
+      console.error('Erro ao criar nota rápida:', err);
+      showToast({ id: 'quick-note-err', message: 'Falha ao criar nota rápida.' }, 3200);
+    } finally {
+      setQuickNoteSaving(false);
+    }
+  };
+
+  // Ctrl+V: Colar imagem diretamente no quadro (apenas Mestre ativo com canEdit === true)
+  useEffect(() => {
+    const onPaste = async (e: ClipboardEvent) => {
+      if (!canEdit || !investigationId) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (active) {
+        const tag = active.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable) {
+          return;
+        }
+      }
+      if (anyModalOpen) return;
+
+      const items = e.clipboardData?.items;
+      if (!items || items.length === 0) return;
+
+      let imageFile: File | null = null;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          imageFile = items[i].getAsFile();
+          if (imageFile) break;
+        }
+      }
+      if (!imageFile) return;
+
+      e.preventDefault();
+      const pos = getViewportCenterWorldPos();
+      showToast({ id: 'paste-upload', message: 'Colando imagem no quadro...' }, 4000);
+      try {
+        const uploadedUrl = await uploadInvestigationImage(imageFile, investigationId);
+        const baseName = imageFile.name ? imageFile.name.replace(/\.[^.]+$/, '') : '';
+        const title = baseName && baseName !== 'image' ? baseName : `Evidência Colada`;
+        const created: any = await api.createInvestigationCard({
+          investigation_id: investigationId,
+          title,
+          image_url: uploadedUrl,
+          x: pos.x,
+          y: pos.y,
+          type: 'image',
+          is_hidden: false,
+          tags: [],
+          insights: [],
+          metadata: { pasted_from_clipboard: true },
+        } as any);
+        await loadBoard();
+        if (created?.id) {
+          setLastCreatedId(created.id);
+          setTimeout(() => setLastCreatedId(null), 5000);
+        }
+        showToast({ id: 'paste-ok', message: '✓ Imagem colada como nova pista!' }, 2800);
+      } catch (err) {
+        console.error('Erro ao colar imagem no quadro:', err);
+        showToast({ id: 'paste-err', message: 'Falha ao colar imagem no quadro.' }, 3400);
+      }
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [canEdit, investigationId, anyModalOpen, getViewportCenterWorldPos, showToast]);
 
   const handleCardOpen = useCallback((card: any) => {
     const metadata = parseCardMetadata(card);
@@ -2031,6 +2222,19 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           setUnlockingCard(updatedCard);
         }
 
+        if (investigationId) {
+          recordUnlockedCode(
+            investigationId,
+            {
+              cardId: String(unlockingCard.id),
+              cardTitle: unlockingCard.title || 'Mega-Pista',
+              code,
+              lockType: 'mega_clue',
+            },
+            { isGameMaster, playerView }
+          );
+        }
+
         showToast({ id: `unlock-${unlockingCard.id}`, message: successMessage }, 3200);
         return { success: true, message: successMessage, closeModal: unlockedNow };
       }
@@ -2052,6 +2256,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
       const updatedMeta = { ...metadata, unlocked_at: new Date().toISOString() };
       await api.updateInvestigationCard(unlockingCard.id, { is_locked: false, metadata: updatedMeta } as any);
+      if (investigationId) {
+        recordUnlockedCode(
+          investigationId,
+          {
+            cardId: String(unlockingCard.id),
+            cardTitle: unlockingCard.title || 'Evidência Protegida',
+            code,
+            lockType: 'prompt',
+          },
+          { isGameMaster, playerView }
+        );
+      }
       showToast({ id: `unlock-${unlockingCard.id}`, message: 'Acesso concedido' }, 3200);
       setUnlockingCard(null);
       openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false });
@@ -2330,6 +2546,20 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                <button className="hud-btn" onClick={() => { toggleCardStatus(contextMenu.targetId!, 'false', []); setContextMenu(null); }} title="Descartar / Falso"><X size={16} /></button>
              </div>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
+             {(() => {
+               const targetCard = cards.find((c) => c.id === contextMenu.targetId);
+               if (!targetCard) return null;
+               const targetMeta = parseCardMetadata(targetCard);
+               const isTargetLockedForViewer = !canEdit && isCardLocked(targetCard, targetMeta);
+               if (isTargetLockedForViewer) return null;
+               return (
+                 <>
+                   <button className="hud-btn" onClick={() => { handleSendCardToDecoder(targetCard); setContextMenu(null); }}>🔐 Enviar para Decoder</button>
+                   <button className="hud-btn" onClick={() => { handleOpenCardInHex(targetCard); setContextMenu(null); }}>⌨️ Abrir no Hex</button>
+                   <hr style={{borderColor:'#333', margin:'4px 0'}} />
+                 </>
+               );
+             })()}
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }}><ArrowUp size={15} /> Trazer para Frente</button>
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }}><ArrowDown size={15} /> Mandar para Trás</button>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
@@ -2357,7 +2587,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           ) : (
             <>
              <div className="context-menu-title">MESA DE INVESTIGAÇÃO</div>
-             <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }}><Plus size={15} /> Nova Pista Aqui</button>
+             {canEdit && (
+               <>
+                 <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }}><Plus size={15} /> Nova Pista Aqui</button>
+                 <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; handleOpenQuickNote({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setContextMenu(null); }}>📝 Nota Rápida</button>
+               </>
+             )}
              <button className="hud-btn" onClick={() => { handleAutoOrganize('timeline'); setContextMenu(null); }}><CalendarDays size={15} /> Organizar Timeline</button>
              <button className="hud-btn" onClick={() => { setOrigin({x:0, y:0}); setContextMenu(null); }}><LocateFixed size={15} /> Resetar Câmera</button>
             </>
@@ -2474,6 +2709,28 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           data-game-master={isGameMaster ? 'true' : 'false'}
           data-player-view={playerView ? 'true' : 'false'}
         >
+          {/* Grupo 1: Ações Principais */}
+          {canEdit && (
+            <div className="toolbar-group" role="group" aria-label="Ações Principais">
+              <button
+                className="hud-btn primary"
+                onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
+                data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
+                data-gm-only="true"
+              >
+                <Settings size={16} /> HUB DE CRIAÇÃO
+              </button>
+              <button
+                className="hud-btn"
+                onClick={() => handleOpenQuickNote()}
+                data-tooltip="Criar Nota Rápida / Teoria da Mesa"
+                data-gm-only="true"
+              >
+                📝 Nota Rápida
+              </button>
+            </div>
+          )}
+
           {/* 1. Controle do Mestre */}
           {isGameMaster && (
             <div className="toolbar-group" role="group" aria-label="Controle do Mestre">
@@ -2536,6 +2793,13 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 <button className={`hud-btn ${connectionType === 'mystic' ? 'active' : ''}`} onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }} data-tooltip="Conexão: Sobrenatural / Oculto">SOBRENATURAL</button>
               </>
             )}
+            <button
+              className="hud-btn"
+              onClick={() => setCodesPanelOpen(true)}
+              data-tooltip="Códigos e Senhas Desbloqueados"
+            >
+              🔑 Códigos{unlockedCodes.length > 0 ? ` (${unlockedCodes.length})` : ''}
+            </button>
 
             {pinMode && (
               <div style={{ display: 'flex', gap: 6, margin: '0 4px', alignItems: 'center' }}>
@@ -2660,7 +2924,16 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           isOpen={!!inspectCard}
           card={inspectCard}
           isGameMaster={isGameMaster}
-          onClose={() => setInspectCard(null)}
+          playerView={viewerMode}
+          performanceMode={performanceMode}
+          initialForensicMode={inspectInitialForensicMode}
+          onSendToDecoder={(text, mode) => {
+            setInspectCard(null);
+            setDecoderInitialInput(text);
+            if (mode) setDecoderInitialMode(mode);
+            setDecoderOpen(true);
+          }}
+          onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
           onEdit={() => {
             // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
             setEditingCard(inspectCard);
@@ -3196,6 +3469,9 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     }}
                     onOpen={() => handleCardOpen(card)}
                     onEdit={() => handleEditCard(card)}
+                    isNew={shouldShowNewBadge(investigationId, card, { isGameMaster, playerView })}
+                    onSendToDecoder={() => handleSendCardToDecoder(card)}
+                    onOpenHex={() => handleOpenCardInHex(card)}
                     performanceMode={performanceMode}
                     semanticCompact={zoom < 0.48}
                   />
@@ -3841,8 +4117,123 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <button className="hud-btn icon-only" onClick={() => setDecoderOpen(false)} aria-label="Fechar decodificador"><X size={16} /></button>
           </div>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <UniversalDecoder />
+            <UniversalDecoder
+              initialInput={decoderInitialInput}
+              initialMode={decoderInitialMode}
+              investigationId={investigationId}
+            />
           </div>
+        </div>
+      )}
+      {codesPanelOpen && (
+        <div className="qol-modal-backdrop" onClick={() => setCodesPanelOpen(false)}>
+          <div className="qol-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Códigos Descobertos">
+            <div className="qol-modal-header">
+              <h3>🔑 Códigos Descobertos ({unlockedCodes.length})</h3>
+              <button type="button" className="hud-btn icon-only" onClick={() => setCodesPanelOpen(false)} aria-label="Fechar"><X size={16} /></button>
+            </div>
+            <div className="qol-modal-body">
+              {unlockedCodes.length === 0 ? (
+                <p className="qol-empty-msg">Nenhum código ou senha foi desbloqueado por jogadores nesta investigação ainda.</p>
+              ) : (
+                <div className="qol-codes-list">
+                  {unlockedCodes.map((entry) => (
+                    <div key={`${entry.cardId}-${entry.lockType}-${entry.code}`} className="qol-code-row">
+                      <div>
+                        <div className="qol-code-title">{entry.cardTitle}</div>
+                        <div className="qol-code-sub">
+                          {entry.lockType} • {new Date(entry.unlockedAt).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="qol-code-right">
+                        <code>{entry.code}</code>
+                        <button
+                          type="button"
+                          className="hud-btn"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(entry.code).catch(() => {});
+                            showToast({ id: 'copy-code', message: `Código ${entry.code} copiado!` }, 2000);
+                          }}
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {quickNoteOpen && canEdit && (
+        <div className="qol-modal-backdrop" onClick={() => setQuickNoteOpen(false)}>
+          <form className="qol-modal-card" onClick={(e) => e.stopPropagation()} onSubmit={handleCreateQuickNote} role="dialog" aria-modal="true" aria-label="Nota Rápida">
+            <div className="qol-modal-header">
+              <h3>📝 Nota Rápida / Teoria</h3>
+              <button type="button" className="hud-btn icon-only" onClick={() => setQuickNoteOpen(false)} aria-label="Fechar"><X size={16} /></button>
+            </div>
+            <div className="qol-modal-body">
+              <label className="qol-field">
+                <span>Título curto</span>
+                <input
+                  type="text"
+                  value={quickNoteTitle}
+                  onChange={(e) => setQuickNoteTitle(e.target.value)}
+                  placeholder="Ex: Ligação entre Suspeito A e Galpão"
+                  autoFocus
+                />
+              </label>
+              <label className="qol-field">
+                <span>Texto / Observação</span>
+                <textarea
+                  rows={3}
+                  value={quickNoteText}
+                  onChange={(e) => setQuickNoteText(e.target.value)}
+                  placeholder="Escreva a nota ou hipótese..."
+                  required
+                />
+              </label>
+              <div className="qol-field-row">
+                <label className="qol-field">
+                  <span>Tag de Teoria</span>
+                  <select value={quickNoteTag} onChange={(e) => setQuickNoteTag(e.target.value)}>
+                    <option value="Teoria">Teoria</option>
+                    <option value="Pista">Pista</option>
+                    <option value="Urgente">Urgente</option>
+                    <option value="Conexão">Conexão</option>
+                  </select>
+                </label>
+                <div className="qol-field">
+                  <span>Cor</span>
+                  <div className="qol-color-swatches">
+                    {[
+                      { hex: '#fef08a', label: 'Amarelo' },
+                      { hex: '#bae6fd', label: 'Azul' },
+                      { hex: '#fecaca', label: 'Vermelho' },
+                      { hex: '#bbf7d0', label: 'Verde' },
+                    ].map((c) => (
+                      <button
+                        key={c.hex}
+                        type="button"
+                        className={`qol-color-swatch ${quickNoteColor === c.hex ? 'active' : ''}`}
+                        style={{ backgroundColor: c.hex }}
+                        onClick={() => setQuickNoteColor(c.hex)}
+                        title={c.label}
+                        aria-label={c.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="qol-modal-footer">
+              <button type="button" className="hud-btn" onClick={() => setQuickNoteOpen(false)}>Cancelar</button>
+              <button type="submit" className="hud-btn primary" disabled={quickNoteSaving}>
+                {quickNoteSaving ? 'Criando...' : 'Criar Nota'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
       {showLegacyModal && (

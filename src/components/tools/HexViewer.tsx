@@ -1,93 +1,105 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './HexViewer.css';
 
 interface Props {
   hiddenMessage?: string;
+  focused?: boolean;
+  onSendToDecoder?: (text: string) => void;
 }
 
-interface HexRow {
-  offset: string;
-  bytes: string[];
-  ascii: string;
-}
-
-export default function HexViewer({ hiddenMessage = '' }: Props) {
-  const [rows, setRows] = useState<HexRow[]>([]);
-  const [bytesPerRow, setBytesPerRow] = useState<number>(16);
+export default function HexViewer({ hiddenMessage = '', focused = false, onSendToDecoder }: Props) {
+  const [content, setContent] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+  const viewerRef = useRef<HTMLDivElement | null>(null);
+  const dataMarkerRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    const checkOrientation = () => {
-      // 8 bytes in portrait mobile (< 640px), 16 in landscape / desktop
-      if (window.innerWidth < 640) {
-        setBytesPerRow(8);
-      } else {
-        setBytesPerRow(16);
+    const generateHex = () => {
+      let hex = '';
+      const possible = '0123456789ABCDEF';
+      for (let i = 0; i < 800; i++) {
+        hex += possible.charAt(Math.floor(Math.random() * possible.length));
+        if (i % 2 === 1) hex += ' ';
+        if (i % 16 === 15) hex += '\n';
       }
+      return hex;
     };
 
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, []);
+    const rawData = generateHex();
+    setContent(rawData);
+  }, [hiddenMessage]);
 
   useEffect(() => {
-    // Generate pseudo-random bytes or inject hiddenMessage
-    const totalBytes = 256;
-    const rawBytes: number[] = [];
-    for (let i = 0; i < totalBytes; i++) {
-      rawBytes.push(Math.floor(Math.random() * 256));
-    }
-
-    if (hiddenMessage) {
-      const msgBytes: number[] = [];
-      const prefix = '[DATA]: ';
-      const suffix = ' [END]';
-      const fullText = prefix + hiddenMessage + suffix;
-      for (let i = 0; i < fullText.length; i++) {
-        msgBytes.push(fullText.charCodeAt(i));
-      }
-      const insertAt = Math.min(64, Math.max(0, totalBytes - msgBytes.length - 16));
-      for (let i = 0; i < msgBytes.length && (insertAt + i) < rawBytes.length; i++) {
-        rawBytes[insertAt + i] = msgBytes[i];
+    if ((focused || hiddenMessage) && dataMarkerRef.current) {
+      try {
+        dataMarkerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch {
+        // ignore in jsdom
       }
     }
+  }, [focused, hiddenMessage, content]);
 
-    const calculatedRows: HexRow[] = [];
-    for (let i = 0; i < rawBytes.length; i += bytesPerRow) {
-      const slice = rawBytes.slice(i, i + bytesPerRow);
-      const offset = i.toString(16).toUpperCase().padStart(8, '0');
-      const hexList: string[] = slice.map(b => b.toString(16).toUpperCase().padStart(2, '0'));
-      const ascii = slice.map(b => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.')).join('');
-      calculatedRows.push({ offset, bytes: hexList, ascii });
+  const handleCopy = async () => {
+    const textToCopy = hiddenMessage || content;
+    if (!textToCopy) return;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // fallback
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = textToCopy;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      } catch {
+        // ignore
+      }
     }
+  };
 
-    setRows(calculatedRows);
-  }, [hiddenMessage, bytesPerRow]);
+  const mid = Math.floor(content.length / 2);
+  const before = content.slice(0, mid);
+  const after = content.slice(mid);
 
   return (
-    <div className="hex-viewer" style={{ ['--hex-height' as any]: '300px' }}>
-      <div className="hex-title">
-        VISUALIZADOR HEXADECIMAL v2.0 ({bytesPerRow} BYTES/LINHA)
+    <div className="hex-viewer" ref={viewerRef} style={{ ['--hex-height' as any]: '300px' }}>
+      <div className="hex-header-bar">
+        <div className="hex-title">VISUALIZADOR HEXADECIMAL v1.0</div>
+        <div className="hex-actions">
+          <button
+            type="button"
+            className="hex-action-btn"
+            onClick={handleCopy}
+            title="Copiar mensagem ou conteúdo hex"
+          >
+            {copied ? '✓ Copiado' : '📋 Copiar Mensagem / Hex'}
+          </button>
+          {onSendToDecoder && (hiddenMessage || content) && (
+            <button
+              type="button"
+              className="hex-action-btn primary"
+              onClick={() => onSendToDecoder(hiddenMessage || content)}
+              title="Enviar para o Universal Decoder"
+            >
+              🔐 Decoder
+            </button>
+          )}
+        </div>
       </div>
-      <div className="hex-table" role="table" aria-label="Hex Dump">
-        <div className="hex-table-header" role="row">
-          <span className="hex-col-offset">OFFSET</span>
-          <span className="hex-col-bytes">HEX</span>
-          <span className="hex-col-ascii">ASCII</span>
-        </div>
-        <div className="hex-table-body">
-          {rows.map((row) => (
-            <div className="hex-row" key={row.offset} role="row">
-              <span className="hex-col-offset">{row.offset}</span>
-              <span className="hex-col-bytes">
-                {row.bytes.map((byte, idx) => (
-                  <span key={idx} className="hex-byte">{byte}</span>
-                ))}
-              </span>
-              <span className="hex-col-ascii">{row.ascii}</span>
-            </div>
-          ))}
-        </div>
+      <div className="hex-content">
+        {before}
+        {hiddenMessage ? (
+          <span ref={dataMarkerRef} className="hex-hidden">
+            {`\n000F4A0 [DATA]: ${hiddenMessage} [END]\n`}
+          </span>
+        ) : null}
+        {after}
       </div>
     </div>
   );

@@ -23,6 +23,75 @@ export interface CreateTemplateInput {
   is_public?: boolean;
 }
 
+export interface SanitizeTemplateOptions {
+  stripSecrets?: boolean;
+}
+
+const TRANSIENT_FILE_AND_PREVIEW_KEYS = new Set([
+  'imgFile',
+  'uvFile',
+  'videoFile',
+  'filterFile',
+  'thermalFile',
+  'forensicFile',
+  'megaImageFile',
+  'glitchFocusedImageFile',
+  'filterInitialImage',
+  'previewUrl',
+  'videoPreviewUrl',
+  'uvPreviewUrl',
+  'filterPreviewUrl',
+  'audioBasePreview',
+  'audioHiddenPreview',
+  'megaImagePreview',
+  'thermalPreviewUrl',
+  'forensicPreviewUrl',
+  'glitchFocusedImagePreview',
+  'uvEditorBaseUrl',
+]);
+
+const SECRET_TEMPLATE_KEYS = new Set([
+  'descHidden',
+  'description_hidden',
+  'lockPass',
+  'lock_password',
+  'lockPasses',
+  'discoveryCode',
+  'discovery_code',
+  'phonePassword',
+  'phone_password',
+  'glitchKeyword',
+  'correct_keyword',
+  'thermalSecretText',
+  'thermal_secret_text',
+  'thermalKeyword',
+  'thermal_keyword',
+  'realText',
+  'real_text',
+  'megaFinalTruthText',
+  'final_truth_text',
+  'hexEncodingKey',
+  'hex_raw_text',
+  'required_codes',
+]);
+
+function isTransientFileOrPreviewKey(key: string): boolean {
+  if (TRANSIENT_FILE_AND_PREVIEW_KEYS.has(key)) return true;
+  return /(File|Preview|PreviewUrl)$/.test(key);
+}
+
+function isFileOrBlobInstance(val: unknown): boolean {
+  if (!val || typeof val !== 'object') return false;
+  if (typeof File !== 'undefined' && val instanceof File) return true;
+  if (typeof Blob !== 'undefined' && val instanceof Blob) return true;
+  const tag = Object.prototype.toString.call(val);
+  return tag === '[object File]' || tag === '[object Blob]';
+}
+
+function isTemporaryMediaString(val: string): boolean {
+  return val.startsWith('blob:') || val.startsWith('data:image/');
+}
+
 /**
  * Fetch all templates accessible to the current user
  * (their own templates + public templates)
@@ -63,20 +132,27 @@ export async function fetchClueTemplate(id: string): Promise<ClueTemplate | null
  * Create a new clue template
  */
 export async function createClueTemplate(input: CreateTemplateInput): Promise<ClueTemplate> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
     throw new Error('User must be authenticated to create templates');
   }
+
+  const isPublic = Boolean(input.is_public);
+  const safeTemplateData = sanitizeTemplateData(input.template_data, {
+    stripSecrets: isPublic,
+  });
 
   const { data, error } = await supabase
     .from('clue_templates')
     .insert({
       name: input.name,
       description: input.description || null,
-      template_data: input.template_data,
+      template_data: safeTemplateData,
       created_by: user.id,
-      is_public: input.is_public || false,
+      is_public: isPublic,
     } as any)
     .select()
     .single();
@@ -96,15 +172,19 @@ export async function updateClueTemplate(
   id: string,
   updates: Partial<CreateTemplateInput>
 ): Promise<ClueTemplate> {
+  const shouldStripSecrets = Boolean(updates.is_public);
   const updateData: any = {
     ...(updates.name && { name: updates.name }),
     ...(updates.description !== undefined && { description: updates.description }),
-    ...(updates.template_data && { template_data: updates.template_data }),
+    ...(updates.template_data !== undefined && {
+      template_data: sanitizeTemplateData(updates.template_data, {
+        stripSecrets: shouldStripSecrets,
+      }),
+    }),
     ...(updates.is_public !== undefined && { is_public: updates.is_public }),
   };
 
-  const { data, error } = await (supabase
-    .from('clue_templates') as any)
+  const { data, error } = await (supabase.from('clue_templates') as any)
     .update(updateData)
     .eq('id', id)
     .select()
@@ -122,10 +202,7 @@ export async function updateClueTemplate(
  * Delete a template
  */
 export async function deleteClueTemplate(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('clue_templates')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('clue_templates').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting clue template:', error);
@@ -134,58 +211,100 @@ export async function deleteClueTemplate(id: string): Promise<void> {
 }
 
 /**
- * Helper: Sanitize form state to remove File objects, blob URLs, and other non-serializable data
- * This ensures the template_data can be safely stored as JSONB
+ * Helper: Sanitize form state to remove File objects, blob URLs, circular references,
+ * and other non-serializable data so template_data can be safely stored as JSONB.
+ * When options.stripSecrets is true, GM/solution secret keys are also removed.
  */
-export function sanitizeTemplateData(formState: any): any {
-  const seen = new WeakSet();
-  
-  const sanitize = (val: any, depth = 0): any => {
-    // Prevent infinite recursion
-    if (depth > 10) return null;
-    
-    // Handle primitives
-    if (val === null || val === undefined) return null;
-    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
-      // Filter out blob URLs
-      if (typeof val === 'string' && val.startsWith('blob:')) return null;
+export function sanitizeTemplateData(
+  formState: any,
+  options?: SanitizeTemplateOptions
+): any {
+  const stripSecrets = Boolean(options?.stripSecrets);
+  const ancestors = new WeakSet<object>();
+
+  const sanitize = (val: any, depth = 0, parentKey?: string): any => {
+    if (depth > 15) return undefined;
+
+    if (val === null) return null;
+    if (val === undefined || typeof val === 'function' || typeof val === 'symbol') {
+      return undefined;
+    }
+
+    if (typeof val === 'string') {
+      if (isTemporaryMediaString(val)) return undefined;
       return val;
     }
-    
-    // Skip File objects and Blobs
-    if (val instanceof File || val instanceof Blob) return null;
-    
-    // Handle Dates
-    if (val instanceof Date) return val.toISOString();
-    
-    // Handle Arrays
-    if (Array.isArray(val)) {
-      return val.map(v => sanitize(v, depth + 1)).filter(v => v !== null);
+
+    if (typeof val === 'number' || typeof val === 'boolean') {
+      return val;
     }
-    
-    // Handle Objects
+
+    if (isFileOrBlobInstance(val)) {
+      return undefined;
+    }
+
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+
+    if (Array.isArray(val)) {
+      if (ancestors.has(val)) return undefined;
+      ancestors.add(val);
+      const arrResult = val
+        .map((item) => sanitize(item, depth + 1))
+        .filter((item) => item !== undefined && item !== null);
+      ancestors.delete(val);
+      return arrResult;
+    }
+
     if (typeof val === 'object') {
-      // Prevent circular references
-      if (seen.has(val)) return null;
-      seen.add(val);
-      
-      const result: any = {};
+      if (ancestors.has(val)) return undefined;
+      ancestors.add(val);
+
+      const result: Record<string, any> = {};
       for (const key of Object.keys(val)) {
-        // Skip preview URLs and file objects
-        if (key.includes('Preview') || key.includes('File') || key.includes('Url') && val[key]?.startsWith?.('blob:')) {
+        if (isTransientFileOrPreviewKey(key)) {
           continue;
         }
-        
-        const sanitizedValue = sanitize(val[key], depth + 1);
-        if (sanitizedValue !== null) {
-          result[key] = sanitizedValue;
+
+        if (stripSecrets) {
+          if (SECRET_TEMPLATE_KEYS.has(key)) {
+            continue;
+          }
+          // Handle nested context slices (phoneState.password, thermalConfig.secretText/keyword, security_layer.keyword)
+          if (
+            (parentKey === 'phoneState' && key === 'password') ||
+            (parentKey === 'thermalConfig' && (key === 'secretText' || key === 'keyword')) ||
+            (parentKey === 'security_layer' && key === 'keyword')
+          ) {
+            continue;
+          }
+        }
+
+        const rawChild = val[key];
+        if (rawChild === undefined || typeof rawChild === 'function') {
+          continue;
+        }
+        if (isFileOrBlobInstance(rawChild)) {
+          continue;
+        }
+        if (typeof rawChild === 'string' && isTemporaryMediaString(rawChild)) {
+          continue;
+        }
+
+        const sanitizedChild = sanitize(rawChild, depth + 1, key);
+        if (sanitizedChild !== undefined) {
+          result[key] = sanitizedChild;
         }
       }
-      return Object.keys(result).length > 0 ? result : null;
+
+      ancestors.delete(val);
+      return result;
     }
-    
-    return null;
+
+    return undefined;
   };
-  
-  return sanitize(formState);
+
+  const sanitizedRoot = sanitize(formState, 0);
+  return sanitizedRoot === undefined ? null : sanitizedRoot;
 }

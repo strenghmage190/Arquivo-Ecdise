@@ -3,7 +3,7 @@ import './PatternLock.css';
 
 interface PatternLockProps {
   code?: string | null; // pattern string like "1-2-3-6-9"
-  onUnlock?: () => void;
+  onUnlock?: (unlockedPattern?: string) => void;
   onInput?: (value: string) => void; // editor mode: report current pattern
   allowEdit?: boolean; // if true, allow constructing pattern (editor)
 }
@@ -45,7 +45,7 @@ export default function PatternLock({ code, onUnlock, onInput, allowEdit = false
     if (!code) return; // nothing to check
     if (str === String(code)) {
       setStatus('success');
-      setTimeout(() => onUnlock && onUnlock(), 350);
+      setTimeout(() => onUnlock && onUnlock(str), 350);
     } else {
       setStatus('error');
       setTimeout(() => {

@@ -1,7 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { FieldVisibilityConfig, defaultFieldVisibility } from '../config/fieldVisibilityConfig';
+import {
+  FieldVisibilityConfig,
+  defaultFieldVisibility,
+} from '../config/fieldVisibilityConfig';
+import {
+  DisplayConfig,
+  defaultDisplayConfig,
+} from '../config/displayConfig';
+import { InvestigationCardInsight } from '../api/investigations';
+import {
+  FilterTransformRect,
+  hydrateClueStateFromCard,
+  mergeDisplayConfig,
+  mergeFieldVisibilityConfig,
+  normalizePersonStatus,
+} from '../utils/cluePayloadBuilder';
+import type { UVAuthoringState } from '../components/tools/uveditor/types';
+import type { ThermalElement, ThermalPalette } from '../components/tools/ThermalEditor';
 
-// Define the shape of our state groupings
+export type { DisplayConfig, FilterTransformRect };
+export { defaultDisplayConfig };
+
 export interface CoreState {
   title: string;
   descPublic: string;
@@ -16,6 +35,7 @@ export interface FilterConfig {
   brightness: number;
   contrast: number;
   saturate: number;
+  transform: FilterTransformRect | null;
 }
 
 export interface ThermalConfig {
@@ -24,13 +44,17 @@ export interface ThermalConfig {
   keyword: string;
   fontSize: number;
   positionY: number;
+  palette?: ThermalPalette;
+  elements?: ThermalElement[];
 }
 
 export interface ChatEntry {
+  id?: string;
   sender: 'me' | 'them' | 'system';
   type: 'text' | 'image';
   text: string;
   image_url?: string;
+  time?: string;
 }
 
 export interface PhoneState {
@@ -97,6 +121,7 @@ export interface MediaState {
   forensicFile: File | null;
   forensicPreviewUrl: string | null;
   forensicTargetChannel: 'R' | 'G' | 'B' | null;
+  uvAuthoringState?: UVAuthoringState | null;
   previewUrl: string | null;
   videoPreviewUrl: string | null;
   uvPreviewUrl: string | null;
@@ -108,6 +133,17 @@ export interface MediaState {
   videoUrl: string | null;
   videoUrlInput: string;
   audioHiddenUploadedUrl: string | null;
+  audioTargetFreq: number;
+  removedImage: boolean;
+  removedVideo: boolean;
+  removedUv: boolean;
+  removedFilter: boolean;
+  removedThermal: boolean;
+  removedForensic: boolean;
+  removedAudioBase: boolean;
+  removedAudioHidden: boolean;
+  removedGlitchFocused: boolean;
+  removedMegaImage: boolean;
 }
 
 export interface CipherState {
@@ -152,40 +188,12 @@ export interface MegaClueState {
   megaRequiredPuzzleIds: string[];
 }
 
-export interface DisplayConfig {
-  cipher: {
-    showShredded: boolean;
-    showCipherText: boolean;
-    showRealText: boolean;
-    showShredConfig: boolean;
-  };
-  megaClue: {
-    showHints: boolean;
-    showAnswer: boolean;
-    showProgress: boolean;
-  };
-}
-
 export interface MediaVisibility {
   audioBase: 'always' | 'glitch_only' | 'post_solve';
   audioHidden: 'post_solve' | 'post_keyword' | 'always';
   visual: 'glitch_active' | 'post_keyword' | 'always';
   uvLayer: 'post_keyword' | 'always' | 'post_solve';
 }
-
-export const defaultDisplayConfig: DisplayConfig = {
-  cipher: {
-    showShredded: true,
-    showCipherText: true,
-    showRealText: false,
-    showShredConfig: false,
-  },
-  megaClue: {
-    showHints: true,
-    showAnswer: false,
-    showProgress: true,
-  },
-};
 
 export const defaultMediaVisibility: MediaVisibility = {
   audioBase: 'always',
@@ -194,26 +202,46 @@ export const defaultMediaVisibility: MediaVisibility = {
   uvLayer: 'post_keyword',
 };
 
+export type ClueArchetype =
+  | 'quick'
+  | 'forensic_doc'
+  | 'secret_audio'
+  | 'puzzle_lock'
+  | 'fake_phone'
+  | 'mega_clue'
+  | 'complete';
+
+export type CreatorMode = 'quick' | 'complete';
+
 export interface ClueModalContextType {
-  // States
+  investigationId: string;
+  activeTab: string;
+  setActiveTab: (tabId: string) => void;
+  creatorMode: CreatorMode;
+  setCreatorMode: React.Dispatch<React.SetStateAction<CreatorMode>>;
+  isDuplicateMode: boolean;
+  setIsDuplicateMode: React.Dispatch<React.SetStateAction<boolean>>;
+  duplicateSourceCard: any | null;
+  setDuplicateSourceCard: React.Dispatch<React.SetStateAction<any | null>>;
+
   coreState: CoreState;
   setCoreState: React.Dispatch<React.SetStateAction<CoreState>>;
-  
+
   securityState: SecurityState;
   setSecurityState: React.Dispatch<React.SetStateAction<SecurityState>>;
-  
+
   mediaState: MediaState;
   setMediaState: React.Dispatch<React.SetStateAction<MediaState>>;
-  
+
   cipherState: CipherState;
   setCipherState: React.Dispatch<React.SetStateAction<CipherState>>;
-  
+
   glitchState: GlitchState;
   setGlitchState: React.Dispatch<React.SetStateAction<GlitchState>>;
-  
+
   megaClueState: MegaClueState;
   setMegaClueState: React.Dispatch<React.SetStateAction<MegaClueState>>;
-  
+
   editorState: EditorState;
   setEditorState: React.Dispatch<React.SetStateAction<EditorState>>;
 
@@ -240,21 +268,77 @@ export interface ClueModalContextType {
 
   mediaVisibility: MediaVisibility;
   setMediaVisibility: React.Dispatch<React.SetStateAction<MediaVisibility>>;
-  
-  // URL management
+
+  insights: InvestigationCardInsight[];
+  setInsights: React.Dispatch<React.SetStateAction<InvestigationCardInsight[]>>;
+
+  cardStatus: string | null;
+  setCardStatus: React.Dispatch<React.SetStateAction<string | null>>;
+
   registerUrl: (url: string | null | undefined) => void;
   revokeUrl: (url: string | null | undefined) => void;
-  
-  // Reset function
-  resetForm: () => void;
-  
-  // Existing card load
+
+  resetForm: (options?: { defaultHidden?: boolean }) => void;
   loadExistingCard: (card: any) => void;
+  loadCardAsDuplicate: (card: any) => void;
+  applyArchetype: (archetype: ClueArchetype) => void;
+  getTemplateSnapshot: () => Record<string, any>;
+  applyTemplateData: (data: any) => void;
 }
 
-const ClueModalContext = createContext<ClueModalContextType | undefined>(undefined);
+// Persist the Context object on globalThis so Vite HMR module reloads
+// (?t=... cache-busted instances) never create a mismatched Context reference.
+const CLUE_MODAL_CONTEXT_KEY = '__ECDISE_CLUE_MODAL_CONTEXT__';
+const ClueModalContext: React.Context<ClueModalContextType | undefined> =
+  ((globalThis as Record<string, any>)[CLUE_MODAL_CONTEXT_KEY] ??=
+    createContext<ClueModalContextType | undefined>(undefined));
 
-export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const createInitialMediaState = (): MediaState => ({
+  imgFile: null,
+  videoFile: null,
+  uvFile: null,
+  filterFile: null,
+  audioBase: null,
+  audioHidden: null,
+  megaImageFile: null,
+  thermalFile: null,
+  forensicFile: null,
+  forensicPreviewUrl: null,
+  forensicTargetChannel: null,
+  uvAuthoringState: null,
+  previewUrl: null,
+  videoPreviewUrl: null,
+  uvPreviewUrl: null,
+  filterPreviewUrl: null,
+  audioBasePreview: null,
+  audioHiddenPreview: null,
+  megaImagePreview: null,
+  thermalPreviewUrl: null,
+  videoUrl: null,
+  videoUrlInput: '',
+  audioHiddenUploadedUrl: null,
+  audioTargetFreq: 50,
+  removedImage: false,
+  removedVideo: false,
+  removedUv: false,
+  removedFilter: false,
+  removedThermal: false,
+  removedForensic: false,
+  removedAudioBase: false,
+  removedAudioHidden: false,
+  removedGlitchFocused: false,
+  removedMegaImage: false,
+});
+
+export const ClueModalProvider: React.FC<{
+  children: React.ReactNode;
+  investigationId?: string;
+}> = ({ children, investigationId = '' }) => {
+  const [activeTab, setActiveTab] = useState<string>('geral');
+  const [creatorMode, setCreatorMode] = useState<CreatorMode>('complete');
+  const [isDuplicateMode, setIsDuplicateMode] = useState<boolean>(false);
+  const [duplicateSourceCard, setDuplicateSourceCard] = useState<any | null>(null);
+
   const [coreState, setCoreState] = useState<CoreState>({
     title: '',
     descPublic: '',
@@ -277,14 +361,7 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' },
   });
 
-  const [mediaState, setMediaState] = useState<MediaState>({
-    imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null, thermalFile: null,
-    forensicFile: null, forensicPreviewUrl: null, forensicTargetChannel: null,
-    previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null, thermalPreviewUrl: null,
-    videoUrl: null,
-    videoUrlInput: '',
-    audioHiddenUploadedUrl: null,
-  });
+  const [mediaState, setMediaState] = useState<MediaState>(createInitialMediaState);
 
   const [cipherState, setCipherState] = useState<CipherState>({
     isShredded: false,
@@ -294,7 +371,7 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     cipherText: '',
     hexCode: '',
     hexEncodingMethod: 'plain',
-    hexEncodingKey: ''
+    hexEncodingKey: '',
   });
 
   const [glitchState, setGlitchState] = useState<GlitchState>({
@@ -344,6 +421,7 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     brightness: 100,
     contrast: 100,
     saturate: 100,
+    transform: null,
   });
 
   const [thermalConfig, setThermalConfig] = useState<ThermalConfig>({
@@ -352,6 +430,8 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     keyword: '',
     fontSize: 24,
     positionY: 50,
+    palette: 'ironbow',
+    elements: undefined,
   });
 
   const [phoneState, setPhoneState] = useState<PhoneState>({
@@ -367,7 +447,7 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     name: '',
     age: '',
     profession: '',
-    status: '',
+    status: 'UNKNOWN',
     details: '',
   });
 
@@ -382,251 +462,594 @@ export const ClueModalProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     externalLink: '',
   });
 
-  const [fieldVisibilityConfig, setFieldVisibilityConfig] = useState<FieldVisibilityConfig>(defaultFieldVisibility);
-  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(defaultDisplayConfig);
-  const [mediaVisibility, setMediaVisibility] = useState<MediaVisibility>(defaultMediaVisibility);
+  const [fieldVisibilityConfig, setFieldVisibilityConfig] =
+    useState<FieldVisibilityConfig>(() => mergeFieldVisibilityConfig(defaultFieldVisibility));
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(() =>
+    mergeDisplayConfig(defaultDisplayConfig)
+  );
+  const [mediaVisibility, setMediaVisibility] =
+    useState<MediaVisibility>(defaultMediaVisibility);
+  const [insights, setInsights] = useState<InvestigationCardInsight[]>([]);
+  const [cardStatus, setCardStatus] = useState<string | null>(null);
 
-  // URL management for cleanup
+  // Blob URL lifecycle management
   const urlsRef = React.useRef<Set<string>>(new Set());
 
   const registerUrl = (url: string | null | undefined) => {
-    if (url) urlsRef.current.add(url);
+    if (url && url.startsWith('blob:')) {
+      urlsRef.current.add(url);
+    }
   };
 
   const revokeUrl = (url: string | null | undefined) => {
     if (url && urlsRef.current.has(url)) {
-      try { URL.revokeObjectURL(url); } catch (err) {}
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore revoke errors
+      }
       urlsRef.current.delete(url);
     }
   };
 
   useEffect(() => {
     return () => {
-      // Cleanup all registered URLs on unmount
       urlsRef.current.forEach((u) => {
-        try { URL.revokeObjectURL(u); } catch (err) {}
+        try {
+          URL.revokeObjectURL(u);
+        } catch {
+          // ignore
+        }
       });
       urlsRef.current.clear();
     };
   }, []);
 
-  const resetForm = () => {
-    setCoreState({ title: '', descPublic: '', descHidden: '', tags: '', discoveryCode: '', evidenceType: 'document', isHidden: false });
-    setSecurityState({ isLocked: false, lockPass: '', lockPasses: [], securityLayerEnabled: false, revealLogicMode: 'aligned_only', signalTargets: { visual: true, audio: false }, hidePreviewOnBoard: false, audioStaticSync: false, narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' } });
-    setMediaState({
-      imgFile: null, videoFile: null, uvFile: null, filterFile: null, audioBase: null, audioHidden: null, megaImageFile: null, thermalFile: null,
-      forensicFile: null, forensicPreviewUrl: null, forensicTargetChannel: null,
-      previewUrl: null, videoPreviewUrl: null, uvPreviewUrl: null, filterPreviewUrl: null, audioBasePreview: null, audioHiddenPreview: null, megaImagePreview: null, thermalPreviewUrl: null,
-      videoUrl: null, videoUrlInput: '', audioHiddenUploadedUrl: null
+  const resetForm = (options?: { defaultHidden?: boolean }) => {
+    setCoreState({
+      title: '',
+      descPublic: '',
+      descHidden: '',
+      tags: '',
+      discoveryCode: '',
+      evidenceType: 'document',
+      isHidden: Boolean(options?.defaultHidden),
     });
-    setCipherState({ isShredded: false, shredRows: 1, shredCols: 8, realText: '', cipherText: '', hexCode: '', hexEncodingMethod: 'plain', hexEncodingKey: '' });
-    setGlitchState({ glitchCorrectFrequency: 17, glitchCorrectShift: 33, glitchCorrectChromatic: 12, glitchRewardCode: 'ALPHA-01', glitchKeyword: '', glitchRequireKeyword: false, glitchUnlockMode: 'code', glitchDifficulty: 'hard', glitchToleranceFreq: 1, glitchToleranceShift: 2, glitchToleranceChroma: 2, glitchFocusedImageFile: null, glitchFocusedImagePreview: null, showGlitchDesigner: false, glitchHiddenAudioUrl: '', glitchHiddenVideoUrl: '', glitchHint: '', glitchAccessInstructions: '', glitchStartFrequency: 12, glitchStartShift: 20, glitchStartChromatic: 8 });
-    setMegaClueState({ megaFinalTruthText: '', megaImageFile: null, megaImagePreview: null, megaRequiredPuzzleIds: [] });
-    setPersonState({ isPerson: false, name: '', age: '', profession: '', status: '', details: '' });
-    setMetadataState({ fakeDate: '', fakeLocation: '', technicalNote: '', fakeMetaCam: '', fakeMetaGps: '', fakeMetaOwner: '', stamp: '', externalLink: '' });
-    setPhoneState({ hasKeypad: false, password: '', lockType: 'pin', contactName: 'Desconhecido', chatList: [] });
-    setThermalConfig({ enabled: false, secretText: '', keyword: '', fontSize: 24, positionY: 50 });
-    setFilterConfig({ brightness: 100, contrast: 100, saturate: 100 });
-    setEditorState({ editorMode: null, uvEditorBaseUrl: null, uvEditorPurpose: null, filterInitialImage: null, showAudioForgeFor: null, showGlitchDesigner: false, showKeypadEditor: false, showForensicEditor: false, showThermalEditor: false });
-    setFieldVisibilityConfig(defaultFieldVisibility);
-    setDisplayConfig(defaultDisplayConfig);
+    setSecurityState({
+      isLocked: false,
+      lockPass: '',
+      lockPasses: [],
+      securityLayerEnabled: false,
+      revealLogicMode: 'aligned_only',
+      signalTargets: { visual: true, audio: false },
+      hidePreviewOnBoard: false,
+      audioStaticSync: false,
+      narrativeLinks: { audioHintsVisual: false, visualHintsCode: false, hintNote: '' },
+    });
+    setMediaState(createInitialMediaState());
+    setCipherState({
+      isShredded: false,
+      shredRows: 1,
+      shredCols: 8,
+      realText: '',
+      cipherText: '',
+      hexCode: '',
+      hexEncodingMethod: 'plain',
+      hexEncodingKey: '',
+    });
+    setGlitchState({
+      glitchCorrectFrequency: 17,
+      glitchCorrectShift: 33,
+      glitchCorrectChromatic: 12,
+      glitchRewardCode: 'ALPHA-01',
+      glitchKeyword: '',
+      glitchRequireKeyword: false,
+      glitchUnlockMode: 'code',
+      glitchDifficulty: 'hard',
+      glitchToleranceFreq: 1,
+      glitchToleranceShift: 2,
+      glitchToleranceChroma: 2,
+      glitchFocusedImageFile: null,
+      glitchFocusedImagePreview: null,
+      showGlitchDesigner: false,
+      glitchHiddenAudioUrl: '',
+      glitchHiddenVideoUrl: '',
+      glitchHint: '',
+      glitchAccessInstructions: '',
+      glitchStartFrequency: 12,
+      glitchStartShift: 20,
+      glitchStartChromatic: 8,
+    });
+    setMegaClueState({
+      megaFinalTruthText: '',
+      megaImageFile: null,
+      megaImagePreview: null,
+      megaRequiredPuzzleIds: [],
+    });
+    setPersonState({
+      isPerson: false,
+      name: '',
+      age: '',
+      profession: '',
+      status: 'UNKNOWN',
+      details: '',
+    });
+    setMetadataState({
+      fakeDate: '',
+      fakeLocation: '',
+      technicalNote: '',
+      fakeMetaCam: '',
+      fakeMetaGps: '',
+      fakeMetaOwner: '',
+      stamp: '',
+      externalLink: '',
+    });
+    setPhoneState({
+      hasKeypad: false,
+      password: '',
+      lockType: 'pin',
+      contactName: 'Desconhecido',
+      chatList: [],
+    });
+    setThermalConfig({
+      enabled: false,
+      secretText: '',
+      keyword: '',
+      fontSize: 24,
+      positionY: 50,
+      palette: 'ironbow',
+      elements: undefined,
+    });
+    setFilterConfig({
+      brightness: 100,
+      contrast: 100,
+      saturate: 100,
+      transform: null,
+    });
+    setEditorState({
+      editorMode: null,
+      uvEditorBaseUrl: null,
+      uvEditorPurpose: null,
+      filterInitialImage: null,
+      showAudioForgeFor: null,
+      showGlitchDesigner: false,
+      showKeypadEditor: false,
+      showForensicEditor: false,
+      showThermalEditor: false,
+    });
+    setFieldVisibilityConfig(mergeFieldVisibilityConfig(defaultFieldVisibility));
+    setDisplayConfig(mergeDisplayConfig(defaultDisplayConfig));
     setMediaVisibility(defaultMediaVisibility);
+    setInsights([]);
+    setCardStatus(null);
+    setIsDuplicateMode(false);
+    setDuplicateSourceCard(null);
   };
 
   const loadExistingCard = (card: any) => {
-    let m: any = {};
-    try {
-      m = typeof card.metadata === 'object' ? card.metadata : (typeof card.metadata === 'string' ? JSON.parse(card.metadata) : {});
-    } catch (e) { m = {}; }
+    const hydrated = hydrateClueStateFromCard(card);
+    setCoreState(hydrated.coreState);
+    setSecurityState(hydrated.securityState);
+    setMediaState(hydrated.mediaState);
+    setCipherState(hydrated.cipherState);
+    setGlitchState(hydrated.glitchState);
+    setMegaClueState(hydrated.megaClueState);
+    setFilterConfig(hydrated.filterConfig);
+    setThermalConfig(hydrated.thermalConfig);
+    setPhoneState(hydrated.phoneState as PhoneState);
+    setPersonState(hydrated.personState);
+    setMetadataState(hydrated.metadataState);
+    setDisplayConfig(hydrated.displayConfig);
+    setFieldVisibilityConfig(hydrated.fieldVisibilityConfig);
+    setMediaVisibility(hydrated.mediaVisibility);
+    setInsights(hydrated.insights);
+    setCardStatus(hydrated.cardStatus);
+    setIsDuplicateMode(false);
+    setDuplicateSourceCard(null);
+  };
 
-    // Core
-    setCoreState({
-      title: card.title || '',
-      descPublic: card.description_public || '',
-      descHidden: card.description_hidden || '',
-      tags: Array.isArray(card.tags) ? card.tags.join(', ') : (card.tags || ''),
-      discoveryCode: card.discovery_code || '',
-      isHidden: card.is_hidden || false,
-      evidenceType: card.type || 'document'
-    });
-
-    // Security
-    const sl = m.security_layer || {};
-    setSecurityState({
-      isLocked: card.is_locked || false,
-      lockPass: card.lock_password || '',
-      lockPasses: m.mega_clue?.required_codes || [],
-      securityLayerEnabled: !!m.security_layer || !!m.glitch_puzzle,
-      revealLogicMode: sl.reveal_logic || 'aligned_only',
-      signalTargets: sl.signal_targets || { visual: true, audio: false },
-      hidePreviewOnBoard: !!m.masked_preview,
-      audioStaticSync: !!m.audio_static_sync,
-      narrativeLinks: {
-        audioHintsVisual: m.narrative_hints?.audio_guides_visual || false,
-        visualHintsCode: m.narrative_hints?.visual_guides_code || false,
-        hintNote: m.narrative_hints?.hint_note || ''
-      }
-    });
-
-    // Media URLs (no Files when loading existing)
-    const imgUrl = card.image_url || m.original_image_url || m.base_media_url;
-    const vidUrl = card.video_url || m.videoUrl;
-    const audUrl = card.audio_url;
-    const audHidUrl = m.audio_hidden_url;
-    setMediaState(prev => ({
+  const loadCardAsDuplicate = (card: any) => {
+    if (!card) return;
+    loadExistingCard(card);
+    setCoreState((prev) => ({
       ...prev,
-      previewUrl: imgUrl || null,
-      videoUrl: vidUrl || null,
-      videoUrlInput: vidUrl || '',
-      videoPreviewUrl: vidUrl || null,
-      audioBasePreview: audUrl || null,
-      audioHiddenPreview: audHidUrl || null,
-      audioHiddenUploadedUrl: audHidUrl || null,
-      uvPreviewUrl: card.image_uv_url || m.uv_layer_url || m.hidden_uv_url || null,
+      title: `${card.title || prev.title || 'Evidência'} (Cópia)`,
     }));
-    if (imgUrl) registerUrl(imgUrl);
-    if (vidUrl) registerUrl(vidUrl);
-    if (audUrl) registerUrl(audUrl);
+    setCardStatus(null);
+    setIsDuplicateMode(true);
+    setDuplicateSourceCard(card);
+  };
 
-    // Cipher
-    const isShredded = card.is_shredded || m.is_shredded || (m.shred_rows && m.shred_cols);
-    setCipherState({
-      isShredded: !!isShredded,
-      shredRows: m.shred_rows || 1,
-      shredCols: m.shred_cols || 8,
-      realText: card.real_text || m.real_text || '',
-      cipherText: card.cipher_text || m.cipher_text || '',
-      hexCode: m.hex_code || m.hexCode || '',
-      hexEncodingMethod: m.hexEncodingMethod || 'plain',
-      hexEncodingKey: m.hexEncodingKey || ''
-    });
+  const applyArchetype = (archetype: ClueArchetype) => {
+    switch (archetype) {
+      case 'quick':
+        setCreatorMode('quick');
+        setActiveTab('geral');
+        break;
+      case 'forensic_doc':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('visual');
+        break;
+      case 'secret_audio':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('audio');
+        break;
+      case 'puzzle_lock':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'glitch_puzzle' }));
+        setSecurityState((prev) => ({ ...prev, securityLayerEnabled: true }));
+        setActiveTab('glitch');
+        break;
+      case 'fake_phone':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'document' }));
+        setActiveTab('seguranca');
+        break;
+      case 'mega_clue':
+        setCreatorMode('complete');
+        setCoreState((prev) => ({ ...prev, evidenceType: 'mega_clue' }));
+        setActiveTab('mega');
+        break;
+      case 'complete':
+      default:
+        setCreatorMode('complete');
+        setActiveTab('geral');
+        break;
+    }
+  };
 
-    // Glitch
-    if (m.glitch_puzzle) {
-      const gp = m.glitch_puzzle;
-      setGlitchState(prev => ({
-        ...prev,
-        glitchCorrectFrequency: gp.correct_frequency ?? prev.glitchCorrectFrequency,
-        glitchCorrectShift: gp.correct_shift ?? prev.glitchCorrectShift,
-        glitchCorrectChromatic: gp.correct_chromatic ?? prev.glitchCorrectChromatic,
-        glitchDifficulty: gp.difficulty ?? prev.glitchDifficulty,
-        glitchToleranceFreq: gp.tolerance_frequency ?? prev.glitchToleranceFreq,
-        glitchToleranceShift: gp.tolerance_shift ?? prev.glitchToleranceShift,
-        glitchToleranceChroma: gp.tolerance_chromatic ?? prev.glitchToleranceChroma,
-        glitchStartFrequency: gp.start_frequency ?? prev.glitchStartFrequency,
-        glitchStartShift: gp.start_shift ?? prev.glitchStartShift,
-        glitchStartChromatic: gp.start_chromatic ?? prev.glitchStartChromatic,
-        glitchAccessInstructions: gp.access_instructions || '',
-        glitchHint: gp.hint || '',
-        glitchKeyword: gp.correct_keyword || sl.keyword || '',
-        glitchRequireKeyword: !!gp.require_keyword_validation,
-        glitchUnlockMode: gp.unlock_mode || 'code',
-        glitchRewardCode: gp.reward_code || 'ALPHA-01',
-        glitchHiddenAudioUrl: gp.hidden_audio_url || '',
-        glitchHiddenVideoUrl: gp.hidden_video_url || '',
-        glitchFocusedImagePreview: gp.focused_image_url || null,
-      }));
+  const getTemplateSnapshot = (): Record<string, any> => ({
+    coreState,
+    securityState,
+    mediaState: {
+      audioTargetFreq: mediaState.audioTargetFreq,
+      forensicTargetChannel: mediaState.forensicTargetChannel,
+      videoUrlInput: mediaState.videoUrlInput,
+    },
+    cipherState,
+    glitchState: {
+      ...glitchState,
+      glitchFocusedImageFile: null,
+      glitchFocusedImagePreview: null,
+    },
+    megaClueState: {
+      ...megaClueState,
+      megaImageFile: null,
+      megaImagePreview: null,
+    },
+    filterConfig,
+    thermalConfig,
+    phoneState,
+    personState,
+    metadataState,
+    fieldVisibilityConfig,
+    displayConfig,
+    mediaVisibility,
+    insights,
+    cardStatus,
+  });
+
+  const applyTemplateData = (data: any) => {
+    if (!data || typeof data !== 'object') return;
+
+    // Structured snapshot format (Unified / Onda A+)
+    if (data.coreState || data.securityState || data.cipherState || data.glitchState) {
+      if (data.coreState) setCoreState((prev) => ({ ...prev, ...data.coreState }));
+      if (data.securityState) {
+        setSecurityState((prev) => ({ ...prev, ...data.securityState }));
+      }
+      if (data.mediaState) {
+        setMediaState((prev) => ({
+          ...prev,
+          audioTargetFreq: data.mediaState.audioTargetFreq ?? prev.audioTargetFreq,
+          forensicTargetChannel:
+            data.mediaState.forensicTargetChannel ?? prev.forensicTargetChannel,
+          videoUrlInput: data.mediaState.videoUrlInput ?? prev.videoUrlInput,
+        }));
+      }
+      if (data.cipherState) setCipherState((prev) => ({ ...prev, ...data.cipherState }));
+      if (data.glitchState) {
+        setGlitchState((prev) => ({
+          ...prev,
+          ...data.glitchState,
+          glitchFocusedImageFile: null,
+          glitchFocusedImagePreview: prev.glitchFocusedImagePreview,
+        }));
+      }
+      if (data.megaClueState) {
+        setMegaClueState((prev) => ({
+          ...prev,
+          ...data.megaClueState,
+          megaImageFile: null,
+          megaImagePreview: prev.megaImagePreview,
+        }));
+      }
+      if (data.filterConfig) {
+        setFilterConfig((prev) => ({ ...prev, ...data.filterConfig }));
+      }
+      if (data.thermalConfig) {
+        setThermalConfig((prev) => ({ ...prev, ...data.thermalConfig }));
+      }
+      if (data.phoneState) setPhoneState((prev) => ({ ...prev, ...data.phoneState }));
+      if (data.personState) {
+        setPersonState((prev) => ({
+          ...prev,
+          ...data.personState,
+          status: data.personState.status
+            ? normalizePersonStatus(data.personState.status)
+            : prev.status,
+        }));
+      }
+      if (data.metadataState) {
+        setMetadataState((prev) => ({ ...prev, ...data.metadataState }));
+      }
+      if (data.fieldVisibilityConfig) {
+        setFieldVisibilityConfig(mergeFieldVisibilityConfig(data.fieldVisibilityConfig));
+      }
+      if (data.displayConfig) {
+        setDisplayConfig(mergeDisplayConfig(data.displayConfig));
+      }
+      if (data.mediaVisibility) {
+        setMediaVisibility((prev) => ({ ...prev, ...data.mediaVisibility }));
+      }
+      if (Array.isArray(data.insights)) setInsights(data.insights);
+      if (data.cardStatus !== undefined) setCardStatus(data.cardStatus);
+      return;
     }
 
-    // Mega Clue
-    if (m.mega_clue) {
-      setMegaClueState(prev => ({
-        ...prev,
-        megaFinalTruthText: m.mega_clue.final_truth_text || '',
-        megaRequiredPuzzleIds: m.mega_clue.required_puzzle_ids || [],
-      }));
+    // Legacy flat template_data compatibility
+    setCoreState((prev) => ({
+      ...prev,
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.descPublic !== undefined && { descPublic: data.descPublic }),
+      ...(data.descHidden !== undefined && { descHidden: data.descHidden }),
+      ...(data.tags !== undefined && {
+        tags: Array.isArray(data.tags) ? data.tags.join(', ') : data.tags,
+      }),
+      ...(data.discoveryCode !== undefined && { discoveryCode: data.discoveryCode }),
+      ...(data.evidenceType !== undefined && { evidenceType: data.evidenceType }),
+      ...(data.isHidden !== undefined && { isHidden: Boolean(data.isHidden) }),
+    }));
+
+    setSecurityState((prev) => ({
+      ...prev,
+      ...(data.isLocked !== undefined && { isLocked: Boolean(data.isLocked) }),
+      ...(data.lockPass !== undefined && { lockPass: data.lockPass }),
+      ...(data.lockPasses !== undefined && { lockPasses: data.lockPasses }),
+      ...(data.securityLayerEnabled !== undefined && {
+        securityLayerEnabled: Boolean(data.securityLayerEnabled),
+      }),
+      ...(data.revealLogicMode !== undefined && { revealLogicMode: data.revealLogicMode }),
+      ...(data.signalTargets !== undefined && { signalTargets: data.signalTargets }),
+      ...(data.hidePreviewOnBoard !== undefined && {
+        hidePreviewOnBoard: Boolean(data.hidePreviewOnBoard),
+      }),
+      ...(data.audioStaticSync !== undefined && {
+        audioStaticSync: Boolean(data.audioStaticSync),
+      }),
+      ...(data.narrativeLinks !== undefined && { narrativeLinks: data.narrativeLinks }),
+    }));
+
+    setMediaState((prev) => ({
+      ...prev,
+      ...(data.freq !== undefined && { audioTargetFreq: Number(data.freq) || 50 }),
+      ...(data.audioTargetFreq !== undefined && {
+        audioTargetFreq: Number(data.audioTargetFreq) || 50,
+      }),
+      ...(data.forensicTargetChannel !== undefined && {
+        forensicTargetChannel: data.forensicTargetChannel,
+      }),
+    }));
+
+    setCipherState((prev) => ({
+      ...prev,
+      ...(data.isShredded !== undefined && { isShredded: Boolean(data.isShredded) }),
+      ...(data.shredRows !== undefined && { shredRows: Number(data.shredRows) || 1 }),
+      ...(data.shredCols !== undefined && { shredCols: Number(data.shredCols) || 8 }),
+      ...(data.realText !== undefined && { realText: data.realText }),
+      ...(data.cipherText !== undefined && { cipherText: data.cipherText }),
+      ...(data.hexCode !== undefined && { hexCode: data.hexCode }),
+      ...(data.hexEncodingMethod !== undefined && {
+        hexEncodingMethod: data.hexEncodingMethod,
+      }),
+      ...(data.hexEncodingKey !== undefined && { hexEncodingKey: data.hexEncodingKey }),
+    }));
+
+    setGlitchState((prev) => ({
+      ...prev,
+      ...(data.glitchStartFrequency !== undefined && {
+        glitchStartFrequency: data.glitchStartFrequency,
+      }),
+      ...(data.glitchStartShift !== undefined && {
+        glitchStartShift: data.glitchStartShift,
+      }),
+      ...(data.glitchStartChromatic !== undefined && {
+        glitchStartChromatic: data.glitchStartChromatic,
+      }),
+      ...(data.glitchCorrectFrequency !== undefined && {
+        glitchCorrectFrequency: data.glitchCorrectFrequency,
+      }),
+      ...(data.glitchCorrectShift !== undefined && {
+        glitchCorrectShift: data.glitchCorrectShift,
+      }),
+      ...(data.glitchCorrectChromatic !== undefined && {
+        glitchCorrectChromatic: data.glitchCorrectChromatic,
+      }),
+      ...(data.glitchDifficulty !== undefined && {
+        glitchDifficulty: data.glitchDifficulty,
+      }),
+      ...(data.glitchToleranceFreq !== undefined && {
+        glitchToleranceFreq: data.glitchToleranceFreq,
+      }),
+      ...(data.glitchToleranceShift !== undefined && {
+        glitchToleranceShift: data.glitchToleranceShift,
+      }),
+      ...(data.glitchToleranceChroma !== undefined && {
+        glitchToleranceChroma: data.glitchToleranceChroma,
+      }),
+      ...(data.glitchAccessInstructions !== undefined && {
+        glitchAccessInstructions: data.glitchAccessInstructions,
+      }),
+      ...(data.glitchHint !== undefined && { glitchHint: data.glitchHint }),
+      ...(data.glitchKeyword !== undefined && { glitchKeyword: data.glitchKeyword }),
+      ...(data.glitchUnlockMode !== undefined && {
+        glitchUnlockMode: data.glitchUnlockMode,
+      }),
+      ...(data.glitchRequireKeyword !== undefined && {
+        glitchRequireKeyword: Boolean(data.glitchRequireKeyword),
+      }),
+      ...(data.glitchRewardCode !== undefined && {
+        glitchRewardCode: data.glitchRewardCode,
+      }),
+      ...(data.glitchHiddenAudioUrl !== undefined && {
+        glitchHiddenAudioUrl: data.glitchHiddenAudioUrl,
+      }),
+      ...(data.glitchHiddenVideoUrl !== undefined && {
+        glitchHiddenVideoUrl: data.glitchHiddenVideoUrl,
+      }),
+    }));
+
+    setMegaClueState((prev) => ({
+      ...prev,
+      ...(data.megaFinalTruthText !== undefined && {
+        megaFinalTruthText: data.megaFinalTruthText,
+      }),
+      ...(data.megaRequiredPuzzleIds !== undefined && {
+        megaRequiredPuzzleIds: data.megaRequiredPuzzleIds,
+      }),
+    }));
+
+    setFilterConfig((prev) => ({
+      ...prev,
+      ...(data.filterRevealBrightness !== undefined && {
+        brightness: data.filterRevealBrightness,
+      }),
+      ...(data.filterRevealContrast !== undefined && {
+        contrast: data.filterRevealContrast,
+      }),
+      ...(data.filterRevealSaturate !== undefined && {
+        saturate: data.filterRevealSaturate,
+      }),
+      ...(data.filterTransform !== undefined && { transform: data.filterTransform }),
+    }));
+
+    setThermalConfig((prev) => ({
+      ...prev,
+      ...(data.thermalEnabled !== undefined && { enabled: Boolean(data.thermalEnabled) }),
+      ...(data.thermalSecretText !== undefined && { secretText: data.thermalSecretText }),
+      ...(data.thermalFontSize !== undefined && { fontSize: data.thermalFontSize }),
+      ...(data.thermalPositionY !== undefined && { positionY: data.thermalPositionY }),
+      ...(data.thermalKeyword !== undefined && { keyword: data.thermalKeyword }),
+    }));
+
+    setPhoneState((prev) => ({
+      ...prev,
+      ...(data.phoneHasKeypad !== undefined && {
+        hasKeypad: Boolean(data.phoneHasKeypad),
+      }),
+      ...(data.phonePassword !== undefined && { password: data.phonePassword }),
+      ...(data.phoneLockType !== undefined && { lockType: data.phoneLockType }),
+      ...(data.chatContactName !== undefined && { contactName: data.chatContactName }),
+      ...(Array.isArray(data.editingChatList || data.chatData) && {
+        chatList: data.editingChatList || data.chatData,
+      }),
+    }));
+
+    setPersonState((prev) => ({
+      ...prev,
+      ...(data.isPerson !== undefined && { isPerson: Boolean(data.isPerson) }),
+      ...(data.personName !== undefined && { name: data.personName }),
+      ...(data.personDob !== undefined && { age: data.personDob }),
+      ...(data.personStatus !== undefined && {
+        status: normalizePersonStatus(data.personStatus),
+      }),
+      ...(data.personOccupation !== undefined && { profession: data.personOccupation }),
+    }));
+
+    setMetadataState((prev) => ({
+      ...prev,
+      ...(data.fakeDate !== undefined && { fakeDate: data.fakeDate }),
+      ...(data.fakeLocation !== undefined && { fakeLocation: data.fakeLocation }),
+      ...(data.technicalNote !== undefined && { technicalNote: data.technicalNote }),
+      ...(data.fakeMeta?.date !== undefined && { fakeDate: data.fakeMeta.date }),
+      ...(data.fakeMeta?.gps !== undefined && {
+        fakeMetaGps: data.fakeMeta.gps,
+        fakeLocation: data.fakeLocation || data.fakeMeta.gps,
+      }),
+      ...(data.fakeMeta?.owner !== undefined && { fakeMetaOwner: data.fakeMeta.owner }),
+      ...(data.stamp !== undefined && { stamp: data.stamp }),
+      ...(data.externalLink !== undefined && { externalLink: data.externalLink }),
+    }));
+
+    if (data.fieldVisibilityConfig) {
+      setFieldVisibilityConfig(mergeFieldVisibilityConfig(data.fieldVisibilityConfig));
     }
-
-    // Thermal
-    if (m.thermal) {
-      setThermalConfig({
-        enabled: true,
-        secretText: m.thermal_secret_text || '',
-        keyword: m.thermal_keyword || '',
-        fontSize: m.thermal_font_size || 24,
-        positionY: m.thermal_position_y || 50
-      });
+    if (data.displayConfig) {
+      setDisplayConfig(mergeDisplayConfig(data.displayConfig));
     }
-
-    // Filter
-    if (m.image_filter_reveal) {
-      setFilterConfig({
-        brightness: m.image_filter_reveal.brightness || 100,
-        contrast: m.image_filter_reveal.contrast || 100,
-        saturate: m.image_filter_reveal.saturate || 100
-      });
-    }
-
-    // Phone
-    if (m.phone_locked || m.phone_has_keypad || m.chat_data) {
-      setPhoneState({
-        hasKeypad: !!m.phone_locked || !!m.phone_has_keypad,
-        password: m.phone_password || '',
-        lockType: m.phone_lock_type || 'pin',
-        contactName: m.chat_contact_name || 'Desconhecido',
-        chatList: m.chat_data || []
-      });
-    }
-
-    // Person
-    if (m.person || m.is_person) {
-      const p = m.person || m.person_info || {};
-      setPersonState({
-        isPerson: true,
-        name: p.name || '',
-        age: p.dob || p.age || '',
-        profession: p.occupation || p.profession || '',
-        status: p.status || '',
-        details: p.details || ''
-      });
-    }
-
-    // Fake EXIF metadata
-    const fv = m.field_values || {};
-    setMetadataState({
-      fakeDate: fv.date_created || m.fakeDate || '',
-      fakeLocation: fv.gps_coords || m.fakeLocation || '',
-      technicalNote: fv.technical_note || m.technicalNote || '',
-      fakeMetaCam: fv.camera_model || '',
-      fakeMetaGps: fv.gps_coords || '',
-      fakeMetaOwner: fv.device_owner || '',
-      stamp: fv.stamp || m.stamp || '',
-      externalLink: fv.external_link || m.externalLink || m.external_link || ''
-    });
-
-    // Display config
-    if (m.display_config) setDisplayConfig(m.display_config);
-    if (m.field_visibility) setFieldVisibilityConfig(m.field_visibility);
-    if (m.media_visibility) {
-      const mv = m.media_visibility;
-      setMediaVisibility({
-        audioBase: mv.audio_base || 'always',
-        audioHidden: mv.audio_hidden || 'post_solve',
-        visual: mv.visual || 'glitch_active',
-        uvLayer: mv.uv_layer || 'post_keyword'
-      });
+    if (data.mediaVisibility) {
+      setMediaVisibility((prev) => ({ ...prev, ...data.mediaVisibility }));
     }
   };
 
   return (
-    <ClueModalContext.Provider value={{
-      coreState, setCoreState,
-      securityState, setSecurityState,
-      mediaState, setMediaState,
-      cipherState, setCipherState,
-      glitchState, setGlitchState,
-      megaClueState, setMegaClueState,
-      editorState, setEditorState,
-      filterConfig, setFilterConfig,
-      thermalConfig, setThermalConfig,
-      phoneState, setPhoneState,
-      personState, setPersonState,
-      metadataState, setMetadataState,
-      fieldVisibilityConfig, setFieldVisibilityConfig,
-      displayConfig, setDisplayConfig,
-      mediaVisibility, setMediaVisibility,
-      registerUrl, revokeUrl, resetForm, loadExistingCard
-    }}>
+    <ClueModalContext.Provider
+      value={{
+        investigationId,
+        activeTab,
+        setActiveTab,
+        creatorMode,
+        setCreatorMode,
+        isDuplicateMode,
+        setIsDuplicateMode,
+        duplicateSourceCard,
+        setDuplicateSourceCard,
+        coreState,
+        setCoreState,
+        securityState,
+        setSecurityState,
+        mediaState,
+        setMediaState,
+        cipherState,
+        setCipherState,
+        glitchState,
+        setGlitchState,
+        megaClueState,
+        setMegaClueState,
+        editorState,
+        setEditorState,
+        filterConfig,
+        setFilterConfig,
+        thermalConfig,
+        setThermalConfig,
+        phoneState,
+        setPhoneState,
+        personState,
+        setPersonState,
+        metadataState,
+        setMetadataState,
+        fieldVisibilityConfig,
+        setFieldVisibilityConfig,
+        displayConfig,
+        setDisplayConfig,
+        mediaVisibility,
+        setMediaVisibility,
+        insights,
+        setInsights,
+        cardStatus,
+        setCardStatus,
+        registerUrl,
+        revokeUrl,
+        resetForm,
+        loadExistingCard,
+        loadCardAsDuplicate,
+        applyArchetype,
+        getTemplateSnapshot,
+        applyTemplateData,
+      }}
+    >
       {children}
     </ClueModalContext.Provider>
   );

@@ -17,6 +17,8 @@ import WaveSurfer from 'wavesurfer.js';
 import useEscapeClose from './useEscapeClose';
 import './InspectionModal.css';
 import { markPerfKeep } from '../../utils/performance';
+import usePerformanceMode from '../../utils/usePerformanceMode';
+import { markCardSeen, recordUnlockedCode } from '../../utils/playerTracking';
 import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
@@ -29,11 +31,30 @@ interface Props {
   card: any;
   onEdit?: () => void;
   isGameMaster: boolean;
+  playerView?: boolean;
+  performanceMode?: boolean;
+  initialForensicMode?: 'none' | 'channel' | 'hex' | 'lens' | 'decoder';
+  onSendToDecoder?: (text: string, mode?: string) => void;
   externalBaseId?: string;
   externalHiddenId?: string;
 }
 
-export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameMaster, externalBaseId, externalHiddenId }: Props) {
+export default function InspectionModal({
+  isOpen,
+  onClose,
+  card,
+  onEdit,
+  isGameMaster,
+  playerView,
+  performanceMode: performanceModeProp,
+  initialForensicMode = 'none',
+  onSendToDecoder,
+  externalBaseId,
+  externalHiddenId,
+}: Props) {
+  const { enabled: perfModeFromHook } = usePerformanceMode();
+  const effectivePerformanceMode = performanceModeProp ?? perfModeFromHook;
+  const effectivePlayerView = playerView ?? !isGameMaster;
   const isCardLocked = (c: any) => {
     const v = c?.is_locked;
     if (v === true || v === 1) return true;
@@ -72,7 +93,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [localThermal, setLocalThermal] = useState(false);
   const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100 });
   const [showFilters, setShowFilters] = useState(false);
-  const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
+  const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>(initialForensicMode || 'none');
+  const [decoderPayloadOverride, setDecoderPayloadOverride] = useState<string | undefined>(undefined);
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -165,6 +187,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       e.currentTarget.style.setProperty('--uv-radius', '140px');
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      setForensicMode(initialForensicMode || 'none');
+      setDecoderPayloadOverride(undefined);
+    }
+  }, [isOpen, initialForensicMode, card?.id]);
+
+  // Marca pista como vista para o jogador ao abrir o InspectionModal (quando não está bloqueada)
+  useEffect(() => {
+    if (!isOpen || !card?.id || !card?.investigation_id) return;
+    if (isCardLocked(card) && !isUnlocked && !isGameMaster) return;
+    markCardSeen(String(card.investigation_id), String(card.id), {
+      isGameMaster,
+      playerView: effectivePlayerView,
+    });
+  }, [isOpen, card, isUnlocked, isGameMaster, effectivePlayerView]);
 
   const disableAllBut = React.useCallback((mode: string) => {
     // filters
@@ -349,9 +388,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
 
   // Persist unlock to server so the card remains unlocked permanently
-  const persistUnlockForCard = async () => {
+  const persistUnlockForCard = async (unlockedCode?: string, lockType: 'keypad' | 'terminal' = 'keypad') => {
     setIsUnlocked(true);
     const cardObj = serverCard || card;
+    if (cardObj?.investigation_id && cardObj?.id && unlockedCode) {
+      recordUnlockedCode(
+        String(cardObj.investigation_id),
+        {
+          cardId: String(cardObj.id),
+          cardTitle: cardObj.title || 'Evidência Protegida',
+          code: String(unlockedCode),
+          lockType,
+        },
+        { isGameMaster, playerView: effectivePlayerView }
+      );
+    }
     if (!cardObj || !cardObj.id) return;
     try {
       const updates: any = { is_locked: false, lock_password: null };
@@ -791,8 +842,16 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       startY: 0
     };
 
-    const updateTransform = () => {
-      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px) scale(${state.scale})`;
+    const updateTransform = (animate = false) => {
+      if (animate && !effectivePerformanceMode) {
+        transformTarget.style.transition =
+          'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), width 240ms cubic-bezier(0.22, 1, 0.36, 1), height 240ms cubic-bezier(0.22, 1, 0.36, 1)';
+      } else {
+        transformTarget.style.transition = 'none';
+      }
+      transformTarget.style.width = `${state.scale * 100}%`;
+      transformTarget.style.height = `${state.scale * 100}%`;
+      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px)`;
       transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
       const badge = container.querySelector('.image-zoom-badge');
       if (badge) badge.textContent = `${Math.round(state.scale * 100)}%`;
@@ -914,18 +973,39 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     };
     container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Double Tap / Double Click Reset
+    // Double Tap / Double Click Toggle: Fit (100%) <-> Zoom 200% centrado no ponto clicado/tocado
     const onDblClick = (clientX: number, clientY: number) => {
       if (state.scale > 1) {
         state.scale = 1;
         state.pointX = 0;
         state.pointY = 0;
-        updateTransform();
+        transformTarget.style.transformOrigin = 'center center';
+        updateTransform(true);
       } else {
-        zoom(1.5, clientX, clientY);
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = transformTarget.getBoundingClientRect();
+        const originXPct = targetRect.width > 0
+          ? Math.max(0, Math.min(100, ((clientX - targetRect.left) / targetRect.width) * 100))
+          : 50;
+        const originYPct = targetRect.height > 0
+          ? Math.max(0, Math.min(100, ((clientY - targetRect.top) / targetRect.height) * 100))
+          : 50;
+        transformTarget.style.transformOrigin = `${originXPct.toFixed(1)}% ${originYPct.toFixed(1)}%`;
+
+        const cx = clientX - containerRect.left;
+        const cy = clientY - containerRect.top;
+        const mouseOffsetX = cx - containerRect.width / 2;
+        const mouseOffsetY = cy - containerRect.height / 2;
+
+        state.scale = 2;
+        state.pointX = -mouseOffsetX;
+        state.pointY = -mouseOffsetY;
+        updateTransform(true);
       }
     };
     const onDblClickWrapper = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
       if (e.cancelable) e.preventDefault();
       try { window.getSelection()?.removeAllRanges(); } catch {}
       onDblClick(e.clientX, e.clientY);
@@ -934,12 +1014,17 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     let lastTap = 0;
     const onTouchStartDouble = (e: TouchEvent) => {
-      const currentTime = new Date().getTime();
+      if (e.touches.length !== 1) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
+      const currentTime = Date.now();
       const tapLength = currentTime - lastTap;
       if (tapLength < 300 && tapLength > 0) {
         if (e.cancelable) e.preventDefault();
         try { window.getSelection()?.removeAllRanges(); } catch {}
         onDblClick(e.touches[0].clientX, e.touches[0].clientY);
+        lastTap = 0;
+        return;
       }
       lastTap = currentTime;
     };
@@ -963,8 +1048,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // Cleanup transform and reset will-change so browser may re-render in full quality
       try { transformTarget.style.willChange = 'auto'; } catch (err) { }
       transformTarget.style.transform = '';
+      transformTarget.style.transformOrigin = 'center center';
+      transformTarget.style.transition = '';
+      transformTarget.style.width = '100%';
+      transformTarget.style.height = '100%';
     };
-  }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel]);
+  }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel, effectivePerformanceMode]);
 
   // Renderizador inteligente da Área Visual
   const renderVisualContent = () => {
@@ -1811,51 +1900,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         {/* debug overlay removed */}
 
         {/* --- CONTEÚDO PRINCIPAL --- */}
-        {cardLocked && !isUnlocked ? (
-          <div className="lock-screen-container">
-            {isGameMaster && (
-              <div className="gm-bypass-banner">
-                <div className="gm-bypass-info">
-                  <ShieldCheck size={18} />
-                  <span>MODO MESTRE ATIVO — Senha: <strong>{String(currentCard.lock_password || 'Nenhuma')}</strong></span>
-                </div>
-                <div style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <button type="button" className="btn-gm-bypass" onClick={persistUnlockForCard}>
-                    ⚡ DESBLOQUEIO DE MESTRE (PERMANENTE)
-                  </button>
-                  <button type="button" className="btn-gm-bypass btn-gm-bypass-temp" onClick={() => setIsUnlocked(true)}>
-                    👁️ BYPASS TEMPORÁRIO
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="lock-password-card">
-              <Lock size={40} className="lock-icon" />
-              <h3 className="lock-title">ARQUIVO CONFIDENCIAL PROTEGIDO</h3>
-              <p className="lock-hint">{currentCard.description_public || 'Insira a credencial de segurança para descriptografar os dados desta evidência.'}</p>
-              
-              <form onSubmit={handlePasswordSubmit} className="lock-form">
-                <input
-                  type="text"
-                  className="lock-password-input"
-                  placeholder="Digite a senha de liberação..."
-                  value={passwordInput}
-                  onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
-                  autoCapitalize="off"
-                  autoCorrect="off"
+        {!(isUnlocked || isGameMaster) ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+            {(() => {
+              const lockPass = card.lock_password;
+              const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
+              if (isNumeric) {
+                return (
+                  <NumericKeypad
+                    code={lockPass}
+                    onUnlock={(unlockedCode) => persistUnlockForCard(unlockedCode || String(lockPass), 'keypad')}
+                  />
+                );
+              }
+              return (
+                <HackingTerminal
+                  correctPassword={lockPass}
+                  onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
+                  hint={card.description_public}
                 />
-                {passwordError && <span className="lock-error-msg">ACESSO NEGADO: Credencial incorreta.</span>}
-                <button type="submit" className="lock-submit-btn">
-                  DESCRIPTOGRAFAR
-                </button>
-              </form>
-
-              {currentCard.lock_password && /^\d+$/.test(String(currentCard.lock_password)) && (
-                <div className="lock-keypad-wrapper">
-                  <NumericKeypad code={String(currentCard.lock_password)} onUnlock={persistUnlockForCard} />
-                </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         ) : (
           <div className={`inspect-body-split ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -1943,7 +2008,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 <div className="tools-hud-panel">
                   <div className="hud-title">ESTAÇÃO DE DECIFRAGEM</div>
                   <div style={{ width: '100%' }}>
-                    <UniversalDecoder />
+                    <UniversalDecoder
+                      initialInput={
+                        decoderPayloadOverride !== undefined
+                          ? decoderPayloadOverride
+                          : (currentCard.metadata?.cipher_text || currentCard.description_public || '')
+                      }
+                      investigationId={currentCard?.investigation_id ? String(currentCard.investigation_id) : undefined}
+                    />
                   </div>
                 </div>
               )}
@@ -1961,7 +2033,19 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 <div className="tools-hud-panel">
                   <div className="hud-title">⌨️ INSPETOR HEXADECIMAL</div>
                   <div style={{ width: '100%' }}>
-                    <HexViewer hiddenMessage={currentCard.metadata?.hex_code || currentCard.metadata?.hex_hidden_message || ''} />
+                    <HexViewer
+                      hiddenMessage={
+                        currentCard.metadata?.hex_code ||
+                        currentCard.metadata?.hex_hidden_message ||
+                        currentCard.metadata?.technical_note ||
+                        ''
+                      }
+                      focused={true}
+                      onSendToDecoder={(hexText) => {
+                        setDecoderPayloadOverride(hexText);
+                        setForensicMode('decoder');
+                      }}
+                    />
                   </div>
                 </div>
               )}
@@ -2020,6 +2104,33 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       </div>
                     )
                   )}
+                  {/* Ações Rápidas: Enviar para Decoder / Abrir no Hex (seguro: apenas conteúdo público/cifrado, nunca description_hidden) */}
+                  <div className="inspect-quick-forensics">
+                    <button
+                      type="button"
+                      className="btn-tool-tab"
+                      onClick={() => {
+                        const safeText = currentCard.metadata?.cipher_text || currentCard.description_public || '';
+                        if (onSendToDecoder) {
+                          onSendToDecoder(safeText);
+                        } else {
+                          setDecoderPayloadOverride(safeText);
+                          setForensicMode('decoder');
+                        }
+                      }}
+                      title="Enviar texto público/cifrado para o Decoder"
+                    >
+                      🔐 Enviar para Decoder
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tool-tab"
+                      onClick={() => setForensicMode(prev => prev === 'hex' ? 'none' : 'hex')}
+                      title="Abrir conteúdo técnico/hex no Inspetor Hexadecimal"
+                    >
+                      ⌨️ Abrir no Hex
+                    </button>
+                  </div>
 
                   {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
                   {megaClueMeta && (
