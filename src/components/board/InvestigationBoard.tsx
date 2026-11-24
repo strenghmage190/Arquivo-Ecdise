@@ -273,6 +273,39 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   useEffect(() => { originRef.current = origin; }, [origin]);
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
+  const [membraneState, setMembraneState] = useState<'calm' | 'amber' | 'crimson'>('calm');
+
+  useEffect(() => {
+    const computeFromDoomsday = () => {
+      if (!doomsdayTarget) return null;
+      const remainingMs = Math.max(0, doomsdayTarget - Date.now());
+      // Considera janela de 60 min para tensão progressiva (0% -> 100%)
+      const tensionPct = Math.min(100, Math.max(0, (1 - remainingMs / (60 * 60 * 1000)) * 100));
+      if (tensionPct > 75) return 'crimson' as const;
+      if (tensionPct >= 41) return 'amber' as const;
+      return 'calm' as const;
+    };
+
+    const next = computeFromDoomsday();
+    if (next) {
+      setMembraneState(next);
+      if (performanceMode) return;
+      const iv = window.setInterval(() => {
+        const updated = computeFromDoomsday();
+        if (updated) setMembraneState(updated);
+      }, 5000);
+      return () => window.clearInterval(iv);
+    }
+
+    const onMembraneEvent = (ev: Event) => {
+      const detail = (ev as CustomEvent<'calm' | 'amber' | 'crimson'>).detail;
+      if (detail === 'calm' || detail === 'amber' || detail === 'crimson') {
+        setMembraneState(detail);
+      }
+    };
+    window.addEventListener('ordo:membrane-state', onMembraneEvent);
+    return () => window.removeEventListener('ordo:membrane-state', onMembraneEvent);
+  }, [doomsdayTarget, performanceMode]);
   const [playerView, setPlayerView] = useState<boolean>(() => true);
   const isMobile = useIsMobile();
   const { width: windowWidth, height: windowHeight } = useWindowSize();
@@ -2020,7 +2053,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   }, [connectionMode, isUV, undo, redo, togglePerformanceMode, handleAutoOrganize]); // Adicione dependências relevantes
 
   return (
-    <div className="investigation-board" data-performance-mode={performanceMode ? 'on' : 'off'}>
+    <div
+      className="investigation-board"
+      data-performance-mode={performanceMode ? 'on' : 'off'}
+      data-membrane-state={membraneState}
+    >
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
       <header className="investigation-header">
         <div className="header-left">
@@ -2140,88 +2177,91 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           className="investigation-toolbar" 
           data-game-master={isGameMaster ? 'true' : 'false'} 
           data-player-view={playerView ? 'true' : 'false'}
-          style={{ justifyContent: 'space-between' }}
         >
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            {canEdit && (
-              <button 
-                className="hud-btn primary" 
-                onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
-                data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
-                data-gm-only="true"
-                style={{ fontWeight: 700, letterSpacing: '0.06em' }}
-              >
-                <Plus size={14} /> NOVA PISTA
-              </button>
-            )}
+          {/* 1. Criação / Visão */}
+          {(canEdit || isGameMaster) && (
+            <div className="toolbar-group" role="group" aria-label="Criação e Visão">
+              {canEdit && (
+                <button 
+                  className="hud-btn primary" 
+                  onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
+                  data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
+                  data-gm-only="true"
+                  style={{ fontWeight: 700, letterSpacing: '0.06em' }}
+                >
+                  <Plus size={14} /> NOVA PISTA
+                </button>
+              )}
 
-            {isGameMaster && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button className="hud-btn icon-only" onClick={async () => {
-                   try {
-                     const invite = await api.createInviteLink(investigationId);
-                     if (invite?.invite_code) {
-                       const url = `${window.location.origin}/invite/${invite.invite_code}`;
-                       setInviteLink(url);
+              {isGameMaster && (
+                <>
+                  <button className="hud-btn icon-only" onClick={async () => {
+                     try {
+                       const invite = await api.createInviteLink(investigationId);
+                       if (invite?.invite_code) {
+                         const url = `${window.location.origin}/invite/${invite.invite_code}`;
+                         setInviteLink(url);
+                       }
+                     } catch (e) {
+                       console.error('Falha ao gerar link de convite', e);
+                       alert('Falha ao gerar link de convite');
                      }
-                   } catch (e) {
-                     console.error('Falha ao gerar link de convite', e);
-                     alert('Falha ao gerar link de convite');
-                   }
-                   setInviteOpen(true);
-                }} data-tooltip="Convidar jogadores" data-gm-only="true" aria-label="Convidar jogadores"><Mail size={16} /></button>
-                <button 
-                   className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
-                   onClick={() => setPlayerView(!playerView)}
-                   data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
-                   data-gm-only="true"
-                   aria-label={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
-                >
-                   {playerView ? <Eye size={16} /> : <Glasses size={16} />}
-                </button>
-                <button 
-                   className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
-                   onClick={() => setShowHiddenClues(!showHiddenClues)}
-                   data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
-                   data-gm-only="true"
-                   aria-label={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas"}
-                >
-                   <Eye size={16} />
-                </button>
-                <button 
-                   className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
-                   onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
-                   data-tooltip="GM Overwatch - Painel de Controle"
-                   data-gm-only="true"
-                   aria-label="GM Overwatch"
-                >
-                   <Crown size={16} />
-                </button>
-              </div>
-            )}
+                     setInviteOpen(true);
+                  }} data-tooltip="Convidar jogadores" data-gm-only="true" aria-label="Convidar jogadores"><Mail size={16} /></button>
+                  <button 
+                     className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
+                     onClick={() => setPlayerView(!playerView)}
+                     data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
+                     data-gm-only="true"
+                     aria-label={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
+                  >
+                     {playerView ? <Eye size={16} /> : <Glasses size={16} />}
+                  </button>
+                  <button 
+                     className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
+                     onClick={() => setShowHiddenClues(!showHiddenClues)}
+                     data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
+                     data-gm-only="true"
+                     aria-label={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas"}
+                  >
+                     <Eye size={16} />
+                  </button>
+                  <button 
+                     className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
+                     onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
+                     data-tooltip="GM Overwatch - Painel de Controle"
+                     data-gm-only="true"
+                     aria-label="GM Overwatch"
+                  >
+                     <Crown size={16} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
+          {/* 2. Conexões / Camadas */}
+          <div className="toolbar-group" role="group" aria-label="Conexões e Camadas">
             {connectionMode && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className={`hud-btn ${connectionType==='confirmed'?'active':''}`} onClick={() => {setConnectionType('confirmed'); setConnectionColor('#c62828');}} aria-label="Conexão do tipo Fato">FATO</button>
-                <button className={`hud-btn ${connectionType==='theory'?'active':''}`} onClick={() => {setConnectionType('theory'); setConnectionColor('#f9a825');}} aria-label="Conexão do tipo Teoria">TEORIA</button>
-                <button className={`hud-btn ${connectionType==='mystic'?'active':''}`} onClick={() => {setConnectionType('mystic'); setConnectionColor('#7e57c2');}} aria-label="Conexão do tipo Sobrenatural">SOBRENATURAL</button>
-              </div>
+              <>
+                <button className={`hud-btn ${connectionType==='confirmed'?'active':''}`} onClick={() => {setConnectionType('confirmed'); setConnectionColor('#c62828');}} data-tooltip="Conexão: Fato Confirmado" aria-label="Conexão do tipo Fato">FATO</button>
+                <button className={`hud-btn ${connectionType==='theory'?'active':''}`} onClick={() => {setConnectionType('theory'); setConnectionColor('#f9a825');}} data-tooltip="Conexão: Teoria / Hipótese" aria-label="Conexão do tipo Teoria">TEORIA</button>
+                <button className={`hud-btn ${connectionType==='mystic'?'active':''}`} onClick={() => {setConnectionType('mystic'); setConnectionColor('#7e57c2');}} data-tooltip="Conexão: Sobrenatural / Oculto" aria-label="Conexão do tipo Sobrenatural">SOBRENATURAL</button>
+              </>
             )}
 
             {pinMode && (
-              <div style={{ display: 'flex', gap: 6, marginLeft: 8, alignItems: 'center' }}>
-                 <div role="button" tabIndex={0} aria-label="Pino vermelho" onClick={() => setPinType('vermelho')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('vermelho'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#e63946', cursor: 'pointer', border: pinType === 'vermelho' ? '2px solid white' : 'none'}} />
-                 <div role="button" tabIndex={0} aria-label="Pino azul" onClick={() => setPinType('azul')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('azul'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#3b82f6', cursor: 'pointer', border: pinType === 'azul' ? '2px solid white' : 'none'}} />
-                 <div role="button" tabIndex={0} aria-label="Pino verde" onClick={() => setPinType('verde')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('verde'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#eab308', cursor: 'pointer', border: pinType === 'verde' ? '2px solid white' : 'none'}} />
+              <div style={{ display: 'flex', gap: 6, margin: '0 4px', alignItems: 'center' }}>
+                 <div role="button" tabIndex={0} aria-label="Pino vermelho" title="Pino vermelho" onClick={() => setPinType('vermelho')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('vermelho'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#e63946', cursor: 'pointer', border: pinType === 'vermelho' ? '2px solid white' : 'none'}} />
+                 <div role="button" tabIndex={0} aria-label="Pino azul" title="Pino azul" onClick={() => setPinType('azul')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('azul'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#3b82f6', cursor: 'pointer', border: pinType === 'azul' ? '2px solid white' : 'none'}} />
+                 <div role="button" tabIndex={0} aria-label="Pino verde" title="Pino amarelo" onClick={() => setPinType('verde')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPinType('verde'); }} style={{width: 14, height: 14, borderRadius: '50%', background: '#eab308', cursor: 'pointer', border: pinType === 'verde' ? '2px solid white' : 'none'}} />
               </div>
             )}
-          </div>
 
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} title="Luz UV" aria-label="Alternar Luz Ultravioleta (UV)" aria-pressed={isUV}><Flashlight size={16} /></button>
+            <button className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`} onClick={() => setIsUV(!isUV)} data-tooltip={isUV ? "Desativar Luz Ultravioleta (UV)" : "Ativar Luz Ultravioleta (UV)"} aria-label="Alternar Luz Ultravioleta (UV)" aria-pressed={isUV}><Flashlight size={16} /></button>
             <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto" aria-label="Decodificador de Texto"><Lock size={16} /></button>
             <div style={{ position: 'relative' }}>
-              <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar" aria-label="Organizar"><Layers2 size={16} /></button>
+              <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar camadas e pistas" aria-label="Organizar"><Layers2 size={16} /></button>
               {showOrganizeMenu && (
                 <div className="dropdown-menu">
                   <div className="dropdown-header">Organizar</div>
@@ -2244,6 +2284,21 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                 </div>
               )}
             </div>
+          </div>
+
+          {/* 3. Busca / Histórico */}
+          <div className="toolbar-group" role="group" aria-label="Busca e Histórico">
+            <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar pistas (Ctrl+F)" aria-label="Buscar pistas"><Search size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer última alteração" aria-label="Desfazer última alteração"><Undo2 size={16} /></button>
+            <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer última alteração" aria-label="Refazer última alteração"><Redo2 size={16} /></button>
+          </div>
+
+          {/* 4. Configurações / Performance */}
+          <div className="toolbar-group toolbar-zoom" role="group" aria-label="Configurações e Performance">
+            <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir Zoom" aria-label="Diminuir Zoom do Quadro"><ZoomOut size={16} /></button>
+            <span className="tabular-nums toolbar-zoom-value" style={{ fontSize: 11, fontWeight: 700, width: 42, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
+            <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar Zoom" aria-label="Aumentar Zoom do Quadro"><ZoomIn size={16} /></button>
+            <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Resetar Zoom para 100%" aria-label="Redefinir Zoom para 100%"><RotateCcw size={16} /></button>
             <button
               className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
               onClick={togglePerformanceMode}
@@ -2252,14 +2307,6 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             >
               <Zap size={16} />
             </button>
-            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 6px' }} />
-            <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} title="Desfazer" aria-label="Desfazer última alteração"><Undo2 size={16} /></button>
-            <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} title="Refazer" aria-label="Refazer última alteração"><Redo2 size={16} /></button>
-            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 6px' }} />
-            <button className="hud-btn icon-only" onClick={zoomOut} title="Diminuir Zoom" aria-label="Diminuir Zoom do Quadro"><ZoomOut size={16} /></button>
-            <span className="tabular-nums toolbar-zoom-value" style={{ fontSize: 11, fontWeight: 700, width: 42, textAlign: 'center' }}>{(zoom * 100).toFixed(0)}%</span>
-            <button className="hud-btn icon-only" onClick={zoomIn} title="Aumentar Zoom" aria-label="Aumentar Zoom do Quadro"><ZoomIn size={16} /></button>
-            <button className="hud-btn icon-only" onClick={resetZoom} title="Resetar Zoom" aria-label="Redefinir Zoom para 100%"><RotateCcw size={16} /></button>
           </div>
         </div>
       )}
@@ -2419,6 +2466,8 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           setContextMenu({ type: 'bg', x: worldX, y: worldY });
         }}
       >
+        <div className="board-ambient-scanline" aria-hidden="true" />
+        <div className="board-membrane-vignette" aria-hidden="true" />
         {marqueeRect && <div className="marquee-rect" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
         <div
           className="board-transform-layer"

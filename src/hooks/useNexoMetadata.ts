@@ -20,10 +20,11 @@ const DEFAULT_METADATA: NexoMetadata = {
 };
 
 export const useNexoMetadata = (initialMetadata?: Partial<NexoMetadata>) => {
-  const [metadata, setMetadata] = useState<NexoMetadata>({
+  const [metadata, setMetadata] = useState<NexoMetadata>(() => ({
     ...DEFAULT_METADATA,
+    lastUpdated: new Date().toISOString(),
     ...initialMetadata,
-  });
+  }));
 
   const updateThreatLevel = useCallback(
     (level: NexoMetadata['threatLevel']) => {

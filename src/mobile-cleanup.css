@@ -1,34 +1,38 @@
 /* --- LIMPEZA DE LAYOUT MOBILE RESPONSIVO --- */
-@media (max-width: 768px) {
-  /* 1. Remove elementos legados ou redundantes em telas pequenas */
-  .investigation-toolbar,
-  .quick-actions-bar,
-  .mobile-hud {
-    display: none;
-    visibility: hidden;
-    height: 0;
-    border: none;
-    overflow: hidden;
-  }
+@layer overrides {
+  @media (max-width: 768px) {
+    /* 1. Remove elementos legados ou redundantes em telas pequenas */
+    .investigation-toolbar,
+    .quick-actions-bar,
+    .mobile-hud {
+      display: none;
+      visibility: hidden;
+      height: 0;
+      border: none;
+      overflow: hidden;
+    }
 
-  /* 2. Garante que nada ultrapasse a largura da tela (Scroll Horizontal acidental) */
-  body, html, #root {
-    overflow-x: hidden;
-    width: 100%;
-    max-width: 100vw;
-  }
+    /* 2. Garante que nada ultrapasse a largura da tela (Scroll Horizontal acidental) */
+    body,
+    html,
+    #root {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+    }
 
-  .investigation-board {
-    border-bottom: none;
-  }
+    .investigation-board {
+      border-bottom: none;
+    }
 
-  .timeline-wrapper,
-  .timeline-scrubber,
-  .timeline-controls,
-  .quick-actions {
-    display: none;
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
+    .timeline-wrapper,
+    .timeline-scrubber,
+    .timeline-controls,
+    .quick-actions {
+      display: none;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
   }
 }

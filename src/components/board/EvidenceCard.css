@@ -18,7 +18,7 @@
   container-name: evidence-card;
   border: 1px solid var(--evidence-accent);
   border-radius: 0;
-  background-color: var(--surface);
+  background-color: rgba(11, 15, 22, 0.94);
   background-image:
     linear-gradient(rgb(148 163 184 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(148 163 184 / 3%) 1px, transparent 1px);
@@ -118,7 +118,7 @@
   height: 150px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
-  background: #000;
+  background: rgba(11, 15, 22, 0.94);
 }
 
 .clue-image-container img,
@@ -133,6 +133,17 @@
   height: 100% !important;
   border: 0 !important;
   object-fit: cover !important;
+}
+
+/* Dimming sutil em miniaturas claras/brancas em repouso, restaurando 100% no hover */
+.clue-card:not(.is-uv) .clue-image-container img {
+  filter: brightness(0.88);
+  transition: filter 180ms ease;
+}
+
+.clue-card:not(.is-uv):hover .clue-image-container img,
+.card-node:hover .clue-card:not(.is-uv) .clue-image-container img {
+  filter: brightness(1);
 }
 
 .overlay-scan {
@@ -181,6 +192,7 @@
 
 .clue-info {
   position: relative;
+  z-index: 2;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -188,6 +200,7 @@
   min-height: 80px;
   min-width: 0;
   padding: 14px;
+  background-color: rgba(11, 15, 22, 0.94);
   text-align: left;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -294,13 +307,15 @@
 }
 
 .decision-bar {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
   padding: 7px 9px;
   border-top: 1px solid var(--border);
-  background: var(--bg);
+  background: rgba(11, 15, 22, 0.98);
 }
 
 .divider {
@@ -345,7 +360,134 @@
 .loading-placeholder-content {
   width: 100%;
   height: 100%;
-  background: #1B1B1E;
+  background: rgba(11, 15, 22, 0.94);
+}
+
+@keyframes evidence-stamp-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+    filter: brightness(1);
+  }
+  45% {
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.55);
+    filter: brightness(1.35);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(56, 189, 248, 0);
+    filter: brightness(1);
+  }
+}
+
+/* Entrada / Revelação (~350ms scan usando apenas transform/opacity) */
+@keyframes card-reveal-scan {
+  0% {
+    opacity: 0.75;
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 270px, 0);
+  }
+}
+
+.clue-card.is-revealing .scanner-line {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 25;
+  height: 3px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.85), transparent);
+  animation: card-reveal-scan 350ms ease-out forwards;
+  will-change: transform, opacity;
+}
+
+/* Seleção e Hover: cantoneiras táticas animadas e pulso suave na borda */
+@keyframes tactical-corner-pulse {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.012);
+  }
+}
+
+.card-node.selected .clue-card::before {
+  animation: tactical-corner-pulse 2.2s ease-in-out infinite;
+}
+
+@media (hover: hover) {
+  .card-node:hover .clue-card::before {
+    animation: tactical-corner-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+/* Brilho lento de baixa intensidade (4s-6s) apenas para pistas místicas / Mega-Pistas */
+@keyframes mystic-ambient-glow {
+  0%, 100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.52;
+  }
+}
+
+.clue-card.type-mega-clue::after,
+.clue-card[data-element]:not(.status-false)::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid var(--evidence-accent);
+  box-shadow: inset 0 0 18px var(--evidence-glow);
+  opacity: 0.25;
+  animation: mystic-ambient-glow 5s ease-in-out infinite;
+}
+
+.clue-card.stamp-flash .evidence-state-stamp,
+.clue-card.stamp-flash .clue-info h3 {
+  animation: evidence-stamp-glow 250ms ease-out;
+}
+
+body.performance-mode .clue-card.is-revealing .scanner-line,
+body.performance-mode .card-node.selected .clue-card::before,
+body.performance-mode .card-node:hover .clue-card::before,
+body.performance-mode .clue-card.type-mega-clue::after,
+body.performance-mode .clue-card[data-element]::after,
+body.performance-mode .clue-card.stamp-flash .evidence-state-stamp,
+body.performance-mode .clue-card.stamp-flash .clue-info h3,
+.clue-card.performance-mode.is-revealing .scanner-line,
+.clue-card.performance-mode::before,
+.clue-card.performance-mode::after,
+.clue-card.performance-mode.stamp-flash .evidence-state-stamp,
+.clue-card.performance-mode.stamp-flash .clue-info h3 {
+  animation: none !important;
+}
+
+body.performance-mode .clue-card.is-revealing .scanner-line,
+.clue-card.performance-mode.is-revealing .scanner-line,
+body.performance-mode .clue-card.type-mega-clue::after,
+body.performance-mode .clue-card[data-element]::after,
+.clue-card.performance-mode.type-mega-clue::after,
+.clue-card.performance-mode[data-element]::after {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clue-card.is-revealing .scanner-line,
+  .card-node.selected .clue-card::before,
+  .card-node:hover .clue-card::before,
+  .clue-card.type-mega-clue::after,
+  .clue-card[data-element]::after,
+  .clue-card.stamp-flash .evidence-state-stamp,
+  .clue-card.stamp-flash .clue-info h3 {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 768px) {

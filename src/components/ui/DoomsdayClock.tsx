@@ -1,20 +1,55 @@
 import React, { useEffect, useState } from 'react';
-import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
+import { getOptimizedInterval } from '../../utils/performance';
+import { getMembraneUrgency, type MembraneUrgency } from './SystemOverlays';
+import './SystemOverlays.css';
 
 interface Props {
   targetTime: number | null; // ms since epoch
   isGameMaster: boolean;
   onUpdate: (minutesDelta: number) => Promise<void>;
+  /** Optional total duration in ms for percentage urgency calculation */
+  totalDurationMs?: number;
 }
 
-export default function DoomsdayClock({ targetTime, isGameMaster, onUpdate }: Props) {
+const DEFAULT_CALM_THRESHOLD_MS = 30 * 60 * 1000; // >= 30m => 0–49% (verde/ciano)
+const DEFAULT_AMBER_THRESHOLD_MS = 10 * 60 * 1000; // 10–30m => 50–79% (âmbar), < 10m => 80–100% (carmesim)
+
+function computeUrgencyPercent(remainingMs: number, totalDurationMs?: number): number {
+  if (remainingMs <= 0) return 100;
+  if (totalDurationMs && totalDurationMs > 0) {
+    const elapsedRatio = (totalDurationMs - remainingMs) / totalDurationMs;
+    return Math.max(0, Math.min(100, Math.round(elapsedRatio * 100)));
+  }
+  if (remainingMs >= DEFAULT_CALM_THRESHOLD_MS) {
+    // 30m..120m maps smoothly inside 0–49%
+    const ratio = Math.min(1, (remainingMs - DEFAULT_CALM_THRESHOLD_MS) / (90 * 60 * 1000));
+    return Math.round((1 - ratio) * 49);
+  }
+  if (remainingMs >= DEFAULT_AMBER_THRESHOLD_MS) {
+    // 10m..30m maps smoothly inside 50–79%
+    const ratio = (remainingMs - DEFAULT_AMBER_THRESHOLD_MS) / (DEFAULT_CALM_THRESHOLD_MS - DEFAULT_AMBER_THRESHOLD_MS);
+    return Math.round(50 + (1 - ratio) * 29);
+  }
+  // < 10m maps smoothly inside 80–100%
+  const ratio = remainingMs / DEFAULT_AMBER_THRESHOLD_MS;
+  return Math.round(80 + (1 - ratio) * 20);
+}
+
+export default function DoomsdayClock({ targetTime, isGameMaster, onUpdate, totalDurationMs }: Props) {
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [urgency, setUrgency] = useState<MembraneUrgency>('calm');
 
   useEffect(() => {
     const tick = () => {
-      if (!targetTime) { setTimeLeft(''); return; }
+      if (!targetTime) {
+        setTimeLeft('');
+        return;
+      }
       const now = Date.now();
       const diff = targetTime - now;
+      const pct = computeUrgencyPercent(diff, totalDurationMs);
+      setUrgency(getMembraneUrgency(pct));
+
       if (diff <= 0) {
         setTimeLeft('00:00:00');
         return;
@@ -25,68 +60,37 @@ export default function DoomsdayClock({ targetTime, isGameMaster, onUpdate }: Pr
       setTimeLeft(`${h}:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`);
     };
     tick();
-    const iv = setInterval(tick, getOptimizedInterval(1000, 5)); // 1000ms normal, 5000ms in performance mode
-    return () => clearInterval(iv);
-  }, [targetTime]);
+    const iv = window.setInterval(tick, getOptimizedInterval(1000, 5)); // 1000ms normal, 5000ms in performance mode
+    return () => window.clearInterval(iv);
+  }, [targetTime, totalDurationMs]);
 
   if (!targetTime) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 'calc(env(safe-area-inset-top, 0px) + var(--space-2, 8px))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(5, 5, 8, 0.95)',
-        border: '1.5px solid var(--institutional-red, #b33)',
-        color: '#ff2a2a',
-        padding: 'var(--space-1, 4px) var(--space-3, 12px)',
-        fontFamily: 'var(--font-terminal, monospace)',
-        fontSize: 'var(--font-size-lg, 18px)',
-        fontWeight: 'bold',
-        zIndex: 'var(--z-hud, 1000)',
-        boxShadow: '0 0 16px rgba(230, 57, 70, 0.4)',
-        letterSpacing: '2px',
-        textShadow: '0 0 8px rgba(255, 0, 0, 0.7)',
-        borderRadius: 'var(--radius-sm, 4px)',
-        backdropFilter: 'blur(8px)',
-        pointerEvents: 'auto',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2, 8px)' }}>
-        <div style={{ fontVariantNumeric: 'tabular-nums' }}>{timeLeft}</div>
+    <div className="doomsday-hud-slot">
+      <div
+        className="doomsday-clock"
+        data-urgency={urgency}
+        role="timer"
+        aria-live="off"
+        aria-label={`Contagem regressiva: ${timeLeft}`}
+      >
+        <div className="doomsday-clock-time tabular-nums">{timeLeft}</div>
         {isGameMaster && (
-          <div style={{ fontSize: 'var(--font-size-xs, 11px)', display: 'flex', gap: 'var(--space-1, 4px)' }}>
+          <div className="doomsday-clock-controls">
             <button
+              type="button"
+              className="doomsday-clock-btn"
               onClick={() => onUpdate(-10)}
-              style={{
-                padding: '2px 8px',
-                minHeight: '28px',
-                background: 'rgba(230, 57, 70, 0.15)',
-                color: '#fff',
-                border: '1px solid rgba(230, 57, 70, 0.5)',
-                borderRadius: 'var(--radius-sm, 4px)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontWeight: 600,
-              }}
+              aria-label="Subtrair 10 minutos"
             >
               -10m
             </button>
             <button
+              type="button"
+              className="doomsday-clock-btn"
               onClick={() => onUpdate(+10)}
-              style={{
-                padding: '2px 8px',
-                minHeight: '28px',
-                background: 'rgba(230, 57, 70, 0.15)',
-                color: '#fff',
-                border: '1px solid rgba(230, 57, 70, 0.5)',
-                borderRadius: 'var(--radius-sm, 4px)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontWeight: 600,
-              }}
+              aria-label="Adicionar 10 minutos"
             >
               +10m
             </button>

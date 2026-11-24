@@ -33,6 +33,12 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({ pathData, onSelect, onC
         d={pathData} 
         fill="none" 
       />
+      {/* Subtle luminous pulse for confirmed / mystic connections */}
+      <path
+        className="connection-pulse"
+        d={pathData}
+        fill="none"
+      />
       {/* Invisible hitbox for better touch interaction (rendered after so it sits on top) */}
       <path 
         className="connection-hitbox"

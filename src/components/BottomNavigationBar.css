@@ -113,6 +113,27 @@
     color: var(--text-primary);
   }
 
+  .mobile-tools-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-tools-group + .mobile-tools-group {
+    padding-top: 10px;
+    border-top: 1px solid rgb(148 163 184 / 16%);
+  }
+
+  .mobile-tools-group-label {
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-family: var(--font-system);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
   .mobile-tools-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

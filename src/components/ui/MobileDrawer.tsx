@@ -1,5 +1,7 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useId, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useSwipeable } from 'react-swipeable';
+import { useHaptics } from '../../hooks/useHaptics';
 
 export interface MobileDrawerProps {
   isOpen: boolean;
@@ -8,6 +10,9 @@ export interface MobileDrawerProps {
   children: React.ReactNode;
   title?: string;
   width?: string;
+  className?: string;
+  swipeToClose?: boolean;
+  closeOnBackdropClick?: boolean;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -16,49 +21,91 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   position = 'left',
   children,
   title,
-  width = 'min(85vw, 360px)'
+  width = 'min(85vw, 360px)',
+  className = '',
+  swipeToClose = true,
+  closeOnBackdropClick = true,
 }) => {
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
-  }, [onClose]);
+  const titleId = useId();
+  const drawerRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const { light } = useHaptics();
+  const isLeft = position === 'left';
+
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (swipeToClose && isLeft) {
+        light();
+        onClose();
+      }
+    },
+    onSwipedRight: () => {
+      if (swipeToClose && !isLeft) {
+        light();
+        onClose();
+      }
+    },
+    trackMouse: false,
+    delta: 50,
+  });
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    },
+    [onClose]
+  );
 
   useEffect(() => {
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return;
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    requestAnimationFrame(() => {
+      drawerRef.current?.focus();
+    });
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.body.style.overflow = prevOverflow;
+      previousFocusRef.current?.focus?.();
     };
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen) return null;
 
-  const isLeft = position === 'left';
-
   return (
     <>
       <div
-        onClick={onClose}
+        className="modal-backdrop"
+        onClick={closeOnBackdropClick ? onClose : undefined}
         style={{
           position: 'fixed',
           inset: 0,
           background: 'rgba(0, 0, 0, 0.65)',
           backdropFilter: 'blur(3px)',
+          WebkitBackdropFilter: 'blur(3px)',
           zIndex: 'var(--z-modals, 2000)',
           animation: 'fadeInBackdrop 0.2s ease forwards',
         }}
         aria-hidden="true"
       />
       <aside
+        ref={drawerRef}
+        tabIndex={-1}
+        className={`mobile-drawer ${className}`.trim()}
+        {...swipeHandlers}
         role="dialog"
         aria-modal="true"
-        aria-label={title || 'Drawer'}
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={!title ? 'Gaveta lateral' : undefined}
         style={{
           position: 'fixed',
           top: 0,
           bottom: 0,
+          height: '100dvh',
           [isLeft ? 'left' : 'right']: 0,
           width,
           maxWidth: '100vw',
@@ -71,7 +118,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
           boxShadow: '0 0 40px rgba(0, 0, 0, 0.85)',
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingLeft: isLeft ? 'env(safe-area-inset-left, 0px)' : '0px',
+          paddingRight: !isLeft ? 'env(safe-area-inset-right, 0px)' : '0px',
           overscrollBehavior: 'contain',
+          outline: 'none',
         }}
       >
         {title && (
@@ -80,11 +130,13 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              gap: 'var(--space-2, 8px)',
               padding: '12px 16px',
               borderBottom: '1px solid var(--border, #29313d)',
             }}
           >
             <h2
+              id={titleId}
               style={{
                 margin: 0,
                 fontSize: 'var(--font-size-sm, 14px)',
@@ -98,11 +150,13 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               {title}
             </h2>
             <button
+              type="button"
               onClick={onClose}
               aria-label="Fechar gaveta"
               style={{
                 background: 'transparent',
-                border: 'none',
+                border: '1px solid transparent',
+                borderRadius: 'var(--radius-sm, 4px)',
                 color: 'var(--text-secondary, #94a3b8)',
                 cursor: 'pointer',
                 minHeight: 'var(--control-h-sm, 32px)',
@@ -110,6 +164,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                touchAction: 'manipulation',
               }}
             >
               <X size={18} />
@@ -122,7 +177,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
-            padding: '16px',
+            padding: 'var(--space-4, 16px)',
             scrollbarWidth: 'thin',
           }}
         >

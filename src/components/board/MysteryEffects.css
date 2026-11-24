@@ -21,10 +21,102 @@
   color: inherit !important;
 }
 
-.static-noise,
-.uv-lens-flare,
-.uv-container.uv-active::before {
+.static-noise {
   display: none;
+}
+
+.uv-flashlight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 235;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.uv-flashlight-layer.is-hovering {
+  opacity: 1;
+}
+
+.uv-beam-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle var(--uv-radius) at var(--mouse-x) var(--mouse-y),
+    rgba(192, 132, 252, 0.24) 0%,
+    rgba(139, 92, 246, 0.14) 52%,
+    rgba(88, 28, 135, 0.04) 82%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+}
+
+.uv-lens-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--uv-radius) * 2);
+  height: calc(var(--uv-radius) * 2);
+  margin-top: calc(var(--uv-radius) * -1);
+  margin-left: calc(var(--uv-radius) * -1);
+  border-radius: 50%;
+  border: 1.5px solid rgba(192, 132, 252, 0.68);
+  box-shadow:
+    0 0 18px rgba(168, 85, 247, 0.35),
+    inset 0 0 20px rgba(168, 85, 247, 0.16);
+  transform: translate3d(var(--mouse-x), var(--mouse-y), 0);
+  will-change: transform;
+}
+
+.uv-lens-ring-spin {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(216, 180, 254, 0.45);
+  animation: uv-ring-rotate 9s linear infinite, uv-ring-pulse 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.uv-cursor-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #f3e8ff;
+  border: 1px solid #a855f7;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.95);
+}
+
+@keyframes uv-ring-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes uv-ring-pulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+body.performance-mode .uv-lens-ring-spin {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uv-lens-ring-spin {
+    animation: none !important;
+  }
 }
 
 .hidden-ink-layer,

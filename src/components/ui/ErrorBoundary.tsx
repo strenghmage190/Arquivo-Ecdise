@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onReset?: () => void;
 }
 
 interface State {
@@ -27,6 +28,11 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
   }
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.props.onReset?.();
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -34,58 +40,100 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div style={{
-          padding: '40px',
-          background: 'linear-gradient(135deg, #1a0000, #000)',
-          border: '2px solid #ff0000',
-          borderRadius: '12px',
-          color: '#ff6666',
-          fontFamily: 'monospace',
-          margin: '20px',
-          maxWidth: '800px',
-          boxShadow: '0 0 30px rgba(255,0,0,0.3)'
-        }}>
-          <h2 style={{ color: '#ff3333', marginBottom: '20px', fontSize: '24px' }}>
-            <AlertTriangle className="lucide-icon inline-icon" size={16} />️ ERRO CRÍTICO DO SISTEMA
+        <div
+          role="alert"
+          style={{
+            padding: 'clamp(16px, 4vw, 32px)',
+            background: 'var(--surface, #11141b)',
+            border: '1px solid var(--institutional-red, #e63946)',
+            borderRadius: 'var(--radius-md, 8px)',
+            color: 'var(--text-primary, #f1f5f9)',
+            fontFamily: 'var(--font-system, monospace)',
+            margin: 'var(--space-4, 16px) auto',
+            width: 'min(94vw, 720px)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.75)',
+          }}
+        >
+          <h2
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2, 8px)',
+              color: 'var(--institutional-red, #e63946)',
+              margin: '0 0 var(--space-3, 12px)',
+              fontSize: 'var(--font-size-lg, 1.25rem)',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            <AlertTriangle size={20} aria-hidden="true" />
+            <span>Erro Crítico do Sistema</span>
           </h2>
-          <p style={{ marginBottom: '16px', fontSize: '14px' }}>
-            Uma falha inesperada foi detectada. O sistema pode estar instável.
+          <p
+            style={{
+              margin: '0 0 var(--space-4, 16px)',
+              fontSize: 'var(--font-size-sm, 0.875rem)',
+              color: 'var(--text-secondary, #94a3b8)',
+            }}
+          >
+            Uma falha inesperada foi detectada no módulo atual. Você pode tentar recuperar ou reiniciar a aplicação.
           </p>
-          <details style={{ marginTop: '20px', cursor: 'pointer' }}>
-            <summary style={{ color: '#ffaa00', fontWeight: 'bold', marginBottom: '12px' }}>
-              <Search className="lucide-icon inline-icon" size={16} /> Detalhes Técnicos (clique para expandir)
+          <details style={{ marginTop: 'var(--space-4, 16px)', cursor: 'pointer' }}>
+            <summary
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2, 8px)',
+                color: 'var(--el-conhecimento, #eab308)',
+                fontWeight: 700,
+                fontSize: 'var(--font-size-sm, 0.875rem)',
+              }}
+            >
+              <Search size={15} aria-hidden="true" />
+              <span>Detalhes Técnicos</span>
             </summary>
-            <pre style={{
-              background: '#0a0000',
-              padding: '16px',
-              borderRadius: '8px',
-              overflow: 'auto',
-              fontSize: '12px',
-              border: '1px solid #330000',
-              marginTop: '12px'
-            }}>
+            <pre
+              style={{
+                background: 'var(--bg, #0b0c10)',
+                padding: 'var(--space-3, 12px)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                overflow: 'auto',
+                maxHeight: '40dvh',
+                fontSize: 'var(--font-size-xs, 12px)',
+                border: '1px solid var(--border, #29313d)',
+                marginTop: 'var(--space-3, 12px)',
+                color: '#fca5a5',
+              }}
+            >
               {this.state.error?.toString()}
               {'\n\n'}
               {this.state.errorInfo?.componentStack}
             </pre>
           </details>
-          <button
-            onClick={() => window.location.reload()}
+          <div
             style={{
-              marginTop: '24px',
-              padding: '12px 24px',
-              background: '#ff3333',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              boxShadow: '0 0 15px rgba(255,0,0,0.4)'
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 'var(--space-3, 12px)',
+              marginTop: 'var(--space-6, 24px)',
             }}
           >
-            <RefreshCw className="lucide-icon inline-icon" size={16} /> REINICIAR APLICAÇÃO
-          </button>
+            <button
+              type="button"
+              onClick={this.handleRetry}
+              className="btn-ordo btn-ordo-secondary control-md"
+            >
+              Tentar Novamente
+            </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-ordo btn-ordo-primary control-md"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              <span>Reiniciar Aplicação</span>
+            </button>
+          </div>
         </div>
       );
     }

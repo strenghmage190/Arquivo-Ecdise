@@ -1181,7 +1181,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             src={audioSrc || undefined}
             preload="metadata"
             style={{ display: 'none' }}
-            onEnded={() => setAudioIsPlaying(false)}
+            onPlay={() => window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: true } }))}
+            onPause={() => window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: false } }))}
+            onEnded={() => {
+              setAudioIsPlaying(false);
+              window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: false } }));
+            }}
             onTimeUpdate={(e) => setAudioPosition((e.target as HTMLAudioElement).currentTime || 0)}
             onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
           />

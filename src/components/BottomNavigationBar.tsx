@@ -3,19 +3,43 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './BottomNavigationBar.css';
 
-// Definição clara das ferramentas disponíveis no mobile
-const MOBILE_TOOLS = [
-  { id: 'create', icon: <Settings size={20} />, label: 'Criar', gmOnly: true },
-  { id: 'connect', icon: <Link2 size={20} />, label: 'Conectar' },
-  { id: 'terminal', icon: <Terminal size={20} />, label: 'Console' },
-  { id: 'search', icon: <Search size={20} />, label: 'Buscar' },
-  { id: 'uv', icon: <Flashlight size={20} />, label: 'Luz UV' },
-  { id: 'organize', icon: <LayoutPanelTop size={20} />, label: 'Organizar' },
-  { id: 'reset-cam', icon: <LocateFixed size={20} />, label: 'Focar' },
-  { id: 'decoder', icon: <Lock size={20} />, label: 'Decodificar' },
-  { id: 'undo', icon: <Undo2 size={20} />, label: 'Desfazer' },
-  { id: 'redo', icon: <Redo2 size={20} />, label: 'Refazer' },
-  { id: 'performance', icon: <Zap size={20} />, label: 'Desempenho' },
+// Definição clara das ferramentas disponíveis no mobile agrupadas por categoria
+const MOBILE_TOOL_GROUPS = [
+  {
+    id: 'creation-vision',
+    label: 'Criação / Visão',
+    tools: [
+      { id: 'create', icon: <Settings size={20} />, label: 'Criar', tooltip: 'Criar nova evidência', gmOnly: true },
+      { id: 'reset-cam', icon: <LocateFixed size={20} />, label: 'Focar', tooltip: 'Centralizar câmera no quadro' },
+    ],
+  },
+  {
+    id: 'connections-layers',
+    label: 'Conexões / Camadas',
+    tools: [
+      { id: 'connect', icon: <Link2 size={20} />, label: 'Conectar', tooltip: 'Conectar pistas com fios' },
+      { id: 'uv', icon: <Flashlight size={20} />, label: 'Luz UV', tooltip: 'Alternar Luz Ultravioleta (UV)' },
+      { id: 'organize', icon: <LayoutPanelTop size={20} />, label: 'Organizar', tooltip: 'Organizar pistas no quadro' },
+      { id: 'decoder', icon: <Lock size={20} />, label: 'Decodificar', tooltip: 'Decodificador de texto' },
+    ],
+  },
+  {
+    id: 'search-history',
+    label: 'Busca / Histórico',
+    tools: [
+      { id: 'search', icon: <Search size={20} />, label: 'Buscar', tooltip: 'Buscar pistas no quadro' },
+      { id: 'undo', icon: <Undo2 size={20} />, label: 'Desfazer', tooltip: 'Desfazer última alteração' },
+      { id: 'redo', icon: <Redo2 size={20} />, label: 'Refazer', tooltip: 'Refazer última alteração' },
+    ],
+  },
+  {
+    id: 'settings-performance',
+    label: 'Configurações / Performance',
+    tools: [
+      { id: 'terminal', icon: <Terminal size={20} />, label: 'Console', tooltip: 'Abrir Terminal C.R.I.S.' },
+      { id: 'performance', icon: <Zap size={20} />, label: 'Desempenho', tooltip: 'Alternar Modo Performance' },
+    ],
+  },
 ];
 
 const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaster = false }) => {
@@ -81,7 +105,13 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
   };
 
   // Build sheet/overlay as portal so it's not clipped by parent containers
-  const visibleTools = MOBILE_TOOLS.filter((t) => !(t.gmOnly && !isGameMaster));
+  const visibleGroups = MOBILE_TOOL_GROUPS
+    .map((group) => ({
+      ...group,
+      tools: group.tools.filter((t) => !(t.gmOnly && !isGameMaster)),
+    }))
+    .filter((group) => group.tools.length > 0);
+  let renderedToolIndex = 0;
 
   const sheet = (
     <>
@@ -105,19 +135,31 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
           <button type="button" className="close-btn" onClick={closeSheet} aria-label="Fechar ferramentas"><X size={16} /></button>
         </div>
 
-        <div className="mobile-tools-grid">
-          {visibleTools.map((tool, idx) => (
-            <button
-              key={tool.id}
-              ref={idx === 0 ? firstToolRef : undefined}
-              type="button"
-              className="mobile-tool-btn"
-              onClick={() => { console.debug('BottomNav: click tool', tool.id); triggerTool(tool.id); }}
-              aria-label={tool.label}
-            >
-              <span className="tool-icon">{tool.icon}</span>
-              <span className="tool-label">{tool.label}</span>
-            </button>
+        <div className="mobile-tools-groups">
+          {visibleGroups.map((group) => (
+            <div key={group.id} className="mobile-tools-group">
+              <div className="mobile-tools-group-label">{group.label}</div>
+              <div className="mobile-tools-grid">
+                {group.tools.map((tool) => {
+                  const isFirst = renderedToolIndex === 0;
+                  renderedToolIndex += 1;
+                  return (
+                    <button
+                      key={tool.id}
+                      ref={isFirst ? firstToolRef : undefined}
+                      type="button"
+                      className="mobile-tool-btn"
+                      onClick={() => { console.debug('BottomNav: click tool', tool.id); triggerTool(tool.id); }}
+                      title={tool.tooltip}
+                      aria-label={tool.tooltip || tool.label}
+                    >
+                      <span className="tool-icon">{tool.icon}</span>
+                      <span className="tool-label">{tool.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
       </div>

@@ -1,14 +1,20 @@
-/* SystemOverlays & HUD Overlay Styles */
+/* SystemOverlays & Coordinated HUD Overlay Styles */
 
 .hud-overlay-root {
   position: fixed;
   inset: 0;
   z-index: var(--z-hud, 1000);
   pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2, 8px);
+  padding:
+    max(var(--space-2, 8px), env(safe-area-inset-top, 0px))
+    max(var(--space-3, 12px), env(safe-area-inset-right, 0px))
+    max(var(--space-2, 8px), env(safe-area-inset-bottom, 0px))
+    max(var(--space-3, 12px), env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
   overflow: hidden;
 }
 
@@ -17,9 +23,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3, 12px);
-  padding: var(--space-2, 8px) var(--space-4, 16px);
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  pointer-events: none;
 }
 
 .hud-interactive {
@@ -27,11 +34,12 @@
 }
 
 .nexus-hud {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3, 12px);
+  gap: var(--space-2, 8px);
   width: 100%;
+  min-width: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -45,7 +53,9 @@
 .hud-left {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2, 8px);
+  min-width: 0;
   pointer-events: auto;
 }
 
@@ -55,17 +65,18 @@
   justify-content: center;
   width: var(--control-h-sm, 32px);
   height: var(--control-h-sm, 32px);
-  background: rgba(17, 20, 27, 0.85);
+  background: rgba(17, 20, 27, 0.88);
   border: 1px solid var(--border, #29313d);
   color: var(--text-primary, #f1f5f9);
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   backdrop-filter: blur(4px);
+  pointer-events: auto;
 }
 
 .nav-btn:hover {
-  background: var(--surface, #1e293b);
+  background: var(--surface-elevated, #1e293b);
   border-color: var(--nexus-blue, #cbd5e1);
   box-shadow: 0 0 10px rgba(203, 213, 225, 0.2);
 }
@@ -73,27 +84,57 @@
 .hud-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3, 12px);
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+  min-width: 0;
   pointer-events: auto;
 }
 
+/* Membrana Local Monitor — progressive urgency states */
 .system-monitor {
+  --membrane-accent: #10b981;
+  --membrane-glow: rgba(16, 185, 129, 0.35);
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
-  background: rgba(10, 10, 15, 0.85);
+  background: rgba(10, 10, 15, 0.88);
   border: 1px solid var(--border, #29313d);
   padding: 4px 10px;
+  min-height: var(--control-h-sm, 32px);
+  box-sizing: border-box;
   border-radius: var(--radius-sm, 4px);
   font-family: var(--font-system, monospace);
   font-size: 11px;
   backdrop-filter: blur(4px);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.system-monitor[data-urgency="calm"] {
+  --membrane-accent: #10b981;
+  --membrane-glow: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.system-monitor[data-urgency="amber"] {
+  --membrane-accent: #f59e0b;
+  --membrane-glow: rgba(245, 158, 11, 0.4);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.system-monitor[data-urgency="crimson"] {
+  --membrane-accent: #e63946;
+  --membrane-glow: rgba(230, 57, 70, 0.55);
+  border-color: rgba(230, 57, 70, 0.8);
+  box-shadow: 0 0 12px rgba(230, 57, 70, 0.32);
+  animation: hud-critical-pulse 2.2s ease-in-out infinite;
 }
 
 .system-monitor .label {
   color: var(--text-secondary, #94a3b8);
   letter-spacing: 1px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .system-monitor .bar-container {
@@ -102,25 +143,138 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .system-monitor .fill {
   height: 100%;
-  background: #22c55e;
-  transition: width 0.3s ease, background-color 0.3s ease;
+  background: var(--membrane-accent);
+  box-shadow: 0 0 6px var(--membrane-glow);
+  transition: width 0.35s ease, background-color 0.35s ease;
 }
 
 .system-monitor .fill.danger {
-  background: var(--ordo-red, #e63946);
-  box-shadow: 0 0 8px var(--ordo-red, #e63946);
+  background: #e63946;
+  box-shadow: 0 0 8px rgba(230, 57, 70, 0.65);
 }
 
 .system-monitor .value {
-  color: var(--text-primary, #f1f5f9);
-  font-weight: bold;
-  min-width: 40px;
+  color: var(--membrane-accent);
+  font-weight: 700;
+  min-width: 42px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  transition: color 0.35s ease;
+}
+
+/* Doomsday Clock — Coordinated HUD Slot */
+.doomsday-hud-slot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-hud, 1000);
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding:
+    calc(max(var(--space-2, 8px), env(safe-area-inset-top, 0px)) + 44px)
+    max(var(--space-3, 12px), env(safe-area-inset-right, 0px))
+    max(var(--space-2, 8px), env(safe-area-inset-bottom, 0px))
+    max(var(--space-3, 12px), env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+  .doomsday-hud-slot {
+    padding-top: max(var(--space-2, 8px), env(safe-area-inset-top, 0px));
+  }
+}
+
+.doomsday-clock {
+  --clock-accent: #10b981;
+  --clock-glow: rgba(16, 185, 129, 0.35);
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  max-width: min(100%, 340px);
+  background: rgba(5, 5, 8, 0.94);
+  border: 1.5px solid var(--clock-accent);
+  color: var(--clock-accent);
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  font-family: var(--font-terminal, monospace);
+  font-size: clamp(14px, 3.5vw, 18px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  border-radius: var(--radius-sm, 4px);
+  box-shadow: 0 0 14px var(--clock-glow);
+  text-shadow: 0 0 8px var(--clock-glow);
+  backdrop-filter: blur(8px);
+  transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.doomsday-clock[data-urgency="calm"] {
+  --clock-accent: #2dd4bf;
+  --clock-glow: rgba(45, 212, 191, 0.32);
+}
+
+.doomsday-clock[data-urgency="amber"] {
+  --clock-accent: #f59e0b;
+  --clock-glow: rgba(245, 158, 11, 0.4);
+}
+
+.doomsday-clock[data-urgency="crimson"] {
+  --clock-accent: #ff2a2a;
+  --clock-glow: rgba(230, 57, 70, 0.52);
+  animation: hud-critical-pulse 2s ease-in-out infinite;
+}
+
+.doomsday-clock-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.doomsday-clock-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.doomsday-clock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  min-width: 44px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary, #f1f5f9);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.doomsday-clock-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@keyframes hud-critical-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--membrane-glow, var(--clock-glow, rgba(230, 57, 70, 0.45)));
+    opacity: 1;
+  }
+
+  50% {
+    box-shadow: 0 0 18px var(--membrane-glow, var(--clock-glow, rgba(230, 57, 70, 0.72)));
+    opacity: 0.92;
+  }
 }
 
 .btn-logout {
@@ -134,16 +288,17 @@
   color: #fff;
   font-family: var(--font-system, monospace);
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 700;
   letter-spacing: 1px;
   border-radius: var(--radius-sm, 4px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   backdrop-filter: blur(4px);
 }
 
 .btn-logout:hover {
-  background: var(--ordo-red, #e63946);
+  background: var(--institutional-red, #e63946);
   box-shadow: 0 0 12px rgba(230, 57, 70, 0.4);
 }
 
@@ -161,16 +316,6 @@
   overflow: hidden;
   user-select: none;
   z-index: 0;
-}
-
-@media (max-width: 768px) {
-  .background-data {
-    display: none;
-  }
-
-  .system-monitor .label {
-    display: none;
-  }
 }
 
 /* Sigil rail */
@@ -193,4 +338,59 @@
   font-size: 9px;
   letter-spacing: 4px;
   color: var(--text-secondary, #94a3b8);
+}
+
+@media (max-width: 768px) {
+  .background-data,
+  .sigil-rail {
+    display: none;
+  }
+
+  .system-monitor .label {
+    display: none;
+  }
+
+  .system-monitor .bar-container {
+    width: 44px;
+  }
+
+  .btn-logout {
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .nav-btn,
+  .btn-logout,
+  .doomsday-clock-btn {
+    min-height: var(--control-h-md-mobile, 44px);
+  }
+
+  .nav-btn {
+    min-width: var(--control-h-md-mobile, 44px);
+  }
+}
+
+/* Performance mode & reduced motion overrides */
+body.performance-mode .system-monitor,
+body.performance-mode .doomsday-clock,
+body.performance-mode .nav-btn,
+body.performance-mode .btn-logout {
+  backdrop-filter: none;
+  background: var(--surface, #11141b);
+  box-shadow: none;
+  animation: none;
+}
+
+body.performance-mode .system-monitor .fill {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-monitor[data-urgency="crimson"],
+  .doomsday-clock[data-urgency="crimson"] {
+    animation: none;
+  }
 }

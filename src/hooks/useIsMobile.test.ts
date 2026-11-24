@@ -79,6 +79,27 @@ describe('useIsMobile', () => {
     expect(result.current).toBe(true);
     unmount();
   });
+
+  it('should return true for mobile width with pointer: coarse matchMedia', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.innerWidth = 375;
+    (navigator as any).maxTouchPoints = 0;
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: query === '(pointer: coarse)',
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+
+    const { result, unmount } = renderCustomHook(() => useIsMobile());
+    expect(result.current).toBe(true);
+    unmount();
+    window.matchMedia = originalMatchMedia;
+  });
 });
 
 describe('useIsTouchDevice', () => {
@@ -105,6 +126,26 @@ describe('useIsTouchDevice', () => {
     const { result, unmount } = renderCustomHook(() => useIsTouchDevice());
     expect(result.current).toBe(true);
     unmount();
+  });
+
+  it('should return true when pointer: coarse matches', () => {
+    const originalMatchMedia = window.matchMedia;
+    (navigator as any).maxTouchPoints = 0;
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: query === '(pointer: coarse)',
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+
+    const { result, unmount } = renderCustomHook(() => useIsTouchDevice());
+    expect(result.current).toBe(true);
+    unmount();
+    window.matchMedia = originalMatchMedia;
   });
 });
 

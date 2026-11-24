@@ -177,5 +177,11 @@ export const useWarRoom = (investigationId: string, currentUser: any) => {
     [currentUser, userProfile]
   );
 
+  useEffect(() => {
+    return () => {
+      broadcastCursor.cancel();
+    };
+  }, [broadcastCursor]);
+
   return { agents, cursors, broadcastCursor };
 };

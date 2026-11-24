@@ -65,6 +65,90 @@ body.space-panning .corkboard-canvas:active {
   cursor: grabbing;
 }
 
+.board-ambient-scanline {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.board-ambient-scanline::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 18vh;
+  background: linear-gradient(180deg, transparent 0%, rgb(148 163 184 / 4.5%) 50%, transparent 100%);
+  transform: translate3d(0, -25vh, 0);
+  animation: board-scanline-sweep 10s linear infinite;
+  will-change: transform;
+}
+
+@keyframes board-scanline-sweep {
+  0% {
+    transform: translate3d(0, -25vh, 0);
+  }
+  100% {
+    transform: translate3d(0, 115vh, 0);
+  }
+}
+
+.board-membrane-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+
+.investigation-board[data-membrane-state="amber"] .board-membrane-vignette {
+  box-shadow: inset 0 0 96px rgb(245 158 11 / 14%);
+  animation: membrane-amber-pulse 4.5s ease-in-out infinite;
+}
+
+.investigation-board[data-membrane-state="crimson"] .board-membrane-vignette {
+  background: radial-gradient(ellipse at center, transparent 52%, rgb(127 29 29 / 28%) 100%);
+  box-shadow: inset 0 0 110px rgb(220 38 38 / 22%);
+  animation: membrane-crimson-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes membrane-amber-pulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes membrane-crimson-breathe {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+body.performance-mode .board-ambient-scanline,
+body.performance-mode .board-membrane-vignette,
+.investigation-board[data-performance-mode="on"] .board-ambient-scanline,
+.investigation-board[data-performance-mode="on"] .board-membrane-vignette {
+  display: none !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-ambient-scanline,
+  .board-membrane-vignette {
+    display: none !important;
+    animation: none !important;
+  }
+}
+
 .board-transform-layer {
   position: absolute;
   top: 0;
@@ -210,7 +294,7 @@ body.space-panning .corkboard-canvas:active {
 }
 
 .toolbar-group + .toolbar-group {
-  border-left: 1px solid #45515f;
+  border-left: 1px solid rgb(148 163 184 / 22%);
 }
 
 .toolbar-zoom {
@@ -314,6 +398,11 @@ body.space-panning .corkboard-canvas:active {
 .hud-btn:hover::after,
 .board-button:hover::after {
   opacity: 1;
+}
+
+.hud-btn:not([data-tooltip])::after,
+.board-button:not([data-tooltip])::after {
+  display: none;
 }
 
 .dropdown-menu,

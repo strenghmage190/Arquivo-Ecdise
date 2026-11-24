@@ -10,7 +10,11 @@
   cursor: pointer;
   user-select: none;
   touch-action: manipulation;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
   white-space: nowrap;
 
   &:active:not(.disabled) {
@@ -20,8 +24,18 @@
   &:focus-visible {
     outline: 2px solid var(--institutional-red, #e63946);
     outline-offset: 2px;
-    box-shadow: 0 0 10px rgba(230, 57, 70, 0.4);
+    box-shadow: 0 0 10px rgb(230 57 70 / 40%);
   }
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.fullWidth {
+  width: 100%;
 }
 
 /* Tamanhos padronizados */
@@ -48,22 +62,16 @@
   font-size: var(--font-size-base, 1rem);
 }
 
-:root {
-  --btn-primary-start: #00f3ff;
-  --btn-primary-end: #ff003c;
-  --btn-text-dark: #051018;
-}
-
 .primary {
   background: var(--institutional-red, #e63946);
   border-color: var(--institutional-red, #e63946);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(230, 57, 70, 0.25);
+  color: #fff;
+  box-shadow: 0 4px 14px rgb(230 57 70 / 25%);
 
   &:hover:not(.disabled) {
-    background: #ff1e27;
-    border-color: #ff1e27;
-    box-shadow: 0 0 12px rgba(230, 57, 70, 0.5);
+    background: var(--el-sangue-hot, #ff1e27);
+    border-color: var(--el-sangue-hot, #ff1e27);
+    box-shadow: 0 0 12px rgb(230 57 70 / 50%);
   }
 }
 
@@ -74,7 +82,7 @@
 
   &:hover:not(.disabled) {
     border-color: var(--text-secondary, #94a3b8);
-    background: #181d27;
+    background: var(--surface-elevated, #181d27);
   }
 }
 
@@ -84,24 +92,29 @@
   border-color: transparent;
 
   &:hover:not(.disabled) {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgb(255 255 255 / 6%);
   }
 }
 
 .solid {
-  background: linear-gradient(90deg, var(--btn-primary-start, #00f3ff), var(--btn-primary-end, #ff003c));
-  color: var(--btn-text-dark, #051018);
-  border: none;
+  background: var(--institutional-red, #e63946);
+  color: #fff;
+  border-color: var(--institutional-red, #e63946);
+
+  &:hover:not(.disabled) {
+    background: var(--el-sangue-hot, #ff1e27);
+    box-shadow: 0 0 12px rgb(230 57 70 / 45%);
+  }
 }
 
 .caseDelete {
-  background: rgba(230, 57, 70, 0.15);
+  background: rgb(230 57 70 / 15%);
   color: #fca5a5;
-  border-color: rgba(230, 57, 70, 0.4);
+  border-color: rgb(230 57 70 / 40%);
 
   &:hover:not(.disabled) {
-    background: rgba(230, 57, 70, 0.3);
-    border-color: #e63946;
+    background: rgb(230 57 70 / 30%);
+    border-color: var(--institutional-red, #e63946);
   }
 }
 

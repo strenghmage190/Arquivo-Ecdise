@@ -1,101 +1,100 @@
 /* ============================================================================
-   PERFORMANCE MODE v2.0 (Safe Layout)
+   PERFORMANCE MODE v3.0 (Cascade-Layer Safe & Solid Backdrop Fallbacks)
    ========================================================================== */
 
-/* 1. ANIMAÇÕES (Reduz drasticamente mas não remove de modais) */
-/* EXCEÇÕES INLINE: excluir modais e elementos críticos das regras globais */
-body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal),
-body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal)::before,
-body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal)::after {
-  animation-duration: 0.05s !important;
-  animation-delay: 0s !important;
-  transition-duration: 0.05s !important;
-  transition-delay: 0s !important;
-}
+@layer overrides {
+  /* 1. VARIÁVEIS DE MODO PERFORMANCE */
+  body.performance-mode {
+    --perf-decor-filter: none;
+    --perf-decor-backdrop-filter: none;
+    --perf-decor-box-shadow: none;
+    --perf-decor-text-shadow: none;
+    --perf-decor-bg-image: none;
+    --perf-decor-border-radius: 0;
+  }
 
-/* EXCEÇÃO: Modais e overlays mantêm animações normais */
-body.performance-mode .inspect-backdrop,
-body.performance-mode .inspect-backdrop *,
-body.performance-mode .inspect-file,
-body.performance-mode .inspect-file *,
-body.performance-mode .modal-backdrop,
-body.performance-mode .modal-backdrop *,
-body.performance-mode .code-prompt-overlay,
-body.performance-mode .code-prompt-overlay *,
-body.performance-mode .code-prompt-modal,
-body.performance-mode .code-prompt-modal *,
-body.performance-mode .glitch-solver-backdrop,
-body.performance-mode .glitch-solver-backdrop *,
-body.performance-mode .glitch-solver-modal,
-body.performance-mode .glitch-solver-modal * {
-  animation-duration: initial !important;
-  animation-delay: initial !important;
-  transition-duration: initial !important;
-  transition-delay: initial !important;
-  pointer-events: auto !important;
-  transform: none !important;
-}
+  /* 2. ANIMAÇÕES (Reduz drasticamente sem quebrar interação de modais) */
+  body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal),
+  body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal)::before,
+  body.performance-mode *:not(.inspect-backdrop):not(.inspect-file):not(.modal-backdrop):not(.code-prompt-overlay):not(.code-prompt-modal):not(.glitch-solver-backdrop):not(.glitch-solver-modal)::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    animation-delay: 0s;
+    transition-duration: 0.05s;
+    transition-delay: 0s;
+  }
 
-/* 2. EFEITOS PESADOS (Glow, Blur, Neon) - direcionado apenas a elementos decorativos */
-body.performance-mode .decorative,
-body.performance-mode .background-effect,
-body.performance-mode .particle-effect,
-body.performance-mode .scanline,
-body.performance-mode .grid-overlay,
-body.performance-mode .glitch-corruption *,
-body.performance-mode .glitch-layer-1,
-body.performance-mode .glitch-layer-2,
-body.performance-mode .glitch-layer-3,
-body.performance-mode .glitch-text-overlay *,
-body.performance-mode .drop-zone,
-body.performance-mode .scanner-line {
-  box-shadow: none !important;
-  text-shadow: none !important;
-  backdrop-filter: none !important;
-  filter: none !important;
-  background-image: none !important;
-}
+  /* EXCEÇÃO: Modais e overlays mantêm interação estável */
+  body.performance-mode .inspect-backdrop,
+  body.performance-mode .inspect-file,
+  body.performance-mode .modal-backdrop,
+  body.performance-mode .code-prompt-overlay,
+  body.performance-mode .code-prompt-modal,
+  body.performance-mode .glitch-solver-backdrop,
+  body.performance-mode .glitch-solver-modal {
+    pointer-events: auto;
+  }
 
-/* 3. SUBSTITUIÇÃO VISUAL (Fallback para Glassmorphism) */
-body.performance-mode .investigation-toolbar,
-body.performance-mode .modal-content,
-body.performance-mode .glass-panel,
-body.performance-mode .toolbar,
-body.performance-mode .clue-card {
-  background-color: #05080a !important;
-  border: 1px solid #1e40af !important;
-}
+  /* 3. EFEITOS PESADOS (Glow, Blur, Neon) em elementos decorativos */
+  body.performance-mode .decorative,
+  body.performance-mode .background-effect,
+  body.performance-mode .particle-effect,
+  body.performance-mode .scanline,
+  body.performance-mode .grid-overlay,
+  body.performance-mode .glitch-corruption *,
+  body.performance-mode .glitch-layer-1,
+  body.performance-mode .glitch-layer-2,
+  body.performance-mode .glitch-layer-3,
+  body.performance-mode .glitch-text-overlay *,
+  body.performance-mode .drop-zone,
+  body.performance-mode .scanner-line {
+    box-shadow: var(--perf-decor-box-shadow);
+    text-shadow: var(--perf-decor-text-shadow);
+    backdrop-filter: var(--perf-decor-backdrop-filter);
+    -webkit-backdrop-filter: var(--perf-decor-backdrop-filter);
+    filter: var(--perf-decor-filter);
+    background-image: var(--perf-decor-bg-image);
+  }
 
-/* 4. VARIÁVEIS DE MODO PERFORMANCE */
-body.performance-mode {
-  --perf-decor-filter: none;
-  --perf-decor-backdrop-filter: none;
-  --perf-decor-box-shadow: none;
-  --perf-decor-text-shadow: none;
-  --perf-decor-bg-image: none;
-  --perf-decor-border-radius: 0;
-}
+  /* 4. FALLBACK SÓLIDO PARA BACKDROP-FILTER / GLASSMORPHISM */
+  body.performance-mode .investigation-toolbar,
+  body.performance-mode .modal-content,
+  body.performance-mode .modal-surface-container,
+  body.performance-mode .glass-panel,
+  body.performance-mode .toolbar,
+  body.performance-mode .clue-card,
+  body.performance-mode .bottom-sheet,
+  body.performance-mode .mobile-drawer,
+  body.performance-mode .floating-nudge-pad,
+  body.performance-mode .diegetic-window,
+  body.performance-mode .modal-backdrop,
+  body.performance-mode .inspect-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--surface, #11141b);
+    border-color: var(--border, #29313d);
+  }
 
-/* Aplicar remoção/normalização apenas em elementos decorativos usando variáveis */
-body.performance-mode .decorative,
-body.performance-mode .background-effect,
-body.performance-mode .particle-effect,
-body.performance-mode .glitch-corruption * {
-  filter: var(--perf-decor-filter) !important;
-  backdrop-filter: var(--perf-decor-backdrop-filter) !important;
-  box-shadow: var(--perf-decor-box-shadow) !important;
-  text-shadow: var(--perf-decor-text-shadow) !important;
-  background-image: var(--perf-decor-bg-image) !important;
-  border-radius: var(--perf-decor-border-radius) !important;
-}
+  body.performance-mode .modal-backdrop,
+  body.performance-mode .inspect-backdrop {
+    background-color: rgb(5 8 10 / 92%);
+  }
 
-/* Otimizações adicionais seguras */
-body.performance-mode button:hover {
-  opacity: 0.7 !important;
-}
+  /* 5. SCROLL SUAVE DESATIVADO NO MODO PERFORMANCE */
+  body.performance-mode,
+  body.performance-mode * {
+    scroll-behavior: auto;
+  }
 
-body.performance-mode html,
-body.performance-mode body,
-body.performance-mode * {
-  scroll-behavior: auto !important;
+  /* 6. RESPEITO A PREFERS-REDUCED-MOTION */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
+      scroll-behavior: auto;
+    }
+  }
 }

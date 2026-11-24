@@ -37,6 +37,74 @@
   stroke-width: 3;
 }
 
+/* Pulso luminoso discreto em conexões confirmadas e místicas */
+.connection-pulse {
+  display: none;
+  pointer-events: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 16 144;
+  opacity: 0;
+}
+
+.connection-group.type-confirmed .connection-pulse,
+.connection-group.type-mystic .connection-pulse {
+  display: block;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation: connection-pulse-flow 2.8s linear infinite;
+}
+
+.connection-group.type-mystic .connection-pulse {
+  animation-duration: 3.4s;
+  opacity: 0.82;
+}
+
+@keyframes mystic-line-breath {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 0.96;
+  }
+}
+
+.connection-group.type-mystic .connection-path {
+  animation: mystic-line-breath 5s ease-in-out infinite;
+}
+
+@keyframes connection-pulse-flow {
+  from {
+    stroke-dashoffset: 160;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+body.performance-mode .connection-pulse,
+[data-performance-mode="on"] .connection-pulse,
+body.performance-mode .connection-group.type-mystic .connection-path,
+[data-performance-mode="on"] .connection-group.type-mystic .connection-path {
+  animation: none !important;
+}
+
+body.performance-mode .connection-pulse,
+[data-performance-mode="on"] .connection-pulse {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-pulse {
+    display: none !important;
+    animation: none !important;
+  }
+  .connection-group.type-mystic .connection-path {
+    animation: none !important;
+  }
+}
+
 /* --- ESTILO DO MENU DE CONTEXTO --- */
 .connection-context-menu {
   position: fixed;

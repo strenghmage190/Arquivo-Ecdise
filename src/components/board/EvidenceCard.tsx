@@ -45,10 +45,74 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
   const shortId = id ? (String(id).length > 10 ? `${String(id).slice(0, 8)}...` : String(id)) : '';
 
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMotion = performanceMode || prefersReducedMotion;
+
+  // Efeito rápido de decrypt/scramble (~250ms) quando status muda ou pista é revelada
+  const prevStatusRef = useRef<string | null | undefined>(status);
+  const prevLockedRef = useRef<boolean>(locked);
+  const prevCardTypeRef = useRef<string>(cardType);
+  const [stampFlash, setStampFlash] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [scrambledTitle, setScrambledTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    const statusChanged = prevStatusRef.current !== status;
+    const justUnlocked = prevLockedRef.current && !locked;
+    const justRevealedFromHidden = prevCardTypeRef.current === 'hidden' && cardType !== 'hidden';
+    prevStatusRef.current = status;
+    prevLockedRef.current = locked;
+    prevCardTypeRef.current = cardType;
+
+    if ((!statusChanged && !justUnlocked && !justRevealedFromHidden) || reducedMotion) return;
+
+    setStampFlash(true);
+    const flashTimer = window.setTimeout(() => setStampFlash(false), 260);
+    let revealTimer: number | null = null;
+    if (justUnlocked || justRevealedFromHidden) {
+      setIsRevealing(true);
+      revealTimer = window.setTimeout(() => setIsRevealing(false), 360);
+    }
+
+    const baseTitle = cardType === 'hidden' ? `[OCULTA] ${title}` : title;
+    const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%';
+    let step = 0;
+    const totalSteps = 5;
+    const scrambleInterval = window.setInterval(() => {
+      step += 1;
+      if (step >= totalSteps) {
+        window.clearInterval(scrambleInterval);
+        setScrambledTitle(null);
+        return;
+      }
+      const revealCount = Math.floor((step / totalSteps) * baseTitle.length);
+      const next = baseTitle
+        .split('')
+        .map((ch, idx) => (ch === ' ' || idx < revealCount ? ch : glyphs[Math.floor(Math.random() * glyphs.length)]))
+        .join('');
+      setScrambledTitle(next);
+    }, 50);
+
+    return () => {
+      window.clearTimeout(flashTimer);
+      if (revealTimer !== null) window.clearTimeout(revealTimer);
+      window.clearInterval(scrambleInterval);
+      setScrambledTitle(null);
+    };
+  }, [status, locked, title, cardType, reducedMotion]);
+
   // Lazy render para economizar re-renders e trabalho de imagem fora da viewport
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
+
+  useEffect(() => {
+    if (!hasScanned || reducedMotion) return;
+    setIsRevealing(true);
+    const t = window.setTimeout(() => setIsRevealing(false), 360);
+    return () => window.clearTimeout(t);
+  }, [hasScanned, reducedMotion]);
+
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -95,6 +159,8 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     status ? `status-${(status === 'verified' ? 'true' : status)}` : '',
     isUV ? 'is-uv' : '',
     locked ? 'is-locked' : '',
+    stampFlash ? 'stamp-flash' : '',
+    isRevealing ? 'is-revealing' : '',
     performanceMode ? 'performance-mode' : ''
   ].filter(Boolean).join(' ');
 
@@ -152,7 +218,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           <EvidenceCardContent
             id={id}
             image={isVisible ? image : undefined}
+            hasImage={Boolean(image)}
             hiddenSrc={hiddenSrc}
+            title={title}
             isUV={isUV}
             locked={locked}
             cardType={cardType}
@@ -160,6 +228,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             playerView={playerView}
             hasUV={hasUV}
             hasHiddenAudio={hasHiddenAudio}
+            hasAudio={hasAudio}
+            hasVideo={hasVideo}
+            hasChat={hasChat}
             fileType={fileType}
             performanceMode={performanceMode}
             blurred={blurred}
@@ -173,7 +244,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
           {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
-        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
+        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : (scrambledTitle ?? (cardType === 'hidden' ? `[OCULTA] ${title}` : title))}</h3>
         {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
       </div>
 

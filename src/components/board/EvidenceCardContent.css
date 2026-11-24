@@ -3,14 +3,104 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0b0c10;
+  background: rgba(11, 15, 22, 0.94);
 }
 
 .card-content-container.gm-view,
 .card-content-container.player-view,
 .card-content-container.locked-view,
 .card-content-container.glitch-view {
-  background: #0b0c10;
+  background: rgba(11, 15, 22, 0.94);
+}
+
+.diegetic-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px 8px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.06), transparent 60%),
+    rgba(11, 15, 22, 0.94);
+  user-select: none;
+}
+
+.diegetic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 30px;
+  font-family: var(--font-system);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(148, 163, 184, 0.72);
+}
+
+.diegetic-code {
+  padding: 1px 4px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 8px;
+}
+
+.diegetic-svg {
+  width: 100%;
+  height: 86px;
+  display: block;
+}
+
+/* Mini equalizador animado apenas quando o áudio do card está em reprodução */
+.mini-audio-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.mini-audio-eq span {
+  display: block;
+  width: 2px;
+  height: 10px;
+  background: #38bdf8;
+  transform-origin: bottom center;
+  animation: mini-eq-bar 680ms ease-in-out infinite;
+  will-change: transform;
+}
+
+.mini-audio-eq span:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.mini-audio-eq span:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+.mini-audio-eq span:nth-child(4) {
+  animation-delay: 420ms;
+}
+
+@keyframes mini-eq-bar {
+  0%, 100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+body.performance-mode .mini-audio-eq,
+.clue-card.performance-mode .mini-audio-eq {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-audio-eq {
+    display: none !important;
+  }
 }
 
 .card-content-container img,

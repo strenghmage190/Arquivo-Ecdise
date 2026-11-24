@@ -1,65 +1,121 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// Função utilitária para debounce
-const debounce = (func: (...args: any[]) => void, delay: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: any[]) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
+const MOBILE_BREAKPOINT_PX = 768;
 
-export const useIsMobile = () => {
+function detectTouchSupport(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const matchPointerCoarse =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(pointer: coarse)').matches;
+    const hasTouchEvents = Boolean(
+      'ontouchstart' in window ||
+        (typeof navigator !== 'undefined' &&
+          ((navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
+            ((navigator as any).msMaxTouchPoints &&
+              (navigator as any).msMaxTouchPoints > 0)))
+    );
+    return matchPointerCoarse || hasTouchEvents;
+  } catch {
+    return false;
+  }
+}
+
+function detectMobileUA(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(ua);
+}
+
+export const useIsMobile = (): boolean => {
   const [isMobile, setIsMobile] = useState(false);
 
-  const detectTouchSupport = () => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const matchPointerCoarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-      const hasTouchEvents = Boolean(
-        'ontouchstart' in window ||
-        (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
-        ((navigator as any).msMaxTouchPoints && (navigator as any).msMaxTouchPoints > 0)
-      );
-      return matchPointerCoarse || hasTouchEvents;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  const detectMobileUA = () => {
-    if (typeof navigator === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(ua);
-  };
-
   const checkMobile = useCallback(() => {
-    const smallWidth = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const smallWidth =
+      typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
     const touch = detectTouchSupport();
     const uaMobile = detectMobileUA();
 
-    // Mobile quando largura é <= 768px E dispositivo suporta touch/pointer coarse ou UA mobile
+    // Mobile quando largura <= 768px E dispositivo suporta touch/pointer coarse ou UA mobile
     setIsMobile(Boolean(smallWidth && (touch || uaMobile)));
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     checkMobile();
-    const debouncedCheck = debounce(checkMobile, 150);
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const debouncedCheck = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        checkMobile();
+      }, 150);
+    };
+
     window.addEventListener('resize', debouncedCheck);
-    return () => window.removeEventListener('resize', debouncedCheck);
+    window.addEventListener('orientationchange', debouncedCheck);
+
+    const mediaQuery =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(pointer: coarse)')
+        : null;
+
+    if (mediaQuery) {
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', checkMobile);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(checkMobile);
+      }
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedCheck);
+      window.removeEventListener('orientationchange', debouncedCheck);
+      if (mediaQuery) {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', checkMobile);
+        } else if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(checkMobile);
+        }
+      }
+    };
   }, [checkMobile]);
 
   return isMobile;
 };
 
-export const useIsTouchDevice = () => {
+export const useIsTouchDevice = (): boolean => {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const matchPointerCoarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-    const hasTouch = Boolean('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
-    setIsTouchDevice(matchPointerCoarse || hasTouch);
+    const update = () => setIsTouchDevice(detectTouchSupport());
+    update();
+
+    const mediaQuery =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(pointer: coarse)')
+        : null;
+
+    if (mediaQuery) {
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', update);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(update);
+      }
+    }
+
+    return () => {
+      if (mediaQuery) {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', update);
+        } else if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(update);
+        }
+      }
+    };
   }, []);
 
   return isTouchDevice;

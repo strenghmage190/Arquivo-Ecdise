@@ -47,6 +47,7 @@ module.exports = {
         modals: 'var(--z-modals)',
         cris: 'var(--z-cris)',
         toasts: 'var(--z-toasts)',
+        tooltip: 'var(--z-tooltip)',
         driver: 'var(--z-driver)',
       }
     },

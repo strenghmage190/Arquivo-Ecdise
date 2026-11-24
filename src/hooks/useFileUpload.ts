@@ -7,7 +7,7 @@
  * - Retry logic
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 interface UploadOptions {
@@ -26,6 +26,16 @@ export function useFileUpload() {
   const [errors, setErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const mountedRef = useRef(true);
+  const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      intervalsRef.current.forEach((id) => clearInterval(id));
+      intervalsRef.current.clear();
+    };
+  }, []);
 
   const uploadFile = useCallback(async (
     file: File,
@@ -57,19 +67,27 @@ export function useFileUpload() {
 
       // Upload with progress simulation (Supabase doesn't support real progress)
       const progressInterval = setInterval(() => {
+        if (!mountedRef.current) {
+          clearInterval(progressInterval);
+          intervalsRef.current.delete(progressInterval);
+          return;
+        }
         setProgress(prev => {
           const current = prev[key] || 0;
           const increment = Math.random() * 20;
           const newProgress = Math.min(current + increment, 90);
+          options.onProgress?.(newProgress);
           return { ...prev, [key]: newProgress };
         });
       }, 200);
+      intervalsRef.current.add(progressInterval);
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from(bucket)
         .upload(path, file);
 
       clearInterval(progressInterval);
+      intervalsRef.current.delete(progressInterval);
 
       if (error) throw error;
 

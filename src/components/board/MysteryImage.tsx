@@ -573,6 +573,19 @@ export function MysteryImage({
         />
       )}
 
+      {isUVMode && (
+        <div
+          className={`uv-flashlight-layer ${isHovering ? 'is-hovering' : ''}`}
+          aria-hidden="true"
+        >
+          <div className="uv-beam-overlay" />
+          <div className="uv-lens-ring">
+            <div className="uv-lens-ring-spin" />
+            <div className="uv-cursor-dot" />
+          </div>
+        </div>
+      )}
+
       {isUVMode && fxMounted && (
         <>
           <div
