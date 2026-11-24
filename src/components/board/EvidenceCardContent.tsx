@@ -94,8 +94,12 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
           <div className="lock-overlay encrypted-full">
             <div className="encryption-text-wrapper">
               <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
-              <div className="access-denied">ACESSO NEGADO</div>
+              <div className="access-denied">[REDIGIDO] // ACESSO NEGADO</div>
               <div className="encryption-code">MODO ECONÔMICO</div>
+              <div className="redacted-dossier-bars" aria-hidden="true">
+                <div className="redacted-dossier-bar" style={{ width: '92%' }} />
+                <div className="redacted-dossier-bar" style={{ width: '68%' }} />
+              </div>
             </div>
           </div>
         </>
@@ -107,8 +111,13 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
         <div className="lock-overlay encrypted-full">
           <div className="encryption-text-wrapper">
             <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
-            <div className="access-denied">ACESSO NEGADO</div>
+            <div className="access-denied">[REDIGIDO] // ACESSO NEGADO</div>
             <div className="encryption-code">{encryptionCode}</div>
+            <div className="redacted-dossier-bars" aria-hidden="true">
+              <div className="redacted-dossier-bar" style={{ width: '94%' }} />
+              <div className="redacted-dossier-bar" style={{ width: '74%' }} />
+              <div className="redacted-dossier-bar" style={{ width: '56%' }} />
+            </div>
           </div>
         </div>
       </>

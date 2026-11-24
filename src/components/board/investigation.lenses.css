@@ -1,25 +1,52 @@
 /* --- SISTEMA DE LENTES (VISUAL FILTERS) --- */
 
-/* Base: when any filter lens is active, dim non-matching cards and connections */
+/* Base: when any filter lens or cross-highlight is active, dim non-matching cards to 0.25 without hiding map */
 .corkboard-canvas.filtering-active .card-node {
-  opacity: 0.12;
-  filter: grayscale(90%) contrast(0.8);
+  opacity: 0.25;
   transition:
-    opacity 0.35s ease,
-    filter 0.35s ease,
-    transform 0.35s ease;
-  pointer-events: none;
+    opacity 0.25s ease,
+    filter 0.25s ease,
+    transform 0.25s ease;
 }
 
 /* Matching cards keep full visibility and become interactive */
-.corkboard-canvas.filtering-active .card-node.match-filter,
-.corkboard-canvas.filtering-active .card-node[data-status="verified"] {
+.corkboard-canvas.filtering-active .card-node.match-filter {
   opacity: 1;
   filter: none;
-  transform: scale(1.03);
-  box-shadow: 0 18px 40px rgb(0 0 0 / 60%);
-  pointer-events: auto;
-  z-index: 120;
+  box-shadow: 0 14px 32px rgb(0 0 0 / 55%);
+  z-index: calc(var(--z-cards, 100) + 15);
+}
+
+/* Cross-Highlight: illuminate connected neighbors and dim rest to 0.25 */
+.corkboard-canvas.cross-highlight-active .card-node.dimmed-card {
+  opacity: 0.25;
+}
+
+.corkboard-canvas.cross-highlight-active .card-node.cross-highlighted {
+  opacity: 1;
+  z-index: calc(var(--z-cards, 100) + 18);
+}
+
+/* Global UV Touch-Follow lens mode */
+.corkboard-canvas.uv-touch-locked {
+  cursor: none;
+  touch-action: none;
+}
+
+.global-uv-touch-ring {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(192, 132, 252, 0.72);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.35), inset 0 0 24px rgba(168, 85, 247, 0.16);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+body.performance-mode .global-uv-touch-ring,
+.investigation-board[data-performance-mode="on"] .global-uv-touch-ring {
+  box-shadow: none;
 }
 
 /* Specific lens: only show verified */

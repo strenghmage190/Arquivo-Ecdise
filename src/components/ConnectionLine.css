@@ -31,6 +31,40 @@
   opacity: 1;
 }
 
+.connection-group.dimmed {
+  opacity: 0.25;
+  transition: opacity 200ms ease;
+}
+
+.connection-group.highlighted .connection-path {
+  stroke-width: 3.5;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Rótulo opcional no fio */
+.connection-label-group {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.connection-label-bg {
+  fill: rgba(10, 14, 21, 0.96);
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.connection-label-text {
+  fill: var(--text-primary, #f1f5f9);
+  font-family: var(--font-system, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Hover effect */
 .connection-group:hover .connection-path {
   color: var(--text-primary);

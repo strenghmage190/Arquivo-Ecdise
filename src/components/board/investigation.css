@@ -1,17 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap");
 
-:root {
-  --bg: #0b0c10;
-  --surface: #11141b;
-  --border: #29313d;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --institutional-red: #e63946;
-  --el-sangue: #e63946;
-  --el-morte: #1f2933;
-  --el-morte-border: #64748b;
-  --el-energia: #a855f7;
-  --el-conhecimento: #eab308;
+.investigation-board {
   --ev-metamorfose-a: #1C1C1E;
   --ev-metamorfose-b: #00C2D1;
   --ev-encarnacao-a: #8B1414;
@@ -24,15 +13,9 @@
   --ev-quimera-b: #3D2E7C;
   --ev-singularidade-a: #0A0A0B;
   --ev-singularidade-b: #ca8a04;
-  --el-medo: #f8fafc;
-  --font-system: "JetBrains Mono", "Space Mono", monospace;
-  --font-case: "Rajdhani", sans-serif;
-  --header-height: 78px;
+  --header-height: 64px;
   --z-card-hover: 10;
   --z-dropdown: 50;
-}
-
-.investigation-board {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -763,4 +746,184 @@ body.performance-mode .board-membrane-vignette,
 .qa-panel button.danger:hover {
   background: rgb(230 57 70 / 20%);
   color: #e63946;
+}
+
+/* --- BOARD ZONES LAYER & MAGNETIC GUIDES --- */
+.board-zones-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.board-zone-frame {
+  position: absolute;
+  border: 1.5px dashed rgba(100, 116, 139, 0.55);
+  border-radius: var(--radius-sm, 4px);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.board-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(10, 14, 21, 0.86);
+  font-family: var(--font-system, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.board-zone-header:active {
+  cursor: grabbing;
+}
+
+.board-zone-grip {
+  display: inline-flex;
+  opacity: 0.65;
+}
+
+.board-zone-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-zone-title-input {
+  flex: 1;
+  min-width: 80px;
+  padding: 2px 5px;
+  border: 1px solid var(--border, #29313d);
+  background: rgba(10, 14, 21, 0.96);
+  color: var(--text-primary, #f1f5f9);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.board-zone-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-zone-color-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.board-zone-color-dot.active {
+  border: 1.5px solid #fff;
+  transform: scale(1.15);
+}
+
+.board-zone-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 2px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #f87171;
+  cursor: pointer;
+}
+
+.board-zone-delete-btn:hover {
+  border-color: rgba(230, 57, 70, 0.45);
+  background: rgba(230, 57, 70, 0.14);
+}
+
+.board-zone-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  pointer-events: auto;
+  background: linear-gradient(135deg, transparent 50%, rgba(148, 163, 184, 0.5) 50%);
+}
+
+.magnetic-guides-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 450;
+  pointer-events: none;
+}
+
+.magnetic-guide-v {
+  position: absolute;
+  top: -8000px;
+  width: 1px;
+  height: 16000px;
+  border-left: 1px dashed rgba(56, 189, 248, 0.85);
+}
+
+.magnetic-guide-h {
+  position: absolute;
+  left: -8000px;
+  height: 1px;
+  width: 16000px;
+  border-top: 1px dashed rgba(56, 189, 248, 0.85);
+}
+
+.tap-to-place-banner {
+  position: fixed;
+  top: max(76px, calc(env(safe-area-inset-top, 0px) + 70px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-hud, 1000);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(10, 14, 21, 0.96);
+  border: 1px solid #38bdf8;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-primary, #f1f5f9);
+  font-family: var(--font-system, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.tap-to-place-banner button {
+  padding: 4px 8px;
+  border: 1px solid var(--border, #29313d);
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.corkboard-canvas.snap-grid-active {
+  background-size: 100% 100%, 20px 20px, 20px 20px;
+  background-image:
+    radial-gradient(ellipse at center, transparent 20%, rgb(0 0 0 / 34%) 100%),
+    linear-gradient(rgb(56 189 248 / 9%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(56 189 248 / 9%) 1px, transparent 1px);
 }

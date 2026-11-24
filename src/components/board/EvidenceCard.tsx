@@ -30,13 +30,10 @@ export interface EvidenceCardProps {
   performanceMode?: boolean
   blurred?: boolean
   element?: string | null
+  semanticCompact?: boolean
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null }) => {
-  // DEBUG: Log de props importantes
-  if (cardType !== 'normal' || locked || isUV) {
-    console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
-  }
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null, semanticCompact = false }) => {
   const handleToggle = (s: 'verified' | 'theory' | 'false') => {
     if (!onToggleStatus) return;
     const newStatus = status === s ? null : s;
@@ -161,6 +158,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     locked ? 'is-locked' : '',
     stampFlash ? 'stamp-flash' : '',
     isRevealing ? 'is-revealing' : '',
+    semanticCompact ? 'semantic-compact' : '',
     performanceMode ? 'performance-mode' : ''
   ].filter(Boolean).join(' ');
 
@@ -244,8 +242,14 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
           {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
-        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : (scrambledTitle ?? (cardType === 'hidden' ? `[OCULTA] ${title}` : title))}</h3>
-        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
+        <h3 style={{ marginTop: 6 }}>
+          {locked && !isGameMaster ? (
+            <span className="redacted-block" aria-label="Conteúdo redigido">[REDIGIDO]</span>
+          ) : (
+            scrambledTitle ?? (cardType === 'hidden' ? `[OCULTA] ${title}` : title)
+          )}
+        </h3>
+        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[DESCARTADO]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
       </div>
 
       <div className="decision-bar">
@@ -277,7 +281,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element','semanticCompact'
   ];
   // Nota: onEdit e onOpen são funções, comparação por referência pode causar re-renders
   return keys.every((k) => prev[k] === next[k]);

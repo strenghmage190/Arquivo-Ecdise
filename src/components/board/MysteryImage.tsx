@@ -144,15 +144,15 @@ export function MysteryImage({
     channelFilter = 'contrast(1.2) saturate(2.4) sepia(0.2) hue-rotate(150deg)';
   }
 
+  const hasCustomFilters = filters.brightness !== 100 || filters.contrast !== 100 || filters.saturate !== 100;
+
   const baseFilter = isUVMode
     ? 'brightness(0.25) contrast(1.5) saturate(0.2) hue-rotate(260deg)'
-    : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
+    : (channelFilter || hasCustomFilters)
+      ? `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`.trim()
+      : undefined;
 
   const filterStyle: React.CSSProperties = useMemo(() => {
-    const baseFilter = isUVMode
-      ? 'brightness(0.25) contrast(1.5) saturate(0.2) hue-rotate(260deg)'
-      : `${channelFilter} brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturate}%)`;
-
     return {
       backgroundSize: fit,
       backgroundRepeat: 'no-repeat',
@@ -162,9 +162,9 @@ export function MysteryImage({
       inset: 0,
       zIndex: 5,
       filter: baseFilter,
-      backgroundImage: (baseSrc && !isForensicActive) ? `url(${baseSrc})` : 'none',
+      backgroundImage: (baseSrc && !isForensicActive && isUVMode) ? `url(${baseSrc})` : 'none',
     };
-  }, [isUVMode, channelFilter, filters, fit, baseSrc, isForensicActive]);
+  }, [isUVMode, baseFilter, fit, baseSrc, isForensicActive]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
   // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas quando o jogador se aproximar
@@ -205,12 +205,6 @@ export function MysteryImage({
     // increase contrast/saturation to make secret content pop
     filter: 'brightness(2.0) contrast(2.2) saturate(2.0)'
   }), [fit, hiddenLayerOpacity, filterLayerSrc, filterImage, hiddenImage]);
-
-  // Debug temporário: ajuda a identificar por que a camada pode permanecer invisível
-  try {
-    // eslint-disable-next-line no-console
-    console.debug('MysteryImage debug', { filters, revealSettings, hiddenLayerOpacity });
-  } catch (e) { }
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -541,8 +535,8 @@ export function MysteryImage({
             <img src={baseSrc} className="bg-blur" alt="" loading="lazy" draggable={false} style={{ pointerEvents: 'none' }} />
           )}
 
-          {/* Base image always rendered as background layer (keeps layout stable) */}
-          <div style={{ ...filterStyle }} />
+          {/* Render background layer ONLY in UV mode to avoid double rendering when forensicChannel === 'all' */}
+          {isUVMode && <div style={{ ...filterStyle }} />}
 
           {/* 2. CAMADA DO PUZZLE DE TRATAMENTO (só filterLayerSrc, não hiddenSrc) */}
           {filterLayerSrc && !isUVMode && (

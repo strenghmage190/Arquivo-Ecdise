@@ -1,9 +1,6 @@
-:root {
-  --evidence-card-width: 244px;
-}
-
 .clue-card,
 .card-node {
+  --evidence-card-width: 244px;
   --evidence-accent: var(--border);
   --evidence-glow: rgb(148 163 184 / 18%);
   position: relative;
@@ -18,7 +15,7 @@
   container-name: evidence-card;
   border: 1px solid var(--evidence-accent);
   border-radius: 0;
-  background-color: rgba(11, 15, 22, 0.94);
+  background-color: rgba(10, 14, 21, 0.96);
   background-image:
     linear-gradient(rgb(148 163 184 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(148 163 184 / 3%) 1px, transparent 1px);
@@ -26,7 +23,7 @@
   box-shadow: 0 4px 6px rgb(0 0 0 / 20%);
   color: var(--text-primary);
   font-family: var(--font-system);
-  transition: border-color 150ms, background-color 150ms;
+  transition: border-color 150ms, background-color 150ms, opacity 200ms ease, box-shadow 200ms ease;
 }
 
 .card-node {
@@ -118,7 +115,7 @@
   height: 150px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
-  background: rgba(11, 15, 22, 0.94);
+  background: rgba(10, 14, 21, 0.96);
 }
 
 .clue-image-container img,
@@ -200,7 +197,7 @@
   min-height: 80px;
   min-width: 0;
   padding: 14px;
-  background-color: rgba(11, 15, 22, 0.94);
+  background-color: rgba(10, 14, 21, 0.96);
   text-align: left;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -315,7 +312,7 @@
   gap: 3px;
   padding: 7px 9px;
   border-top: 1px solid var(--border);
-  background: rgba(11, 15, 22, 0.98);
+  background: rgba(10, 14, 21, 0.96);
 }
 
 .divider {
@@ -360,7 +357,110 @@
 .loading-placeholder-content {
   width: 100%;
   height: 100%;
-  background: rgba(11, 15, 22, 0.94);
+  background: rgba(10, 14, 21, 0.96);
+}
+
+/* Bloco [REDIGIDO] estilo dossiê */
+.redacted-block {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #05070b;
+  border: 1px solid rgba(230, 57, 70, 0.45);
+  color: #e63946;
+  font-family: var(--font-system);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.15);
+}
+
+/* Cross-Highlight & Dimming Filter (esmaecimento sem esconder o mapa) */
+.card-node.dimmed-card {
+  opacity: 0.25;
+}
+
+.card-node.cross-highlighted {
+  z-index: calc(var(--z-cards, 100) + 15);
+}
+
+.card-node.cross-highlighted .clue-card {
+  border-color: #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35), 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* Zoom Semântico (< 48%): oculta ID hex e micro-botões, amplia Título + Status + Badge de Tipo */
+.corkboard-canvas.semantic-zoom-low .clue-card .clue-uuid,
+.corkboard-canvas.semantic-zoom-low .clue-card .clue-inline-icon,
+.corkboard-canvas.semantic-zoom-low .clue-card .decision-bar,
+.corkboard-canvas.semantic-zoom-low .clue-card .badges-container .type-badge:not(:first-child),
+.clue-card.semantic-compact .clue-uuid,
+.clue-card.semantic-compact .clue-inline-icon,
+.clue-card.semantic-compact .decision-bar,
+.clue-card.semantic-compact .badges-container .type-badge:not(:first-child) {
+  display: none;
+}
+
+.corkboard-canvas.semantic-zoom-low .clue-card .clue-image-container,
+.clue-card.semantic-compact .clue-image-container {
+  height: 112px;
+}
+
+.corkboard-canvas.semantic-zoom-low .clue-card .badges-container .type-badge:first-child,
+.clue-card.semantic-compact .badges-container .type-badge:first-child {
+  width: 36px;
+  height: 36px;
+  border-width: 2px;
+  background: rgba(10, 14, 21, 0.96);
+}
+
+.corkboard-canvas.semantic-zoom-low .clue-card .clue-info,
+.clue-card.semantic-compact .clue-info {
+  min-height: 130px;
+  padding: 14px 14px 28px;
+  justify-content: flex-start;
+}
+
+.corkboard-canvas.semantic-zoom-low .clue-card .clue-info h3,
+.clue-card.semantic-compact .clue-info h3 {
+  margin-top: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.corkboard-canvas.semantic-zoom-low .clue-card .evidence-state-stamp,
+.clue-card.semantic-compact .evidence-state-stamp {
+  font-size: 11px;
+  padding: 4px 7px;
+  bottom: 8px;
+  right: 10px;
+}
+
+/* Container query para cards compactos */
+@container evidence-card (max-width: 225px) {
+  .clue-info {
+    padding: 10px 12px;
+  }
+
+  .clue-info h3 {
+    font-size: 11px;
+  }
+
+  .decision-bar {
+    padding: 6px;
+    gap: 2px;
+  }
+
+  .btn-decision {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 @keyframes evidence-stamp-glow {

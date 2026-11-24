@@ -1,13 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
-
-:root {
+.invite-backdrop {
   --nexus-blue: #cbd5e1;
   --nexus-blue-glow: rgb(203 213 225 / 24%);
-  --ordo-red: #e63946;
+  --ordo-red: var(--institutional-red, #e63946);
   --ordo-red-glow: rgb(230 57 70 / 30%);
-}
-
-.invite-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(11, 12, 16, 0.85);
@@ -16,7 +11,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4, 16px);
+  padding:
+    max(var(--space-4, 16px), env(safe-area-inset-top, 0px))
+    max(var(--space-3, 12px), env(safe-area-inset-right, 0px))
+    max(var(--space-4, 16px), env(safe-area-inset-bottom, 0px))
+    max(var(--space-3, 12px), env(safe-area-inset-left, 0px));
   box-sizing: border-box;
 }
 
@@ -24,9 +23,10 @@
   width: min(520px, 100%);
   max-height: 90dvh;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
-  background: linear-gradient(180deg, rgba(17, 20, 27, 0.98), rgba(11, 12, 16, 0.95));
-  padding: 24px 20px;
+  background: linear-gradient(180deg, rgba(17, 20, 27, 0.98), rgba(11, 12, 16, 0.96));
+  padding: 20px 16px;
   border: 1px solid var(--border, rgba(203, 213, 225, 0.2));
   color: var(--text-primary, #f1f5f9);
   border-radius: var(--radius-md, 8px);
@@ -40,23 +40,95 @@
 
 @media (min-width: 640px) {
   .invite-modal {
-    padding: 30px;
+    padding: 28px;
   }
+}
+
+.invite-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .invite-modal h2 {
   color: var(--nexus-blue);
-  letter-spacing: 2px;
+  font-size: clamp(1rem, 4.2vw, 1.25rem);
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 20px;
+  margin: 0;
   text-shadow: 0 0 10px rgb(203 213 225 / 20%);
+  overflow-wrap: anywhere;
+}
+
+.invite-modal-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-h-md-mobile, 44px);
+  min-height: var(--control-h-md-mobile, 44px);
+  background: transparent;
+  border: 1px solid var(--border, #29313d);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+}
+
+.invite-modal-close:hover {
+  color: #fff;
+  border-color: var(--nexus-blue);
+}
+
+.invite-link-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 480px) {
+  .invite-link-row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.invite-link-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  min-height: var(--control-h-md-mobile, 44px);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border, #444);
+  color: #c6a45f;
+  padding: 10px 12px;
+  font-size: 16px; /* >= 16px no touch */
+  font-family: var(--font-terminal, monospace);
+  border-radius: var(--radius-sm, 4px);
+  box-sizing: border-box;
+}
+
+.invite-copy-btn {
+  min-height: var(--control-h-md-mobile, 44px);
+  padding: 10px 18px;
+  background: #c6a45f;
+  color: #000;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  font-family: inherit;
+  letter-spacing: 1px;
+  border-radius: var(--radius-sm, 4px);
+  flex: 0 0 auto;
 }
 
 .invite-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 @media (min-width: 480px) {
@@ -67,16 +139,18 @@
 }
 
 .invite-form input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(203, 213, 225, 0.2);
   color: #f1f5f9;
   padding: 10px 14px;
-  min-height: var(--control-h-md, 40px);
+  min-height: var(--control-h-md-mobile, 44px);
   border-radius: var(--radius-sm, 4px);
   font-family: inherit;
   font-size: 16px; /* Previne auto-zoom no iOS */
-  transition: all 0.3s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   box-sizing: border-box;
 }
 
@@ -91,15 +165,15 @@
   color: var(--ordo-red, #e63946);
   border: 1px solid var(--ordo-red, #e63946);
   padding: 10px 18px;
-  min-height: var(--control-h-md, 40px);
+  min-height: var(--control-h-md-mobile, 44px);
   cursor: pointer;
   border-radius: var(--radius-sm, 4px);
   font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 2px;
-  font-weight: bold;
+  font-weight: 700;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,8 +186,8 @@
 }
 
 .members-list {
-  margin-top: 25px;
-  padding-top: 20px;
+  margin-top: 22px;
+  padding-top: 18px;
   border-top: 1px solid rgb(203 213 225 / 10%);
 }
 
@@ -128,7 +202,7 @@
 .member-item {
   padding: 10px 0;
   border-top: 1px dashed rgb(203 213 225 / 15%);
-  color: rgb(241 245 249 / 80%);
+  color: rgb(241 245 249 / 85%);
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -138,4 +212,8 @@
 .member-item::before {
   content: "▸";
   color: var(--nexus-blue);
+}
+
+body.performance-mode .invite-backdrop {
+  backdrop-filter: none;
 }

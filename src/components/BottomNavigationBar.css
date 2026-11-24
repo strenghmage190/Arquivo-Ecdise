@@ -157,11 +157,12 @@
   }
 
   .mobile-tool-btn:active,
-  .mobile-tool-btn:hover {
-    border-color: #64748b;
+  .mobile-tool-btn:hover,
+  .mobile-tool-btn.is-active {
+    border-color: #38bdf8;
     background: #1b2330;
     color: var(--text-primary);
-    box-shadow: 0 0 9px rgb(148 163 184 / 16%);
+    box-shadow: 0 0 9px rgb(56 189 248 / 22%);
   }
 
   .tool-icon {

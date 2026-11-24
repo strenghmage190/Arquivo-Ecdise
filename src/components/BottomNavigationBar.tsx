@@ -1,51 +1,91 @@
-import { Flashlight, FolderOpen, House, LayoutPanelTop, Link2, LocateFixed, Lock, Menu, MoreHorizontal, Redo2, Search, Settings, Terminal, Undo2, X, Zap } from 'lucide-react';
+import {
+  BoxSelect,
+  Flashlight,
+  Grid,
+  House,
+  LayoutPanelTop,
+  Link2,
+  LocateFixed,
+  Lock,
+  Maximize2,
+  MoreHorizontal,
+  Plus,
+  Radar,
+  Redo2,
+  Search,
+  Terminal,
+  Undo2,
+  X,
+  Zap,
+} from 'lucide-react';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { useHaptics } from '../hooks/useHaptics';
 import './BottomNavigationBar.css';
 
-// Definição clara das ferramentas disponíveis no mobile agrupadas por categoria
-const MOBILE_TOOL_GROUPS = [
+interface MobileToolDef {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  tooltip: string;
+  gmOnly?: boolean;
+}
+
+const MOBILE_TOOL_GROUPS: Array<{ id: string; label: string; tools: MobileToolDef[] }> = [
   {
     id: 'creation-vision',
-    label: 'Criação / Visão',
+    label: 'Criação & Câmera',
     tools: [
-      { id: 'create', icon: <Settings size={20} />, label: 'Criar', tooltip: 'Criar nova evidência', gmOnly: true },
-      { id: 'reset-cam', icon: <LocateFixed size={20} />, label: 'Focar', tooltip: 'Centralizar câmera no quadro' },
+      { id: 'create', icon: <Plus size={19} />, label: 'Criar', tooltip: 'Criar nova evidência', gmOnly: true },
+      { id: 'fit-view', icon: <Maximize2 size={19} />, label: 'Enquadrar', tooltip: 'Enquadrar todas as pistas (Zoom to Fit)' },
+      { id: 'reset-cam', icon: <LocateFixed size={19} />, label: 'Reset 100%', tooltip: 'Resetar câmera para 100%' },
+      { id: 'minimap', icon: <Radar size={19} />, label: 'Minimapa', tooltip: 'Alternar Minimapa Tático' },
     ],
   },
   {
     id: 'connections-layers',
-    label: 'Conexões / Camadas',
+    label: 'Conexões & Quadro',
     tools: [
-      { id: 'connect', icon: <Link2 size={20} />, label: 'Conectar', tooltip: 'Conectar pistas com fios' },
-      { id: 'uv', icon: <Flashlight size={20} />, label: 'Luz UV', tooltip: 'Alternar Luz Ultravioleta (UV)' },
-      { id: 'organize', icon: <LayoutPanelTop size={20} />, label: 'Organizar', tooltip: 'Organizar pistas no quadro' },
-      { id: 'decoder', icon: <Lock size={20} />, label: 'Decodificar', tooltip: 'Decodificador de texto' },
+      { id: 'connect', icon: <Link2 size={19} />, label: 'Conectar', tooltip: 'Conectar pistas com fios' },
+      { id: 'marquee', icon: <BoxSelect size={19} />, label: 'Seleção', tooltip: 'Seleção em área (Marquee)' },
+      { id: 'uv', icon: <Flashlight size={19} />, label: 'Luz UV', tooltip: 'Alternar Luz Ultravioleta (UV)' },
+      { id: 'organize', icon: <LayoutPanelTop size={19} />, label: 'Organizar', tooltip: 'Organizar pistas no quadro' },
+      { id: 'snap-grid', icon: <Grid size={19} />, label: 'Grade', tooltip: 'Alternar Snap to Grid' },
     ],
   },
   {
     id: 'search-history',
-    label: 'Busca / Histórico',
+    label: 'Busca, C.R.I.S. & Histórico',
     tools: [
-      { id: 'search', icon: <Search size={20} />, label: 'Buscar', tooltip: 'Buscar pistas no quadro' },
-      { id: 'undo', icon: <Undo2 size={20} />, label: 'Desfazer', tooltip: 'Desfazer última alteração' },
-      { id: 'redo', icon: <Redo2 size={20} />, label: 'Refazer', tooltip: 'Refazer última alteração' },
+      { id: 'search', icon: <Search size={19} />, label: 'Buscar', tooltip: 'Buscar pistas no quadro' },
+      { id: 'terminal', icon: <Terminal size={19} />, label: 'C.R.I.S.', tooltip: 'Abrir Terminal C.R.I.S.' },
+      { id: 'decoder', icon: <Lock size={19} />, label: 'Decoder', tooltip: 'Decodificador de texto' },
+      { id: 'undo', icon: <Undo2 size={19} />, label: 'Desfazer', tooltip: 'Desfazer última alteração' },
+      { id: 'redo', icon: <Redo2 size={19} />, label: 'Refazer', tooltip: 'Refazer última alteração' },
     ],
   },
   {
     id: 'settings-performance',
-    label: 'Configurações / Performance',
+    label: 'Sistema',
     tools: [
-      { id: 'terminal', icon: <Terminal size={20} />, label: 'Console', tooltip: 'Abrir Terminal C.R.I.S.' },
-      { id: 'performance', icon: <Zap size={20} />, label: 'Desempenho', tooltip: 'Alternar Modo Performance' },
+      { id: 'performance', icon: <Zap size={19} />, label: 'Desempenho', tooltip: 'Alternar Modo Performance' },
     ],
   },
 ];
 
-const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaster = false }) => {
+interface BottomNavigationBarProps {
+  isGameMaster?: boolean;
+  activeTools?: Record<string, boolean>;
+}
+
+const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
+  isGameMaster = false,
+  activeTools = {},
+}) => {
   const [showMore, setShowMore] = React.useState(false);
   const toggleBtnRef = React.useRef<HTMLButtonElement | null>(null);
   const firstToolRef = React.useRef<HTMLButtonElement | null>(null);
+  const { selection } = useHaptics();
 
   const closeSheet = React.useCallback(() => {
     try {
@@ -53,58 +93,63 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
       if (active && (active.tagName === 'BUTTON' || active.tagName === 'INPUT' || active.tagName === 'A')) {
         active.blur();
       }
-    } catch (e) {}
+    } catch {
+      // ignore
+    }
     setShowMore(false);
-    // give browser a tick to update aria-hidden then focus the toggle
-    setTimeout(() => { try { toggleBtnRef.current?.focus(); } catch (e) {} }, 0);
+    setTimeout(() => {
+      try {
+        toggleBtnRef.current?.focus();
+      } catch {
+        // ignore
+      }
+    }, 0);
   }, []);
 
-  // focus first tool when sheet opens; handle Escape to close
   React.useEffect(() => {
     if (showMore) {
-      setTimeout(() => { try { firstToolRef.current?.focus(); } catch (e) {} }, 0);
-      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { closeSheet(); } };
+      setTimeout(() => {
+        try {
+          firstToolRef.current?.focus();
+        } catch {
+          // ignore
+        }
+      }, 0);
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') closeSheet();
+      };
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
     }
     return undefined;
   }, [showMore, closeSheet]);
 
-  React.useEffect(() => {
-    console.debug('BottomNav: showMore state', showMore);
-  }, [showMore]);
-
-  // Função disparadora de eventos
   const triggerTool = (toolId: string) => {
-    console.debug('BottomNav: triggerTool', toolId);
-    // Primeiro tente a função global exposta (garante entrega quando o evento pode chegar antes do listener)
+    selection();
     try {
       const anyWin = window as any;
       if (typeof anyWin.handleInvestigationTool === 'function') {
         anyWin.handleInvestigationTool(toolId);
-        try { closeSheet(); } catch (err) { /* ignore */ }
+        closeSheet();
         return;
       }
-    } catch (e) {
-      // não crítico
-      // eslint-disable-next-line no-console
-      console.warn('BottomNav: global handler call failed', e);
+    } catch {
+      // fallback below
     }
 
-    // Fallback: dispare o evento que o InvestigationBoard também escuta
     try {
-      const event = new CustomEvent('investigation:tool', { detail: toolId, bubbles: true, composed: true });
+      const event = new CustomEvent('investigation:tool', {
+        detail: toolId,
+        bubbles: true,
+        composed: true,
+      });
       window.dispatchEvent(event);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('BottomNav: dispatch event failed', e);
+    } catch {
+      // ignore
     }
-
-    // Fecha o menu após clicar (opcional)
-    try { closeSheet(); } catch (err) { /* ignore in edge cases */ }
+    closeSheet();
   };
 
-  // Build sheet/overlay as portal so it's not clipped by parent containers
   const visibleGroups = MOBILE_TOOL_GROUPS
     .map((group) => ({
       ...group,
@@ -115,12 +160,15 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
 
   const sheet = (
     <>
-      {/* Overlay Escuro quando menu está aberto */}
       {showMore && (
-        <div className="mobile-menu-overlay" onClick={closeSheet} tabIndex={-1} aria-hidden={!showMore} />
+        <div
+          className="mobile-menu-overlay"
+          onClick={closeSheet}
+          tabIndex={-1}
+          aria-hidden={!showMore}
+        />
       )}
 
-      {/* Menu Gaveta (Bottom Sheet) */}
       <div
         id="mobile-tools-sheet"
         className={`mobile-tools-sheet ${showMore ? 'open' : ''}`}
@@ -128,11 +176,20 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
         aria-hidden={!showMore}
         aria-modal={showMore}
         aria-labelledby="mobile-tools-title"
-        onKeyDown={(e) => { if (e.key === 'Escape') closeSheet(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') closeSheet();
+        }}
       >
         <div className="mobile-sheet-header">
-          <span id="mobile-tools-title">FERRAMENTAS</span>
-          <button type="button" className="close-btn" onClick={closeSheet} aria-label="Fechar ferramentas"><X size={16} /></button>
+          <span id="mobile-tools-title">FERRAMENTAS DO QUADRO</span>
+          <button
+            type="button"
+            className="close-btn"
+            onClick={closeSheet}
+            aria-label="Fechar ferramentas"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         <div className="mobile-tools-groups">
@@ -143,15 +200,17 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
                 {group.tools.map((tool) => {
                   const isFirst = renderedToolIndex === 0;
                   renderedToolIndex += 1;
+                  const isActive = Boolean(activeTools[tool.id]);
                   return (
                     <button
                       key={tool.id}
                       ref={isFirst ? firstToolRef : undefined}
                       type="button"
-                      className="mobile-tool-btn"
-                      onClick={() => { console.debug('BottomNav: click tool', tool.id); triggerTool(tool.id); }}
+                      className={`mobile-tool-btn ${isActive ? 'is-active' : ''}`}
+                      onClick={() => triggerTool(tool.id)}
                       title={tool.tooltip}
                       aria-label={tool.tooltip || tool.label}
+                      aria-pressed={isActive}
                     >
                       <span className="tool-icon">{tool.icon}</span>
                       <span className="tool-label">{tool.label}</span>
@@ -168,26 +227,47 @@ const BottomNavigationBar: React.FC<{ isGameMaster?: boolean }> = ({ isGameMaste
 
   return (
     <>
-      {/* Render sheet into body to avoid clipping */}
       {typeof document !== 'undefined' && ReactDOM.createPortal(sheet, document.body)}
 
-      {/* Barra de Navegação Fixa */}
-      <nav className="mobile-bottom-bar">
-        <button type="button" className="nav-item" onClick={() => window.location.href = '/'}>
+      <nav className="mobile-bottom-bar" aria-label="Navegação Mobile">
+        <button
+          type="button"
+          className="nav-item"
+          onClick={() => {
+            selection();
+            window.location.href = '/';
+          }}
+        >
           <House className="icon" size={20} />
           <span>Início</span>
         </button>
-        
-        <button type="button" className="nav-item active">
-          <LayoutPanelTop className="icon" size={20} />
-          <span>Quadro</span>
+
+        <button
+          type="button"
+          className={`nav-item ${activeTools.search ? 'active-tab' : ''}`}
+          onClick={() => triggerTool('search')}
+        >
+          <Search className="icon" size={20} />
+          <span>Buscar</span>
         </button>
 
-        <button 
+        <button
+          type="button"
+          className={`nav-item ${activeTools.uv ? 'active-tab' : ''}`}
+          onClick={() => triggerTool('uv')}
+        >
+          <Flashlight className="icon" size={20} />
+          <span>Luz UV</span>
+        </button>
+
+        <button
           ref={toggleBtnRef}
           type="button"
-          className={`nav-item ${showMore ? 'active-tab' : ''}`} 
-          onClick={() => { console.debug('BottomNav: toggle showMore ->', !showMore); setShowMore((s) => !s); }}
+          className={`nav-item ${showMore ? 'active-tab' : ''}`}
+          onClick={() => {
+            selection();
+            setShowMore((s) => !s);
+          }}
           aria-expanded={showMore}
         >
           <MoreHorizontal className="icon" size={20} />
