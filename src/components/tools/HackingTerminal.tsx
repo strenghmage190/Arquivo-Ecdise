@@ -21,16 +21,11 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     };
   }, []);
 
-  // Boot sequence on mount
+  // Boot sequence on mount (fast, non-blocking)
   useEffect(() => {
     const bootMessages = [
-      { delay: 300, text: '&gt; Verificando integridade do sistema...', type: 'system' },
-      { delay: 800, text: '&gt; [OK] Núcleo operacional estável', type: 'system' },
-      { delay: 1400, text: '&gt; Inicializando módulos de vídeo...', type: 'system' },
-      { delay: 2000, text: '&gt; [ERRO] Driver de vídeo corrompido detectado.', type: 'error' },
-      { delay: 2600, text: '&gt; Tentando bypass de segurança...', type: 'system' },
-      { delay: 3200, text: '&gt; Autenticação necessária para bypass.', type: 'warning' },
-      { delay: 3800, text: '&gt; Sistema aguardando credenciais.', type: 'system' }
+      { delay: 100, text: '&gt; Verificando integridade do sistema C.R.I.S....', type: 'system' },
+      { delay: 350, text: '&gt; [OK] Autenticação necessária para bypass.', type: 'warning' },
     ];
 
     bootMessages.forEach(({ delay, text, type }) => {
@@ -42,7 +37,7 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
 
     const finalTimer = window.setTimeout(() => {
       setBootComplete(true);
-    }, 4000);
+    }, 500);
     timers.current.push(finalTimer);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,16 +74,24 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
 
   function processResponse(query: string) {
     addLog('&gt; Analisando parâmetros de busca...', 'system');
-    const isGlitch = Math.random() < 0.2;
+    const q = query.trim().toLowerCase();
+    const target = (correctPassword || '').trim().toLowerCase();
     let responseText = '';
-    if (query.toLowerCase().includes('ajuda')) {
-      responseText = 'Funções disponíveis: Protocolo de Criação, Acesso a Arquivos, Desconexão.';
-    } else if (query.toLowerCase().includes((correctPassword || '').toLowerCase())) {
+    if (q === 'ajuda' || q === 'help') {
+      responseText = 'Comandos: ajuda | status | dica | clear — ou digite a credencial de acesso.';
+    } else if (q === 'dica') {
+      responseText = hint ? `Dica do Sistema: ${hint}` : `Credencial esperada possui ${target.length || '?'} caracteres.`;
+    } else if (q === 'status') {
+      responseText = `Tentativas registradas: ${attempts + 1}. Terminal aguardando credencial válida.`;
+    } else if (target && q === target) {
       responseText = 'Chave válida. Concedendo acesso...';
+    } else if (target && q.length === target.length) {
+      responseText = `Acesso negado. Comprimento compatível (${target.length} chars), mas assinatura incorreta.`;
     } else {
-      responseText = 'Dados insuficientes. Especifique parâmetros ou aumente nível de autorização.';
+      responseText = 'Acesso negado. Use "dica" se precisar de orientação.';
     }
 
+    const isGlitch = Math.random() < 0.15;
     if (isGlitch) {
       const t1 = window.setTimeout(() => {
         const glitchMsg = 'NÃO... PARE... A DOR...';
@@ -129,7 +132,7 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     timers.current.push(t);
   };
 
-  const quickCommands = ['ajuda', correctPassword || 'ORDOS', 'status', 'bypass', 'clear'];
+  const quickCommands = ['ajuda', 'status', 'dica', 'clear'];
 
   return (
     <div className="nexus-container">

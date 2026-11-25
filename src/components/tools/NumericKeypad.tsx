@@ -77,6 +77,20 @@ export default function NumericKeypad({ code, onUnlock, onInput, smudgeHints = [
       <div className="keypad-actions">
         <button className="keypad-mini" onClick={handleClear}>limpar</button>
       </div>
+      {investigationId && (
+        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
+          <TeamFindingsPopover
+            onSelectValue={(val) => {
+              const digits = val.replace(/\D/g, '').slice(0, 6);
+              if (digits) {
+                setInput(digits);
+                setStatus('locked');
+                onInput && onInput(digits);
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

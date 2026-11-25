@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import {
+  Archive,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
@@ -81,6 +82,11 @@ import {
 } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
 import { ForensicDispatchProvider } from '../../contexts/ForensicDispatchContext';
+import { CollaborationProvider, useCollaboration } from '../../contexts/CollaborationContext';
+import { useAuth } from '../auth/AuthProvider';
+import FindingsDrawer from '../collaboration/FindingsDrawer';
+import { useTacticalPings } from '../../hooks/useTacticalPings';
+import { TEAM_STATUS_META, TeamCardStatus } from '../../types/collaboration';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
@@ -197,8 +203,32 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin, uvTouc
   );
 };
 
-export const InvestigationBoard = React.memo(function InvestigationBoard({ investigationId }: Props) {
+function InvestigationBoardInner({
+  investigationId,
+  onRegisterNavigateToCard,
+}: Props & { onRegisterNavigateToCard?: (fn: (cardId: string) => void) => void }) {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const user = session?.user;
+  const {
+    pinsByCardId,
+    cardStatuses,
+    setCardTeamStatus,
+    findings,
+    isDrawerOpen,
+    setDrawerOpen,
+  } = useCollaboration();
+  const authorName =
+    (user as any)?.user_metadata?.code_name ||
+    (user as any)?.email?.split('@')[0] ||
+    'Agente';
+  const { tacticalPings, sendTacticalPing } = useTacticalPings(
+    investigationId,
+    (user as any)?.id,
+    authorName
+  );
+  const [teamStatusFilter, setTeamStatusFilter] = useState<'all' | TeamCardStatus>('all');
+  const [mobilePingMode, setMobilePingMode] = useState(false);
   const [cards, setCards] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   // Context menu state for connection right-click
@@ -1823,6 +1853,17 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     setSelectedIds([cardId]);
   }, [panToPosition]);
 
+  useEffect(() => {
+    if (!onRegisterNavigateToCard) return;
+    onRegisterNavigateToCard((cardId: string) => {
+      panToCard(cardId);
+      const target = cardsRef.current.find((c) => c.id === cardId);
+      if (target) {
+        setInspectCard(target);
+      }
+    });
+  }, [onRegisterNavigateToCard, panToCard]);
+
   const zoomToFit = useCallback(() => {
     const canSeeHidden = isGameMaster && !playerView && showHiddenClues;
     const visible = (cardsRef.current || []).filter((c) => c && (!c.is_hidden || canSeeHidden));
@@ -2888,6 +2929,22 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               <KeyRound size={15} /> Códigos{unlockedCodes.length > 0 ? ` (${unlockedCodes.length})` : ''}
             </button>
             <button
+              className={`hud-btn ${isDrawerOpen ? 'active' : ''}`}
+              onClick={() => setDrawerOpen(!isDrawerOpen)}
+              data-tooltip="Gaveta de Achados da Equipe"
+            >
+              <Archive size={15} /> Gaveta{findings.length > 0 ? ` (${findings.length})` : ''}
+            </button>
+            {isMobileDevice && (
+              <button
+                className={`hud-btn ${mobilePingMode ? 'active' : ''}`}
+                onClick={() => setMobilePingMode((m) => !m)}
+                data-tooltip="Toque no quadro para enviar Ping Tático ao vivo"
+              >
+                <LocateFixed size={15} /> {mobilePingMode ? 'Toque no Quadro...' : 'Pingar'}
+              </button>
+            )}
+            <button
               className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`}
               onClick={() => setIsUV(!isUV)}
               data-tooltip={isUV ? 'Desativar Luz Ultravioleta (UV)' : 'Ativar Luz Ultravioleta (UV)'}
@@ -2907,6 +2964,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               aria-label="Filtrar por Status"
             >
               {statusFilter === 'all' ? 'TODOS' : statusFilter === 'verified' ? 'FATOS' : statusFilter === 'theory' ? 'TEORIAS' : 'FALSOS'}
+            </button>
+            <button
+              className={`hud-btn ${teamStatusFilter !== 'all' ? 'active' : ''}`}
+              onClick={() => {
+                const order: Array<'all' | TeamCardStatus> = ['all', 'unexplored', 'has_clue', 'stuck', 'exhausted'];
+                const next = order[(order.indexOf(teamStatusFilter) + 1) % order.length];
+                setTeamStatusFilter(next);
+              }}
+              data-tooltip="Filtrar por Progresso da Equipe"
+              aria-label="Filtrar por Progresso da Equipe"
+            >
+              {teamStatusFilter === 'all' ? 'EQUIPE: TODOS' : `${TEAM_STATUS_META[teamStatusFilter].icon} ${TEAM_STATUS_META[teamStatusFilter].shortLabel.toUpperCase()}`}
             </button>
             <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar pistas (Ctrl+F)" aria-label="Buscar pistas">
               <Search size={16} />
@@ -3228,6 +3297,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               setCreateModalOpen(true);
               return;
             }
+            if (e.altKey || mobilePingMode) {
+              sendTacticalPing(worldX, worldY);
+              if (mobilePingMode) setMobilePingMode(false);
+              return;
+            }
             if (noteMode) {
               const newNote = { id: Date.now().toString(), x: worldX, y: worldY, text: '', color: '#fcd34d' };
               setNotes([...notes, newNote]);
@@ -3427,9 +3501,14 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             const isSelected = selectedIds.includes(card.id);
             const isNew = lastCreatedId === card.id;
             const cardStatus = (card as any)?.metadata?.status || '';
-            const matchesStatusFilter = statusFilter === 'all' || cardStatus === statusFilter;
+            const cardPins = pinsByCardId[card.id] || [];
+            const unresolvedPinCount = cardPins.filter((p) => !p.is_resolved).length;
+            const teamStatus: TeamCardStatus = cardStatuses[card.id] || 'unexplored';
+            const matchesStatusFilter =
+              (statusFilter === 'all' || cardStatus === statusFilter) &&
+              (teamStatusFilter === 'all' || teamStatus === teamStatusFilter);
             const isCrossHighlighted = activeCrossHighlightIds ? activeCrossHighlightIds.has(card.id) : false;
-            const isDimmed = (activeCrossHighlightIds && !isCrossHighlighted) || (statusFilter !== 'all' && !matchesStatusFilter);
+            const isDimmed = (activeCrossHighlightIds && !isCrossHighlighted) || ((statusFilter !== 'all' || teamStatusFilter !== 'all') && !matchesStatusFilter);
             return (
                 <div
                 key={card.id}
@@ -3622,11 +3701,25 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     onOpenHex={() => handleOpenCardInHex(card)}
                     performanceMode={performanceMode}
                     semanticCompact={zoom < 0.48}
+                    pinCount={cardPins.length}
+                    unresolvedPinCount={unresolvedPinCount}
+                    teamStatus={teamStatus}
+                    onChangeTeamStatus={(nextStatus) => setCardTeamStatus(card.id, nextStatus)}
                   />
                 </div>
               </div>
             );
           })}
+
+          {tacticalPings.map((ping) => (
+            <div
+              key={ping.id}
+              className="tactical-ping-pulse"
+              style={{ left: ping.x, top: ping.y }}
+            >
+              <span className="tactical-ping-label">📡 {ping.authorName}</span>
+            </div>
+          ))}
 
           {notes.map(note => (
             <div 
@@ -4510,7 +4603,43 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           onToggle={() => setGmOverwatchOpen(!gmOverwatchOpen)}
         />
       )}
+
+      <FindingsDrawer
+        cardTitlesById={React.useMemo(() => {
+          const map: Record<string, string> = {};
+          cards.forEach((c) => {
+            if (c?.id) map[c.id] = c.title || 'Pista';
+          });
+          return map;
+        }, [cards])}
+      />
     </div>
+  );
+}
+
+export const InvestigationBoard = React.memo(function InvestigationBoard({ investigationId }: Props) {
+  const { session } = useAuth();
+  const user = session?.user;
+  const navigateRef = useRef<((cardId: string) => void) | null>(null);
+  const authorName =
+    (user as any)?.user_metadata?.code_name ||
+    (user as any)?.email?.split('@')[0] ||
+    'Agente';
+
+  return (
+    <CollaborationProvider
+      investigationId={investigationId}
+      currentUserId={(user as any)?.id || null}
+      authorName={authorName}
+      onNavigateToCard={(cardId) => navigateRef.current?.(cardId)}
+    >
+      <InvestigationBoardInner
+        investigationId={investigationId}
+        onRegisterNavigateToCard={(fn) => {
+          navigateRef.current = fn;
+        }}
+      />
+    </CollaborationProvider>
   );
 });
 

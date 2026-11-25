@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import './PatternLock.css';
 
 interface PatternLockProps {
@@ -11,6 +13,7 @@ interface PatternLockProps {
 const GRID = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export default function PatternLock({ code, onUnlock, onInput, allowEdit = false }: PatternLockProps) {
+  const { investigationId } = useCollaboration();
   const [pattern, setPattern] = useState<number[]>([]);
   const [status, setStatus] = useState<'locked' | 'error' | 'success'>('locked');
   const [isDragging, setIsDragging] = useState(false);
@@ -156,6 +159,23 @@ export default function PatternLock({ code, onUnlock, onInput, allowEdit = false
           OK
         </button>
       </div>
+      {!allowEdit && investigationId && (
+        <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
+          <TeamFindingsPopover
+            onSelectValue={(val) => {
+              const nodes = val
+                .split(/[-,\s]+/)
+                .map((n) => Number(n.trim()))
+                .filter((n) => Number.isInteger(n) && n >= 1 && n <= 9);
+              if (nodes.length > 0) {
+                setPattern(nodes);
+                setStatus('locked');
+                onInput && onInput(nodes.join('-'));
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, KeyRound, Keyboard, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, KeyRound, Keyboard, Link2, Lock, MessageSquare, Pencil, Pin, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
+import { TEAM_STATUS_META, TeamCardStatus } from '../../types/collaboration'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
 
@@ -34,9 +35,13 @@ export interface EvidenceCardProps {
   isNew?: boolean
   onSendToDecoder?: () => void
   onOpenHex?: () => void
+  pinCount?: number
+  unresolvedPinCount?: number
+  teamStatus?: TeamCardStatus
+  onChangeTeamStatus?: (nextStatus: TeamCardStatus) => void
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null, semanticCompact = false, isNew = false, onSendToDecoder, onOpenHex }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null, semanticCompact = false, isNew = false, onSendToDecoder, onOpenHex, pinCount = 0, unresolvedPinCount = 0, teamStatus = 'unexplored', onChangeTeamStatus }) => {
   // DEBUG: Log de props importantes
   if (cardType !== 'normal' || locked || isUV) {
     console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
@@ -219,6 +224,23 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {isNew && !(isGameMaster && !playerView) && (
             <div className="evidence-new-badge" title="Pista recém-descoberta ainda não aberta">NOVA</div>
           )}
+          {pinCount > 0 && (
+            <div
+              className="type-badge small"
+              style={{
+                background: unresolvedPinCount > 0 ? 'rgba(245, 158, 11, 0.9)' : 'rgba(56, 189, 248, 0.75)',
+                color: '#090d16',
+                fontWeight: 700,
+                padding: '2px 5px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+              title={`${pinCount} marcações (${unresolvedPinCount} pendentes)`}
+            >
+              <Pin size={10} /> {pinCount}
+            </div>
+          )}
         </div>
 
         {/* <Check className="lucide-icon inline-icon" size={16} /> Content container with view classes - NO NESTING */}
@@ -247,10 +269,40 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
       </div>
 
       <div className="clue-info">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="clue-uuid">ID: {shortId}</span>
-          {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
-          {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="clue-uuid">ID: {shortId}</span>
+            {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
+            {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
+          </div>
+          {onChangeTeamStatus && (() => {
+            const order: TeamCardStatus[] = ['unexplored', 'has_clue', 'stuck', 'exhausted'];
+            const meta = TEAM_STATUS_META[teamStatus] || TEAM_STATUS_META.unexplored;
+            const nextStatus = order[(order.indexOf(teamStatus) + 1) % order.length];
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChangeTeamStatus(nextStatus);
+                }}
+                title={`Status da equipe: ${meta.label} (clique para alternar)`}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: `1px solid ${meta.color}66`,
+                  color: meta.color,
+                  borderRadius: 999,
+                  padding: '1px 7px',
+                  fontSize: '0.66rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {meta.icon} {meta.shortLabel}
+              </button>
+            );
+          })()}
         </div>
         <h3 style={{ marginTop: 6 }}>
           {locked && !isGameMaster ? (
@@ -311,7 +363,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element','semanticCompact','isNew'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element','semanticCompact','isNew','pinCount','unresolvedPinCount','teamStatus'
   ];
   // Nota: onEdit e onOpen são funções, comparação por referência pode causar re-renders
   return keys.every((k) => prev[k] === next[k]);

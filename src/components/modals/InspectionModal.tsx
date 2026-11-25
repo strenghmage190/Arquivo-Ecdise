@@ -1108,6 +1108,7 @@ export default function InspectionModal({
           <PhysicalDocumentTable
             documentData={parsedMetadata.physical_document}
             title={currentCard.title}
+            cardId={currentCard.id}
           />
         </div>
       );
@@ -1242,7 +1243,15 @@ export default function InspectionModal({
       const videoSrc = unifiedMedia.videoUrl || currentCard.video_url;
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-          <CCTVPlayer src={videoSrc || ''} allowManage={isGameMaster} onReplace={handleReplaceVideo} onRemove={handleRemoveVideo} />
+          <CCTVPlayer
+            src={videoSrc || ''}
+            cameraName={parsedMetadata?.cctv_camera_name || currentCard.title || 'CAM-04 [SETOR C]'}
+            thermalSecretText={parsedMetadata?.thermal_secret_text}
+            cardId={currentCard.id}
+            allowManage={isGameMaster}
+            onReplace={handleReplaceVideo}
+            onRemove={handleRemoveVideo}
+          />
         </div>
       );
     }
