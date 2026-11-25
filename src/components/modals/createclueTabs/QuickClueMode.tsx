@@ -151,6 +151,31 @@ export default function QuickClueMode() {
 
   return (
     <div className="ccm-tab-stack">
+      <div className="ccm-section" style={{ padding: '10px 12px' }}>
+        <div className="ccm-label" style={{ marginBottom: 6 }}>ASSISTENTE POR INTENÇÃO (ATALHO DO MESTRE)</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button type="button" className="ccm-chip" onClick={() => jumpToAdvancedTab('visual')}>
+            Documento com Tinta Oculta / Rasgado
+          </button>
+          <button type="button" className="ccm-chip" onClick={() => jumpToAdvancedTab('audio')}>
+            Gravação com Sinal Escondido (48 kHz)
+          </button>
+          <button type="button" className="ccm-chip" onClick={() => jumpToAdvancedTab('seguranca')}>
+            Celular Apreendido (Multi-App)
+          </button>
+          <button
+            type="button"
+            className="ccm-chip"
+            onClick={() => {
+              setCoreState((s) => ({ ...s, evidenceType: 'glitch_puzzle' }));
+              jumpToAdvancedTab('glitch');
+            }}
+          >
+            Arquivo Corrompido (Glitch)
+          </button>
+        </div>
+      </div>
+
       {advancedChips.length > 0 && (
         <div className="ccm-chips-row">
           <span className="ccm-note" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
 import './EnigmaMachine.css';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -31,6 +32,23 @@ export default function EnigmaMachine({ onOutput }: { onOutput: (s: string) => v
   const [foreignChars, setForeignChars] = useState('Include');
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
+  const [copiedKeySheet, setCopiedKeySheet] = useState(false);
+
+  const copyKeySheet = () => {
+    const sheet = [
+      `=== FOLHA DE CHAVES (${model.toUpperCase()}) ===`,
+      `REFLETOR: ${reflector}`,
+      `ROTORES: ${rotorOrder.join(' - ')}`,
+      `POSIÇÃO INICIAL: ${positions.join(' - ')}`,
+      `ANÉIS (RING): ${ringSettings.join(' - ')}`,
+      `PLUGBOARD: ${plugPairs.trim() || 'NENHUM'}`,
+    ].join('\n');
+    try {
+      navigator.clipboard?.writeText(sheet);
+      setCopiedKeySheet(true);
+      setTimeout(() => setCopiedKeySheet(false), 1800);
+    } catch {}
+  };
 
   const encodeText = (text: string) => {
     const rotors = rotorOrder.map((label, i) => {
@@ -89,13 +107,13 @@ export default function EnigmaMachine({ onOutput }: { onOutput: (s: string) => v
   return (
     <div className="enigma-machine">
       <div className="machine-settings">
-        <label>Model</label>
+        <label>Modelo</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
           <option>Enigma M3</option>
           <option>Enigma M4</option>
         </select>
 
-        <label>Reflector</label>
+        <label>Refletor</label>
         <select value={reflector} onChange={e => setReflector(e.target.value)}>
           {Object.keys(REFLECTORS).map(r => (
             <option key={r} value={r}>
@@ -104,11 +122,31 @@ export default function EnigmaMachine({ onOutput }: { onOutput: (s: string) => v
           ))}
         </select>
 
-        <label>Foreign Characters</label>
+        <label>Caracteres Externos</label>
         <select value={foreignChars} onChange={e => setForeignChars(e.target.value)}>
-          <option>Include</option>
-          <option>Ignore</option>
+          <option value="Include">Incluir</option>
+          <option value="Ignore">Ignorar</option>
         </select>
+
+        <button
+          type="button"
+          onClick={copyKeySheet}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 9px',
+            borderRadius: 5,
+            border: '1px solid rgba(0,243,255,0.35)',
+            background: 'rgba(0,243,255,0.12)',
+            color: '#00f3ff',
+            fontSize: 11,
+            cursor: 'pointer',
+          }}
+        >
+          {copiedKeySheet ? <Check size={12} /> : <Copy size={12} />}
+          {copiedKeySheet ? 'Folha Copiada' : 'Copiar Folha de Chaves'}
+        </button>
       </div>
 
       <div className="rotor-settings">

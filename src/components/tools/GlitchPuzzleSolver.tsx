@@ -1,4 +1,4 @@
-import { Check, AlertTriangle, Lightbulb, Copy } from 'lucide-react';
+import { Check, AlertTriangle, Lightbulb, Copy, Lock, Unlock } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import GlitchImageEngine from './GlitchImageEngine';
 import { addCollectedCode } from '../../utils/codeTracking';
@@ -335,6 +335,49 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
               <div className="solver-hint"><Lightbulb className="lucide-icon inline-icon" size={16} /> {resolvedConfig.hint}</div>
             )}
           </div>
+
+          {(() => {
+            const fDist = Math.abs(freq - target.f);
+            const sDist = Math.abs(shift - target.s);
+            const cDist = Math.abs(chroma - target.c);
+            const fLocked = fDist <= tolF;
+            const sLocked = sDist <= tolS;
+            const cLocked = cDist <= tolC;
+            const fPct = Math.max(0, Math.round(100 - fDist * 2.5));
+            const sPct = Math.max(0, Math.round(100 - sDist * 2.5));
+            const cPct = Math.max(0, Math.round(100 - cDist * 2.5));
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
+                {[
+                  { label: 'FREQ', locked: fLocked, pct: fPct },
+                  { label: 'FASE', locked: sLocked, pct: sPct },
+                  { label: 'CROMO', locked: cLocked, pct: cPct },
+                ].map((ch) => (
+                  <div
+                    key={ch.label}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      border: `1px solid ${ch.locked ? '#10b981' : 'rgba(255,255,255,0.12)'}`,
+                      background: ch.locked ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255,255,255,0.03)',
+                      color: ch.locked ? '#6ee7b7' : '#94a3b8',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {ch.locked ? <Unlock size={11} /> : <Lock size={11} />}
+                      {ch.label}
+                    </span>
+                    <strong>{ch.locked ? 'TRAVADO' : `${ch.pct}%`}</strong>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {alignmentSatisfied && uvUrl && (
             <div className="uv-toggle">

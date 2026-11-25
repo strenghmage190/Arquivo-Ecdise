@@ -135,33 +135,30 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
       </div>
 
       <form className="collab-add-form" onSubmit={handleCreate}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <select
-            className="collab-select"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value as FindingCategory)}
-            aria-label="Categoria do achado"
-          >
-            {(Object.keys(FINDING_CATEGORY_META) as FindingCategory[]).map((cat) => (
-              <option key={cat} value={cat}>
-                {FINDING_CATEGORY_META[cat].label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            className="collab-input"
-            style={{ flex: 1 }}
-            placeholder="Ex: 7492, Dr. Arnaldo..."
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-          />
-        </div>
+        <select
+          className="collab-select"
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value as FindingCategory)}
+          aria-label="Categoria do achado"
+        >
+          {(Object.keys(FINDING_CATEGORY_META) as FindingCategory[]).map((cat) => (
+            <option key={cat} value={cat}>
+              {FINDING_CATEGORY_META[cat].label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          className="collab-input"
+          placeholder="Valor (ex: 7492, Dr. Arnaldo...)"
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+        />
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             type="text"
             className="collab-input"
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
             placeholder="Contexto opcional..."
             value={newDetails}
             onChange={(e) => setNewDetails(e.target.value)}
