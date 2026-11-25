@@ -14,15 +14,70 @@ import {
   Thermometer,
   Palette,
   Sparkles,
+  FlipHorizontal,
+  Scissors,
+  Plus,
 } from 'lucide-react';
+import { nanoid } from 'nanoid';
 import { Tooltip } from 'react-tooltip';
 import { toast } from 'sonner';
 import { validateImageFile } from '../../../utils/fileValidators';
 import { validateFile } from '../../../utils/storage';
+import {
+  DocumentLayer,
+  FragmentationConfig,
+  InkLayerType,
+  PhysicalDocumentMetadata,
+} from '../../../types/forensicPillars';
 
 type AlignLayerKey = 'uv' | 'thermal' | 'forensic' | 'filter';
 
+const DEFAULT_FRAGMENTATION: FragmentationConfig = {
+  mode: 'intact',
+  cols: 6,
+  rows: 1,
+  allowRotation: true,
+  allowFlip: true,
+};
+
+const createEmptyPhysicalDoc = (frontBaseUrl?: string | null): PhysicalDocumentMetadata => ({
+  version: 2,
+  frontBaseUrl: frontBaseUrl || null,
+  backBaseUrl: null,
+  layers: [],
+  fragmentation: { ...DEFAULT_FRAGMENTATION },
+});
+
+const INK_TYPE_OPTIONS: { value: InkLayerType; label: string }[] = [
+  { value: 'normal', label: 'Tinta Comum' },
+  { value: 'uv', label: 'Tinta UV (Luz Negra)' },
+  { value: 'thermal', label: 'Tinta Térmica (Calor)' },
+  { value: 'chromatic_r', label: 'Camuflagem Vermelha (R)' },
+  { value: 'chromatic_g', label: 'Camuflagem Verde (G)' },
+  { value: 'chromatic_b', label: 'Camuflagem Azul (B)' },
+];
+
+async function fileToSafeDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        reject(new Error('Falha ao ler imagem.'));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Falha ao ler imagem.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function TabVisual() {
+  const clueCtx = useClueModal() as ReturnType<typeof useClueModal> & {
+    physicalDocument?: PhysicalDocumentMetadata | null;
+    setPhysicalDocument?: React.Dispatch<React.SetStateAction<PhysicalDocumentMetadata | null>>;
+  };
   const {
     mediaState,
     setMediaState,
@@ -34,13 +89,31 @@ export default function TabVisual() {
     registerUrl,
     revokeUrl,
     setActiveTab,
-  } = useClueModal();
+  } = clueCtx;
+
+  const [localPhysicalDoc, setLocalPhysicalDoc] = useState<PhysicalDocumentMetadata | null>(null);
+  const physicalDoc = clueCtx.physicalDocument ?? localPhysicalDoc;
+
+  const updatePhysicalDoc = (
+    updater: (prev: PhysicalDocumentMetadata) => PhysicalDocumentMetadata
+  ) => {
+    const apply = (prev: PhysicalDocumentMetadata | null) =>
+      updater(prev || createEmptyPhysicalDoc(mediaState.previewUrl));
+    if (clueCtx.setPhysicalDocument) {
+      clueCtx.setPhysicalDocument(apply);
+    }
+    setLocalPhysicalDoc(apply);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const uvPngInputRef = useRef<HTMLInputElement>(null);
   const filterPngInputRef = useRef<HTMLInputElement>(null);
+  const backImageInputRef = useRef<HTMLInputElement>(null);
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [docLayerSide, setDocLayerSide] = useState<'front' | 'back'>('back');
+  const [newLayerInk, setNewLayerInk] = useState<InkLayerType>('uv');
+  const [newLayerText, setNewLayerText] = useState('');
 
   // Simple visual alignment overlay state
   const [alignLayer, setAlignLayer] = useState<AlignLayerKey>('uv');
@@ -219,6 +292,90 @@ export default function TabVisual() {
       setThermalConfig((s) => ({ ...s, enabled: true }));
     }
     setEditorState((s) => ({ ...s, showThermalEditor: true }));
+  };
+
+  const handleBackImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const validation = validateImageFile(file, 10 * 1024 * 1024, [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ]);
+    if (!validation.ok) {
+      toast.error(validation.reason || 'Imagem de verso inválida.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const dataUrl = await fileToSafeDataUrl(file);
+      updatePhysicalDoc((prev) => ({
+        ...prev,
+        backBaseUrl: dataUrl,
+      }));
+    } catch {
+      toast.error('Não foi possível processar a imagem do verso.');
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveBackImage = () => {
+    updatePhysicalDoc((prev) => ({
+      ...prev,
+      backBaseUrl: null,
+    }));
+  };
+
+  const handleAddDocLayer = () => {
+    const content = newLayerText.trim();
+    if (!content) {
+      toast.error('Digite o texto da camada antes de adicionar.');
+      return;
+    }
+    const colorMap: Record<InkLayerType, string> = {
+      normal: '#1e293b',
+      uv: '#a855f7',
+      thermal: '#5c3a1e',
+      chromatic_r: '#ef4444',
+      chromatic_g: '#22c55e',
+      chromatic_b: '#3b82f6',
+    };
+    const layer: DocumentLayer = {
+      id: nanoid(8),
+      side: docLayerSide,
+      inkType: newLayerInk,
+      kind: 'text',
+      content,
+      x: 50,
+      y: 50,
+      width: 60,
+      height: 20,
+      rotation: 0,
+      opacity: newLayerInk === 'uv' ? 0.95 : 1,
+      fontSize: 18,
+      color: colorMap[newLayerInk],
+    };
+    updatePhysicalDoc((prev) => ({
+      ...prev,
+      layers: [...prev.layers, layer],
+    }));
+    setNewLayerText('');
+  };
+
+  const handleRemoveDocLayer = (id: string) => {
+    updatePhysicalDoc((prev) => ({
+      ...prev,
+      layers: prev.layers.filter((l) => l.id !== id),
+    }));
+  };
+
+  const handleUpdateDocLayer = (id: string, patch: Partial<DocumentLayer>) => {
+    updatePhysicalDoc((prev) => ({
+      ...prev,
+      layers: prev.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+    }));
   };
 
   const filterTransform = filterConfig.transform || { left: 25, top: 25, width: 50, height: 50 };
@@ -890,6 +1047,301 @@ export default function TabVisual() {
               )}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* VERSO & FRAGMENTAÇÃO (physical_document) */}
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <FlipHorizontal size={16} /> Verso &amp; Fragmentação (Documento Físico)
+            <span data-tooltip-id="physical-doc-tip" className="ccm-help-icon">
+              <Info size={15} />
+            </span>
+          </h3>
+          <span className="ccm-code-pill">
+            {physicalDoc?.layers.length || 0} camadas •{' '}
+            {physicalDoc?.fragmentation.mode && physicalDoc.fragmentation.mode !== 'intact'
+              ? `${physicalDoc.fragmentation.cols} tiras`
+              : 'Intacto'}
+          </span>
+          <Tooltip id="physical-doc-tip" className="cyber-tooltip ccm-tooltip">
+            Configure imagem do verso, camadas de tinta (UV/Térmica/RGB) na frente ou verso e fragmentação em tiras para a Mesa de Luz.
+          </Tooltip>
+        </div>
+
+        {/* Verso: Imagem + URL */}
+        <div className="ccm-list-card">
+          <div className="ccm-section-head">
+            <span className="ccm-label-inline" style={{ fontSize: 12, fontWeight: 600 }}>
+              <FlipHorizontal size={14} /> Imagem do Verso (Opcional)
+            </span>
+          </div>
+
+          <div className="ccm-btn-row">
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              ref={backImageInputRef}
+              onChange={handleBackImageSelect}
+            />
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-primary"
+              onClick={() => backImageInputRef.current?.click()}
+            >
+              <Upload size={15} /> Selecionar Imagem do Verso
+            </button>
+            {physicalDoc?.backBaseUrl && (
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-danger"
+                onClick={handleRemoveBackImage}
+              >
+                <Trash2 size={15} /> Remover Verso
+              </button>
+            )}
+            <button
+              type="button"
+              className="ccm-btn"
+              disabled={!mediaState.previewUrl}
+              onClick={() => setEditorState((s) => ({ ...s, editorMode: 'uv' }))}
+              title="Abrir UVEditor na imagem principal"
+            >
+              <Sparkles size={15} /> Editar UV (Frente)
+            </button>
+          </div>
+
+          <div className="ccm-field">
+            <label className="ccm-label">URL Externa do Verso (opcional)</label>
+            <input
+              type="text"
+              className="ccm-input"
+              value={physicalDoc?.backBaseUrl && !physicalDoc.backBaseUrl.startsWith('data:') ? physicalDoc.backBaseUrl : ''}
+              onChange={(e) =>
+                updatePhysicalDoc((prev) => ({
+                  ...prev,
+                  backBaseUrl: e.target.value.trim() || null,
+                }))
+              }
+              placeholder="https://..."
+            />
+          </div>
+
+          {physicalDoc?.backBaseUrl && (
+            <div className="ccm-callout ccm-callout-info">
+              <div className="ccm-callout-left">
+                <img
+                  src={physicalDoc.backBaseUrl}
+                  alt="Prévia do verso"
+                  style={{ width: 56, height: 42, objectFit: 'cover', borderRadius: 4 }}
+                />
+                <span>Imagem do verso configurada</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Camadas Frente / Verso */}
+        <div className="ccm-list-card">
+          <div className="ccm-section-head">
+            <span className="ccm-label-inline" style={{ fontSize: 12, fontWeight: 600 }}>
+              <Layers size={14} /> Camadas de Tinta (Frente / Verso)
+            </span>
+            <div className="ccm-btn-row">
+              <button
+                type="button"
+                className={`ccm-btn ccm-btn-sm ${docLayerSide === 'front' ? 'ccm-btn-primary' : ''}`}
+                onClick={() => setDocLayerSide('front')}
+              >
+                Frente
+              </button>
+              <button
+                type="button"
+                className={`ccm-btn ccm-btn-sm ${docLayerSide === 'back' ? 'ccm-btn-primary' : ''}`}
+                onClick={() => setDocLayerSide('back')}
+              >
+                Verso
+              </button>
+            </div>
+          </div>
+
+          <div className="ccm-grid-3">
+            <div className="ccm-field">
+              <label className="ccm-label">Tipo de Tinta</label>
+              <select
+                className="ccm-input"
+                value={newLayerInk}
+                onChange={(e) => setNewLayerInk(e.target.value as InkLayerType)}
+              >
+                {INK_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="ccm-field" style={{ gridColumn: 'span 2' }}>
+              <label className="ccm-label">Texto da Camada ({docLayerSide === 'front' ? 'Frente' : 'Verso'})</label>
+              <div className="ccm-btn-row">
+                <input
+                  type="text"
+                  className="ccm-input"
+                  value={newLayerText}
+                  onChange={(e) => setNewLayerText(e.target.value)}
+                  placeholder="Ex: SENHA DO COFRE: 4920"
+                />
+                <button
+                  type="button"
+                  className="ccm-btn ccm-btn-primary"
+                  onClick={handleAddDocLayer}
+                >
+                  <Plus size={15} /> Adicionar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {(physicalDoc?.layers || []).filter((l) => l.side === docLayerSide).length > 0 && (
+            <div className="ccm-list-stack">
+              {(physicalDoc?.layers || [])
+                .filter((l) => l.side === docLayerSide)
+                .map((layer) => (
+                  <div key={layer.id} className="ccm-callout ccm-callout-info" style={{ flexWrap: 'wrap', gap: 8 }}>
+                    <div className="ccm-callout-left" style={{ flex: '1 1 220px' }}>
+                      <span className="ccm-code-pill">{layer.inkType.toUpperCase()}</span>
+                      <input
+                        type="text"
+                        className="ccm-input"
+                        value={layer.content}
+                        onChange={(e) => handleUpdateDocLayer(layer.id, { content: e.target.value })}
+                      />
+                    </div>
+                    <div className="ccm-btn-row" style={{ alignItems: 'center' }}>
+                      <label className="ccm-label" style={{ margin: 0 }}>X%</label>
+                      <input
+                        type="number"
+                        className="ccm-input"
+                        style={{ width: 64 }}
+                        min={0}
+                        max={100}
+                        value={layer.x}
+                        onChange={(e) => handleUpdateDocLayer(layer.id, { x: Number(e.target.value) || 0 })}
+                      />
+                      <label className="ccm-label" style={{ margin: 0 }}>Y%</label>
+                      <input
+                        type="number"
+                        className="ccm-input"
+                        style={{ width: 64 }}
+                        min={0}
+                        max={100}
+                        value={layer.y}
+                        onChange={(e) => handleUpdateDocLayer(layer.id, { y: Number(e.target.value) || 0 })}
+                      />
+                      <button
+                        type="button"
+                        className="ccm-btn ccm-btn-sm ccm-btn-danger"
+                        onClick={() => handleRemoveDocLayer(layer.id)}
+                        title="Remover camada"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fragmentação */}
+        <div className="ccm-list-card">
+          <div className="ccm-section-head">
+            <span className="ccm-label-inline" style={{ fontSize: 12, fontWeight: 600 }}>
+              <Scissors size={14} /> Fragmentação do Documento
+            </span>
+          </div>
+
+          <div className="ccm-grid-3">
+            <div className="ccm-field">
+              <label className="ccm-label">Modo</label>
+              <select
+                className="ccm-input"
+                value={physicalDoc?.fragmentation.mode || 'intact'}
+                onChange={(e) =>
+                  updatePhysicalDoc((prev) => ({
+                    ...prev,
+                    fragmentation: {
+                      ...prev.fragmentation,
+                      mode: e.target.value as FragmentationConfig['mode'],
+                    },
+                  }))
+                }
+              >
+                <option value="intact">Intacto (Folha inteira)</option>
+                <option value="shredder_strips">Tiras de Triturador</option>
+                <option value="torn_pieces">Pedaços Rasgados</option>
+              </select>
+            </div>
+
+            {physicalDoc?.fragmentation.mode && physicalDoc.fragmentation.mode !== 'intact' && (
+              <>
+                <div className="ccm-field">
+                  <label className="ccm-label">Quantidade de Tiras (2-12)</label>
+                  <input
+                    type="number"
+                    className="ccm-input"
+                    min={2}
+                    max={12}
+                    value={physicalDoc.fragmentation.cols}
+                    onChange={(e) =>
+                      updatePhysicalDoc((prev) => ({
+                        ...prev,
+                        fragmentation: {
+                          ...prev.fragmentation,
+                          cols: Math.max(2, Math.min(12, Number(e.target.value) || 6)),
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="ccm-field" style={{ justifyContent: 'center' }}>
+                  <label className="ccm-label" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={physicalDoc.fragmentation.allowRotation}
+                      onChange={(e) =>
+                        updatePhysicalDoc((prev) => ({
+                          ...prev,
+                          fragmentation: {
+                            ...prev.fragmentation,
+                            allowRotation: e.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    Permitir Rotação (90°)
+                  </label>
+                  <label className="ccm-label" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={physicalDoc.fragmentation.allowFlip}
+                      onChange={(e) =>
+                        updatePhysicalDoc((prev) => ({
+                          ...prev,
+                          fragmentation: {
+                            ...prev.fragmentation,
+                            allowFlip: e.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    Permitir Virar Verso
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </section>
     </div>

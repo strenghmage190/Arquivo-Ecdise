@@ -202,6 +202,8 @@
   height: 100%;
   gap: 2px;
   background: #1a222d;
+  touch-action: none;
+  user-select: none;
 }
 
 .pdt-frag-strip {
@@ -211,6 +213,9 @@
   cursor: pointer;
   border: 1px solid transparent;
   transition: transform 0.18s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .pdt-frag-strip.selected {

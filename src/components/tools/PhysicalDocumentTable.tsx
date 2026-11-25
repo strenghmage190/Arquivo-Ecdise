@@ -62,6 +62,7 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
 
   const [heatCells, setHeatCells] = useState<Record<string, number>>({});
   const [isHeating, setIsHeating] = useState(false);
+  const fragPointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
 
   const isFragmented = documentData.fragmentation.mode !== 'intact';
   const totalCols = Math.max(1, documentData.fragmentation.cols || 6);
@@ -415,6 +416,9 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                 {globalSide === 'front' && documentData.frontBaseUrl && (
                   <img src={documentData.frontBaseUrl} alt="Frente" className="pdt-bg" />
                 )}
+                {globalSide === 'back' && documentData.backBaseUrl && (
+                  <img src={documentData.backBaseUrl} alt="Verso" className="pdt-bg" />
+                )}
                 {visibleSideLayers.map(renderLayer)}
                 {showPins && sidePins.map(renderPinMarker)}
               </>
@@ -427,11 +431,22 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                   <div
                     key={p.id}
                     className={`pdt-frag-strip ${selectedPieceIdx === idx ? 'selected' : ''}`}
-                    onClick={(e) => {
+                    onPointerDown={(e) => {
+                      if (!e.isPrimary) return;
+                      fragPointerStartRef.current = { x: e.clientX, y: e.clientY, id: p.id };
+                    }}
+                    onPointerUp={(e) => {
+                      const start = fragPointerStartRef.current;
+                      fragPointerStartRef.current = null;
+                      if (!start || start.id !== p.id) return;
+                      const dist = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+                      if (dist > 10) return;
                       if (pinMode) {
+                        e.stopPropagation();
                         placePinOnRect(e.currentTarget.getBoundingClientRect(), e.clientX, e.clientY, p.id);
                         return;
                       }
+                      if (tool === 'heater') return;
                       handlePieceClick(idx);
                     }}
                     style={{
@@ -448,6 +463,9 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                     >
                       {globalSide === 'front' && documentData.frontBaseUrl && (
                         <img src={documentData.frontBaseUrl} alt="" className="pdt-bg" />
+                      )}
+                      {globalSide === 'back' && documentData.backBaseUrl && (
+                        <img src={documentData.backBaseUrl} alt="" className="pdt-bg" />
                       )}
                       {visibleSideLayers.map(renderLayer)}
                     </div>
