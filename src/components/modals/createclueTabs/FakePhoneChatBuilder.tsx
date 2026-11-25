@@ -62,7 +62,13 @@ const SYSTEM_PRESETS = [
 ];
 
 export default function FakePhoneChatBuilder() {
-  const { phoneState, setPhoneState, investigationId } = useClueModal();
+  const {
+    phoneState,
+    setPhoneState,
+    investigationId,
+    deviceExtraction,
+    setDeviceExtraction,
+  } = useClueModal();
   const [showChatEditor, setShowChatEditor] = useState(false);
   const [chatJson, setChatJson] = useState('');
   const fileInputsRef = useRef<Record<number, HTMLInputElement | null>>({});
@@ -77,13 +83,6 @@ export default function FakePhoneChatBuilder() {
   const [quickChatSender, setQuickChatSender] = useState<'me' | 'them' | 'system'>('them');
   const [quickChatText, setQuickChatText] = useState('');
   const [showDeviceBuilder, setShowDeviceBuilder] = useState(false);
-  const [deviceDraft, setDeviceDraft] = useState<DeviceExtractionMetadata | null>(() => {
-    try {
-      return (window as any).__ecdiseDeviceDraft || null;
-    } catch {
-      return null;
-    }
-  });
   const [quickChatTime, setQuickChatTime] = useState('');
 
   const handleMoveMessage = (idx: number, direction: -1 | 1) => {
@@ -454,7 +453,7 @@ export default function FakePhoneChatBuilder() {
                 isLocked={previewLocked}
                 password={previewLocked ? phoneState.password || '0000' : undefined}
                 passwordType={phoneState.lockType}
-                deviceData={deviceDraft}
+                deviceData={deviceExtraction}
               />
             </div>
 
@@ -464,13 +463,14 @@ export default function FakePhoneChatBuilder() {
               style={{ marginTop: 6 }}
               onClick={() => setShowDeviceBuilder(true)}
             >
-              Configurar Apps do Celular (Galeria, Notas, Lixeira)
+              Configurar Apps do Celular (Conversas, Galeria, Notas, Lixeira)
             </button>
 
             <DeviceBuilderModal
               isOpen={showDeviceBuilder}
               onClose={() => setShowDeviceBuilder(false)}
-              initialDevice={deviceDraft}
+              investigationId={investigationId}
+              initialDevice={deviceExtraction}
               basePhoneState={{
                 hasKeypad: phoneState.hasKeypad,
                 lockType: phoneState.lockType,
@@ -479,8 +479,7 @@ export default function FakePhoneChatBuilder() {
                 chatList: phoneState.chatList,
               }}
               onSave={(device) => {
-                setDeviceDraft(device);
-                (window as any).__ecdiseDeviceDraft = device;
+                setDeviceExtraction(device);
                 toast.success('Ecossistema completo do celular salvo na pista!');
               }}
             />

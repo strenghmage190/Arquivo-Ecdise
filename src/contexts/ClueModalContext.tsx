@@ -17,6 +17,7 @@ import {
 } from '../utils/cluePayloadBuilder';
 import type { UVAuthoringState } from '../components/tools/uveditor/types';
 import type { ThermalElement, ThermalPalette } from '../components/tools/ThermalEditor';
+import type { AudioStudioMetadata, DeviceExtractionMetadata } from '../types/forensicPillars';
 
 export type { DisplayConfig, FilterTransformRect };
 export { defaultDisplayConfig };
@@ -254,6 +255,12 @@ export interface ClueModalContextType {
   phoneState: PhoneState;
   setPhoneState: React.Dispatch<React.SetStateAction<PhoneState>>;
 
+  deviceExtraction: DeviceExtractionMetadata | null;
+  setDeviceExtraction: React.Dispatch<React.SetStateAction<DeviceExtractionMetadata | null>>;
+
+  audioStudioMeta: AudioStudioMetadata | null;
+  setAudioStudioMeta: React.Dispatch<React.SetStateAction<AudioStudioMetadata | null>>;
+
   personState: PersonState;
   setPersonState: React.Dispatch<React.SetStateAction<PersonState>>;
 
@@ -441,6 +448,8 @@ export const ClueModalProvider: React.FC<{
     contactName: 'Desconhecido',
     chatList: [],
   });
+  const [deviceExtraction, setDeviceExtraction] = useState<DeviceExtractionMetadata | null>(null);
+  const [audioStudioMeta, setAudioStudioMeta] = useState<AudioStudioMetadata | null>(null);
 
   const [personState, setPersonState] = useState<PersonState>({
     isPerson: false,
@@ -622,6 +631,8 @@ export const ClueModalProvider: React.FC<{
     setMediaVisibility(defaultMediaVisibility);
     setInsights([]);
     setCardStatus(null);
+    setDeviceExtraction(null);
+    setAudioStudioMeta(null);
     setIsDuplicateMode(false);
     setDuplicateSourceCard(null);
   };
@@ -644,6 +655,8 @@ export const ClueModalProvider: React.FC<{
     setMediaVisibility(hydrated.mediaVisibility);
     setInsights(hydrated.insights);
     setCardStatus(hydrated.cardStatus);
+    setDeviceExtraction(hydrated.deviceExtraction || null);
+    setAudioStudioMeta(hydrated.audioStudioMeta || null);
     setIsDuplicateMode(false);
     setDuplicateSourceCard(null);
   };
@@ -1012,6 +1025,10 @@ export const ClueModalProvider: React.FC<{
         setSecurityState,
         mediaState,
         setMediaState,
+        deviceExtraction,
+        setDeviceExtraction,
+        audioStudioMeta,
+        setAudioStudioMeta,
         cipherState,
         setCipherState,
         glitchState,

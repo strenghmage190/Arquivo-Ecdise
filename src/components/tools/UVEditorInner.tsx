@@ -344,6 +344,7 @@ export function UVEditorInner({
   const redrawRafIdRef = useRef<number | null>(null);
   const redrawScheduledRef = useRef<boolean>(false);
   const lastRedrawRef = useRef<number>(0);
+  const uvBufRef = useRef<HTMLCanvasElement | null>(null);
   const redrawTimeoutRef = useRef<number | null>(null);
   const moveScheduledRef = useRef<boolean>(false);
   const latestMoveRef = useRef<{
@@ -1172,12 +1173,19 @@ export function UVEditorInner({
         const spot = flashlightPosRef.current || { x: clearW / 2, y: clearH / 2 };
         const radius = flashlightRadiusRef.current || 135;
 
-        // Render all secret UV layers to offscreen buffer
-        const uvBuf = document.createElement('canvas');
-        uvBuf.width = Math.round(clearW * dpr);
-        uvBuf.height = Math.round(clearH * dpr);
+        // Reuse persistent offscreen buffer for secret UV layers (zero per-frame canvas allocation)
+        const targetW = Math.max(1, Math.round(clearW * dpr));
+        const targetH = Math.max(1, Math.round(clearH * dpr));
+        if (!uvBufRef.current) uvBufRef.current = document.createElement('canvas');
+        const uvBuf = uvBufRef.current;
+        if (uvBuf.width !== targetW || uvBuf.height !== targetH) {
+          uvBuf.width = targetW;
+          uvBuf.height = targetH;
+        }
         const uvCtx = uvBuf.getContext('2d');
         if (uvCtx) {
+          uvCtx.setTransform(1, 0, 0, 1, 0, 0);
+          uvCtx.clearRect(0, 0, targetW, targetH);
           uvCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
           renderLayersList(uvCtx, secretLayers, clearW, clearH, dpr, false);
 

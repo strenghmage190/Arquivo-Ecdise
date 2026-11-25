@@ -5,7 +5,7 @@ import { Tooltip } from 'react-tooltip';
 import AudioStudioModal from '../AudioStudioModal';
 
 export default function TabAudio() {
-  const { mediaState, setMediaState, setEditorState, registerUrl, revokeUrl } = useClueModal();
+  const { mediaState, setMediaState, setEditorState, registerUrl, revokeUrl, setAudioStudioMeta } = useClueModal();
   const baseAudioRef = useRef<HTMLInputElement>(null);
   const hiddenAudioRef = useRef<HTMLInputElement>(null);
 
@@ -238,7 +238,7 @@ export default function TabAudio() {
         isOpen={showStudioModal}
         onClose={() => setShowStudioModal(false)}
         initialBaseAudio={mediaState.audioBase}
-        onSave={(file) => {
+        onSave={(file, studioMeta) => {
           const url = URL.createObjectURL(file);
           registerUrl(url);
           revokeUrl(mediaState.audioBasePreview);
@@ -248,6 +248,7 @@ export default function TabAudio() {
             audioBasePreview: url,
             removedAudioBase: false,
           }));
+          if (studioMeta) setAudioStudioMeta(studioMeta);
         }}
       />
 

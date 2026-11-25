@@ -11,12 +11,15 @@ import {
   Lock,
   Plus,
   Upload,
+  MessageSquare,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import {
   DeviceExtractionMetadata,
   DeviceGalleryItem,
+  DeviceMessage,
   DeviceNoteItem,
+  DeviceThread,
   DeviceVoicemailItem,
   DeviceTrashItem,
 } from '../../types/forensicPillars';
@@ -40,7 +43,7 @@ interface Props {
   onSave: (device: DeviceExtractionMetadata) => void;
 }
 
-type BuilderTab = 'lock' | 'gallery' | 'notes' | 'voicemails' | 'trash';
+type BuilderTab = 'lock' | 'threads' | 'gallery' | 'notes' | 'voicemails' | 'trash';
 
 export default function DeviceBuilderModal({
   isOpen,
@@ -66,6 +69,35 @@ export default function DeviceBuilderModal({
   const [trashUnlockCode, setTrashUnlockCode] = useState(
     () => initialDevice?.trashUnlockCode || ''
   );
+  const [threads, setThreads] = useState<DeviceThread[]>(() => {
+    if (initialDevice?.threads && initialDevice.threads.length > 0) {
+      return initialDevice.threads;
+    }
+    const legacyMessages: DeviceMessage[] = (basePhoneState.chatList || []).map((m, idx) => ({
+      id: m.id || `msg-${idx}`,
+      sender: (m.sender === 'me' || m.sender === 'eu' ? 'me' : 'them') as 'me' | 'them',
+      type: (m.image_url ? 'image' : 'text') as 'image' | 'text',
+      text: m.text || '',
+      mediaUrl: m.image_url,
+      time: m.time || '12:00',
+    }));
+    return [
+      {
+        id: 'main',
+        contactName: basePhoneState.contactName || 'Contato Principal',
+        contactStatus: 'online',
+        messages: legacyMessages,
+      },
+    ];
+  });
+  const [activeThreadId, setActiveThreadId] = useState<string>(() => threads[0]?.id || 'main');
+  const [newContactName, setNewContactName] = useState('');
+  const [msgSender, setMsgSender] = useState<'me' | 'them'>('them');
+  const [msgType, setMsgType] = useState<'text' | 'image' | 'audio'>('text');
+  const [msgText, setMsgText] = useState('');
+  const [msgMediaUrl, setMsgMediaUrl] = useState('');
+  const [msgDeleted, setMsgDeleted] = useState(false);
+  const [msgRestorable, setMsgRestorable] = useState('');
 
   // New note draft
   const [noteTitle, setNoteTitle] = useState('');
@@ -158,15 +190,6 @@ export default function DeviceBuilderModal({
   };
 
   const handleSaveAll = () => {
-    const legacyMessages = (basePhoneState.chatList || []).map((m, idx) => ({
-      id: m.id || `msg-${idx}`,
-      sender: (m.sender === 'me' || m.sender === 'eu' ? 'me' : 'them') as 'me' | 'them',
-      type: (m.image_url ? 'image' : 'text') as 'image' | 'text',
-      text: m.text || '',
-      mediaUrl: m.image_url,
-      time: m.time || '12:00',
-    }));
-
     onSave({
       version: 2,
       ownerName,
@@ -184,14 +207,7 @@ export default function DeviceBuilderModal({
         trash: trash.length > 0,
       },
       trashUnlockCode: trashUnlockCode.trim() || undefined,
-      threads: [
-        {
-          id: 'main',
-          contactName: basePhoneState.contactName || 'Contato Principal',
-          contactStatus: 'online',
-          messages: legacyMessages,
-        },
-      ],
+      threads,
       gallery,
       notes,
       voicemails,
@@ -219,6 +235,9 @@ export default function DeviceBuilderModal({
         <nav className="dbm-tabs">
           <button type="button" className={tab === 'lock' ? 'active' : ''} onClick={() => setTab('lock')}>
             <Lock size={13} /> Bloqueio &amp; Dedos
+          </button>
+          <button type="button" className={tab === 'threads' ? 'active' : ''} onClick={() => setTab('threads')}>
+            <MessageSquare size={13} /> Conversas ({threads.length})
           </button>
           <button type="button" className={tab === 'gallery' ? 'active' : ''} onClick={() => setTab('gallery')}>
             <ImageIcon size={13} /> Galeria ({gallery.length})
@@ -256,6 +275,149 @@ export default function DeviceBuilderModal({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {tab === 'threads' && (
+            <div className="dbm-stack">
+              <div className="dbm-grid">
+                <input
+                  type="text"
+                  placeholder="Novo contato ou grupo (ex: Joui)"
+                  value={newContactName}
+                  onChange={(e) => setNewContactName(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="dbm-add-btn"
+                  onClick={() => {
+                    if (!newContactName.trim()) return;
+                    const id = nanoid(6);
+                    setThreads((prev) => [
+                      ...prev,
+                      { id, contactName: newContactName.trim(), contactStatus: 'online', messages: [] },
+                    ]);
+                    setActiveThreadId(id);
+                    setNewContactName('');
+                  }}
+                >
+                  <Plus size={14} /> Criar Conversa
+                </button>
+              </div>
+
+              <div className="dbm-tabs" style={{ padding: 0, background: 'transparent', border: 'none' }}>
+                {threads.map((th) => (
+                  <button
+                    key={th.id}
+                    type="button"
+                    className={activeThreadId === th.id ? 'active' : ''}
+                    onClick={() => setActiveThreadId(th.id)}
+                  >
+                    {th.contactName} ({th.messages.length})
+                  </button>
+                ))}
+              </div>
+
+              <div className="dbm-grid">
+                <select
+                  value={msgSender}
+                  onChange={(e) => setMsgSender(e.target.value as 'me' | 'them')}
+                  style={{ background: '#060a10', color: '#fff', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 6, padding: 8 }}
+                >
+                  <option value="them">Contato</option>
+                  <option value="me">Dono do Celular</option>
+                </select>
+                <select
+                  value={msgType}
+                  onChange={(e) => setMsgType(e.target.value as 'text' | 'image' | 'audio')}
+                  style={{ background: '#060a10', color: '#fff', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 6, padding: 8 }}
+                >
+                  <option value="text">Texto</option>
+                  <option value="image">Imagem</option>
+                  <option value="audio">Áudio</option>
+                </select>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Texto da mensagem..."
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+              />
+
+              {msgType !== 'text' && (
+                <div className="dbm-grid">
+                  <label className="dbm-upload">
+                    <Upload size={14} /> Subir {msgType === 'image' ? 'Foto' : 'Áudio'}
+                    <input
+                      type="file"
+                      accept={msgType === 'image' ? 'image/*' : 'audio/*'}
+                      hidden
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        try {
+                          const url = investigationId
+                            ? msgType === 'image'
+                              ? await uploadInvestigationImage(f, investigationId)
+                              : await uploadInvestigationFile(f, investigationId, 'chat_audio')
+                            : URL.createObjectURL(f);
+                          setMsgMediaUrl(url);
+                        } catch {
+                          setMsgMediaUrl(URL.createObjectURL(f));
+                        }
+                      }}
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ou URL do anexo"
+                    value={msgMediaUrl}
+                    onChange={(e) => setMsgMediaUrl(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <label className="dbm-check">
+                <input type="checkbox" checked={msgDeleted} onChange={(e) => setMsgDeleted(e.target.checked)} />
+                Marcar como Mensagem Apagada (recuperável pelo jogador)
+              </label>
+              {msgDeleted && (
+                <input
+                  type="text"
+                  placeholder="Texto revelado ao clicar em Restaurar..."
+                  value={msgRestorable}
+                  onChange={(e) => setMsgRestorable(e.target.value)}
+                />
+              )}
+
+              <button
+                type="button"
+                className="dbm-add-btn"
+                onClick={() => {
+                  const newMsg: DeviceMessage = {
+                    id: nanoid(8),
+                    sender: msgSender,
+                    type: msgType,
+                    text: msgText,
+                    mediaUrl: msgType !== 'text' ? msgMediaUrl.trim() || undefined : undefined,
+                    time: '22:30',
+                    isDeleted: msgDeleted,
+                    restorableText: msgDeleted ? msgRestorable || msgText : undefined,
+                  };
+                  setThreads((prev) =>
+                    prev.map((th) =>
+                      th.id === activeThreadId ? { ...th, messages: [...th.messages, newMsg] } : th
+                    )
+                  );
+                  setMsgText('');
+                  setMsgMediaUrl('');
+                  setMsgRestorable('');
+                  setMsgDeleted(false);
+                }}
+              >
+                <Plus size={14} /> Adicionar Mensagem na Conversa
+              </button>
             </div>
           )}
 

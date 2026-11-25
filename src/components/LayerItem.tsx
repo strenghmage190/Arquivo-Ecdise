@@ -88,6 +88,21 @@ export function LayerItem({ layer, isSelected, ...props }: LayerItemProps) {
         >
           {layer.locked ? <Lock size={14} className="icon-locked" /> : <Unlock size={14} className="icon-unlocked" />}
         </button>
+        {layer.id !== '__base_image' && (
+          <button
+            type="button"
+            className="layer-btn layer-btn--icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onDelete(layer.id);
+            }}
+            title="Excluir camada"
+            aria-label="Excluir camada"
+            style={{ color: '#f87171' }}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
 
       <div

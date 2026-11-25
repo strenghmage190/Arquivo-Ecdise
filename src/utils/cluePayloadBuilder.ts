@@ -94,6 +94,8 @@ export interface BuildCluePayloadParams {
   isDuplicate?: boolean;
   uploadedUrls?: UploadedClueUrls;
   state?: Record<string, any>;
+  deviceExtraction?: any;
+  audioStudioMeta?: any;
   coreState?: Partial<{
     title: string;
     descPublic: string;
@@ -728,6 +730,8 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
     },
     insights: Array.isArray(card?.insights) ? [...card.insights] : [],
     cardStatus: typeof m.status === 'string' ? m.status : null,
+    deviceExtraction: m.device_extraction || null,
+    audioStudioMeta: m.audio_studio || null,
   };
 }
 
@@ -1005,8 +1009,11 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
   if (stateBag.physicalDocument || (params as any).physicalDocument || (typeof window !== 'undefined' && (window as any).__ecdiseDocStudioDraft)) {
     metadata.physical_document = stateBag.physicalDocument || (params as any).physicalDocument || (window as any).__ecdiseDocStudioDraft;
   }
-  if (stateBag.deviceExtraction || (params as any).deviceExtraction || (typeof window !== 'undefined' && (window as any).__ecdiseDeviceDraft)) {
-    metadata.device_extraction = stateBag.deviceExtraction || (params as any).deviceExtraction || (window as any).__ecdiseDeviceDraft;
+  if (stateBag.deviceExtraction || (params as any).deviceExtraction) {
+    metadata.device_extraction = stateBag.deviceExtraction || (params as any).deviceExtraction;
+  }
+  if (stateBag.audioStudioMeta || (params as any).audioStudioMeta) {
+    metadata.audio_studio = stateBag.audioStudioMeta || (params as any).audioStudioMeta;
   }
 
   if (cardStatus) {
