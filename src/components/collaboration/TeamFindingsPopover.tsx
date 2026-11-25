@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Archive, Check, Copy, Sparkles } from 'lucide-react';
 import { useCollaboration } from '../../contexts/CollaborationContext';
 import { FINDING_CATEGORY_META, FindingCategory } from '../../types/collaboration';
+import { FindingCategoryIcon } from './CollaborationIcons';
 import './Collaboration.css';
 
 interface TeamFindingsPopoverProps {
@@ -72,8 +73,8 @@ export default function TeamFindingsPopover({
               return (
                 <div key={f.id} className="collab-popover-item">
                   <div style={{ minWidth: 0 }}>
-                    <strong>
-                      {meta.icon} {f.label}
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <FindingCategoryIcon category={f.category} size={12} /> {f.label}
                     </strong>
                     <small>
                       {f.author_name}

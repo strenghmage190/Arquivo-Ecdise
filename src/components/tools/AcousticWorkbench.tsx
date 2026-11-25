@@ -496,7 +496,7 @@ export default function AcousticWorkbench({
                     boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                   }}
                 >
-                  📌
+                  <Pin size={12} />
                 </button>
               );
             })}

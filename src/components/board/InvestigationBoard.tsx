@@ -31,6 +31,7 @@ import {
   Pin,
   Plus,
   Radar,
+  Radio,
   Redo2,
   RotateCcw,
   Search,
@@ -87,6 +88,7 @@ import { useAuth } from '../auth/AuthProvider';
 import FindingsDrawer from '../collaboration/FindingsDrawer';
 import { useTacticalPings } from '../../hooks/useTacticalPings';
 import { TEAM_STATUS_META, TeamCardStatus } from '../../types/collaboration';
+import { TeamStatusIcon } from '../collaboration/CollaborationIcons';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
@@ -2974,8 +2976,16 @@ function InvestigationBoardInner({
               }}
               data-tooltip="Filtrar por Progresso da Equipe"
               aria-label="Filtrar por Progresso da Equipe"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              {teamStatusFilter === 'all' ? 'EQUIPE: TODOS' : `${TEAM_STATUS_META[teamStatusFilter].icon} ${TEAM_STATUS_META[teamStatusFilter].shortLabel.toUpperCase()}`}
+              {teamStatusFilter === 'all' ? (
+                'EQUIPE: TODOS'
+              ) : (
+                <>
+                  <TeamStatusIcon status={teamStatusFilter} size={13} />{' '}
+                  {TEAM_STATUS_META[teamStatusFilter].shortLabel.toUpperCase()}
+                </>
+              )}
             </button>
             <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar pistas (Ctrl+F)" aria-label="Buscar pistas">
               <Search size={16} />
@@ -3717,7 +3727,9 @@ function InvestigationBoardInner({
               className="tactical-ping-pulse"
               style={{ left: ping.x, top: ping.y }}
             >
-              <span className="tactical-ping-label">📡 {ping.authorName}</span>
+              <span className="tactical-ping-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Radio size={11} /> {ping.authorName}
+              </span>
             </div>
           ))}
 

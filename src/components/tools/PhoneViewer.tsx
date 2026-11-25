@@ -14,6 +14,7 @@ import {
   Radio,
   Flashlight,
   Pin,
+  AlertTriangle,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import NumericKeypad from './NumericKeypad';
@@ -410,7 +411,9 @@ export default function PhoneViewer({
                       )}
                       {msg.isDeleted && !isRestored ? (
                         <div className="phone-deleted-msg">
-                          <span>⚠ Mensagem apagada</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <AlertTriangle size={11} /> Mensagem apagada
+                          </span>
                           {msg.restorableText && (
                             <button
                               type="button"

@@ -134,7 +134,7 @@ export default function PinNoteComposer({
             >
               {(Object.keys(FINDING_CATEGORY_META) as FindingCategory[]).map((cat) => (
                 <option key={cat} value={cat}>
-                  {FINDING_CATEGORY_META[cat].icon} {FINDING_CATEGORY_META[cat].label}
+                  {FINDING_CATEGORY_META[cat].label}
                 </option>
               ))}
             </select>

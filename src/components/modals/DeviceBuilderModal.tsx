@@ -325,7 +325,10 @@ export default function DeviceBuilderModal({
               <div className="dbm-list">
                 {notes.map((n) => (
                   <div key={n.id} className="dbm-item">
-                    <span>{n.isLocked ? '🔒 ' : ''}{n.title}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {n.isLocked && <Lock size={12} />}
+                      {n.title}
+                    </span>
                     <button type="button" onClick={() => setNotes((p) => p.filter((x) => x.id !== n.id))}>
                       <Trash2 size={13} />
                     </button>

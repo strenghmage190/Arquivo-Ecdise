@@ -6,6 +6,7 @@ import {
   FINDING_CATEGORY_META,
   FindingCategory,
 } from '../../types/collaboration';
+import { FindingCategoryIcon } from './CollaborationIcons';
 import './Collaboration.css';
 
 interface FindingsDrawerProps {
@@ -125,8 +126,9 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
               type="button"
               className={`collab-filter-chip ${categoryFilter === cat ? 'active' : ''}`}
               onClick={() => setCategoryFilter(cat)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              {meta.icon} {meta.label.split(' ')[0]}
+              <FindingCategoryIcon category={cat} size={12} /> {meta.label.split(' ')[0]}
             </button>
           );
         })}
@@ -142,7 +144,7 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
           >
             {(Object.keys(FINDING_CATEGORY_META) as FindingCategory[]).map((cat) => (
               <option key={cat} value={cat}>
-                {FINDING_CATEGORY_META[cat].icon} {FINDING_CATEGORY_META[cat].label}
+                {FINDING_CATEGORY_META[cat].label}
               </option>
             ))}
           </select>
@@ -192,8 +194,8 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
             return (
               <div key={f.id} className="collab-finding-card">
                 <div className="collab-finding-top">
-                  <span className="collab-finding-cat" style={{ color: meta.color }}>
-                    {meta.icon} {meta.label}
+                  <span className="collab-finding-cat" style={{ color: meta.color, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <FindingCategoryIcon category={f.category} size={12} /> {meta.label}
                   </span>
                   <div className="collab-finding-actions">
                     <button

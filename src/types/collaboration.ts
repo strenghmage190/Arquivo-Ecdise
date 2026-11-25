@@ -108,21 +108,21 @@ export const PIN_TAG_META: Record<PinTag, { label: string; color: string }> = {
 
 export const FINDING_CATEGORY_META: Record<
   FindingCategory,
-  { label: string; icon: string; color: string }
+  { label: string; color: string }
 > = {
-  code: { label: 'Código / Senha', icon: '🔑', color: '#10b981' },
-  person: { label: 'Nome / Pessoa', icon: '👤', color: '#60a5fa' },
-  date: { label: 'Data / Hora', icon: '📅', color: '#f59e0b' },
-  location: { label: 'Local / Coordenada', icon: '📍', color: '#f43f5e' },
-  theory: { label: 'Teoria / Dúvida', icon: '💡', color: '#c084fc' },
+  code: { label: 'Código / Senha', color: '#10b981' },
+  person: { label: 'Nome / Pessoa', color: '#60a5fa' },
+  date: { label: 'Data / Hora', color: '#f59e0b' },
+  location: { label: 'Local / Coordenada', color: '#f43f5e' },
+  theory: { label: 'Teoria / Dúvida', color: '#c084fc' },
 };
 
 export const TEAM_STATUS_META: Record<
   TeamCardStatus,
-  { label: string; shortLabel: string; icon: string; color: string }
+  { label: string; shortLabel: string; color: string }
 > = {
-  unexplored: { label: 'Inexplorado', shortLabel: 'Inexplorado', icon: '🔍', color: '#94a3b8' },
-  has_clue: { label: 'Tem algo aqui!', shortLabel: 'Tem pista', icon: '⚠️', color: '#f59e0b' },
-  stuck: { label: 'Parcial / Travamos aqui', shortLabel: 'Travamos', icon: '🧩', color: '#ef4444' },
-  exhausted: { label: 'Esgotado / Extraído', shortLabel: 'Esgotado', icon: '✅', color: '#10b981' },
+  unexplored: { label: 'Inexplorado', shortLabel: 'Inexplorado', color: '#94a3b8' },
+  has_clue: { label: 'Tem algo aqui!', shortLabel: 'Tem pista', color: '#f59e0b' },
+  stuck: { label: 'Parcial / Travamos aqui', shortLabel: 'Travamos', color: '#ef4444' },
+  exhausted: { label: 'Esgotado / Extraído', shortLabel: 'Esgotado', color: '#10b981' },
 };

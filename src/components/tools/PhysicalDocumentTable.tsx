@@ -276,15 +276,16 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
           color: '#090d16',
           border: isHl ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.6)',
           borderRadius: 999,
-          padding: '2px 6px',
-          fontSize: '0.7rem',
-          fontWeight: 700,
+          padding: 3,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           cursor: 'pointer',
           zIndex: 25,
           boxShadow: isHl ? '0 0 14px #fbbf24' : '0 2px 6px rgba(0,0,0,0.55)',
         }}
       >
-        📌
+        <Pin size={12} />
       </button>
     );
   };
