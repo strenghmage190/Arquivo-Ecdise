@@ -17,7 +17,11 @@ import {
 } from '../utils/cluePayloadBuilder';
 import type { UVAuthoringState } from '../components/tools/uveditor/types';
 import type { ThermalElement, ThermalPalette } from '../components/tools/ThermalEditor';
-import type { AudioStudioMetadata, DeviceExtractionMetadata } from '../types/forensicPillars';
+import type {
+  AudioStudioMetadata,
+  DeviceExtractionMetadata,
+  PhysicalDocumentMetadata,
+} from '../types/forensicPillars';
 
 export type { DisplayConfig, FilterTransformRect };
 export { defaultDisplayConfig };
@@ -261,6 +265,9 @@ export interface ClueModalContextType {
   audioStudioMeta: AudioStudioMetadata | null;
   setAudioStudioMeta: React.Dispatch<React.SetStateAction<AudioStudioMetadata | null>>;
 
+  physicalDocument: PhysicalDocumentMetadata | null;
+  setPhysicalDocument: React.Dispatch<React.SetStateAction<PhysicalDocumentMetadata | null>>;
+
   personState: PersonState;
   setPersonState: React.Dispatch<React.SetStateAction<PersonState>>;
 
@@ -450,6 +457,7 @@ export const ClueModalProvider: React.FC<{
   });
   const [deviceExtraction, setDeviceExtraction] = useState<DeviceExtractionMetadata | null>(null);
   const [audioStudioMeta, setAudioStudioMeta] = useState<AudioStudioMetadata | null>(null);
+  const [physicalDocument, setPhysicalDocument] = useState<PhysicalDocumentMetadata | null>(null);
 
   const [personState, setPersonState] = useState<PersonState>({
     isPerson: false,
@@ -633,6 +641,7 @@ export const ClueModalProvider: React.FC<{
     setCardStatus(null);
     setDeviceExtraction(null);
     setAudioStudioMeta(null);
+    setPhysicalDocument(null);
     setIsDuplicateMode(false);
     setDuplicateSourceCard(null);
   };
@@ -657,6 +666,7 @@ export const ClueModalProvider: React.FC<{
     setCardStatus(hydrated.cardStatus);
     setDeviceExtraction(hydrated.deviceExtraction || null);
     setAudioStudioMeta(hydrated.audioStudioMeta || null);
+    setPhysicalDocument(hydrated.physicalDocument || null);
     setIsDuplicateMode(false);
     setDuplicateSourceCard(null);
   };
@@ -735,6 +745,9 @@ export const ClueModalProvider: React.FC<{
     filterConfig,
     thermalConfig,
     phoneState,
+    deviceExtraction,
+    audioStudioMeta,
+    physicalDocument,
     personState,
     metadataState,
     fieldVisibilityConfig,
@@ -786,6 +799,9 @@ export const ClueModalProvider: React.FC<{
         setThermalConfig((prev) => ({ ...prev, ...data.thermalConfig }));
       }
       if (data.phoneState) setPhoneState((prev) => ({ ...prev, ...data.phoneState }));
+      if (data.deviceExtraction !== undefined) setDeviceExtraction(data.deviceExtraction);
+      if (data.audioStudioMeta !== undefined) setAudioStudioMeta(data.audioStudioMeta);
+      if (data.physicalDocument !== undefined) setPhysicalDocument(data.physicalDocument);
       if (data.personState) {
         setPersonState((prev) => ({
           ...prev,
@@ -1029,6 +1045,8 @@ export const ClueModalProvider: React.FC<{
         setDeviceExtraction,
         audioStudioMeta,
         setAudioStudioMeta,
+        physicalDocument,
+        setPhysicalDocument,
         cipherState,
         setCipherState,
         glitchState,

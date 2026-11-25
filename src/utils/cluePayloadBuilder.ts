@@ -96,6 +96,7 @@ export interface BuildCluePayloadParams {
   state?: Record<string, any>;
   deviceExtraction?: any;
   audioStudioMeta?: any;
+  physicalDocument?: any;
   coreState?: Partial<{
     title: string;
     descPublic: string;
@@ -248,6 +249,34 @@ export function isLockedPlaceholderImage(url: unknown): boolean {
     (url === LOCKED_PLACEHOLDER_IMG ||
       url.startsWith('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'))
   );
+}
+
+/**
+ * Recursively strips any transient `blob:` URLs from metadata objects/arrays
+ * so ephemeral browser object URLs are never persisted to Supabase.
+ */
+export function stripBlobUrlsDeep<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'string') {
+    return (value.startsWith('blob:') ? undefined : value) as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => stripBlobUrlsDeep(item))
+      .filter((item) => item !== undefined) as unknown as T;
+  }
+  if (typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value as Record<string, any>)) {
+      if (typeof v === 'string' && v.startsWith('blob:')) continue;
+      const cleaned = stripBlobUrlsDeep(v);
+      if (cleaned !== undefined) {
+        out[k] = cleaned;
+      }
+    }
+    return out as T;
+  }
+  return value;
 }
 
 function isRemoteOrDataUrl(url: unknown): url is string {
@@ -732,6 +761,7 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
     cardStatus: typeof m.status === 'string' ? m.status : null,
     deviceExtraction: m.device_extraction || null,
     audioStudioMeta: m.audio_studio || null,
+    physicalDocument: m.physical_document || null,
   };
 }
 
@@ -1006,11 +1036,23 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     audio_target_freq: audioTargetFreq,
   };
 
-  if (stateBag.physicalDocument || (params as any).physicalDocument || (typeof window !== 'undefined' && (window as any).__ecdiseDocStudioDraft)) {
-    metadata.physical_document = stateBag.physicalDocument || (params as any).physicalDocument || (window as any).__ecdiseDocStudioDraft;
+  if (stateBag.physicalDocument !== undefined || (params as any).physicalDocument !== undefined) {
+    const doc = stateBag.physicalDocument ?? (params as any).physicalDocument;
+    if (doc) {
+      metadata.physical_document = stripBlobUrlsDeep(doc);
+    } else {
+      delete metadata.physical_document;
+    }
+  } else if (typeof window !== 'undefined' && (window as any).__ecdiseDocStudioDraft) {
+    metadata.physical_document = stripBlobUrlsDeep((window as any).__ecdiseDocStudioDraft);
   }
-  if (stateBag.deviceExtraction || (params as any).deviceExtraction) {
-    metadata.device_extraction = stateBag.deviceExtraction || (params as any).deviceExtraction;
+  if (stateBag.deviceExtraction !== undefined || (params as any).deviceExtraction !== undefined) {
+    const dev = stateBag.deviceExtraction ?? (params as any).deviceExtraction;
+    if (dev) {
+      metadata.device_extraction = stripBlobUrlsDeep(dev);
+    } else {
+      delete metadata.device_extraction;
+    }
   }
   if (stateBag.audioStudioMeta || (params as any).audioStudioMeta) {
     metadata.audio_studio = stateBag.audioStudioMeta || (params as any).audioStudioMeta;
