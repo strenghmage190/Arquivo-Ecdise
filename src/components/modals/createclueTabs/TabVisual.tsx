@@ -602,6 +602,11 @@ export default function TabVisual() {
         </button>
       </div>
 
+      <details className="ccm-section" style={{ padding: '10px 14px' }}>
+        <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>
+          OPÇÕES INDIVIDUAIS / LEGADAS (UV, TÉRMICA, RGB E FILTROS SEPARADOS)
+        </summary>
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* CAMADA UV */}
       <section className="ccm-section">
         <div className="ccm-section-head">
@@ -925,6 +930,8 @@ export default function TabVisual() {
           )}
         </div>
       </section>
+        </div>
+      </details>
     </div>
   );
 }
