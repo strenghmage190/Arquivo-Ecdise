@@ -75,6 +75,7 @@ export default function AcousticWorkbench({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const createdUrlsRef = useRef<string[]>([]);
 
   const [sampleRate, setSampleRate] = useState(SAMPLE_RATE_48K);
   const [leftSamples, setLeftSamples] = useState<Float32Array | null>(null);
@@ -101,15 +102,25 @@ export default function AcousticWorkbench({
     setLoadError(null);
 
     const load = async () => {
+      let localCtx: AudioContext | null = null;
       try {
         const res = await fetch(audioSrc);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const arrayBuf = await res.arrayBuffer();
-        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new Ctx();
-        audioCtxRef.current = ctx;
-        const decoded = await ctx.decodeAudioData(arrayBuf);
         if (cancelled) return;
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        localCtx = new Ctx();
+        audioCtxRef.current = localCtx;
+        const decoded = await localCtx.decodeAudioData(arrayBuf);
+        if (cancelled) {
+          try {
+            await localCtx.close();
+          } catch {}
+          if (audioCtxRef.current === localCtx) {
+            audioCtxRef.current = null;
+          }
+          return;
+        }
         setSampleRate(decoded.sampleRate);
         setBandMaxHz(Math.floor(decoded.sampleRate / 2));
         setLpFreq(Math.floor(decoded.sampleRate / 2));
@@ -121,6 +132,11 @@ export default function AcousticWorkbench({
         );
         setLoading(false);
       } catch {
+        if (localCtx && cancelled) {
+          try {
+            await localCtx.close();
+          } catch {}
+        }
         if (!cancelled) {
           setLoadError('Não foi possível decodificar o áudio para análise espectral.');
           setLoading(false);
@@ -134,9 +150,17 @@ export default function AcousticWorkbench({
       try {
         sourceNodeRef.current?.stop();
       } catch {}
+      sourceNodeRef.current = null;
       try {
         audioCtxRef.current?.close();
       } catch {}
+      audioCtxRef.current = null;
+      createdUrlsRef.current.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+      });
+      createdUrlsRef.current = [];
     };
   }, [audioSrc]);
 
@@ -272,7 +296,9 @@ export default function AcousticWorkbench({
             Math.floor(binMin + yNorm * (binMax - binMin))
           );
           const binFreq = (bin / fftCache.bins) * nyquist;
-          const inBand = binFreq >= hpFreq && binFreq <= lpFreq;
+          const effHp = Math.min(hpFreq, lpFreq);
+          const effLp = Math.max(hpFreq, lpFreq);
+          const inBand = binFreq >= effHp && binFreq <= effLp;
           const mag = fftCache.magnitudes[colOffset + bin];
           const filteredMag = inBand ? mag : mag * 0.04;
           const db = 20 * Math.log10(Math.max(1e-6, filteredMag));
@@ -300,6 +326,10 @@ export default function AcousticWorkbench({
     setIsPlaying(false);
   }, []);
 
+  useEffect(() => {
+    stopPlayback();
+  }, [activeSamples, hpFreq, lpFreq, stopPlayback]);
+
   const togglePlay = useCallback(async () => {
     if (isPlaying) {
       stopPlayback();
@@ -316,13 +346,16 @@ export default function AcousticWorkbench({
     src.buffer = buf;
     src.playbackRate.value = playbackRate;
 
+    const effHp = Math.min(hpFreq, lpFreq);
+    const effLp = Math.max(hpFreq, lpFreq);
+
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
-    hp.frequency.value = Math.max(20, hpFreq);
+    hp.frequency.value = Math.max(20, effHp);
 
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = Math.min(sampleRate * 0.48, lpFreq);
+    lp.frequency.value = Math.min(sampleRate * 0.48, effLp);
 
     src.connect(hp);
     hp.connect(lp);

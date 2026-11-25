@@ -90,6 +90,29 @@ export default function AudioStudioModal({
   }, [baseFile]);
 
   useEffect(() => {
+    if (isOpen) {
+      setBaseFile(initialBaseAudio ?? null);
+    } else {
+      try {
+        previewSrcRef.current?.stop();
+      } catch {}
+      setIsPlaying(false);
+    }
+  }, [isOpen, initialBaseAudio]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
     return () => {
       try {
         previewSrcRef.current?.stop();
@@ -97,6 +120,7 @@ export default function AudioStudioModal({
       try {
         previewCtxRef.current?.close();
       } catch {}
+      previewCtxRef.current = null;
     };
   }, []);
 
@@ -147,6 +171,8 @@ export default function AudioStudioModal({
         });
       } else {
         const imgData = renderTextCanvas(secretText);
+        const minFreqHz = mode === 'ghost_zone' ? 16800 : mode === 'stereo_lr' ? 400 : 800;
+        const maxFreqHz = mode === 'ghost_zone' ? 20500 : mode === 'stereo_lr' ? 16000 : 8500;
         const res = synthesizeStegoAudio({
           mode,
           imageData: imgData,
@@ -156,6 +182,8 @@ export default function AudioStudioModal({
           durationSec,
           startSec,
           endSec,
+          minFreqHz,
+          maxFreqHz,
           intensity,
         });
         setSynthLeft(res.left);
@@ -164,8 +192,8 @@ export default function AudioStudioModal({
         setLastMeta({
           version: 2,
           mode,
-          minFreqHz: mode === 'ghost_zone' ? 16800 : mode === 'stereo_lr' ? 400 : 800,
-          maxFreqHz: mode === 'ghost_zone' ? 20500 : mode === 'stereo_lr' ? 16000 : 8500,
+          minFreqHz,
+          maxFreqHz,
           startSec,
           endSec,
           sampleRate: res.sampleRate,

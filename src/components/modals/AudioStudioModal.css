@@ -1,7 +1,7 @@
 .asm-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 35000;
+  z-index: 55000;
   background: rgba(5, 7, 11, 0.86);
   backdrop-filter: blur(6px);
   display: flex;
@@ -12,14 +12,14 @@
 
 .asm-dialog {
   width: min(760px, 100%);
-  background: var(--ccm-surface, #0d1117);
-  border: 1px solid var(--ccm-border, rgba(255, 255, 255, 0.14));
-  border-radius: 10px;
-  color: var(--ccm-text, #e2e8f0);
+  background: var(--ccm-surface, var(--bg-1, #0d1117));
+  border: 1px solid var(--ccm-border, var(--border-color, rgba(148, 163, 184, 0.24)));
+  border-radius: var(--radius-md, 10px);
+  color: var(--ccm-text, var(--text-color, #e2e8f0));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ccm-mono, var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .asm-header {
@@ -27,32 +27,33 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-  background: rgba(0, 243, 255, 0.06);
+  border-bottom: 1px solid var(--ccm-hairline, rgba(148, 163, 184, 0.2));
+  background: var(--ccm-surface-inset, rgba(8, 12, 18, 0.9));
 }
 
 .asm-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #00f3ff;
+  color: var(--ccm-accent, var(--accent, #5eead4));
 }
 
 .asm-title h2 {
   margin: 0;
   font-size: 13.5px;
+  color: var(--ccm-text-strong, #f1f5f9);
 }
 
 .asm-title span {
   font-size: 11px;
-  color: #7d96ad;
+  color: var(--ccm-text-muted, #94a3b8);
 }
 
 .asm-close {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #dbe7f3;
-  border-radius: 6px;
+  border: 1px solid var(--ccm-border, rgba(148, 163, 184, 0.24));
+  color: var(--ccm-text, #dbe7f3);
+  border-radius: var(--radius-sm, 6px);
   padding: 5px;
   cursor: pointer;
 }
@@ -95,12 +96,12 @@
 }
 
 .asm-mode-btn.active {
-  border-color: #00f3ff;
-  background: rgba(0, 243, 255, 0.12);
+  border-color: var(--ccm-accent-border, var(--accent, #5eead4));
+  background: var(--ccm-accent-dim, rgba(94, 234, 212, 0.12));
 }
 
 .asm-mode-btn.active strong {
-  color: #00f3ff;
+  color: var(--ccm-accent, var(--accent, #5eead4));
 }
 
 .asm-grid {
@@ -133,11 +134,11 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(0, 243, 255, 0.35);
-  border-radius: 6px;
+  background: var(--ccm-surface-inset, rgba(255, 255, 255, 0.04));
+  border: 1px dashed var(--ccm-accent-border, rgba(94, 234, 212, 0.42));
+  border-radius: var(--radius-sm, 6px);
   padding: 8px 10px;
-  color: #8bf7ff;
+  color: var(--ccm-accent, #5eead4);
   font-size: 12px;
   cursor: pointer;
 }
@@ -153,11 +154,11 @@
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
-  color: #9cb3c9;
+  color: var(--ccm-text-muted, #9cb3c9);
 }
 
 .asm-sliders input {
-  accent-color: #00f3ff;
+  accent-color: var(--ccm-accent, var(--accent, #5eead4));
 }
 
 .asm-discretion {
@@ -223,8 +224,8 @@
 }
 
 .asm-btn-primary {
-  background: #00f3ff;
-  border: none;
-  color: #041019;
-  font-weight: 700;
+  background: var(--ccm-accent-dim, rgba(94, 234, 212, 0.14));
+  border: 1px solid var(--ccm-accent-border, rgba(94, 234, 212, 0.45));
+  color: var(--ccm-accent, #5eead4);
+  font-weight: 600;
 }

@@ -1,4 +1,4 @@
-import { Music, Palette, X, Play, Pause, MoveVertical, MoveHorizontal, Activity, Radio, Flame, Diamond, Mountain, Microscope, Terminal } from 'lucide-react';
+import { Music, Palette, X, Play, Pause, MoveVertical, MoveHorizontal, Activity, Radio, Flame, Diamond, Mountain, Microscope, Terminal, RotateCcw } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
@@ -344,7 +344,7 @@ export default function AudioViewerModal({
               }}
               title="Resetar todos os controles"
             >
-              ↺ RESETAR
+              <RotateCcw size={14} /> RESETAR
             </button>
           </div>
         </div>
