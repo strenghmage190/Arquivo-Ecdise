@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+jest.mock('../../../supabaseClient', () => ({ supabase: {} }));
 import PhoneViewer from '../PhoneViewer';
 import { ForensicDispatchProvider } from '../../../contexts/ForensicDispatchContext';
 import { DeviceExtractionMetadata } from '../../../types/forensicPillars';

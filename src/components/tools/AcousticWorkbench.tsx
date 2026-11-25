@@ -16,6 +16,10 @@ import {
 } from '../../utils/audioStegoSynthesizer';
 import { AudioAnomalyReport } from '../../types/forensicPillars';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import { AcousticPinAnchor, CasePin, PIN_TAG_META } from '../../types/collaboration';
+import PinListBar from '../collaboration/PinListBar';
+import PinNoteComposer from '../collaboration/PinNoteComposer';
 import './AcousticWorkbench.css';
 
 export type ChannelRoute = 'mix' | 'left' | 'right' | 'diff';
@@ -54,6 +58,19 @@ export default function AcousticWorkbench({
   cardId,
 }: AcousticWorkbenchProps) {
   const { openFieldManual, saveSnippetToBoard } = useForensicDispatch();
+  const {
+    investigationId,
+    pinsByCardId,
+    createPin,
+    addFinding,
+    pendingAnchorJump,
+    clearAnchorJump,
+  } = useCollaboration();
+
+  const [pinMode, setPinMode] = useState(false);
+  const [showPins, setShowPins] = useState(true);
+  const [pendingPinAnchor, setPendingPinAnchor] = useState<AcousticPinAnchor | null>(null);
+  const [cursorSec, setCursorSec] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -292,9 +309,57 @@ export default function AcousticWorkbench({
     };
 
     sourceNodeRef.current = src;
-    src.start(0);
+    const offset = Math.max(0, Math.min(cursorSec, Math.max(0, buf.duration - 0.05)));
+    src.start(0, offset);
     setIsPlaying(true);
-  }, [isPlaying, stopPlayback, activeSamples, sampleRate, playbackRate, hpFreq, lpFreq]);
+  }, [isPlaying, stopPlayback, activeSamples, sampleRate, playbackRate, hpFreq, lpFreq, cursorSec]);
+
+  const durationSec = activeSamples ? activeSamples.length / sampleRate : 0;
+
+  const acousticPins = useMemo(() => {
+    if (!cardId) return [];
+    return (pinsByCardId[cardId] || []).filter((p) => p.tool_type === 'acoustic');
+  }, [pinsByCardId, cardId]);
+
+  const applyPinState = useCallback(
+    (anchor: AcousticPinAnchor) => {
+      if (anchor.channel) setChannelRoute(anchor.channel);
+      if (typeof anchor.bandMinHz === 'number') setBandMinHz(anchor.bandMinHz);
+      if (typeof anchor.bandMaxHz === 'number') setBandMaxHz(anchor.bandMaxHz);
+      if (typeof anchor.timeSec === 'number') setCursorSec(anchor.timeSec);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!pendingAnchorJump || !cardId) return;
+    if (pendingAnchorJump.cardId === cardId && pendingAnchorJump.toolType === 'acoustic') {
+      applyPinState(pendingAnchorJump.anchorData as AcousticPinAnchor);
+      clearAnchorJump();
+    }
+  }, [pendingAnchorJump, cardId, applyPinState, clearAnchorJump]);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || durationSec <= 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const xNorm = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+    const yNorm = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / Math.max(1, rect.height)));
+    const timeSec = Number((xNorm * durationSec).toFixed(2));
+    const freqHz = Math.round(bandMinHz + yNorm * (bandMaxHz - bandMinHz));
+    setCursorSec(timeSec);
+
+    if (pinMode || e.altKey) {
+      setPendingPinAnchor({
+        timeSec,
+        freqHz,
+        channel: channelRoute,
+        bandMinHz,
+        bandMaxHz,
+      });
+      setPinMode(false);
+    }
+  };
 
   const handleSaveSnippet = async () => {
     const canvas = canvasRef.current;
@@ -352,6 +417,18 @@ export default function AcousticWorkbench({
             <BookOpen size={14} /> Manual
           </button>
 
+          {cardId && investigationId && (
+            <button
+              type="button"
+              className={`aw-btn-ghost ${pinMode ? 'active' : ''}`}
+              style={pinMode ? { borderColor: '#f59e0b', color: '#fbbf24' } : undefined}
+              onClick={() => setPinMode((m) => !m)}
+              title="Clique no espectrograma para cravar um marcador persistente"
+            >
+              <Pin size={14} /> {pinMode ? 'Clique no Gráfico...' : 'Marcar Ponto'}
+            </button>
+          )}
+
           <button
             type="button"
             className="aw-btn-primary"
@@ -363,16 +440,112 @@ export default function AcousticWorkbench({
         </div>
       </div>
 
-      <div className="aw-spectrum-box">
+      <div className="aw-spectrum-box" style={{ position: 'relative' }}>
         {loading && <div className="aw-overlay-msg">Decodificando forma de onda...</div>}
         {loadError && <div className="aw-overlay-msg error">{loadError}</div>}
-        <canvas ref={canvasRef} width={760} height={240} className="aw-canvas" />
+        <canvas
+          ref={canvasRef}
+          width={760}
+          height={240}
+          className="aw-canvas"
+          style={{ cursor: pinMode ? 'crosshair' : 'pointer' }}
+          onClick={handleCanvasClick}
+        />
+        {durationSec > 0 && cursorSec > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: `${Math.min(100, Math.max(0, (cursorSec / durationSec) * 100))}%`,
+              width: 2,
+              background: '#38bdf8',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+        {showPins &&
+          durationSec > 0 &&
+          acousticPins
+            .filter((p) => !p.is_resolved)
+            .map((pin) => {
+              const anchor = pin.anchor_data as AcousticPinAnchor;
+              const leftPct = Math.min(99, Math.max(1, ((anchor.timeSec || 0) / durationSec) * 100));
+              const tagMeta = PIN_TAG_META[pin.tag] || PIN_TAG_META.look_here;
+              return (
+                <button
+                  key={pin.id}
+                  type="button"
+                  title={`${pin.author_name}: ${pin.note}`}
+                  onClick={() => applyPinState(anchor)}
+                  style={{
+                    position: 'absolute',
+                    top: 6,
+                    left: `${leftPct}%`,
+                    transform: 'translateX(-50%)',
+                    background: tagMeta.color,
+                    color: '#090d16',
+                    border: 'none',
+                    borderRadius: 999,
+                    width: 20,
+                    height: 20,
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    zIndex: 5,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                  }}
+                >
+                  📌
+                </button>
+              );
+            })}
         <div className="aw-freq-axis">
           <span>{bandMaxHz} Hz</span>
           <span>{Math.round((bandMinHz + bandMaxHz) / 2)} Hz</span>
           <span>{bandMinHz} Hz</span>
         </div>
       </div>
+
+      {pendingPinAnchor && cardId && (
+        <PinNoteComposer
+          title="Marcar Ponto no Espectrograma"
+          subtitle={`${pendingPinAnchor.timeSec.toFixed(1)}s • ${pendingPinAnchor.freqHz || 0} Hz • Canal ${pendingPinAnchor.channel.toUpperCase()}`}
+          onSubmitPin={async (tag, note) => {
+            await createPin({
+              cardId,
+              toolType: 'acoustic',
+              anchorData: pendingPinAnchor,
+              tag,
+              note,
+            });
+          }}
+          onSubmitFinding={async (category, label, details) => {
+            await addFinding({
+              category,
+              label,
+              details,
+              sourceCardId: cardId,
+              sourceTool: 'acoustic',
+              sourceAnchor: pendingPinAnchor,
+            });
+          }}
+          onCancel={() => setPendingPinAnchor(null)}
+        />
+      )}
+
+      {cardId && investigationId && (
+        <PinListBar
+          pins={acousticPins}
+          showPins={showPins}
+          onToggleShowPins={() => setShowPins((s) => !s)}
+          onSelectPin={(pin: CasePin) => applyPinState(pin.anchor_data as AcousticPinAnchor)}
+          renderAnchorSummary={(pin) => {
+            const a = pin.anchor_data as AcousticPinAnchor;
+            return `${(a.timeSec ?? 0).toFixed(1)}s (${(a.channel || 'mix').toUpperCase()})`;
+          }}
+        />
+      )}
 
       <div className="aw-rack">
         <div className="aw-rack-card">

@@ -16,6 +16,8 @@ import { useClueModal, ChatEntry } from '../../../contexts/ClueModalContext';
 import PhoneViewer from '../../tools/PhoneViewer';
 import { uploadInvestigationImage } from '../../../utils/storage';
 import { toast } from 'sonner';
+import DeviceBuilderModal from '../DeviceBuilderModal';
+import { DeviceExtractionMetadata } from '../../../types/forensicPillars';
 
 function parseTimeToMinutes(timeStr: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec((timeStr || '').trim());
@@ -74,6 +76,14 @@ export default function FakePhoneChatBuilder() {
   // Quick Add State
   const [quickChatSender, setQuickChatSender] = useState<'me' | 'them' | 'system'>('them');
   const [quickChatText, setQuickChatText] = useState('');
+  const [showDeviceBuilder, setShowDeviceBuilder] = useState(false);
+  const [deviceDraft, setDeviceDraft] = useState<DeviceExtractionMetadata | null>(() => {
+    try {
+      return (window as any).__ecdiseDeviceDraft || null;
+    } catch {
+      return null;
+    }
+  });
   const [quickChatTime, setQuickChatTime] = useState('');
 
   const handleMoveMessage = (idx: number, direction: -1 | 1) => {
@@ -444,8 +454,36 @@ export default function FakePhoneChatBuilder() {
                 isLocked={previewLocked}
                 password={previewLocked ? phoneState.password || '0000' : undefined}
                 passwordType={phoneState.lockType}
+                deviceData={deviceDraft}
               />
             </div>
+
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-primary ccm-btn-block"
+              style={{ marginTop: 6 }}
+              onClick={() => setShowDeviceBuilder(true)}
+            >
+              Configurar Aparelho Completo (Galeria EXIF, Notas AES-GCM, Caixa Postal &amp; Lixeira)
+            </button>
+
+            <DeviceBuilderModal
+              isOpen={showDeviceBuilder}
+              onClose={() => setShowDeviceBuilder(false)}
+              initialDevice={deviceDraft}
+              basePhoneState={{
+                hasKeypad: phoneState.hasKeypad,
+                lockType: phoneState.lockType,
+                password: phoneState.password,
+                contactName: phoneState.contactName,
+                chatList: phoneState.chatList,
+              }}
+              onSave={(device) => {
+                setDeviceDraft(device);
+                (window as any).__ecdiseDeviceDraft = device;
+                toast.success('Ecossistema completo do celular salvo na pista!');
+              }}
+            />
             <div className="ccm-note" style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Preview ({previewLocked ? 'Bloqueado' : 'Conversa'})
             </div>

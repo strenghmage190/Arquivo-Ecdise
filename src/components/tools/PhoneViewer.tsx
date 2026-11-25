@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Radio,
   Flashlight,
+  Pin,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import NumericKeypad from './NumericKeypad';
@@ -23,6 +24,10 @@ import {
   DeviceNoteItem,
 } from '../../types/forensicPillars';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import { PhonePinAnchor } from '../../types/collaboration';
+import PinNoteComposer from '../collaboration/PinNoteComposer';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import { decryptNoteBody } from '../../utils/webCryptoLock';
 import './PhoneViewer.css';
 
@@ -66,6 +71,16 @@ export default function PhoneViewer({
   cardId,
 }: PhoneViewerProps): React.ReactElement {
   const { sendToForensics, openFieldManual } = useForensicDispatch();
+  const {
+    investigationId,
+    pinsByCardId,
+    createPin,
+    addFinding,
+    pendingAnchorJump,
+    clearAnchorJump,
+  } = useCollaboration();
+  const [pendingPinTarget, setPendingPinTarget] = useState<PhonePinAnchor | null>(null);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
   const resolvedDevice: DeviceExtractionMetadata = useMemo(() => {
     if (deviceData) return deviceData;
@@ -130,6 +145,28 @@ export default function PhoneViewer({
   useEffect(() => {
     setUnlocked(!resolvedDevice.lockScreen.enabled);
   }, [resolvedDevice.lockScreen.enabled]);
+
+  useEffect(() => {
+    if (!pendingAnchorJump || !cardId) return;
+    if (pendingAnchorJump.cardId === cardId && pendingAnchorJump.toolType === 'phone') {
+      const a = pendingAnchorJump.anchorData as PhonePinAnchor;
+      if (a.app) setActiveApp(a.app);
+      if (a.threadId) setActiveThreadId(a.threadId);
+      if (a.app === 'gallery' && a.itemId) {
+        const photo = resolvedDevice.gallery.find((g) => g.id === a.itemId) || null;
+        if (photo) setSelectedPhoto(photo);
+      }
+      if (a.app === 'notes' && a.itemId) {
+        const note = resolvedDevice.notes.find((n) => n.id === a.itemId) || null;
+        if (note) setSelectedNote(note);
+      }
+      if (a.itemId) {
+        setHighlightedItemId(a.itemId);
+        setTimeout(() => setHighlightedItemId(null), 2600);
+      }
+      clearAnchorJump();
+    }
+  }, [pendingAnchorJump, cardId, resolvedDevice.gallery, resolvedDevice.notes, clearAnchorJump]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -212,6 +249,11 @@ export default function PhoneViewer({
                 smudgeHints={resolvedDevice.lockScreen.smudgeHints}
                 onUnlock={() => setUnlocked(true)}
               />
+            )}
+            {investigationId && (
+              <div style={{ marginTop: 12 }}>
+                <TeamFindingsPopover />
+              </div>
             )}
           </div>
         ) : activeApp === 'home' ? (
@@ -317,8 +359,20 @@ export default function PhoneViewer({
                 {activeThread.messages.map((msg) => {
                   const isMe = msg.sender === 'me';
                   const isRestored = restoredMessageIds.has(msg.id);
+                  const msgPins = (cardId && pinsByCardId[cardId] ? pinsByCardId[cardId] : []).filter(
+                    (p) => !p.is_resolved && p.tool_type === 'phone' && (p.anchor_data as PhonePinAnchor).itemId === msg.id
+                  );
+                  const isPinned = msgPins.length > 0 || highlightedItemId === msg.id;
                   return (
-                    <div key={msg.id} className={`nexus-bubble ${isMe ? 'sent' : 'received'}`}>
+                    <div
+                      key={msg.id}
+                      className={`nexus-bubble ${isMe ? 'sent' : 'received'}`}
+                      style={
+                        isPinned
+                          ? { outline: '2px solid #f59e0b', background: 'rgba(245, 158, 11, 0.14)' }
+                          : undefined
+                      }
+                    >
                       {msg.mediaUrl && msg.type === 'image' && (
                         <div className="phone-media-wrap">
                           <img src={msg.mediaUrl} alt="anexo" className="chat-image" loading="lazy" />
@@ -369,7 +423,27 @@ export default function PhoneViewer({
                       ) : (
                         <span className="msg-text">{isRestored ? msg.restorableText : msg.text}</span>
                       )}
-                      <span className="msg-time">{msg.time || currentTime}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                        <span className="msg-time">{msg.time || currentTime}</span>
+                        {cardId && investigationId && (
+                          <button
+                            type="button"
+                            className="phone-forensic-chip"
+                            style={{ padding: '1px 5px', fontSize: '0.65rem' }}
+                            title="Marcar evidência ou salvar na Gaveta"
+                            onClick={() =>
+                              setPendingPinTarget({
+                                app: 'messages',
+                                threadId: activeThread.id,
+                                itemId: msg.id,
+                                label: msg.text?.slice(0, 40) || 'Mensagem',
+                              })
+                            }
+                          >
+                            <Pin size={10} /> {msgPins.length > 0 ? msgPins.length : 'Marcar'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -403,20 +477,37 @@ export default function PhoneViewer({
                     {selectedPhoto.exif.locationNote && <small>{selectedPhoto.exif.locationNote}</small>}
                   </div>
                 )}
-                <button
-                  type="button"
-                  className="phone-forensic-action"
-                  onClick={() =>
-                    sendToForensics('document_table', {
-                      sourceCardId: cardId,
-                      sourceLabel: selectedPhoto.caption || 'Foto da Galeria',
-                      assetType: 'image',
-                      url: selectedPhoto.url,
-                    })
-                  }
-                >
-                  <Flashlight size={13} /> Abrir na Mesa de Luz / UV
-                </button>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                  <button
+                    type="button"
+                    className="phone-forensic-action"
+                    onClick={() =>
+                      sendToForensics('document_table', {
+                        sourceCardId: cardId,
+                        sourceLabel: selectedPhoto.caption || 'Foto da Galeria',
+                        assetType: 'image',
+                        url: selectedPhoto.url,
+                      })
+                    }
+                  >
+                    <Flashlight size={13} /> Abrir na Mesa de Luz / UV
+                  </button>
+                  {cardId && investigationId && (
+                    <button
+                      type="button"
+                      className="phone-forensic-action"
+                      onClick={() =>
+                        setPendingPinTarget({
+                          app: 'gallery',
+                          itemId: selectedPhoto.id,
+                          label: selectedPhoto.caption || 'Foto da Galeria',
+                        })
+                      }
+                    >
+                      <Pin size={13} /> Marcar Foto
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -470,9 +561,31 @@ export default function PhoneViewer({
                     >
                       Desbloquear Nota
                     </button>
+                    {investigationId && (
+                      <div style={{ marginTop: 8 }}>
+                        <TeamFindingsPopover onSelectValue={(val) => setNotePasswordInput(val)} />
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <p className="phone-note-body">{decryptedNoteBodies[selectedNote.id] ?? selectedNote.body}</p>
+                  <div>
+                    <p className="phone-note-body">{decryptedNoteBodies[selectedNote.id] ?? selectedNote.body}</p>
+                    {cardId && investigationId && (
+                      <button
+                        type="button"
+                        className="phone-forensic-chip"
+                        onClick={() =>
+                          setPendingPinTarget({
+                            app: 'notes',
+                            itemId: selectedNote.id,
+                            label: selectedNote.title,
+                          })
+                        }
+                      >
+                        <Pin size={11} /> Marcar Nota
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -525,6 +638,11 @@ export default function PhoneViewer({
                     >
                       Acessar Lixeira
                     </button>
+                    {investigationId && (
+                      <div style={{ marginTop: 8 }}>
+                        <TeamFindingsPopover onSelectValue={(val) => setTrashPin(val)} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   resolvedDevice.trash.map((item) => (
@@ -552,6 +670,33 @@ export default function PhoneViewer({
           </>
         )}
       </div>
+
+      {pendingPinTarget && cardId && (
+        <PinNoteComposer
+          title="Marcar Evidência no Celular"
+          subtitle={pendingPinTarget.label}
+          onSubmitPin={async (tag, note) => {
+            await createPin({
+              cardId,
+              toolType: 'phone',
+              anchorData: pendingPinTarget,
+              tag,
+              note,
+            });
+          }}
+          onSubmitFinding={async (category, label, details) => {
+            await addFinding({
+              category,
+              label,
+              details,
+              sourceCardId: cardId,
+              sourceTool: 'phone',
+              sourceAnchor: pendingPinTarget,
+            });
+          }}
+          onCancel={() => setPendingPinTarget(null)}
+        />
+      )}
     </div>
   );
 }

@@ -17,6 +17,8 @@ import PhysicalDocumentTable from '../tools/PhysicalDocumentTable';
 import AcousticWorkbench from '../tools/AcousticWorkbench';
 import OrdoFieldManualModal from './OrdoFieldManualModal';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
+import { useCollaboration } from '../../contexts/CollaborationContext';
 import WaveSurfer from 'wavesurfer.js';
 import useEscapeClose from './useEscapeClose';
 import './InspectionModal.css';
@@ -1938,11 +1940,14 @@ export default function InspectionModal({
                 );
               }
               return (
-                <HackingTerminal
-                  correctPassword={lockPass}
-                  onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
-                  hint={card.description_public}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <HackingTerminal
+                    correctPassword={lockPass}
+                    onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
+                    hint={card.description_public}
+                  />
+                  <TeamFindingsPopover />
+                </div>
               );
             })()}
           </div>
@@ -2657,6 +2662,7 @@ export default function InspectionModal({
             {activeDispatch.target === 'document_table' && activeDispatch.asset.url && (
               <PhysicalDocumentTable
                 title={activeDispatch.asset.sourceLabel}
+                cardId={activeDispatch.asset.sourceCardId}
                 documentData={{
                   version: 2,
                   frontBaseUrl: activeDispatch.asset.url,

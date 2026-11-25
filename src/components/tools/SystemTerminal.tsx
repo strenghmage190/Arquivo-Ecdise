@@ -1,6 +1,8 @@
 import { Lock, FileText, AlertTriangle, Search, Thermometer, X } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import './SystemTerminal.css';
 
 interface SystemTerminalProps {
@@ -13,6 +15,7 @@ interface SystemTerminalProps {
 }
 
 export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onThermalUnlock, onDiscoverHidden }: SystemTerminalProps) {
+  const { investigationId } = useCollaboration();
   const [history, setHistory] = useState<string[]>(['C.R.I.S. TERMINAL [VERSÃO 4.0.2]', 'DIGITE "HELP" PARA AJUDA.']);
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -192,6 +195,11 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
               {cmd}
             </button>
           ))}
+          {investigationId && (
+            <TeamFindingsPopover
+              onSelectValue={(val) => setInput((prev) => (prev ? `${prev} ${val}` : val))}
+            />
+          )}
         </div>
 
         <form onSubmit={handleCommand} className="terminal-input-row">

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   Flashlight,
   Flame,
@@ -8,12 +8,17 @@ import {
   BookOpen,
   CheckCircle2,
   MousePointer,
+  Pin,
 } from 'lucide-react';
 import {
   DocumentLayer,
   PhysicalDocumentMetadata,
 } from '../../types/forensicPillars';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import { CasePin, DocumentPinAnchor, PIN_TAG_META } from '../../types/collaboration';
+import PinListBar from '../collaboration/PinListBar';
+import PinNoteComposer from '../collaboration/PinNoteComposer';
 import './PhysicalDocumentTable.css';
 
 type LightTool = 'inspect' | 'uv' | 'heater' | 'lens_r' | 'lens_g' | 'lens_b';
@@ -28,14 +33,27 @@ interface FragmentPiece {
 interface Props {
   documentData: PhysicalDocumentMetadata;
   title?: string;
+  cardId?: string;
 }
 
-export default function PhysicalDocumentTable({ documentData, title = 'Documento Físico' }: Props) {
+export default function PhysicalDocumentTable({ documentData, title = 'Documento Físico', cardId }: Props) {
   const { openFieldManual } = useForensicDispatch();
+  const {
+    investigationId,
+    pinsByCardId,
+    createPin,
+    addFinding,
+    pendingAnchorJump,
+    clearAnchorJump,
+  } = useCollaboration();
   const paperRef = useRef<HTMLDivElement | null>(null);
 
   const [tool, setTool] = useState<LightTool>('inspect');
   const [globalSide, setGlobalSide] = useState<'front' | 'back'>('front');
+  const [pinMode, setPinMode] = useState(false);
+  const [showPins, setShowPins] = useState(true);
+  const [pendingPinAnchor, setPendingPinAnchor] = useState<DocumentPinAnchor | null>(null);
+  const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number; active: boolean }>({
     x: -200,
     y: -200,
@@ -191,6 +209,86 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
 
   const visibleSideLayers = documentData.layers.filter((l) => l.side === globalSide);
 
+  const documentPins = useMemo(() => {
+    if (!cardId) return [];
+    return (pinsByCardId[cardId] || []).filter((p) => p.tool_type === 'document');
+  }, [pinsByCardId, cardId]);
+
+  const sidePins = useMemo(
+    () =>
+      documentPins.filter((p) => {
+        if (p.is_resolved) return false;
+        const a = p.anchor_data as DocumentPinAnchor;
+        return (a.side || 'front') === globalSide;
+      }),
+    [documentPins, globalSide]
+  );
+
+  const applyPinAnchor = useCallback((anchor: DocumentPinAnchor, pinId?: string) => {
+    if (anchor.side) setGlobalSide(anchor.side);
+    if (anchor.tool) setTool(anchor.tool);
+    if (pinId) {
+      setHighlightedPinId(pinId);
+      setTimeout(() => setHighlightedPinId(null), 2600);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pendingAnchorJump || !cardId) return;
+    if (pendingAnchorJump.cardId === cardId && pendingAnchorJump.toolType === 'document') {
+      applyPinAnchor(pendingAnchorJump.anchorData as DocumentPinAnchor);
+      clearAnchorJump();
+    }
+  }, [pendingAnchorJump, cardId, applyPinAnchor, clearAnchorJump]);
+
+  const placePinOnRect = (rect: DOMRect, clientX: number, clientY: number, fragmentId?: number | string) => {
+    const xPct = Number((((clientX - rect.left) / Math.max(1, rect.width)) * 100).toFixed(2));
+    const yPct = Number((((clientY - rect.top) / Math.max(1, rect.height)) * 100).toFixed(2));
+    setPendingPinAnchor({
+      xPct: Math.max(0, Math.min(100, xPct)),
+      yPct: Math.max(0, Math.min(100, yPct)),
+      side: globalSide,
+      tool,
+      ...(fragmentId !== undefined ? { fragmentId } : {}),
+    });
+    setPinMode(false);
+  };
+
+  const renderPinMarker = (pin: CasePin) => {
+    const a = pin.anchor_data as DocumentPinAnchor;
+    const tagMeta = PIN_TAG_META[pin.tag] || PIN_TAG_META.look_here;
+    const isHl = highlightedPinId === pin.id;
+    return (
+      <button
+        key={pin.id}
+        type="button"
+        title={`${pin.author_name}: ${pin.note}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          applyPinAnchor(a, pin.id);
+        }}
+        style={{
+          position: 'absolute',
+          left: `${a.xPct}%`,
+          top: `${a.yPct}%`,
+          transform: 'translate(-50%, -100%)',
+          background: tagMeta.color,
+          color: '#090d16',
+          border: isHl ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.6)',
+          borderRadius: 999,
+          padding: '2px 6px',
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          zIndex: 25,
+          boxShadow: isHl ? '0 0 14px #fbbf24' : '0 2px 6px rgba(0,0,0,0.55)',
+        }}
+      >
+        📌
+      </button>
+    );
+  };
+
   return (
     <div className="pdt-table">
       <div className="pdt-topbar">
@@ -264,6 +362,18 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
             </button>
           </div>
 
+          {cardId && investigationId && (
+            <button
+              type="button"
+              style={pinMode ? { borderColor: '#f59e0b', color: '#fbbf24' } : undefined}
+              onClick={() => setPinMode((m) => !m)}
+              title="Cravar alfinete em um ponto do documento"
+            >
+              <Pin size={15} />
+              <span>{pinMode ? 'Clique no Papel...' : 'Cravar Alfinete'}</span>
+            </button>
+          )}
+
           {isFragmented && documentData.fragmentation.allowRotation && (
             <button
               type="button"
@@ -281,7 +391,12 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
           <div
             ref={paperRef}
             className={`pdt-paper side-${globalSide} tool-${tool}`}
+            style={{ cursor: pinMode ? 'crosshair' : undefined }}
             onPointerDown={(e) => {
+              if (pinMode && !isFragmented && paperRef.current) {
+                placePinOnRect(paperRef.current.getBoundingClientRect(), e.clientX, e.clientY);
+                return;
+              }
               if (tool === 'heater') {
                 setIsHeating(true);
                 applyHeatAt(e.clientX, e.clientY);
@@ -300,6 +415,7 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                   <img src={documentData.frontBaseUrl} alt="Frente" className="pdt-bg" />
                 )}
                 {visibleSideLayers.map(renderLayer)}
+                {showPins && sidePins.map(renderPinMarker)}
               </>
             ) : (
               <div
@@ -310,9 +426,16 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                   <div
                     key={p.id}
                     className={`pdt-frag-strip ${selectedPieceIdx === idx ? 'selected' : ''}`}
-                    onClick={() => handlePieceClick(idx)}
+                    onClick={(e) => {
+                      if (pinMode) {
+                        placePinOnRect(e.currentTarget.getBoundingClientRect(), e.clientX, e.clientY, p.id);
+                        return;
+                      }
+                      handlePieceClick(idx);
+                    }}
                     style={{
                       transform: `rotate(${p.rotation}deg)`,
+                      position: 'relative',
                     }}
                   >
                     <div
@@ -327,6 +450,10 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
                       )}
                       {visibleSideLayers.map(renderLayer)}
                     </div>
+                    {showPins &&
+                      sidePins
+                        .filter((pin) => (pin.anchor_data as DocumentPinAnchor).fragmentId === p.id)
+                        .map(renderPinMarker)}
                   </div>
                 ))}
               </div>
@@ -349,6 +476,46 @@ export default function PhysicalDocumentTable({ documentData, title = 'Documento
           </div>
         </div>
       </div>
+
+      {pendingPinAnchor && cardId && (
+        <PinNoteComposer
+          title="Cravar Alfinete no Documento"
+          subtitle={`${pendingPinAnchor.side === 'front' ? 'Frente' : 'Verso'} • Ferramenta: ${pendingPinAnchor.tool.toUpperCase()}`}
+          onSubmitPin={async (tag, note) => {
+            await createPin({
+              cardId,
+              toolType: 'document',
+              anchorData: pendingPinAnchor,
+              tag,
+              note,
+            });
+          }}
+          onSubmitFinding={async (category, label, details) => {
+            await addFinding({
+              category,
+              label,
+              details,
+              sourceCardId: cardId,
+              sourceTool: 'document',
+              sourceAnchor: pendingPinAnchor,
+            });
+          }}
+          onCancel={() => setPendingPinAnchor(null)}
+        />
+      )}
+
+      {cardId && investigationId && (
+        <PinListBar
+          pins={documentPins}
+          showPins={showPins}
+          onToggleShowPins={() => setShowPins((s) => !s)}
+          onSelectPin={(pin) => applyPinAnchor(pin.anchor_data as DocumentPinAnchor, pin.id)}
+          renderAnchorSummary={(pin) => {
+            const a = pin.anchor_data as DocumentPinAnchor;
+            return `${a.side === 'back' ? 'Verso' : 'Frente'} [${(a.tool || 'inspect').toUpperCase()}]`;
+          }}
+        />
+      )}
     </div>
   );
 }

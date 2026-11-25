@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import './NumericKeypad.css';
 
 interface NumericKeypadProps {
@@ -9,6 +11,7 @@ interface NumericKeypadProps {
 }
 
 export default function NumericKeypad({ code, onUnlock, onInput, smudgeHints = [] }: NumericKeypadProps) {
+  const { investigationId } = useCollaboration();
   const [input, setInput] = useState<string>('');
   const [status, setStatus] = useState<'locked' | 'error' | 'success'>('locked');
 
