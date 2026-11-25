@@ -1,4 +1,4 @@
-import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown, ArrowLeft, FolderOpen, Microscope, Keyboard, Languages, FileText, Video, MessageSquare, SlidersHorizontal, Flashlight, Puzzle, Pencil, Clock, CheckCircle2, XCircle, KeyRound, Smartphone, Play, Pause, Layers } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -827,9 +827,8 @@ export default function InspectionModal({
     if (!container.querySelector('.image-controls')) {
       const controls = document.createElement('div');
       controls.className = 'image-controls';
-      controls.innerHTML = '<button type="button" class="img-zoom-btn" title="Aumentar zoom">+</button><span class="image-zoom-badge">100%</span><button type="button" class="img-zoom-btn" title="Diminuir zoom">−</button><button type="button" class="img-zoom-btn btn-reset" title="Restaurar tamanho">↺</button>';
-      // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
-      if (!fullscreenOpen) container.appendChild(controls);
+      controls.innerHTML = '<button type="button" class="img-zoom-btn" title="Aumentar zoom" aria-label="Aumentar zoom">+</button><span class="image-zoom-badge zoom-level-badge">100%</span><button type="button" class="img-zoom-btn" title="Diminuir zoom" aria-label="Diminuir zoom">−</button><button type="button" class="img-zoom-btn btn-zoom-reset" title="Recentralizar zoom" aria-label="Recentralizar zoom">↺</button>';
+      container.appendChild(controls);
     }
 
     // Estado local do Zoom (Mutable para performance)
@@ -844,14 +843,13 @@ export default function InspectionModal({
 
     const updateTransform = (animate = false) => {
       if (animate && !effectivePerformanceMode) {
-        transformTarget.style.transition =
-          'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), width 240ms cubic-bezier(0.22, 1, 0.36, 1), height 240ms cubic-bezier(0.22, 1, 0.36, 1)';
+        transformTarget.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
       } else {
         transformTarget.style.transition = 'none';
       }
-      transformTarget.style.width = `${state.scale * 100}%`;
-      transformTarget.style.height = `${state.scale * 100}%`;
-      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px)`;
+      transformTarget.style.width = '100%';
+      transformTarget.style.height = '100%';
+      transformTarget.style.transform = `translate3d(${state.pointX}px, ${state.pointY}px, 0) scale(${state.scale})`;
       transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
       const badge = container.querySelector('.image-zoom-badge');
       if (badge) badge.textContent = `${Math.round(state.scale * 100)}%`;
@@ -860,6 +858,8 @@ export default function InspectionModal({
     // --- HANDLERS DE MOUSE/TOUCH ---
 
     const onMouseDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
       if ('button' in e && e.button !== 0) return;
       if (e.cancelable) e.preventDefault();
       try { window.getSelection()?.removeAllRanges(); } catch {}
@@ -946,7 +946,8 @@ export default function InspectionModal({
       state.scale = 1;
       state.pointX = 0;
       state.pointY = 0;
-      updateTransform();
+      transformTarget.style.transformOrigin = 'center center';
+      updateTransform(true);
     };
 
     if (btnIn) btnIn.addEventListener('click', handleIn);
@@ -966,10 +967,15 @@ export default function InspectionModal({
 
     // Wheel Zoom (Mouse)
     const onWheel = (e: WheelEvent) => {
-      try { e.preventDefault(); } catch (err) { }
-      const delta = -Math.sign(e.deltaY) * 0.25;
-      const step = Math.abs(state.scale) > 2 ? delta * 0.8 : delta;
-      zoom(step, e.clientX, e.clientY);
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch (err) { }
+      const rawDy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 100 : e.deltaY;
+      const dy = Math.max(-120, Math.min(120, rawDy));
+      if (dy === 0) return;
+      const targetScale = Math.max(1, Math.min(10, state.scale * Math.exp(-dy * 0.0022)));
+      zoom(targetScale - state.scale, e.clientX, e.clientY);
     };
     container.addEventListener('wheel', onWheel, { passive: false });
 
@@ -1135,7 +1141,7 @@ export default function InspectionModal({
             borderRadius: '12px',
             maxWidth: '500px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
+            <div style={{ marginBottom: '12px', color: '#00f3ff', display: 'flex', justifyContent: 'center' }}><Layers size={44} /></div>
             <h3 style={{
               margin: '0 0 8px',
               color: '#e9fcff',
@@ -1171,7 +1177,7 @@ export default function InspectionModal({
               onClick={() => setShredderModalOpen(true)}
               className="btn-reconstructor"
             >
-              🧩 ABRIR RECONSTRUTOR
+              <Puzzle className="lucide-icon inline-icon" size={16} /> ABRIR RECONSTRUTOR
             </button>
           </div>
         </div>
@@ -1299,7 +1305,7 @@ export default function InspectionModal({
               className="btn-tool-tab"
               style={{ minWidth: 110, minHeight: 44, touchAction: 'manipulation' }}
             >
-              {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
+              {audioIsPlaying ? <><Pause size={14} /> Pausar</> : <><Play size={14} /> Reproduzir</>}
             </button>
 
             <button
@@ -1385,7 +1391,7 @@ export default function InspectionModal({
                   }}
                   style={{ marginTop: 6 }}
                 >
-                  🧩 ABRIR DECODIFICADOR
+                  <Puzzle className="lucide-icon inline-icon" size={15} /> ABRIR DECODIFICADOR
                 </button>
               </div>
             </div>
@@ -1670,25 +1676,25 @@ export default function InspectionModal({
             const isMobile = (typeof window !== 'undefined' && window.innerWidth <= 768);
             return (menuView === 'media' && isMobile) ? (
               <>
-                <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}>⬅ VOLTAR</button>
+                <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}><ArrowLeft className="lucide-icon inline-icon" size={14} /> VOLTAR</button>
                 <hr className="divider" />
                 {hasImage && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}>📸 FOTO</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}><Camera className="lucide-icon inline-icon" size={15} /> FOTO</button>
                 )}
                 {hasVideo && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}><Video className="lucide-icon inline-icon" size={15} /> VÍDEO</button>
                 )}
                 {hasAudio && (
                   <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO</button>
                 )}
                 {hasChat && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}><MessageSquare className="lucide-icon inline-icon" size={15} /> CHATS</button>
                 )}
               </>
             ) : (
               <>
                 <button type="button" className="btn-tool-tab btn-highlight" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('media')}>
-                  📂 MÍDIA ({mediaCount}) ▸
+                  <FolderOpen className="lucide-icon inline-icon" size={15} /> MÍDIA ({mediaCount}) ▸
                 </button>
                 <hr className="divider" />
                 {(() => {
@@ -1711,15 +1717,15 @@ export default function InspectionModal({
                       }}
                       title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
                     >
-                      <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL {isLocked ? '🔒' : ''}
+                      <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL {isLocked ? <Lock className="lucide-icon inline-icon" size={13} /> : null}
                     </button>
                   );
                 })()}
 
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}><Microscope className="lucide-icon inline-icon" size={15} /> FORENSE</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}><Keyboard className="lucide-icon inline-icon" size={15} /> INSPECIONAR CÓDIGO</button>
                 <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}><Lock className="lucide-icon inline-icon" size={16} /> DECODIFICADOR</button>
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</button>
               </>
             )
           })()}
@@ -1744,7 +1750,7 @@ export default function InspectionModal({
                   <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}><Lock className="lucide-icon inline-icon" size={16} /></span>
                 )}
                 {hasRecord && (
-                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
+                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}><FileText className="lucide-icon inline-icon" size={15} /></span>
                 )}
                 {currentCard.metadata?.type && <span className="type-tag">{currentCard.metadata.type}</span>}
                 {contactNameInferred && (
@@ -1759,7 +1765,7 @@ export default function InspectionModal({
                       className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('image'); }}
                     >
-                      📸 FOTO
+                      <Camera className="lucide-icon inline-icon" size={15} /> FOTO
                     </button>
                   )}
                   {hasVideo && (
@@ -1768,7 +1774,7 @@ export default function InspectionModal({
                       className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('video'); }}
                     >
-                      🎥 VÍDEO
+                      <Video className="lucide-icon inline-icon" size={15} /> VÍDEO
                     </button>
                   )}
                   {hasAudio && (
@@ -1786,7 +1792,7 @@ export default function InspectionModal({
                       className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('phone'); }}
                     >
-                      💬 CHATS
+                      <MessageSquare className="lucide-icon inline-icon" size={15} /> CHATS
                     </button>
                   )}
                 </div>
@@ -1833,7 +1839,7 @@ export default function InspectionModal({
                   }}
                   style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                 >
-                  {visualMode === 'audio' ? '🎵 EXPANDIR' : visualMode === 'phone' ? '📱 EXPANDIR' : '🔍 EXPANDIR'}
+                  {visualMode === 'audio' ? <><Music className="lucide-icon inline-icon" size={15} /> EXPANDIR</> : visualMode === 'phone' ? <><Smartphone className="lucide-icon inline-icon" size={15} /> EXPANDIR</> : <><Search className="lucide-icon inline-icon" size={15} /> EXPANDIR</>}
                 </button>
 
                 <button
@@ -1845,16 +1851,16 @@ export default function InspectionModal({
                   <Maximize2 className="lucide-icon inline-icon" size={16} /> TELA CHEIA
                 </button>
 
-                <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}>🧪 TRATAMENTO</button>
+                <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}><SlidersHorizontal className="lucide-icon inline-icon" size={15} /> TRATAMENTO</button>
 
-                <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}>🔦 LUZ UV</button>
+                <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}><Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV</button>
 
                 {isGlitchPuzzleGlobal && (
                   <button
                     className={`btn-tool-tab ${showGlitchSolver ? 'active-green' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setShowGlitchSolver(true); }}
                   >
-                    🧩 DECODIFICAR
+                    <Puzzle className="lucide-icon inline-icon" size={15} /> DECODIFICAR
                   </button>
                 )}
 
@@ -2022,7 +2028,7 @@ export default function InspectionModal({
 
               {forensicMode === 'lens' && (
                 <div className="tools-hud-panel">
-                  <div className="hud-title">🧿 TRADUZIR</div>
+                  <div className="hud-title"><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</div>
                   <div style={{ width: '100%' }}>
                     <DecipherLens realText={currentCard.metadata?.real_text} cipherText={currentCard.metadata?.cipher_text} />
                   </div>
@@ -2031,7 +2037,7 @@ export default function InspectionModal({
 
               {forensicMode === 'hex' && (
                 <div className="tools-hud-panel">
-                  <div className="hud-title">⌨️ INSPETOR HEXADECIMAL</div>
+                  <div className="hud-title"><Keyboard className="lucide-icon inline-icon" size={15} /> INSPETOR HEXADECIMAL</div>
                   <div style={{ width: '100%' }}>
                     <HexViewer
                       hiddenMessage={
@@ -2098,7 +2104,7 @@ export default function InspectionModal({
                         </div>
                         {card.lock_password && (
                           <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
-                            <strong>🔑 Senha configurada:</strong> <code>{card.lock_password}</code>
+                            <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
                           </div>
                         )}
                       </div>
@@ -2120,7 +2126,7 @@ export default function InspectionModal({
                       }}
                       title="Enviar texto público/cifrado para o Decoder"
                     >
-                      🔐 Enviar para Decoder
+                      <KeyRound className="lucide-icon inline-icon" size={15} /> Enviar para Decoder
                     </button>
                     <button
                       type="button"
@@ -2128,7 +2134,7 @@ export default function InspectionModal({
                       onClick={() => setForensicMode(prev => prev === 'hex' ? 'none' : 'hex')}
                       title="Abrir conteúdo técnico/hex no Inspetor Hexadecimal"
                     >
-                      ⌨️ Abrir no Hex
+                      <Keyboard className="lucide-icon inline-icon" size={15} /> Abrir no Hex
                     </button>
                   </div>
 
@@ -2162,20 +2168,20 @@ export default function InspectionModal({
 
                       {/* Mostrar APENAS field_values com valores reais */}
                       <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
-                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>📋 Informações do Arquivo</div>
+                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>Informações do Arquivo</div>
                         {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
                           // Só mostra se tem valor real
                           if (!val && val !== 0) return null;
 
                           const labelMap: Record<string, string> = {
-                            date_created: '📅 Data',
-                            gps_coords: '📍 Localização',
-                            device_owner: '👤 Proprietário',
-                            camera_model: '📷 Câmera',
-                            technical_note: '🔧 Nota Técnica',
-                            chat_contact_name: '💬 Contato',
-                            stamp: '🔖 Carimbo',
-                            external_link: '🔗 Link Externo'
+                            date_created: 'Data',
+                            gps_coords: 'Localização',
+                            device_owner: 'Proprietário',
+                            camera_model: 'Câmera',
+                            technical_note: 'Nota Técnica',
+                            chat_contact_name: 'Contato',
+                            stamp: 'Carimbo',
+                            external_link: 'Link Externo'
                           };
                           const label = labelMap[key] || key;
                           return (
@@ -2219,7 +2225,7 @@ export default function InspectionModal({
                 <div className="controls-col">
                   {isGameMaster && (
                     <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                      ✎ EDITAR DADOS
+                      <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
                     </button>
                   )}
 
@@ -2233,7 +2239,7 @@ export default function InspectionModal({
                         onClick={() => handleUpdateStatus('pending')}
                         title="Marcar como pendente"
                       >
-                        ⏳ PENDENTE
+                        <Clock className="lucide-icon inline-icon" size={14} /> PENDENTE
                       </button>
                       <button
                         type="button"
@@ -2241,7 +2247,7 @@ export default function InspectionModal({
                         onClick={() => handleUpdateStatus('confirmed')}
                         title="Marcar como confirmada"
                       >
-                        ✅ CONFIRMADA
+                        <CheckCircle2 className="lucide-icon inline-icon" size={14} /> CONFIRMADA
                       </button>
                       <button
                         type="button"
@@ -2249,7 +2255,7 @@ export default function InspectionModal({
                         onClick={() => handleUpdateStatus('debunked')}
                         title="Marcar como descartada"
                       >
-                        ❌ DESCARTADA
+                        <XCircle className="lucide-icon inline-icon" size={14} /> DESCARTADA
                       </button>
                     </div>
                   </div>
@@ -2337,7 +2343,7 @@ export default function InspectionModal({
                             </div>
                             {card.lock_password && (
                               <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
-                                <strong>🔑 Senha configurada:</strong> <code>{card.lock_password}</code>
+                                <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
                               </div>
                             )}
                           </div>
@@ -2382,7 +2388,7 @@ export default function InspectionModal({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {isGameMaster && (
                         <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                          ✎ EDITAR DADOS
+                          <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
                         </button>
                       )}
                       {card.metadata?.type === 'person' && (
@@ -2441,7 +2447,7 @@ export default function InspectionModal({
               <span className="glitch-title">Painel de Sincronização</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)}>✖</button>
+              <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)} aria-label="Fechar"><X size={15} /></button>
             </div>
           </div>
           <div className="glitch-solver-body">
@@ -2534,7 +2540,7 @@ export default function InspectionModal({
               {/* Botões de Ação */}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button className={`btn-hud ${localUV ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalUV(!localUV) }}>
-                  🔦 LUZ UV
+                  <Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV
                 </button>
 
                 <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalThermal(!localThermal) }}>
@@ -2542,7 +2548,7 @@ export default function InspectionModal({
                 </button>
 
                 <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel') }}>
-                  🔬 FORENSE
+                  <Microscope className="lucide-icon inline-icon" size={15} /> FORENSE
                 </button>
 
                 {forensicMode === 'channel' && (

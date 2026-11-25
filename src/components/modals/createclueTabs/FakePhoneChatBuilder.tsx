@@ -1,4 +1,17 @@
 import React, { useRef, useState } from 'react';
+import {
+  Clock,
+  Lock,
+  Unlock,
+  PhoneMissed,
+  Music,
+  Image as ImageIcon,
+  AlertTriangle,
+  MessageSquare,
+  X,
+  Paperclip,
+  Plus,
+} from 'lucide-react';
 import { useClueModal, ChatEntry } from '../../../contexts/ClueModalContext';
 import PhoneViewer from '../../tools/PhoneViewer';
 import { uploadInvestigationImage } from '../../../utils/storage';
@@ -40,10 +53,10 @@ function computeNextTime(
 }
 
 const SYSTEM_PRESETS = [
-  { label: '📞 Ligação perdida', text: '📞 Ligação perdida' },
-  { label: '🎵 Áudio (0:14)', text: '🎵 Áudio (0:14)' },
-  { label: '🖼️ Mídia expirada', text: '🖼️ Mídia expirada' },
-  { label: '⚠️ Mensagem apagada', text: '⚠️ Mensagem apagada' },
+  { label: 'Ligação perdida', text: 'Ligação perdida', icon: PhoneMissed },
+  { label: 'Áudio (0:14)', text: 'Áudio (0:14)', icon: Music },
+  { label: 'Mídia expirada', text: 'Mídia expirada', icon: ImageIcon },
+  { label: 'Mensagem apagada', text: 'Mensagem apagada', icon: AlertTriangle },
 ];
 
 export default function FakePhoneChatBuilder() {
@@ -169,154 +182,97 @@ export default function FakePhoneChatBuilder() {
   };
 
   return (
-    <div style={{ marginTop: '10px' }}>
+    <div className="ccm-list-stack">
       <button
         type="button"
-        className={showChatEditor ? 'cc-btn cc-btn-save' : 'cc-btn cc-btn-cancel'}
-        style={{ width: '100%', justifyContent: 'center' }}
+        className={`ccm-btn ccm-btn-block ${showChatEditor ? 'ccm-btn-primary' : ''}`}
         onClick={() => setShowChatEditor(!showChatEditor)}
       >
-        💬 {showChatEditor ? 'Fechar Editor de Chat' : 'Configurar Chat Fake'}
+        <MessageSquare size={15} /> {showChatEditor ? 'Fechar Editor de Chat' : 'Configurar Chat Fake'}
       </button>
 
       {showChatEditor && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '20px',
-            marginTop: '15px',
-            background: 'rgba(0,0,0,0.4)',
-            padding: '15px',
-            borderRadius: '8px',
-            border: '1px solid rgba(100,150,255,0.2)',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="ccm-section ccm-chat-builder">
           {/* LADO ESQUERDO: INPUTS */}
-          <div style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div className="cc-field">
-              <label className="cc-label">Nome do Contato</label>
+          <div className="ccm-chat-col">
+            <div className="ccm-field">
+              <label className="ccm-label">Nome do Contato</label>
               <input
-                className="cc-input"
+                className="ccm-input"
                 value={phoneState.contactName}
                 onChange={(e) => setPhoneState((s) => ({ ...s, contactName: e.target.value }))}
                 placeholder="Ex: Suspeito Principal"
               />
             </div>
 
-            {/* CONTROLES DE HORÁRIO AUTOMÁTICO */}
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                padding: '10px',
-                borderRadius: '6px',
-                border: '1px solid rgba(100,150,255,0.18)',
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-                alignItems: 'flex-end',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 100 }}>
-                <label className="cc-label" style={{ fontSize: 11 }}>
-                  Horário Inicial
-                </label>
-                <input
-                  type="time"
-                  className="cc-input"
-                  style={{ padding: '4px 6px' }}
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 110 }}>
-                <label className="cc-label" style={{ fontSize: 11 }}>
-                  Auto-incremento
-                </label>
-                <select
-                  className="cc-input"
-                  style={{ padding: '4px 6px' }}
-                  value={timeIncrement}
-                  onChange={(e) => setTimeIncrement(parseInt(e.target.value, 10))}
-                >
-                  <option value={1}>+1 min</option>
-                  <option value={2}>+2 min</option>
-                  <option value={5}>+5 min</option>
-                  <option value={0}>Manual</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                className="cc-btn cc-btn-cancel"
-                style={{ padding: '6px 10px', fontSize: 11 }}
-                onClick={handleRecalculateTimes}
-              >
-                ⏱️ Recalcular horários
-              </button>
-            </div>
-
-            {/* TIPOS RÁPIDOS DE MENSAGEM DE SISTEMA */}
-            <div>
-              <label className="cc-label" style={{ fontSize: 11, marginBottom: 6, display: 'block' }}>
-                Inserir Mensagem de Sistema (1 Clique)
-              </label>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {SYSTEM_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    className="cc-btn cc-btn-cancel"
-                    style={{ padding: '4px 8px', fontSize: '11px' }}
-                    onClick={() => handleInsertSystemPreset(preset.text)}
+            <div className="ccm-list-card">
+              <div className="ccm-grid-3">
+                <div className="ccm-field">
+                  <label className="ccm-label">Horário Inicial</label>
+                  <input
+                    type="time"
+                    className="ccm-input"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+                <div className="ccm-field">
+                  <label className="ccm-label">Auto-incremento</label>
+                  <select
+                    className="ccm-input"
+                    value={timeIncrement}
+                    onChange={(e) => setTimeIncrement(parseInt(e.target.value, 10))}
                   >
-                    {preset.label}
+                    <option value={1}>+1 min</option>
+                    <option value={2}>+2 min</option>
+                    <option value={5}>+5 min</option>
+                    <option value={0}>Manual</option>
+                  </select>
+                </div>
+                <div className="ccm-field" style={{ justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="ccm-btn"
+                    onClick={handleRecalculateTimes}
+                  >
+                    <Clock size={14} /> Recalcular
                   </button>
-                ))}
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="cc-label">Mensagens ({phoneState.chatList.length})</label>
+            <div className="ccm-field">
+              <label className="ccm-label">Inserir Mensagem de Sistema (1 Clique)</label>
+              <div className="ccm-btn-row">
+                {SYSTEM_PRESETS.map((preset) => {
+                  const PresetIcon = preset.icon;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="ccm-btn ccm-btn-sm"
+                      onClick={() => handleInsertSystemPreset(preset.text)}
+                    >
+                      <PresetIcon size={13} /> {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="ccm-field">
+              <label className="ccm-label">Mensagens ({phoneState.chatList.length})</label>
               {phoneState.chatList.length === 0 ? (
-                <div
-                  style={{
-                    padding: 12,
-                    background: 'rgba(0,0,0,0.3)',
-                    borderRadius: 6,
-                    border: '1px dashed rgba(100,150,255,0.3)',
-                    color: '#888',
-                    fontSize: 11,
-                    textAlign: 'center',
-                    marginBottom: 10,
-                  }}
-                >
-                  Nenhuma mensagem. Clique em "➕ Adicionar Mensagem".
+                <div className="ccm-callout ccm-note">
+                  Nenhuma mensagem. Clique em "Adicionar Mensagem".
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    paddingRight: '5px',
-                  }}
-                >
+                <div className="ccm-chat-list">
                   {phoneState.chatList.map((m, idx) => (
-                    <div
-                      key={m.id || idx}
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        padding: '10px',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                    <div key={m.id || idx} className="ccm-list-card">
+                      <div className="ccm-chat-msg-head">
                         <select
-                          className="cc-input"
-                          style={{ flex: 1, padding: '4px' }}
+                          className="ccm-input"
                           value={m.sender}
                           onChange={(e) => {
                             const copy = [...phoneState.chatList];
@@ -330,8 +286,7 @@ export default function FakePhoneChatBuilder() {
                         </select>
                         <input
                           type="time"
-                          className="cc-input"
-                          style={{ width: 110, padding: '4px 6px' }}
+                          className="ccm-input"
                           value={m.time || ''}
                           onChange={(e) => {
                             const copy = [...phoneState.chatList];
@@ -341,8 +296,7 @@ export default function FakePhoneChatBuilder() {
                         />
                         <button
                           type="button"
-                          className="cc-btn cc-btn-cancel"
-                          style={{ padding: '4px 7px', fontSize: '11px' }}
+                          className="ccm-btn ccm-btn-sm"
                           disabled={idx === 0}
                           title="Subir mensagem"
                           onClick={() => handleMoveMessage(idx, -1)}
@@ -351,8 +305,7 @@ export default function FakePhoneChatBuilder() {
                         </button>
                         <button
                           type="button"
-                          className="cc-btn cc-btn-cancel"
-                          style={{ padding: '4px 7px', fontSize: '11px' }}
+                          className="ccm-btn ccm-btn-sm"
                           disabled={idx === phoneState.chatList.length - 1}
                           title="Descer mensagem"
                           onClick={() => handleMoveMessage(idx, 1)}
@@ -362,9 +315,8 @@ export default function FakePhoneChatBuilder() {
                       </div>
 
                       <textarea
-                        className="cc-input"
+                        className="ccm-input"
                         rows={2}
-                        style={{ width: '100%', marginBottom: '8px', padding: '6px' }}
                         value={m.text}
                         onChange={(e) => {
                           const copy = [...phoneState.chatList];
@@ -373,33 +325,26 @@ export default function FakePhoneChatBuilder() {
                         }}
                       />
 
-                      <div style={{ marginBottom: '8px' }}>
-                        {m.image_url && (
-                          <img
-                            src={m.image_url}
-                            alt="preview"
-                            style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '4px' }}
-                          />
-                        )}
-                        {chatUploadProgress[idx] !== undefined && (
-                          <div style={{ fontSize: 11, color: '#9cc' }}>
-                            Enviando: {chatUploadProgress[idx]}%
-                          </div>
-                        )}
-                      </div>
+                      {m.image_url && (
+                        <img src={m.image_url} alt="preview" className="ccm-chat-thumb" />
+                      )}
+                      {chatUploadProgress[idx] !== undefined && (
+                        <div className="ccm-note" style={{ color: 'var(--ccm-accent)' }}>
+                          Enviando: {chatUploadProgress[idx]}%
+                        </div>
+                      )}
 
-                      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      <div className="ccm-btn-row">
                         <button
                           type="button"
-                          className="cc-btn cc-btn-cancel"
-                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          className="ccm-btn ccm-btn-sm ccm-btn-danger"
                           onClick={() => {
                             const copy = [...phoneState.chatList];
                             copy.splice(idx, 1);
                             setPhoneState((s) => ({ ...s, chatList: copy }));
                           }}
                         >
-                          ✖ Remover
+                          <X size={13} /> Remover
                         </button>
 
                         <input
@@ -412,11 +357,10 @@ export default function FakePhoneChatBuilder() {
 
                         <button
                           type="button"
-                          className="cc-btn cc-btn-cancel"
-                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          className="ccm-btn ccm-btn-sm"
                           onClick={() => fileInputsRef.current[idx]?.click()}
                         >
-                          📎 Anexar Imagem
+                          <Paperclip size={13} /> Anexar Imagem
                         </button>
                       </div>
                     </div>
@@ -426,19 +370,18 @@ export default function FakePhoneChatBuilder() {
 
               <button
                 type="button"
-                className="cc-btn cc-btn-cancel"
-                style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}
+                className="ccm-btn ccm-btn-block"
                 onClick={handleAddBlankMessage}
               >
-                ➕ Adicionar Mensagem
+                <Plus size={14} /> Adicionar Mensagem
               </button>
             </div>
 
-            <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-              <label className="cc-label">Importar JSON</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="ccm-field">
+              <label className="ccm-label">Importar JSON</label>
+              <div className="ccm-btn-row">
                 <input
-                  className="cc-input"
+                  className="ccm-input"
                   style={{ flex: 1 }}
                   placeholder="Colar JSON aqui"
                   value={chatJson}
@@ -446,7 +389,7 @@ export default function FakePhoneChatBuilder() {
                 />
                 <button
                   type="button"
-                  className="cc-btn cc-btn-save"
+                  className="ccm-btn ccm-btn-primary"
                   onClick={() => {
                     try {
                       const parsed = JSON.parse(chatJson || '[]');
@@ -477,19 +420,24 @@ export default function FakePhoneChatBuilder() {
           </div>
 
           {/* LADO DIREITO: PREVIEW */}
-          <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'center' }}>
-              <button
-                type="button"
-                className={previewLocked ? 'cc-btn cc-btn-save' : 'cc-btn cc-btn-cancel'}
-                style={{ flex: 1, justifyContent: 'center', fontSize: 12, padding: '6px 10px' }}
-                onClick={() => setPreviewLocked((prev) => !prev)}
-              >
-                {previewLocked ? '🔓 Ver Conversa' : '🔒 Simular Bloqueio'}
-              </button>
-            </div>
+          <div className="ccm-phone-col">
+            <button
+              type="button"
+              className={`ccm-btn ccm-btn-sm ccm-btn-block ${previewLocked ? 'ccm-btn-primary' : ''}`}
+              onClick={() => setPreviewLocked((prev) => !prev)}
+            >
+              {previewLocked ? (
+                <>
+                  <Unlock size={14} /> Ver Conversa
+                </>
+              ) : (
+                <>
+                  <Lock size={14} /> Simular Bloqueio
+                </>
+              )}
+            </button>
 
-            <div style={{ width: '100%', height: '500px', position: 'relative', border: '1px solid #333', borderRadius: '24px', overflow: 'hidden' }}>
+            <div className="ccm-phone-frame">
               <PhoneViewer
                 chatData={phoneState.chatList}
                 contactName={phoneState.contactName}
@@ -498,16 +446,15 @@ export default function FakePhoneChatBuilder() {
                 passwordType={phoneState.lockType}
               />
             </div>
-            <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Preview do Dispositivo ({previewLocked ? 'Bloqueado' : 'Conversa'})
+            <div className="ccm-note" style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Preview ({previewLocked ? 'Bloqueado' : 'Conversa'})
             </div>
 
-            <div style={{ width: '100%', background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(100,150,255,0.2)' }}>
-              <div style={{ fontSize: 11, color: '#9ac4ff', marginBottom: '8px' }}>ADIÇÃO RÁPIDA (PREVIEW)</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: '5px' }}>
+            <div className="ccm-list-card" style={{ width: '100%' }}>
+              <div className="ccm-label">ADIÇÃO RÁPIDA (PREVIEW)</div>
+              <div className="ccm-grid-2">
                 <select
-                  className="cc-input"
-                  style={{ flex: 1, padding: '4px' }}
+                  className="ccm-input"
                   value={quickChatSender}
                   onChange={(e) => setQuickChatSender(e.target.value as any)}
                 >
@@ -517,16 +464,14 @@ export default function FakePhoneChatBuilder() {
                 </select>
                 <input
                   type="time"
-                  className="cc-input"
-                  style={{ width: 100, padding: '4px 6px' }}
+                  className="ccm-input"
                   value={quickChatTime}
                   onChange={(e) => setQuickChatTime(e.target.value)}
                 />
               </div>
               <textarea
-                className="cc-input"
+                className="ccm-input"
                 rows={2}
-                style={{ width: '100%', padding: '6px', marginBottom: '5px' }}
                 value={quickChatText}
                 onChange={(e) => setQuickChatText(e.target.value)}
                 onKeyDown={(e) => {
@@ -537,7 +482,11 @@ export default function FakePhoneChatBuilder() {
                 }}
                 placeholder="Digite a mensagem e CTRL+ENTER"
               />
-              <button type="button" className="cc-btn cc-btn-save" style={{ width: '100%', justifyContent: 'center' }} onClick={handleQuickAddMessage}>
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-primary ccm-btn-block"
+                onClick={handleQuickAddMessage}
+              >
                 Adicionar
               </button>
             </div>

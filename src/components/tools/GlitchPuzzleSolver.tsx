@@ -1,4 +1,4 @@
-import { Check, AlertTriangle, Lightbulb } from 'lucide-react';
+import { Check, AlertTriangle, Lightbulb, Copy } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import GlitchImageEngine from './GlitchImageEngine';
 import { addCollectedCode } from '../../utils/codeTracking';
@@ -297,7 +297,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
                 <div className="reward-label">CHAVE DE DESCRIPTOGRAFIA:</div>
                 <h2 className="reward-pass">{resolvedConfig.reward_code}</h2>
                 <button className="btn-copy-key" onClick={handleCopyCode}>
-                  📋 COPIAR CHAVE
+                  <Copy size={14} /> COPIAR CHAVE
                 </button>
                 <small className="usage-hint">Use esta chave na Mega-Pista para desbloquear o enigma final</small>
               </div>
@@ -413,9 +413,9 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
           <div className="solver-footer">
             <div className="sync-status">
               <span className="sync-ok">Nitidez: {Math.round(clarity * 100)}%</span>
-              {Math.abs(freq - target.f) <= tolF && <span className="sync-ok">✓ FREQ</span>}
-              {Math.abs(shift - target.s) <= tolS && <span className="sync-ok">✓ SHIFT</span>}
-              {Math.abs(chroma - target.c) <= tolC && <span className="sync-ok">✓ CHROMA</span>}
+              {Math.abs(freq - target.f) <= tolF && <span className="sync-ok"><Check size={12} /> FREQ</span>}
+              {Math.abs(shift - target.s) <= tolS && <span className="sync-ok"><Check size={12} /> SHIFT</span>}
+              {Math.abs(chroma - target.c) <= tolC && <span className="sync-ok"><Check size={12} /> CHROMA</span>}
             </div>
             {alignmentSatisfied && !needsKeyword && showMedia && (
               <div className="keyword-panel" style={{marginTop:12}}>
@@ -441,7 +441,7 @@ export default function GlitchPuzzleSolver({ config, investigationId, cardId, fu
               disabled={!isAligned || aligned}
               style={{ padding: '10px 14px', fontSize: 13, cursor: !isAligned || aligned ? 'not-allowed' : 'pointer' }}
             >
-              {isAligned ? '✓ DECODIFICAR IMAGEM' : 'AGUARDANDO ALINHAMENTO...'}
+              {isAligned ? <><Check size={14} /> DECODIFICAR IMAGEM</> : 'AGUARDANDO ALINHAMENTO...'}
             </button>
           </div>
         </div>

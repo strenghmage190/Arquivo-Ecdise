@@ -1,4 +1,4 @@
-import { Save, Edit3 } from 'lucide-react';
+import { Save, Edit3, Loader2, Sparkles, Play } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import RealTimeSpectrogram from './RealTimeSpectrogram';
 
@@ -170,7 +170,7 @@ export default function SpectrogramCreator({ onGenerated }: Props) {
                 : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg'
             }`}
           >
-            {isGenerating ? '⏳ Gerando...' : '✨ Gerar'}
+            {isGenerating ? <><Loader2 size={14} className="animate-spin" /> Gerando...</> : <><Sparkles size={14} /> Gerar</>}
           </button>
         </div>
 
@@ -213,7 +213,7 @@ export default function SpectrogramCreator({ onGenerated }: Props) {
                   }}
                   className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded transition-all"
                 >
-                  ▶ Tocar
+                  <Play size={14} /> Tocar
                 </button>
                 <button 
                   onClick={download}

@@ -1,4 +1,4 @@
-import { Check, RefreshCw, Settings, Gamepad2, Lightbulb, AlertTriangle, FileText, Palette, Lock, Sparkles, Save } from 'lucide-react';
+import { Check, RefreshCw, Settings, Gamepad2, Lightbulb, AlertTriangle, FileText, Palette, Lock, Sparkles, Save, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { DisplayConfig, useDisplayConfig, saveDisplayConfig } from '../../config/displayConfig';
 import './DisplayConfigPanel.css';
@@ -32,7 +32,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
 
   const handleSave = () => {
     saveDisplayConfig(config);
-    setSavedMessage('✅ Config salva!');
+    setSavedMessage('Config salva!');
     setTimeout(() => setSavedMessage(''), 2000);
   };
 
@@ -82,7 +82,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
       };
       setConfig(defaultConfig);
       saveDisplayConfig(defaultConfig);
-      setSavedMessage('🔄 Resetado para padrão!');
+      setSavedMessage('Resetado para padrão!');
       setTimeout(() => setSavedMessage(''), 2000);
     }
   };
@@ -91,7 +91,7 @@ export default function DisplayConfigPanel({ onClose }: Props) {
     <div className="display-config-panel">
       <div className="panel-header">
         <h2><Settings className="lucide-icon inline-icon" size={16} /> CONFIGURAÇÃO DE EXIBIÇÃO</h2>
-        <button className="close-btn" onClick={onClose}>✖</button>
+        <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
       </div>
 
       <div className="panel-content">

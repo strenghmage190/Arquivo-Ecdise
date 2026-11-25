@@ -1,4 +1,4 @@
-import { Check, X, Edit3, Settings, Save, Lightbulb, Lock } from 'lucide-react';
+import { Check, X, Edit3, Settings, Save, Lightbulb, Lock, Gift, Play } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { playLockIn } from '../../utils/sound';
 import { updateInvestigationCard } from '../../api/investigations';
@@ -303,7 +303,7 @@ export default function GlitchPuzzleCard({
               </button>
             )}
             {onClose && (
-              <button className="close-btn" onClick={onClose}>✖</button>
+              <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
             )}
           </div>
         </div>
@@ -498,7 +498,7 @@ export default function GlitchPuzzleCard({
                   }}
                   disabled={loading}
                 >
-                  ✕ Cancelar
+                  <X size={13} /> Cancelar
                 </button>
                 <button
                   onClick={handleSaveChanges}
@@ -520,7 +520,7 @@ export default function GlitchPuzzleCard({
           )}
 
           <div className="success-banner">
-            <div className="success-animation">✓</div>
+            <div className="success-animation"><Check size={20} /></div>
             <div className="success-text">DECODIFICAÇÃO COMPLETA</div>
           </div>
 
@@ -530,7 +530,7 @@ export default function GlitchPuzzleCard({
           </div>
 
           <div className="reward-section">
-            <h3>🎁 CÓDIGO DE RECOMPENSA DESBLOQUEADO</h3>
+            <h3><Gift className="lucide-icon inline-icon" size={16} /> CÓDIGO DE RECOMPENSA DESBLOQUEADO</h3>
             <div className="reward-code">
               {puzzleData.reward_code}
             </div>
@@ -594,7 +594,7 @@ export default function GlitchPuzzleCard({
             </button>
           )}
           {onClose && (
-            <button className="close-btn" onClick={onClose}>✖</button>
+            <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
           )}
         </div>
       </div>
@@ -791,7 +791,7 @@ export default function GlitchPuzzleCard({
                 }}
                 disabled={loading}
               >
-                ✕ Cancelar
+                <X size={13} /> Cancelar
               </button>
               <button
                 onClick={handleSaveChanges}
@@ -833,7 +833,7 @@ export default function GlitchPuzzleCard({
           )}
           {justSolved && (
             <div className="restored-banner">
-              <div className="restored-icon">✓</div>
+              <div className="restored-icon"><Check size={18} /></div>
               <div>
                 <div className="restored-title">SISTEMA RESTAURADO</div>
                 <div className="restored-sub">Imagem estabilizada</div>
@@ -845,7 +845,7 @@ export default function GlitchPuzzleCard({
         {/* Como jogar */}
         {displayConfig.puzzle.showAccessInstructions && puzzleData.access_instructions && (
           <div className="hint-section">
-            <div className="hint-title">▶ COMO ACESSAR</div>
+            <div className="hint-title"><Play className="lucide-icon inline-icon" size={13} /> COMO ACESSAR</div>
             <div className="hint-text">{puzzleData.access_instructions}</div>
           </div>
         )}
@@ -918,7 +918,7 @@ export default function GlitchPuzzleCard({
             disabled={!isAligned || loading || solved}
             style={{ padding: '10px 14px', fontSize: 13, cursor: !isAligned || solved ? 'not-allowed' : 'pointer' }}
           >
-            {isAligned ? (loading ? 'PROCESSANDO...' : '✓ DECODIFICAR IMAGEM') : 'AGUARDANDO ALINHAMENTO...'}
+            {isAligned ? (loading ? 'PROCESSANDO...' : <><Check size={14} /> DECODIFICAR IMAGEM</>) : 'AGUARDANDO ALINHAMENTO...'}
           </button>
         </div>
 
@@ -937,7 +937,7 @@ export default function GlitchPuzzleCard({
 
         {solved && displayConfig.puzzle.showRewardCode && (
           <div className="reward-section">
-            <h3>🎁 CÓDIGO DE RECOMPENSA DESBLOQUEADO</h3>
+            <h3><Gift className="lucide-icon inline-icon" size={16} /> CÓDIGO DE RECOMPENSA DESBLOQUEADO</h3>
             <div className="reward-code">
               {puzzleData.reward_code}
             </div>

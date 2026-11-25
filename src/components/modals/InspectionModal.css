@@ -573,12 +573,19 @@
 }
 
 /* Ensure the visual/content area is a rigid compartment that scrolls internally when needed */
-.inspect-file > .inspect-visual-area,
-.inspect-file > .evidence-display-area {
+.inspect-file > .inspect-visual-area {
   overflow: auto; /* allow scrolling when content is larger than container */
   position: relative;
   display: flex;
   align-items: stretch;
+  justify-content: center;
+}
+
+.inspect-file > .evidence-display-area {
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -1147,7 +1154,7 @@
 .img-zoom-btn:hover { transform: translateY(-2px); }
 
 /* Small compact controls for fullscreen (use HUD styling) */
-.fullscreen-stage .image-controls { right: 28px; bottom: 80px; }
+.fullscreen-stage .image-controls { right: 20px; top: 76px; bottom: auto; z-index: 30020; }
 .fullscreen-stage .img-zoom-btn { background: rgba(0,243,255,0.08); border:1px solid rgba(0,243,255,0.12); color:#cbd5e1; }
 
 /* Optional small zoom level indicator */
@@ -1983,9 +1990,8 @@ input[type="number"].filter-number {
   cursor: grab !important;
 }
 
-/* Show controls only while hovering for less visual clutter */
-.image-controls { opacity: 0; transition: opacity 140ms ease; }
-.image-zoomable:hover .image-controls { opacity: 1; }
+/* Keep controls visible for desktop and touch devices */
+.image-controls { opacity: 1; transition: opacity 140ms ease; }
 
 .image-zoomable .large-evidence-img,
 .image-zoomable canvas,
@@ -2469,7 +2475,9 @@ input[type="number"].filter-number {
   height: 32px;
   min-width: 32px;
   min-height: 32px;
+  margin: 0;
   padding: 0;
+  line-height: 1;
   font-family: "Share Tech Mono", monospace;
   font-weight: 700;
   font-size: 14px;

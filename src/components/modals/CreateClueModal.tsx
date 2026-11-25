@@ -18,12 +18,17 @@ import {
   Trash2,
   BookmarkPlus,
   Zap,
-  Wrench,
   Copy,
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
   RotateCcw,
+  FileText,
+  KeyRound,
+  Smartphone,
+  Sparkles,
+  SlidersHorizontal,
+  LucideIcon,
 } from 'lucide-react';
 import UVEditor from '../tools/UVEditor';
 import ThermalEditor from '../tools/ThermalEditor';
@@ -52,6 +57,7 @@ import { buildClueDbPayload, UploadedClueUrls } from '../../utils/cluePayloadBui
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import 'react-tooltip/dist/react-tooltip.css';
 import './CreateClueModal.css';
+import './createclueTabs/createclueTabs.css';
 import TabGeneral from './createclueTabs/TabGeneral';
 import TabVisual from './createclueTabs/TabVisual';
 import TabAudio from './createclueTabs/TabAudio';
@@ -80,27 +86,27 @@ export interface CreateClueModalProps {
   duplicateFromCard?: any;
 }
 
-const ARCHETYPES: { id: ClueArchetype; label: string; icon: string }[] = [
-  { id: 'quick', label: 'Pista Rápida', icon: '⚡' },
-  { id: 'forensic_doc', label: 'Doc Forense', icon: '📄' },
-  { id: 'secret_audio', label: 'Áudio / Espectrograma', icon: '🎵' },
-  { id: 'puzzle_lock', label: 'Enigma / Senha', icon: '🔐' },
-  { id: 'fake_phone', label: 'Celular Falso', icon: '📱' },
-  { id: 'mega_clue', label: 'Mega-Pista', icon: '🌟' },
-  { id: 'complete', label: 'Avançado: 10 Abas', icon: '🛠️' },
+const ARCHETYPES: { id: ClueArchetype; label: string; icon: LucideIcon }[] = [
+  { id: 'quick', label: 'Pista Rápida', icon: Zap },
+  { id: 'forensic_doc', label: 'Doc Forense', icon: FileText },
+  { id: 'secret_audio', label: 'Áudio', icon: Music },
+  { id: 'puzzle_lock', label: 'Enigma / Senha', icon: KeyRound },
+  { id: 'fake_phone', label: 'Celular Falso', icon: Smartphone },
+  { id: 'mega_clue', label: 'Mega-Pista', icon: Sparkles },
+  { id: 'complete', label: 'Avançado (10 Abas)', icon: SlidersHorizontal },
 ];
 
-const TABS = [
-  { id: 'geral', label: 'Geral', icon: BookOpen },
-  { id: 'visual', label: 'Visual', icon: ImageIcon },
-  { id: 'audio', label: 'Áudio', icon: Music },
-  { id: 'cifra', label: 'Cifra & Hex', icon: Lock },
-  { id: 'glitch', label: 'Glitch', icon: Cpu },
-  { id: 'mega', label: 'Tipos Especiais', icon: Network },
-  { id: 'seguranca', label: 'Segurança', icon: ShieldAlert },
-  { id: 'metadata', label: 'Metadados', icon: Fingerprint },
-  { id: 'campos', label: 'Campos', icon: Eye },
-  { id: 'display', label: 'Display', icon: Settings },
+const TABS: { id: string; label: string; icon: LucideIcon; group: 'content' | 'config' }[] = [
+  { id: 'geral', label: 'Geral', icon: BookOpen, group: 'content' },
+  { id: 'visual', label: 'Visual', icon: ImageIcon, group: 'content' },
+  { id: 'audio', label: 'Áudio', icon: Music, group: 'content' },
+  { id: 'cifra', label: 'Cifra & Hex', icon: Lock, group: 'content' },
+  { id: 'glitch', label: 'Glitch', icon: Cpu, group: 'content' },
+  { id: 'mega', label: 'Tipos Especiais', icon: Network, group: 'content' },
+  { id: 'seguranca', label: 'Segurança', icon: ShieldAlert, group: 'config' },
+  { id: 'metadata', label: 'Metadados', icon: Fingerprint, group: 'config' },
+  { id: 'campos', label: 'Campos', icon: Eye, group: 'config' },
+  { id: 'display', label: 'Display', icon: Settings, group: 'config' },
 ];
 
 function CreateClueModalContent({
@@ -294,11 +300,11 @@ function CreateClueModalContent({
 
   const hasChildEditorOpen = Boolean(
     editorState.editorMode ||
-      editorState.showForensicEditor ||
-      editorState.showThermalEditor ||
-      editorState.showGlitchDesigner ||
-      editorState.showAudioForgeFor ||
-      showPlayerSimulator
+    editorState.showForensicEditor ||
+    editorState.showThermalEditor ||
+    editorState.showGlitchDesigner ||
+    editorState.showAudioForgeFor ||
+    showPlayerSimulator
   );
 
   const { guardClose, handleBackdropClick } = useDirtyGuard({
@@ -490,6 +496,25 @@ function CreateClueModalContent({
     () => validationIssues.filter((i) => i.severity === 'warning'),
     [validationIssues]
   );
+
+  const tabContentMap = useMemo<Record<string, boolean>>(() => ({
+    geral: Boolean(coreState.title.trim() || coreState.descPublic.trim() || coreState.descHidden.trim() || insights.length > 0),
+    visual: Boolean(mediaState.previewUrl || mediaState.uvPreviewUrl || mediaState.filterPreviewUrl || mediaState.thermalPreviewUrl || mediaState.forensicPreviewUrl || mediaState.videoPreviewUrl || mediaState.videoUrlInput.trim() || mediaState.videoUrl),
+    audio: Boolean(mediaState.audioBasePreview || mediaState.audioHiddenPreview),
+    cifra: Boolean(cipherState.cipherText.trim() || cipherState.hexCode.trim() || cipherState.isShredded),
+    glitch: Boolean(coreState.evidenceType === 'glitch_puzzle' && (glitchState.glitchKeyword.trim() || glitchState.glitchFocusedImagePreview)),
+    mega: Boolean(coreState.evidenceType === 'mega_clue' && (megaClueState.megaFinalTruthText.trim() || megaClueState.megaRequiredPuzzleIds.length > 0)),
+    seguranca: Boolean(securityState.isLocked || securityState.securityLayerEnabled || phoneState.hasKeypad || phoneState.chatList.length > 0),
+    metadata: Boolean(personState.isPerson || metadataState.stamp || metadataState.externalLink || metadataState.technicalNote),
+    campos: false,
+    display: false,
+  }), [coreState, insights.length, mediaState, cipherState, glitchState, megaClueState, securityState, phoneState, personState, metadataState]);
+
+  const tabErrorSet = useMemo(() => {
+    const s = new Set<string>();
+    errorIssues.forEach((i) => { if (i.tab) s.add(i.tab); });
+    return s;
+  }, [errorIssues]);
 
   const navigateToIssueTab = (tabId: string) => {
     if (creatorMode === 'quick') {
@@ -710,247 +735,235 @@ function CreateClueModalContent({
     }),
   };
 
-  return (
-    <div className="cc-fullscreen-overlay" onClick={(e) => handleBackdropClick(e)}>
-      <div className="cc-refactored-layout">
-        {creatorMode === 'complete' && (
-          <aside className="cc-refactored-sidebar">
-            <nav className="cc-tabs-nav">
-              {visibleTabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    data-tab={tab.id}
-                    className={`cc-tab-button ${isActive ? 'active' : ''}`}
-                    onClick={() => handleTabChange(tab.id)}
-                    onMouseEnter={() => playHover()}
-                  >
-                    <Icon size={18} />
-                    <span>{tab.label}</span>
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTabIndicator"
-                        className="cc-tab-indicator"
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
-        )}
-
-        <main className="cc-refactored-main">
-          <header className="cc-modal-header">
-            <div className="cc-modal-title-group">
-              <h2 className="cc-modal-title">
+  return createPortal(
+    <div className="ccm-overlay" onClick={(e) => handleBackdropClick(e)}>
+      <div className="ccm-modal">
+        <header className="ccm-header">
+          <div className="ccm-header-left">
+            <div className="ccm-title-wrap">
+              <span
+                className={`ccm-mode-pill ${isDuplicateMode ? 'is-duplicate' : existingCard?.id ? 'is-edit' : ''
+                  }`}
+              >
+                {isDuplicateMode ? 'Duplicar' : existingCard?.id ? 'Editar' : 'Criar'}
+              </span>
+              <h2 className="ccm-title">
                 {isDuplicateMode
-                  ? `DUPLICANDO: ${coreState.title || 'EVIDÊNCIA'}`
+                  ? coreState.title || 'Evidência'
                   : existingCard?.id
-                  ? `EDITANDO: ${existingCard.title || 'EVIDÊNCIA'}`
-                  : coreState.isHidden
-                  ? 'NOVA EVIDÊNCIA OCULTA'
-                  : 'NOVA EVIDÊNCIA'}
+                    ? existingCard.title || 'Evidência'
+                    : coreState.isHidden
+                      ? 'Nova Evidência Oculta'
+                      : 'Nova Evidência'}
               </h2>
-
-              <div className="cc-mode-switcher" role="group" aria-label="Modo de criação">
-                <button
-                  type="button"
-                  className={`cc-mode-btn ${creatorMode === 'quick' ? 'active' : ''}`}
-                  onClick={() => {
-                    playClick();
-                    setCreatorMode('quick');
-                  }}
-                >
-                  <Zap size={13} /> Modo Rápido
-                </button>
-                <button
-                  type="button"
-                  className={`cc-mode-btn ${creatorMode === 'complete' ? 'active' : ''}`}
-                  onClick={() => {
-                    playClick();
-                    setCreatorMode('complete');
-                  }}
-                >
-                  <Wrench size={13} /> Modo Completo (10 Abas)
-                </button>
-              </div>
             </div>
-
-            <div className="cc-header-actions">
-              <button
-                type="button"
-                className="cc-btn cc-btn-sim"
-                style={{ padding: '6px 12px', fontSize: 12 }}
-                onClick={() => {
-                  playClick();
-                  setShowPlayerSimulator(true);
-                }}
-                title="Pré-visualizar exatamente como o jogador verá esta pista"
-              >
-                <Eye size={15} /> Simular Visão do Jogador
-              </button>
-
-              {existingCard?.id && !isDuplicateMode && (
-                <button
-                  type="button"
-                  className="cc-btn cc-btn-cancel"
-                  style={{ padding: '6px 12px', fontSize: 12 }}
-                  onClick={handleDuplicateAsNew}
-                  title="Converter edição atual em uma nova cópia"
-                >
-                  <Copy size={14} /> Duplicar como Nova
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="cc-btn cc-btn-cancel"
-                style={{ padding: '6px 12px', fontSize: 12 }}
-                onClick={() => setShowTemplateDropdown((v) => !v)}
-              >
-                <FolderOpen size={15} /> Templates ({templates.length})
-              </button>
-
-              <button
-                type="button"
-                className="cc-btn cc-btn-save"
-                style={{ padding: '6px 12px', fontSize: 12 }}
-                onClick={handleSaveAsTemplate}
-                title="Salvar configuração atual como Template"
-              >
-                <BookmarkPlus size={15} /> Salvar Template
-              </button>
-
-              {showTemplateDropdown && (
-                <div className="cc-template-dropdown">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: 12, color: 'var(--cc-neon)', letterSpacing: 1 }}>
-                      TEMPLATES SALVOS
-                    </strong>
-                    <button
-                      type="button"
-                      className="cc-btn cc-btn-cancel"
-                      style={{ padding: '2px 6px', fontSize: 11 }}
-                      onClick={() => setShowTemplateDropdown(false)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {loadingTemplates ? (
-                    <div style={{ fontSize: 12, color: 'var(--cc-text-muted)' }}>Carregando...</div>
-                  ) : templates.length === 0 ? (
-                    <div style={{ fontSize: 12, color: 'var(--cc-text-muted)', padding: '8px 0' }}>
-                      Nenhum template salvo ainda.
-                    </div>
-                  ) : (
-                    templates.map((tpl) => (
-                      <div key={tpl.id} className="cc-template-item">
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {tpl.name}
-                          </div>
-                          {tpl.description && (
-                            <div style={{ fontSize: 11, color: 'var(--cc-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {tpl.description}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          className="cc-btn cc-btn-save"
-                          style={{ padding: '4px 8px', fontSize: 11 }}
-                          onClick={() => handleLoadTemplate(tpl)}
-                        >
-                          Usar
-                        </button>
-                        <button
-                          type="button"
-                          className="cc-btn cc-btn-cancel"
-                          style={{ padding: '4px 6px', borderColor: '#ff4444', color: '#ff6666' }}
-                          onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
-                          title="Excluir template"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="cc-fullscreen-close"
-                onClick={() => guardClose()}
-                onMouseEnter={() => playHover()}
-                title="Fechar"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </header>
-
-          <div className="cc-archetype-bar">
-            <span className="cc-archetype-label">ARQUÉTIPOS:</span>
-            {ARCHETYPES.map((arch) => (
-              <button
-                key={arch.id}
-                type="button"
-                className="cc-archetype-pill"
-                onClick={() => {
-                  playClick();
-                  applyArchetype(arch.id);
-                }}
-              >
-                <span>{arch.icon}</span>
-                <span>{arch.label}</span>
-              </button>
-            ))}
           </div>
 
-          {hasDraft && (
-            <div className="cc-draft-banner">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                <RotateCcw size={15} color="#f2b775" />
-                <span>
-                  Rascunho não salvo encontrado
-                  {draftTimestamp
-                    ? ` (${new Date(draftTimestamp).toLocaleTimeString('pt-BR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })})`
-                    : ''}
-                  .
-                </span>
+          <div className="ccm-header-actions">
+            {existingCard?.id && !isDuplicateMode && (
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-sm"
+                onClick={handleDuplicateAsNew}
+                title="Converter edição atual em uma nova cópia"
+              >
+                <Copy size={14} />
+                <span>Duplicar</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-sm"
+              onClick={() => setShowTemplateDropdown((v) => !v)}
+              title="Abrir templates salvos"
+            >
+              <FolderOpen size={15} />
+              <span>Templates ({templates.length})</span>
+            </button>
+
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-sm ccm-btn-primary"
+              onClick={handleSaveAsTemplate}
+              title="Salvar configuração atual como Template"
+            >
+              <BookmarkPlus size={15} />
+              <span>+ Template</span>
+            </button>
+
+            {showTemplateDropdown && (
+              <div className="ccm-template-dropdown">
+                <div className="ccm-template-head">
+                  <strong>TEMPLATES SALVOS</strong>
+                  <button
+                    type="button"
+                    className="ccm-btn ccm-btn-sm ccm-btn-ghost"
+                    onClick={() => setShowTemplateDropdown(false)}
+                    aria-label="Fechar templates"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {loadingTemplates ? (
+                  <div className="ccm-template-empty">Carregando...</div>
+                ) : templates.length === 0 ? (
+                  <div className="ccm-template-empty">Nenhum template salvo ainda.</div>
+                ) : (
+                  templates.map((tpl) => (
+                    <div key={tpl.id} className="ccm-template-item">
+                      <div className="ccm-template-info">
+                        <div className="ccm-template-name">{tpl.name}</div>
+                        {tpl.description && (
+                          <div className="ccm-template-desc">{tpl.description}</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="ccm-btn ccm-btn-sm ccm-btn-primary"
+                        onClick={() => handleLoadTemplate(tpl)}
+                      >
+                        Usar
+                      </button>
+                      <button
+                        type="button"
+                        className="ccm-btn ccm-btn-sm ccm-btn-danger"
+                        onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
+                        title="Excluir template"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+            )}
+
+            <button
+              type="button"
+              className="ccm-close-btn"
+              onClick={() => guardClose()}
+              onMouseEnter={() => playHover()}
+              title="Fechar"
+              aria-label="Fechar modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </header>
+
+        <div className="ccm-archetype-bar" role="toolbar" aria-label="Modo e predefinições">
+          <span className="ccm-archetype-label">PREDEFINIÇÃO</span>
+          <div className="ccm-archetype-track">
+            {ARCHETYPES.map((arch) => {
+              const ArchIcon = arch.icon;
+              const isModeActive =
+                (arch.id === 'quick' && creatorMode === 'quick') ||
+                (arch.id === 'complete' && creatorMode === 'complete');
+              return (
                 <button
+                  key={arch.id}
                   type="button"
-                  className="cc-btn cc-btn-save"
-                  style={{ padding: '4px 10px', fontSize: 11 }}
-                  onClick={restoreDraft}
+                  className={`ccm-archetype-pill ${isModeActive ? 'is-active' : ''}`}
+                  onClick={() => {
+                    playClick();
+                    applyArchetype(arch.id);
+                  }}
                 >
-                  Restaurar Rascunho
+                  <ArchIcon size={14} />
+                  <span>{arch.label}</span>
                 </button>
-                <button
-                  type="button"
-                  className="cc-btn cc-btn-cancel"
-                  style={{ padding: '4px 10px', fontSize: 11 }}
-                  onClick={discardDraft}
-                >
-                  Descartar
-                </button>
-              </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {hasDraft && (
+          <div className="ccm-draft-banner">
+            <div className="ccm-draft-msg">
+              <RotateCcw size={15} color="#f2b775" />
+              <span>
+                Rascunho não salvo encontrado
+                {draftTimestamp
+                  ? ` (${new Date(draftTimestamp).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })})`
+                  : ''}
+                .
+              </span>
             </div>
+            <div className="ccm-draft-actions">
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-sm ccm-btn-primary"
+                onClick={restoreDraft}
+              >
+                Restaurar Rascunho
+              </button>
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-sm"
+                onClick={discardDraft}
+              >
+                Descartar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className={`ccm-body ${creatorMode === 'quick' ? 'is-quick' : ''}`}>
+          {creatorMode === 'complete' && (
+            <aside className="ccm-sidebar">
+              <nav className="ccm-tabs-nav cc-tabs-nav" aria-label="Seções da evidência">
+                {(['content', 'config'] as const).map((groupKey) => {
+                  const groupTabs = visibleTabs.filter((t) => t.group === groupKey);
+                  if (groupTabs.length === 0) return null;
+                  return (
+                    <div key={groupKey} className="ccm-tab-group">
+                      <div className="ccm-tab-group-label">
+                        {groupKey === 'content' ? 'Conteúdo' : 'Configuração'}
+                      </div>
+                      {groupTabs.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        const hasError = tabErrorSet.has(tab.id);
+                        const hasContent = tabContentMap[tab.id];
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            data-tab={tab.id}
+                            className={`ccm-tab-btn ${isActive ? 'active' : ''}`}
+                            onClick={() => handleTabChange(tab.id)}
+                            onMouseEnter={() => playHover()}
+                          >
+                            <Icon size={15} />
+                            <span className="ccm-tab-label">{tab.label}</span>
+                            {hasError ? (
+                              <span className="ccm-tab-dot is-error" title="Erro de validação" />
+                            ) : hasContent ? (
+                              <span className="ccm-tab-dot is-filled" title="Preenchido" />
+                            ) : null}
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeTabIndicator"
+                                className="ccm-tab-indicator"
+                                transition={{ type: 'spring', stiffness: 360, damping: 32 }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </nav>
+            </aside>
           )}
 
-          <div className="cc-tab-content-wrapper">
+          <div className="ccm-content">
             {creatorMode === 'quick' ? (
               <QuickClueMode />
             ) : (
@@ -962,7 +975,7 @@ function CreateClueModalContent({
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  className="cc-tab-motion-container"
+                  className="ccm-motion-wrap"
                 >
                   {activeTab === 'geral' && <TabGeneral />}
                   {activeTab === 'visual' && <TabVisual />}
@@ -978,128 +991,128 @@ function CreateClueModalContent({
               </AnimatePresence>
             )}
           </div>
+        </div>
 
-          <footer className="cc-refactored-footer">
-            <div className="cc-footer-info" style={{ position: 'relative' }}>
-              <span className="cc-status-badge">{isSaving ? 'PROCESSANDO...' : 'PRONTO'}</span>
+        <footer className="ccm-footer">
+          <div className="ccm-footer-info">
+            <span className={`ccm-status-indicator ${isSaving ? 'is-saving' : ''}`}>
+              <span className="ccm-status-dot" />
+              <span>{isSaving ? 'Processando...' : 'Pronto'}</span>
+            </span>
 
-              <button
-                type="button"
-                className={`cc-checklist-badge ${
-                  errorIssues.length > 0
-                    ? 'has-errors'
-                    : warningIssues.length > 0
-                    ? 'has-warnings'
-                    : 'is-clean'
+            <button
+              type="button"
+              className={`ccm-checklist-badge ${errorIssues.length > 0
+                ? 'has-errors'
+                : warningIssues.length > 0
+                  ? 'has-warnings'
+                  : 'is-clean'
                 }`}
-                onClick={() => setShowChecklistPopover((v) => !v)}
-                title="Abrir Checklist Anti-Erro"
-              >
-                {errorIssues.length > 0 ? (
-                  <AlertCircle size={14} />
-                ) : warningIssues.length > 0 ? (
-                  <AlertTriangle size={14} />
+              onClick={() => setShowChecklistPopover((v) => !v)}
+              title="Abrir Checklist Anti-Erro"
+            >
+              {errorIssues.length > 0 ? (
+                <AlertCircle size={13} />
+              ) : warningIssues.length > 0 ? (
+                <AlertTriangle size={13} />
+              ) : (
+                <CheckCircle2 size={13} />
+              )}
+              <span>
+                {errorIssues.length === 0 && warningIssues.length === 0
+                  ? 'Checklist OK'
+                  : `${errorIssues.length} Erro${errorIssues.length === 1 ? '' : 's'} • ${warningIssues.length
+                  } Aviso${warningIssues.length === 1 ? '' : 's'}`}
+              </span>
+            </button>
+
+            {showChecklistPopover && (
+              <div className="ccm-checklist-popover">
+                <div className="ccm-checklist-popover-head">
+                  <strong>CHECKLIST ANTI-ERRO</strong>
+                  <button
+                    type="button"
+                    className="ccm-btn ccm-btn-sm ccm-btn-ghost"
+                    onClick={() => setShowChecklistPopover(false)}
+                    aria-label="Fechar checklist"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                {validationIssues.length === 0 ? (
+                  <div className="ccm-checklist-clean">
+                    Nenhum problema ou aviso detectado. Tudo pronto para salvar!
+                  </div>
                 ) : (
-                  <CheckCircle2 size={14} />
+                  <div className="ccm-checklist-items">
+                    {validationIssues.map((issue, idx) => (
+                      <button
+                        key={`${issue.field}-${idx}`}
+                        type="button"
+                        className={`ccm-checklist-item ${issue.severity}`}
+                        onClick={() => navigateToIssueTab(issue.tab)}
+                      >
+                        <span className="ccm-checklist-item-icon">
+                          {issue.severity === 'error' ? (
+                            <AlertCircle size={14} color="#ff6b6b" />
+                          ) : (
+                            <AlertTriangle size={14} color="#f2b775" />
+                          )}
+                        </span>
+                        <span className="ccm-checklist-item-text">{issue.message}</span>
+                        <span className="ccm-checklist-item-tab">Ir para {issue.tab} →</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
-                <span>
-                  {errorIssues.length === 0 && warningIssues.length === 0
-                    ? 'Checklist: OK'
-                    : `${errorIssues.length} Erro${errorIssues.length === 1 ? '' : 's'} • ${
-                        warningIssues.length
-                      } Aviso${warningIssues.length === 1 ? '' : 's'}`}
-                </span>
-              </button>
+              </div>
+            )}
 
-              {showChecklistPopover && (
-                <div className="cc-checklist-popover">
-                  <div className="cc-checklist-popover-header">
-                    <strong>CHECKLIST ANTI-ERRO</strong>
-                    <button
-                      type="button"
-                      className="cc-btn cc-btn-cancel"
-                      style={{ padding: '2px 6px', fontSize: 11 }}
-                      onClick={() => setShowChecklistPopover(false)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {validationIssues.length === 0 ? (
-                    <div style={{ fontSize: 12, color: '#4ade80', padding: '6px 0' }}>
-                      Nenhum problema ou aviso detectado. Tudo pronto para salvar!
-                    </div>
-                  ) : (
-                    <div className="cc-checklist-items">
-                      {validationIssues.map((issue, idx) => (
-                        <button
-                          key={`${issue.field}-${idx}`}
-                          type="button"
-                          className={`cc-checklist-item ${issue.severity}`}
-                          onClick={() => navigateToIssueTab(issue.tab)}
-                        >
-                          <span className="cc-checklist-item-icon">
-                            {issue.severity === 'error' ? (
-                              <AlertCircle size={14} color="#ff6b6b" />
-                            ) : (
-                              <AlertTriangle size={14} color="#f2b775" />
-                            )}
-                          </span>
-                          <span className="cc-checklist-item-text">{issue.message}</span>
-                          <span className="cc-checklist-item-tab">Ir para {issue.tab} →</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {uploadProgress && (
+              <div className="ccm-upload-progress">
+                <span className="ccm-upload-label">{uploadProgress.label}</span>
+                <div className="ccm-upload-bar">
+                  <div
+                    className="ccm-upload-fill"
+                    style={{ width: `${Math.min(100, Math.max(5, uploadProgress.pct))}%` }}
+                  />
                 </div>
-              )}
+              </div>
+            )}
+          </div>
 
-              {uploadProgress && (
-                <div className="cc-upload-progress">
-                  <span style={{ fontSize: 11, color: 'var(--cc-neon)', whiteSpace: 'nowrap' }}>
-                    {uploadProgress.label}
-                  </span>
-                  <div className="cc-upload-progress-bar">
-                    <div
-                      className="cc-upload-progress-fill"
-                      style={{ width: `${Math.min(100, Math.max(5, uploadProgress.pct))}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="cc-footer-buttons">
-              <button
-                type="button"
-                className="cc-btn cc-btn-sim"
-                onClick={() => {
-                  playClick();
-                  setShowPlayerSimulator(true);
-                }}
-                disabled={isSaving}
-              >
-                <Eye size={16} /> SIMULAR JOGADOR
-              </button>
-              <button
-                type="button"
-                className="cc-btn cc-btn-cancel"
-                onClick={() => guardClose()}
-                onMouseEnter={() => playHover()}
-                disabled={isSaving}
-              >
-                <X size={16} /> CANCELAR
-              </button>
-              <button
-                type="button"
-                className="cc-btn cc-btn-save"
-                onClick={handleSave}
-                onMouseEnter={() => playHover()}
-                disabled={isSaving}
-              >
-                <Save size={16} /> {isSaving ? 'SALVANDO...' : isDuplicateMode ? 'CRIAR CÓPIA' : 'SALVAR EVIDÊNCIA'}
-              </button>
-            </div>
-          </footer>
-        </main>
+          <div className="ccm-footer-actions">
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-sim"
+              onClick={() => {
+                playClick();
+                setShowPlayerSimulator(true);
+              }}
+              disabled={isSaving}
+            >
+              <Eye size={15} /> Simular Jogador
+            </button>
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-ghost"
+              onClick={() => guardClose()}
+              onMouseEnter={() => playHover()}
+              disabled={isSaving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="ccm-btn ccm-btn-primary cc-btn-save"
+              onClick={handleSave}
+              onMouseEnter={() => playHover()}
+              disabled={isSaving}
+            >
+              <Save size={15} /> {isSaving ? 'Salvando...' : isDuplicateMode ? 'Criar Cópia' : 'Salvar Evidência'}
+            </button>
+          </div>
+        </footer>
       </div>
 
       <PlayerViewSimulatorModal
@@ -1347,7 +1360,8 @@ function CreateClueModalContent({
           />,
           document.body
         )}
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -82,7 +82,7 @@ export default function DecipherLens({ realText, cipherText, startActive = false
         aria-pressed={active}
         title="Ativar/desativar decodificação (atalho: L ou Espaço)"
       >
-        {active ? 'DESATIVAR FILTRO' : '👁️ INICIAR DECODIFICAÇÃO'}
+        {active ? 'DESATIVAR FILTRO' : <><Eye className="lucide-icon inline-icon" size={14} /> INICIAR DECODIFICAÇÃO</>}
       </button>
 
       <div className="lens-controls">

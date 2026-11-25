@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Settings, Shield, Zap, Layers, LayoutList, Code2 } from 'lucide-react';
+import { Eye, Settings, Shield, Zap, Layers, LayoutList, Code2, Info } from 'lucide-react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
 import { fieldVisibilityPresets, FieldVisibilityConfig } from '../../../config/fieldVisibilityConfig';
 import { Tooltip } from 'react-tooltip';
@@ -64,138 +64,160 @@ export default function TabFieldsVisibility() {
   };
 
   return (
-    <div className="cc-tab-content">
-      <div className="cc-section-header">
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <LayoutList size={18} /> PRESETS RÁPIDOS
-        </h3>
-        <span data-tooltip-id="preset-tip" style={{ cursor: 'help', marginLeft: '10px' }}>
-          [ ? ]
-        </span>
-        <Tooltip id="preset-tip" className="cyber-tooltip">
-          Escolha um conjunto rápido de visibilidade ou ative/desative manualmente abaixo.
-        </Tooltip>
-      </div>
-      <div className="cc-preset-buttons-grid">
-        <button
-          type="button"
-          className={`cc-preset-btn ${activePreset === 'MINIMAL' ? 'active' : ''}`}
-          onClick={() => applyPreset('MINIMAL')}
-        >
-          <Shield size={16} /> MINIMAL
-        </button>
-        <button
-          type="button"
-          className={`cc-preset-btn ${activePreset === 'DEFAULT' ? 'active' : ''}`}
-          onClick={() => applyPreset('DEFAULT')}
-        >
-          <Settings size={16} /> DEFAULT
-        </button>
-        <button
-          type="button"
-          className={`cc-preset-btn ${activePreset === 'FULL' ? 'active' : ''}`}
-          onClick={() => applyPreset('FULL')}
-        >
-          <Eye size={16} /> FULL
-        </button>
-        <button
-          type="button"
-          className={`cc-preset-btn ${activePreset === 'MYSTERY' ? 'active' : ''}`}
-          onClick={() => applyPreset('MYSTERY')}
-        >
-          <Zap size={16} /> MYSTERY
-        </button>
-      </div>
-      {!activePreset && (
-        <div className="cc-cyber-note" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
-          Status: Configuração personalizada
+    <div className="ccm-tab-stack">
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <LayoutList size={17} /> PRESETS RÁPIDOS
+            <span data-tooltip-id="preset-tip" className="ccm-help-icon">
+              <Info size={15} />
+            </span>
+          </h3>
+          <Tooltip id="preset-tip" className="cyber-tooltip ccm-tooltip">
+            Escolha um conjunto rápido de visibilidade ou ative/desative manualmente abaixo.
+          </Tooltip>
         </div>
-      )}
 
-      <div className="cc-section-header" style={{ marginTop: '1.5rem' }}>
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Layers size={18} /> DADOS NO INSPECIONAR ARQUIVO
-        </h3>
-      </div>
-      <div className="cc-checkbox-group">
-        {[
-          { id: 'fileType', label: 'Tipo de Arquivo (MIME)' },
-          { id: 'size', label: 'Tamanho (KB/MB)' },
-          { id: 'cameraModel', label: 'Modelo da Câmera (EXIF)' },
-          { id: 'dateCreated', label: 'Data de Criação' },
-          { id: 'gpsCoords', label: 'Coordenadas GPS' },
-          { id: 'ownerName', label: 'Nome do Proprietário' },
-          { id: 'hexComment', label: 'Comentário Oculto (Hex)' },
-          { id: 'technicalNote', label: 'Nota Técnica do Sistema' },
-        ].map((field) => (
-          <label key={field.id} className="cc-checkbox">
-            <input
-              type="checkbox"
-              checked={fieldVisibilityConfig.fileProperties.visibleFields.includes(field.id as any)}
-              onChange={() => handleFilePropertiesToggle(field.id)}
-            />
-            <span className="cc-checkbox-label">{field.label}</span>
-          </label>
-        ))}
-      </div>
+        <div className="ccm-preset-grid">
+          <button
+            type="button"
+            className={`ccm-preset-btn ${activePreset === 'MINIMAL' ? 'active' : ''}`}
+            onClick={() => applyPreset('MINIMAL')}
+          >
+            <Shield size={15} /> MINIMAL
+          </button>
+          <button
+            type="button"
+            className={`ccm-preset-btn ${activePreset === 'DEFAULT' ? 'active' : ''}`}
+            onClick={() => applyPreset('DEFAULT')}
+          >
+            <Settings size={15} /> DEFAULT
+          </button>
+          <button
+            type="button"
+            className={`ccm-preset-btn ${activePreset === 'FULL' ? 'active' : ''}`}
+            onClick={() => applyPreset('FULL')}
+          >
+            <Eye size={15} /> FULL
+          </button>
+          <button
+            type="button"
+            className={`ccm-preset-btn ${activePreset === 'MYSTERY' ? 'active' : ''}`}
+            onClick={() => applyPreset('MYSTERY')}
+          >
+            <Zap size={15} /> MYSTERY
+          </button>
+        </div>
 
-      <div className="cc-section-header" style={{ marginTop: '1.5rem' }}>
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={18} /> INTERFACE DO GLITCH PUZZLE
-        </h3>
-      </div>
-      <div className="cc-checkbox-group">
-        {[
-          { id: 'accessInstructions', label: 'Instruções de Acesso' },
-          { id: 'hint', label: 'Dica do Puzzle' },
-          { id: 'calibrationControls', label: 'Controles de Calibração (Barras)' },
-          { id: 'logs', label: 'Terminal de Logs (Feedback)' },
-          { id: 'rewardCode', label: 'Código de Recompensa Final' },
-          { id: 'correctAnswerWhenSolved', label: 'Sinal de "RESOLVIDO"' },
-        ].map((field) => (
-          <label key={field.id} className="cc-checkbox">
-            <input
-              type="checkbox"
-              checked={fieldVisibilityConfig.glitchPuzzle.visibleSections.includes(field.id as any)}
-              onChange={() => handleGlitchPuzzleToggle(field.id)}
-            />
-            <span className="cc-checkbox-label">{field.label}</span>
-          </label>
-        ))}
-      </div>
+        {!activePreset && (
+          <p className="ccm-note">Status: Configuração personalizada</p>
+        )}
+      </section>
 
-      <div className="cc-section-header" style={{ marginTop: '1.5rem' }}>
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={18} /> INTERFACE DA MEGA CLUE
-        </h3>
-      </div>
-      <div className="cc-checkbox-group">
-        {[
-          { id: 'hints', label: 'Dicas Secundárias' },
-          { id: 'progress', label: 'Barra de Progresso Global' },
-          { id: 'answer', label: 'Campo da Resposta Final' },
-          { id: 'requiredPuzzles', label: 'Lista de Pistas Necessárias' },
-        ].map((field) => (
-          <label key={field.id} className="cc-checkbox">
-            <input
-              type="checkbox"
-              checked={fieldVisibilityConfig.megaClue.visibleSections.includes(field.id as any)}
-              onChange={() => handleMegaClueToggle(field.id)}
-            />
-            <span className="cc-checkbox-label">{field.label}</span>
-          </label>
-        ))}
-      </div>
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Layers size={17} /> DADOS NO INSPECIONAR ARQUIVO
+          </h3>
+        </div>
+        <div className="ccm-checkbox-grid">
+          {[
+            { id: 'fileType', label: 'Tipo de Arquivo (MIME)' },
+            { id: 'size', label: 'Tamanho (KB/MB)' },
+            { id: 'cameraModel', label: 'Modelo da Câmera (EXIF)' },
+            { id: 'dateCreated', label: 'Data de Criação' },
+            { id: 'gpsCoords', label: 'Coordenadas GPS' },
+            { id: 'ownerName', label: 'Nome do Proprietário' },
+            { id: 'hexComment', label: 'Comentário Oculto (Hex)' },
+            { id: 'technicalNote', label: 'Nota Técnica do Sistema' },
+          ].map((field) => (
+            <label key={field.id} className="ccm-toggle-row">
+              <span className="ccm-toggle-text">
+                <span className="ccm-toggle-title">{field.label}</span>
+              </span>
+              <input
+                type="checkbox"
+                className="ccm-checkbox-input"
+                checked={fieldVisibilityConfig.fileProperties.visibleFields.includes(field.id as any)}
+                onChange={() => handleFilePropertiesToggle(field.id)}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
 
-      <div className="cc-section-header" style={{ marginTop: '1.5rem' }}>
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Code2 size={18} /> METADADOS CUSTOMIZADOS (JSON)
-        </h3>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <label className="cc-checkbox">
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Zap size={17} /> INTERFACE DO GLITCH PUZZLE
+          </h3>
+        </div>
+        <div className="ccm-checkbox-grid">
+          {[
+            { id: 'accessInstructions', label: 'Instruções de Acesso' },
+            { id: 'hint', label: 'Dica do Puzzle' },
+            { id: 'calibrationControls', label: 'Controles de Calibração (Barras)' },
+            { id: 'logs', label: 'Terminal de Logs (Feedback)' },
+            { id: 'rewardCode', label: 'Código de Recompensa Final' },
+            { id: 'correctAnswerWhenSolved', label: 'Sinal de "RESOLVIDO"' },
+          ].map((field) => (
+            <label key={field.id} className="ccm-toggle-row">
+              <span className="ccm-toggle-text">
+                <span className="ccm-toggle-title">{field.label}</span>
+              </span>
+              <input
+                type="checkbox"
+                className="ccm-checkbox-input"
+                checked={fieldVisibilityConfig.glitchPuzzle.visibleSections.includes(field.id as any)}
+                onChange={() => handleGlitchPuzzleToggle(field.id)}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Shield size={17} /> INTERFACE DA MEGA CLUE
+          </h3>
+        </div>
+        <div className="ccm-checkbox-grid">
+          {[
+            { id: 'hints', label: 'Dicas Secundárias' },
+            { id: 'progress', label: 'Barra de Progresso Global' },
+            { id: 'answer', label: 'Campo da Resposta Final' },
+            { id: 'requiredPuzzles', label: 'Lista de Pistas Necessárias' },
+          ].map((field) => (
+            <label key={field.id} className="ccm-toggle-row">
+              <span className="ccm-toggle-text">
+                <span className="ccm-toggle-title">{field.label}</span>
+              </span>
+              <input
+                type="checkbox"
+                className="ccm-checkbox-input"
+                checked={fieldVisibilityConfig.megaClue.visibleSections.includes(field.id as any)}
+                onChange={() => handleMegaClueToggle(field.id)}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Code2 size={17} /> METADADOS CUSTOMIZADOS (JSON)
+          </h3>
+        </div>
+
+        <label className="ccm-toggle-row">
+          <span className="ccm-toggle-text">
+            <span className="ccm-toggle-title">Habilitar exibição de campos JSON customizados</span>
+          </span>
           <input
             type="checkbox"
+            className="ccm-checkbox-input"
             checked={customMeta.enableCustomFields}
             onChange={(e) =>
               setFieldVisibilityConfig((prev) => ({
@@ -207,53 +229,54 @@ export default function TabFieldsVisibility() {
               }))
             }
           />
-          <span className="cc-checkbox-label">Habilitar exibição de campos JSON customizados</span>
         </label>
 
-        <div className="cc-field">
-          <label className="cc-label">Campos Customizados Visíveis por Padrão (separados por vírgula)</label>
-          <input
-            type="text"
-            className="cc-input"
-            value={(customMeta.defaultVisibleCustomFields || []).join(', ')}
-            onChange={(e) =>
-              setFieldVisibilityConfig((prev) => ({
-                ...prev,
-                customMetadata: {
-                  ...customMeta,
-                  defaultVisibleCustomFields: e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                },
-              }))
-            }
-            placeholder="Ex: audio_config, thermal_keyword, device_owner"
-          />
-        </div>
+        <div className="ccm-grid-2">
+          <div className="ccm-field">
+            <label className="ccm-label">Campos Visíveis por Padrão (vírgula)</label>
+            <input
+              type="text"
+              className="ccm-input"
+              value={(customMeta.defaultVisibleCustomFields || []).join(', ')}
+              onChange={(e) =>
+                setFieldVisibilityConfig((prev) => ({
+                  ...prev,
+                  customMetadata: {
+                    ...customMeta,
+                    defaultVisibleCustomFields: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                }))
+              }
+              placeholder="Ex: audio_config, thermal_keyword"
+            />
+          </div>
 
-        <div className="cc-field">
-          <label className="cc-label">Campos Ocultos por Padrão (separados por vírgula)</label>
-          <input
-            type="text"
-            className="cc-input"
-            value={(customMeta.hiddenByDefault || []).join(', ')}
-            onChange={(e) =>
-              setFieldVisibilityConfig((prev) => ({
-                ...prev,
-                customMetadata: {
-                  ...customMeta,
-                  hiddenByDefault: e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                },
-              }))
-            }
-            placeholder="Ex: internal_id, admin_notes, system_flags"
-          />
+          <div className="ccm-field">
+            <label className="ccm-label">Campos Ocultos por Padrão (vírgula)</label>
+            <input
+              type="text"
+              className="ccm-input"
+              value={(customMeta.hiddenByDefault || []).join(', ')}
+              onChange={(e) =>
+                setFieldVisibilityConfig((prev) => ({
+                  ...prev,
+                  customMetadata: {
+                    ...customMeta,
+                    hiddenByDefault: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                }))
+              }
+              placeholder="Ex: internal_id, admin_notes"
+            />
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

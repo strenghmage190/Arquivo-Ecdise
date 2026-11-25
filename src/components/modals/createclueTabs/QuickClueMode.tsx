@@ -8,7 +8,6 @@ import {
   Music,
   Video,
   Sparkles,
-  Wrench,
 } from 'lucide-react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
 
@@ -151,36 +150,17 @@ export default function QuickClueMode() {
     mediaState.videoPreviewUrl || mediaState.videoUrlInput.trim() || mediaState.videoUrl;
 
   return (
-    <div className="cc-tab-content cc-quick-mode">
-      <div className="cc-quick-banner">
-        <div>
-          <strong style={{ color: 'var(--cc-neon)', fontSize: 13, letterSpacing: 1 }}>
-            ⚡ MODO RÁPIDO
-          </strong>
-          <div style={{ fontSize: 12, color: 'var(--cc-text-muted)', marginTop: 2 }}>
-            Crie uma pista completa em segundos. Precisa de UV, Cifra, Áudio Oculto ou Glitch? Troque para o Modo Completo a qualquer momento.
-          </div>
-        </div>
-        <button
-          type="button"
-          className="cc-btn cc-btn-cancel"
-          style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
-          onClick={() => setCreatorMode('complete')}
-        >
-          <Wrench size={14} /> Abrir 10 Abas
-        </button>
-      </div>
-
+    <div className="ccm-tab-stack">
       {advancedChips.length > 0 && (
-        <div className="cc-quick-chips-row">
-          <span style={{ fontSize: 11, color: 'var(--cc-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Sparkles size={12} color="var(--cc-neon)" /> Camadas avançadas ativas:
+        <div className="ccm-chips-row">
+          <span className="ccm-note" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Sparkles size={12} color="var(--ccm-accent)" /> Camadas avançadas ativas:
           </span>
           {advancedChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
-              className="cc-quick-chip"
+              className="ccm-chip"
               onClick={() => jumpToAdvancedTab(chip.tab)}
               title={`Editar na aba ${chip.tab}`}
             >
@@ -190,13 +170,13 @@ export default function QuickClueMode() {
         </div>
       )}
 
-      <div className="cc-quick-grid">
-        <div className="cc-quick-col">
-          <div className="cc-field">
-            <label className="cc-label">Título da Pista *</label>
+      <div className="ccm-grid-2">
+        <div className="ccm-section">
+          <div className="ccm-field">
+            <label className="ccm-label">Título da Pista *</label>
             <input
               type="text"
-              className="cc-input"
+              className="ccm-input"
               value={coreState.title}
               onChange={(e) => setCoreState((s) => ({ ...s, title: e.target.value }))}
               maxLength={100}
@@ -205,10 +185,10 @@ export default function QuickClueMode() {
             />
           </div>
 
-          <div className="cc-field">
-            <label className="cc-label">Descrição Pública (Visível aos jogadores)</label>
+          <div className="ccm-field">
+            <label className="ccm-label">Descrição Pública (Visível aos jogadores)</label>
             <textarea
-              className="cc-input"
+              className="ccm-input"
               value={coreState.descPublic}
               onChange={(e) => setCoreState((s) => ({ ...s, descPublic: e.target.value }))}
               rows={3}
@@ -217,10 +197,10 @@ export default function QuickClueMode() {
             />
           </div>
 
-          <div className="cc-field">
-            <label className="cc-label">Notas Confidenciais do Mestre (Apenas GM)</label>
+          <div className="ccm-field">
+            <label className="ccm-label">Notas Confidenciais do Mestre (Apenas GM)</label>
             <textarea
-              className="cc-input"
+              className="ccm-input"
               value={coreState.descHidden}
               onChange={(e) => setCoreState((s) => ({ ...s, descHidden: e.target.value }))}
               rows={3}
@@ -229,11 +209,11 @@ export default function QuickClueMode() {
             />
           </div>
 
-          <div className="cc-field">
-            <label className="cc-label">Tags (separadas por vírgula)</label>
+          <div className="ccm-field">
+            <label className="ccm-label">Tags (separadas por vírgula)</label>
             <input
               type="text"
-              className="cc-input"
+              className="ccm-input"
               value={coreState.tags}
               onChange={(e) => setCoreState((s) => ({ ...s, tags: e.target.value }))}
               placeholder="Ex: suspeito, laboratório, chave"
@@ -241,11 +221,11 @@ export default function QuickClueMode() {
           </div>
         </div>
 
-        <div className="cc-quick-col">
-          <div className="cc-field">
-            <label className="cc-label">Mídia Principal (Imagem, Áudio ou Vídeo)</label>
+        <div className="ccm-section">
+          <div className="ccm-field">
+            <label className="ccm-label">Mídia Principal (Imagem, Áudio ou Vídeo)</label>
             <div
-              className={`cc-quick-dropzone ${isDragging ? 'dragging' : ''}`}
+              className={`ccm-dropzone ${isDragging ? 'dragging' : ''}`}
               onDragOver={(e) => {
                 e.preventDefault();
                 setIsDragging(true);
@@ -258,18 +238,18 @@ export default function QuickClueMode() {
               }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload size={22} color="var(--cc-neon)" />
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+              <Upload size={22} color="var(--ccm-accent)" />
+              <div className="ccm-dropzone-title">
                 Arraste uma Imagem, Áudio ou Vídeo aqui
               </div>
-              <div style={{ fontSize: 11, color: 'var(--cc-text-muted)' }}>
+              <div className="ccm-dropzone-sub">
                 ou clique para selecionar do computador
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,audio/*,video/*"
-                style={{ display: 'none' }}
+                hidden
                 onChange={(e) => {
                   handleFile(e.target.files?.[0]);
                   e.target.value = '';
@@ -278,11 +258,11 @@ export default function QuickClueMode() {
             </div>
           </div>
 
-          <div className="cc-field">
-            <label className="cc-label">Ou URL de Vídeo (YouTube / MP4 direto)</label>
+          <div className="ccm-field">
+            <label className="ccm-label">Ou URL de Vídeo (YouTube / MP4 direto)</label>
             <input
               type="text"
-              className="cc-input"
+              className="ccm-input"
               value={mediaState.videoUrlInput}
               onChange={(e) =>
                 setMediaState((prev) => ({
@@ -295,46 +275,45 @@ export default function QuickClueMode() {
             />
           </div>
 
-          {/* Previews */}
           {mediaState.previewUrl && (
-            <div className="cc-quick-media-preview">
-              <div className="cc-quick-media-head">
+            <div className="ccm-preview-box">
+              <div className="ccm-preview-head">
                 <span>
                   <ImageIcon size={13} /> Imagem anexada
                 </span>
-                <button type="button" className="cc-quick-remove-btn" onClick={clearImage}>
+                <button type="button" className="ccm-btn ccm-btn-sm ccm-btn-danger" onClick={clearImage}>
                   <X size={13} /> Remover
                 </button>
               </div>
               <img
                 src={mediaState.previewUrl}
                 alt="Preview"
-                style={{ maxHeight: 150, width: '100%', objectFit: 'contain', borderRadius: 4, background: '#05070a' }}
+                className="ccm-preview-media"
               />
             </div>
           )}
 
           {mediaState.audioBasePreview && (
-            <div className="cc-quick-media-preview">
-              <div className="cc-quick-media-head">
+            <div className="ccm-preview-box">
+              <div className="ccm-preview-head">
                 <span>
                   <Music size={13} /> Áudio anexado
                 </span>
-                <button type="button" className="cc-quick-remove-btn" onClick={clearAudio}>
+                <button type="button" className="ccm-btn ccm-btn-sm ccm-btn-danger" onClick={clearAudio}>
                   <X size={13} /> Remover
                 </button>
               </div>
-              <audio controls src={mediaState.audioBasePreview} style={{ width: '100%' }} />
+              <audio controls src={mediaState.audioBasePreview} className="ccm-audio-player" />
             </div>
           )}
 
           {activeVideoSrc && (
-            <div className="cc-quick-media-preview">
-              <div className="cc-quick-media-head">
+            <div className="ccm-preview-box">
+              <div className="ccm-preview-head">
                 <span>
                   <Video size={13} /> Vídeo anexado
                 </span>
-                <button type="button" className="cc-quick-remove-btn" onClick={clearVideo}>
+                <button type="button" className="ccm-btn ccm-btn-sm ccm-btn-danger" onClick={clearVideo}>
                   <X size={13} /> Remover
                 </button>
               </div>
@@ -342,36 +321,37 @@ export default function QuickClueMode() {
                 <video
                   controls
                   src={mediaState.videoPreviewUrl}
-                  style={{ maxHeight: 140, width: '100%', borderRadius: 4, background: '#000' }}
+                  className="ccm-preview-media"
                 />
               ) : (
-                <div style={{ fontSize: 12, color: 'var(--cc-neon)', wordBreak: 'break-all' }}>
+                <div className="ccm-note" style={{ color: 'var(--ccm-accent)', wordBreak: 'break-all' }}>
                   {activeVideoSrc}
                 </div>
               )}
             </div>
           )}
 
-          {/* Security & Hidden */}
-          <div className="cc-quick-toggles">
-            <div className="cc-quick-toggle-card">
-              <label className="cc-checkbox">
+          <div className="ccm-grid-2">
+            <div className="ccm-field">
+              <label className="ccm-toggle-row">
+                <span className="ccm-toggle-text">
+                  <span className="ccm-toggle-title">
+                    <Lock size={14} /> Bloquear com Senha
+                  </span>
+                </span>
                 <input
                   type="checkbox"
+                  className="ccm-checkbox-input"
                   checked={securityState.isLocked}
                   onChange={(e) =>
                     setSecurityState((s) => ({ ...s, isLocked: e.target.checked }))
                   }
                 />
-                <span className="cc-checkbox-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Lock size={14} /> Bloquear com Senha
-                </span>
               </label>
               {securityState.isLocked && (
                 <input
                   type="text"
-                  className="cc-input"
-                  style={{ marginTop: 8 }}
+                  className="ccm-input"
                   value={securityState.lockPass}
                   onChange={(e) =>
                     setSecurityState((s) => ({ ...s, lockPass: e.target.value }))
@@ -381,24 +361,26 @@ export default function QuickClueMode() {
               )}
             </div>
 
-            <div className="cc-quick-toggle-card">
-              <label className="cc-checkbox">
+            <div className="ccm-field">
+              <label className="ccm-toggle-row">
+                <span className="ccm-toggle-text">
+                  <span className="ccm-toggle-title">
+                    <EyeOff size={14} /> Pista Oculta (Código)
+                  </span>
+                </span>
                 <input
                   type="checkbox"
+                  className="ccm-checkbox-input"
                   checked={coreState.isHidden}
                   onChange={(e) =>
                     setCoreState((s) => ({ ...s, isHidden: e.target.checked }))
                   }
                 />
-                <span className="cc-checkbox-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <EyeOff size={14} /> Pista Oculta (Código)
-                </span>
               </label>
               {coreState.isHidden && (
                 <input
                   type="text"
-                  className="cc-input"
-                  style={{ marginTop: 8, textTransform: 'uppercase' }}
+                  className="ccm-input ccm-input-mono"
                   value={coreState.discoveryCode}
                   onChange={(e) =>
                     setCoreState((s) => ({

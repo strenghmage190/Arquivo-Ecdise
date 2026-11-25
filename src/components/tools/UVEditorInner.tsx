@@ -3081,7 +3081,7 @@ export function UVEditorInner({
             className="uv-preview-btn"
             title="Centralizar e encaixar na proporção da imagem base"
           >
-            <span>📐 Encaixar na Proporção da Base</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Target size={14} /> Encaixar na Proporção da Base</span>
           </button>
           <button
             type="button"

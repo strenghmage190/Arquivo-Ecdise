@@ -210,7 +210,7 @@ export default function GMToolkitPanel({
               disabled={!canAct || selectedCardIds.length === 0}
               onClick={() => handleBatchVisibility(false)}
             >
-              <Eye size={14} /> 👁️ Revelar Selecionadas
+              <Eye size={14} /> Revelar Selecionadas
             </button>
             <button
               type="button"
@@ -218,7 +218,7 @@ export default function GMToolkitPanel({
               disabled={!canAct || selectedCardIds.length === 0}
               onClick={() => handleBatchVisibility(true)}
             >
-              <EyeOff size={14} /> 👻 Ocultar Selecionadas
+              <EyeOff size={14} /> Ocultar Selecionadas
             </button>
           </div>
         </div>

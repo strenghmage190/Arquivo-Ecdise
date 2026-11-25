@@ -1,4 +1,4 @@
-import { Check, FileText, Camera, User, Edit3, Lock, Lightbulb, Settings, AlertTriangle, Music, Clapperboard, Volume2, Palette, Search, Eye, Radio, Gamepad2, Sparkles, Zap, Save } from 'lucide-react';
+import { Check, FileText, Camera, User, Edit3, Lock, Unlock, Lightbulb, Settings, AlertTriangle, Music, Clapperboard, Volume2, Palette, Search, Eye, EyeOff, Radio, Gamepad2, Sparkles, Zap, Save, X, Pin } from 'lucide-react';
 import React, { useState } from 'react';
 import {
   FieldVisibilityConfig,
@@ -66,14 +66,14 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
 
   const handleSave = () => {
     saveFieldVisibility(config);
-    setSavedMessage('✅ Configuração salva!');
+    setSavedMessage('Configuração salva!');
     setTimeout(() => setSavedMessage(''), 2000);
   };
 
   const handlePreset = (preset: 'MINIMAL' | 'DEFAULT' | 'FULL' | 'MYSTERY') => {
     const newConfig = applyFieldVisibilityPreset(preset);
     setConfig(newConfig);
-    setSavedMessage(`✅ Preset "${preset}" aplicado!`);
+    setSavedMessage(`Preset "${preset}" aplicado!`);
     setTimeout(() => setSavedMessage(''), 2000);
   };
 
@@ -95,85 +95,85 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
   };
 
   const filePropertyOptions = [
-    { id: 'fileType', label: '📄 Tipo de Arquivo', description: 'Tipo do arquivo (JPEG, PNG, etc)' },
-    { id: 'size', label: '📊 Tamanho', description: 'Tamanho do arquivo em bytes' },
-    { id: 'cameraModel', label: '📷 Câmera', description: 'Modelo da câmera' },
-    { id: 'dateCreated', label: '📅 Data', description: 'Data de criação/fake date' },
-    { id: 'gpsCoords', label: '🗺️ GPS', description: 'Coordenadas de localização' },
-    { id: 'ownerName', label: '👤 Dono', description: 'Quem é o proprietário' },
-    { id: 'hexComment', label: '🔧 HEX Comment', description: 'Dados hexadecimais' },
-    { id: 'technicalNote', label: ' Nota Técnica', description: 'Anotações técnicas' },
-    { id: 'stamp', label: '🔖 Carimbo/Stamp', description: 'Carimbo do documento' },
-    { id: 'externalLink', label: '🔗 Link Externo', description: 'Link para recurso externo' },
-    { id: 'fakeLocation', label: '📍 Localização Falsa', description: 'Localização fictícia do arquivo' },
-    { id: 'isLocked', label: '🔒 Bloqueado', description: 'Se o documento está trancado' },
-    { id: 'lockPassword', label: '🔑 Senha de Desbloqueio', description: 'Senha necessária', onChange: (value) => handleFieldChange('lockPassword', value) },
-    { id: 'isPerson', label: '👤 Dossiê de Pessoa', description: 'Se é um perfil de pessoa' },
-    { id: 'personName', label: '👤 Nome da Pessoa', description: 'Nome completo' },
-    { id: 'personDob', label: '🎂 Data de Nascimento', description: 'Data de nascimento' },
-    { id: 'personStatus', label: '💓 Status Vital', description: 'ALIVE/DEAD/MISSING/UNKNOWN' },
-    { id: 'personOccupation', label: '💼 Ocupação', description: 'Profissão/ocupação' },
+    { id: 'fileType', label: 'Tipo de Arquivo', description: 'Tipo do arquivo (JPEG, PNG, etc)' },
+    { id: 'size', label: 'Tamanho', description: 'Tamanho do arquivo em bytes' },
+    { id: 'cameraModel', label: 'Câmera', description: 'Modelo da câmera' },
+    { id: 'dateCreated', label: 'Data', description: 'Data de criação/fake date' },
+    { id: 'gpsCoords', label: 'GPS', description: 'Coordenadas de localização' },
+    { id: 'ownerName', label: 'Dono', description: 'Quem é o proprietário' },
+    { id: 'hexComment', label: 'HEX Comment', description: 'Dados hexadecimais' },
+    { id: 'technicalNote', label: 'Nota Técnica', description: 'Anotações técnicas' },
+    { id: 'stamp', label: 'Carimbo/Stamp', description: 'Carimbo do documento' },
+    { id: 'externalLink', label: 'Link Externo', description: 'Link para recurso externo' },
+    { id: 'fakeLocation', label: 'Localização Falsa', description: 'Localização fictícia do arquivo' },
+    { id: 'isLocked', label: 'Bloqueado', description: 'Se o documento está trancado' },
+    { id: 'lockPassword', label: 'Senha de Desbloqueio', description: 'Senha necessária', onChange: (value) => handleFieldChange('lockPassword', value) },
+    { id: 'isPerson', label: 'Dossiê de Pessoa', description: 'Se é um perfil de pessoa' },
+    { id: 'personName', label: 'Nome da Pessoa', description: 'Nome completo' },
+    { id: 'personDob', label: 'Data de Nascimento', description: 'Data de nascimento' },
+    { id: 'personStatus', label: 'Status Vital', description: 'ALIVE/DEAD/MISSING/UNKNOWN' },
+    { id: 'personOccupation', label: 'Ocupação', description: 'Profissão/ocupação' },
   ];
 
   const puzzleOptions = [
-    { id: 'accessInstructions', label: '▶️ Como Acessar', description: 'Instruções para resolver' },
-    { id: 'hint', label: '💡 Dica', description: 'Dica para ajudar' },
-    { id: 'calibrationControls', label: '⚙️ Controles', description: 'Sliders de calibração' },
-    { id: 'logs', label: '📜 Logs', description: 'Terminal/logs de recuperação' },
-    { id: 'rewardCode', label: '🎁 Código', description: 'Código de recompensa' },
-    { id: 'correctAnswerWhenSolved', label: '⚠️️ Resposta Correta', description: 'Mostra valores corretos (entrega solução!)' },
-    { id: 'keyword', label: '🔑 Palavra-chave', description: 'Palavra-chave para desbloquear' },
-    { id: 'focusedImage', label: '🖼️ Imagem Focada', description: 'Imagem revelada ao resolver' },
-    { id: 'hiddenAudioUrl', label: '🎵 Áudio Oculto', description: 'URL de áudio secreto' },
-    { id: 'hiddenVideoUrl', label: '🎬 Vídeo Oculto', description: 'URL de vídeo secreto' },
-    { id: 'unlockMode', label: '🔓 Modo de Desbloqueio', description: 'code / code_plus_keyword / media' },
-    { id: 'difficulty', label: '🎯 Dificuldade', description: 'easy / normal / hard / custom' },
-    { id: 'toleranceSettings', label: '📏 Tolerâncias', description: 'Tolerância de freq/shift/chroma' },
-    { id: 'correctParameters', label: '🎛️ Parâmetros Corretos', description: 'Valores exatos (freq/shift/chroma)' },
-    { id: 'startParameters', label: '🎬 Parâmetros Iniciais', description: 'Valores iniciais do puzzle' },
+    { id: 'accessInstructions', label: 'Como Acessar', description: 'Instruções para resolver' },
+    { id: 'hint', label: 'Dica', description: 'Dica para ajudar' },
+    { id: 'calibrationControls', label: 'Controles', description: 'Sliders de calibração' },
+    { id: 'logs', label: 'Logs', description: 'Terminal/logs de recuperação' },
+    { id: 'rewardCode', label: 'Código', description: 'Código de recompensa' },
+    { id: 'correctAnswerWhenSolved', label: 'Resposta Correta', description: 'Mostra valores corretos (entrega solução!)' },
+    { id: 'keyword', label: 'Palavra-chave', description: 'Palavra-chave para desbloquear' },
+    { id: 'focusedImage', label: 'Imagem Focada', description: 'Imagem revelada ao resolver' },
+    { id: 'hiddenAudioUrl', label: 'Áudio Oculto', description: 'URL de áudio secreto' },
+    { id: 'hiddenVideoUrl', label: 'Vídeo Oculto', description: 'URL de vídeo secreto' },
+    { id: 'unlockMode', label: 'Modo de Desbloqueio', description: 'code / code_plus_keyword / media' },
+    { id: 'difficulty', label: 'Dificuldade', description: 'easy / normal / hard / custom' },
+    { id: 'toleranceSettings', label: 'Tolerâncias', description: 'Tolerância de freq/shift/chroma' },
+    { id: 'correctParameters', label: 'Parâmetros Corretos', description: 'Valores exatos (freq/shift/chroma)' },
+    { id: 'startParameters', label: 'Parâmetros Iniciais', description: 'Valores iniciais do puzzle' },
   ];
 
   const megaClueOptions = [
-    { id: 'hints', label: '💡 Dicas', description: 'Dicas da mega-pista' },
-    { id: 'progress', label: '📊 Progresso', description: 'Quantas pistas foram resolvidas' },
-    { id: 'answer', label: '⚠️️ Resposta Final', description: 'Mostra o segredo final (cuidado!)' },
-    { id: 'requiredPuzzles', label: '🔗 Puzzles Obrigatórios', description: 'Lista de puzzles que precisam resolver' },
+    { id: 'hints', label: 'Dicas', description: 'Dicas da mega-pista' },
+    { id: 'progress', label: 'Progresso', description: 'Quantas pistas foram resolvidas' },
+    { id: 'answer', label: 'Resposta Final', description: 'Mostra o segredo final (cuidado!)' },
+    { id: 'requiredPuzzles', label: 'Puzzles Obrigatórios', description: 'Lista de puzzles que precisam resolver' },
   ];
 
   const customFieldOptions = [
-    { id: 'audio_config', label: '🔊 Config de Áudio', description: 'Configuração de áudio/triggers' },
-    { id: 'thermal_keyword', label: '🔥 Palavra-chave Térmica', description: 'Palavra-chave para dados térmicos' },
-    { id: 'thermal_secret_text', label: '🔥 Texto Secreto', description: 'Texto secreto em dados térmicos' },
-    { id: 'thermal_enabled', label: '🔥 Térmica Ativada', description: 'Se dados térmicos estão habilitados' },
-    { id: 'thermal_font_size', label: '🔤 Tamanho da Fonte', description: 'Tamanho da fonte térmica' },
-    { id: 'thermal_position_y', label: '📍 Posição Y', description: 'Posição Y dos dados térmicos' },
-    { id: 'device_owner', label: '👤 Proprietário do Dispositivo', description: 'Informação do dono do dispositivo' },
-    { id: 'gps_coords', label: '🗺️ Coordenadas GPS', description: 'Coordenadas de localização' },
-    { id: 'filter_transform', label: '🎨 Transformação do Filtro', description: 'Posição/tamanho do overlay de filtro' },
-    { id: 'filter_reveal_settings', label: '🔍 Config de Revelação', description: 'Brilho/contraste/saturação' },
-    { id: 'uv_layer', label: '💡 Camada UV', description: 'Camada ultravioleta oculta', onChange: (value) => handleFieldChange('uv_layer', value) },
-    { id: 'is_shredded', label: '📃 Fragmentado', description: 'Se o documento está fragmentado' },
-    { id: 'shred_config', label: '✂️ Config de Fragmentação', description: 'Linhas/colunas de fragmentação' },
-    { id: 'real_text', label: ' Texto Real', description: 'Texto verdadeiro (fragmentado)' },
-    { id: 'cipher_text', label: '🔒 Texto Cifrado', description: 'Texto codificado' },
-    { id: 'chat_data', label: '💬 Dados de Chat', description: 'Conversas de mensagens' },
-    { id: 'chat_contact_name', label: '👤 Nome do Contato', description: 'Nome do contato no chat' },
-    { id: 'video_url', label: '🎬 URL de Vídeo', description: 'Link do vídeo' },
-    { id: 'media_visibility', label: '👁️ Visibilidade de Mídia', description: 'Quando áudio/vídeo aparecem' },
-    { id: 'security_layer', label: '🔒 Camada de Segurança', description: 'Proteção de mídia' },
-    { id: 'reveal_logic', label: '🔓 Lógica de Revelação', description: 'always_visible/aligned_only/aligned_keyword' },
-    { id: 'signal_targets', label: ' Alvos de Sinal', description: 'visual/audio sync' },
-    { id: 'audio_static_sync', label: '📻 Sincronização Estática', description: 'Sincronizar áudio com estática visual' },
-    { id: 'narrative_links', label: '📖 Links Narrativos', description: 'Conexões narrativas entre elementos' },
-    { id: 'hide_preview_board', label: '🙈 Ocultar Preview', description: 'Ocultar preview no board' },
-    { id: 'trigger_time', label: '⏱️ Tempo de Gatilho', description: 'Tempo de ativação do trigger' },
+    { id: 'audio_config', label: 'Config de Áudio', description: 'Configuração de áudio/triggers' },
+    { id: 'thermal_keyword', label: 'Palavra-chave Térmica', description: 'Palavra-chave para dados térmicos' },
+    { id: 'thermal_secret_text', label: 'Texto Secreto', description: 'Texto secreto em dados térmicos' },
+    { id: 'thermal_enabled', label: 'Térmica Ativada', description: 'Se dados térmicos estão habilitados' },
+    { id: 'thermal_font_size', label: 'Tamanho da Fonte', description: 'Tamanho da fonte térmica' },
+    { id: 'thermal_position_y', label: 'Posição Y', description: 'Posição Y dos dados térmicos' },
+    { id: 'device_owner', label: 'Proprietário do Dispositivo', description: 'Informação do dono do dispositivo' },
+    { id: 'gps_coords', label: 'Coordenadas GPS', description: 'Coordenadas de localização' },
+    { id: 'filter_transform', label: 'Transformação do Filtro', description: 'Posição/tamanho do overlay de filtro' },
+    { id: 'filter_reveal_settings', label: 'Config de Revelação', description: 'Brilho/contraste/saturação' },
+    { id: 'uv_layer', label: 'Camada UV', description: 'Camada ultravioleta oculta', onChange: (value) => handleFieldChange('uv_layer', value) },
+    { id: 'is_shredded', label: 'Fragmentado', description: 'Se o documento está fragmentado' },
+    { id: 'shred_config', label: 'Config de Fragmentação', description: 'Linhas/colunas de fragmentação' },
+    { id: 'real_text', label: 'Texto Real', description: 'Texto verdadeiro (fragmentado)' },
+    { id: 'cipher_text', label: 'Texto Cifrado', description: 'Texto codificado' },
+    { id: 'chat_data', label: 'Dados de Chat', description: 'Conversas de mensagens' },
+    { id: 'chat_contact_name', label: 'Nome do Contato', description: 'Nome do contato no chat' },
+    { id: 'video_url', label: 'URL de Vídeo', description: 'Link do vídeo' },
+    { id: 'media_visibility', label: 'Visibilidade de Mídia', description: 'Quando áudio/vídeo aparecem' },
+    { id: 'security_layer', label: 'Camada de Segurança', description: 'Proteção de mídia' },
+    { id: 'reveal_logic', label: 'Lógica de Revelação', description: 'always_visible/aligned_only/aligned_keyword' },
+    { id: 'signal_targets', label: 'Alvos de Sinal', description: 'visual/audio sync' },
+    { id: 'audio_static_sync', label: 'Sincronização Estática', description: 'Sincronizar áudio com estática visual' },
+    { id: 'narrative_links', label: 'Links Narrativos', description: 'Conexões narrativas entre elementos' },
+    { id: 'hide_preview_board', label: 'Ocultar Preview', description: 'Ocultar preview no board' },
+    { id: 'trigger_time', label: 'Tempo de Gatilho', description: 'Tempo de ativação do trigger' },
   ];
 
   return (
     <div className="field-visibility-editor">
       <div className="editor-header">
         <h2><Eye className="lucide-icon inline-icon" size={16} /> EDITOR DE CAMPOS VISÍVEIS</h2>
-        <button className="close-btn" onClick={onClose}>✖</button>
+        <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
       </div>
 
       <div className="editor-tabs">
@@ -206,7 +206,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
       <div className="editor-content">
         {/* PRESETS - Sempre visível */}
         <div className="presets-bar">
-          <span>📌 Presets rápidos:</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Pin size={14} /> Presets rápidos:</span>
           <button
             className="preset-btn"
             onClick={() => handlePreset('MINIMAL')}
@@ -226,14 +226,14 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
             onClick={() => handlePreset('FULL')}
             title="Mostra tudo (cuidado!)"
           >
-            🔓 Completo
+            <Unlock className="lucide-icon inline-icon" size={15} /> Completo
           </button>
           <button
             className="preset-btn"
             onClick={() => handlePreset('MYSTERY')}
             title="Modo misterioso"
           >
-            🎭 Mistério
+            <EyeOff className="lucide-icon inline-icon" size={15} /> Mistério
           </button>
         </div>
 
@@ -364,7 +364,7 @@ export default function FieldVisibilityEditor({ onClose }: Props) {
           </button>
           {onClose && (
             <button className="btn btn-close" onClick={onClose}>
-              ✖ FECHAR
+              <X size={14} /> FECHAR
             </button>
           )}
         </div>

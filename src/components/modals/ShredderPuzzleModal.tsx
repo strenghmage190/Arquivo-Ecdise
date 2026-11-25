@@ -1,4 +1,4 @@
-import { Gamepad2, Check, Puzzle } from 'lucide-react';
+import { Gamepad2, Check, Puzzle, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ShredderPuzzle from '../tools/ShredderPuzzle';
@@ -68,8 +68,8 @@ export default function ShredderPuzzleModal({
               <p className="shredder-format">Formato: {rows}×{cols} {rows === 1 ? 'tiras horizontais' : cols === 1 ? 'tiras verticais' : 'grade'}</p>
             </div>
           </div>
-          <button className="shredder-close-btn" onClick={onClose} title="Fechar (Esc)">
-            ✕
+          <button className="shredder-close-btn" onClick={onClose} title="Fechar (Esc)" aria-label="Fechar">
+            <X size={16} />
           </button>
         </div>
 

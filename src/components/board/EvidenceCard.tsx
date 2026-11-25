@@ -1,4 +1,4 @@
-import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, KeyRound, Keyboard, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -286,7 +286,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             title="Enviar para Decoder"
             aria-label="Enviar para Decoder"
           >
-            🔐
+            <KeyRound size={16} />
           </button>
         )}
         {(!locked || (isGameMaster && !playerView)) && onOpenHex && (
@@ -296,7 +296,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             title="Abrir no Hex"
             aria-label="Abrir no Hex"
           >
-            ⌨️
+            <Keyboard size={16} />
           </button>
         )}
         {isGameMaster && !playerView && onEdit && (

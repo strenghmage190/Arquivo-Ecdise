@@ -1,4 +1,4 @@
-import { Volume2, Zap, TrendingUp, TrendingDown, RefreshCw, Save } from 'lucide-react';
+import { Volume2, Zap, TrendingUp, TrendingDown, RefreshCw, Save, Sliders, X, SkipBack, SkipForward, Play, Pause, BarChart2, MapPin } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import AudioForge from './AudioForge';
 import './AudioMixer.css';
@@ -464,13 +464,13 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
         <div className="mixer-header">
           <div className="header-content">
             <div className="status-indicator-mixer"></div>
-            <h2 className="mixer-title">🎛️ ESTAÇÃO DE MIXAGEM PROFISSIONAL</h2>
+            <h2 className="mixer-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Sliders size={18} /> ESTAÇÃO DE MIXAGEM PROFISSIONAL</h2>
           </div>
           <div className="header-actions">
             <button className="btn-transport forge" onClick={() => setShowForge((v) => !v)}>
               {showForge ? 'Fechar Audio Forge' : 'Abrir Audio Forge'}
             </button>
-            <button className="btn-close-mixer" onClick={onClose}>✕</button>
+            <button className="btn-close-mixer" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
           </div>
         </div>
 
@@ -499,13 +499,13 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
 
           <div className="transport-controls">
             <button className="btn-transport" onClick={() => { setCurrentTime(0); pauseTimeRef.current = 0; }}>
-              ⏮ Início
+              <SkipBack size={14} /> Início
             </button>
             <button className="btn-transport play" onClick={togglePlayPause}>
-              {isPlaying ? '⏸ Pausar' : '▶ Play'}
+              {isPlaying ? <><Pause size={14} /> Pausar</> : <><Play size={14} /> Play</>}
             </button>
             <button className="btn-transport" onClick={() => { setCurrentTime(duration); pauseTimeRef.current = duration; }}>
-              ⏭ Fim
+              <SkipForward size={14} /> Fim
             </button>
           </div>
         </div>
@@ -596,7 +596,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
               className={`btn-toggle ${normalize ? 'active' : ''}`}
               onClick={() => setNormalize(!normalize)}
             >
-              📊 NORMALIZAR
+              <BarChart2 size={14} /> NORMALIZAR
             </button>
           </div>
 
@@ -625,7 +625,7 @@ export default function AudioMixer({ baseAudioFile, onClose, onSave }: Props) {
         {/* Selection Info */}
         {selectionStart !== selectionEnd && (
           <div className="selection-info">
-            <span>📍 Seleção: {formatTime(Math.min(selectionStart, selectionEnd))} → {formatTime(Math.max(selectionStart, selectionEnd))}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapPin size={13} /> Seleção: {formatTime(Math.min(selectionStart, selectionEnd))} → {formatTime(Math.max(selectionStart, selectionEnd))}</span>
             <span>Duração: {formatTime(Math.abs(selectionEnd - selectionStart))}</span>
           </div>
         )}

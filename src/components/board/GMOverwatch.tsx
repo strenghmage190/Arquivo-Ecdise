@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, Image as ImageIcon, Video, Volume2, FileText, ClipboardList } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Toast from '../ui/Toast';
@@ -141,15 +141,15 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
   const getCardIcon = (type: string) => {
     switch (type) {
       case 'image':
-        return '🖼️';
+        return <ImageIcon size={15} />;
       case 'video':
-        return '🎥';
+        return <Video size={15} />;
       case 'audio':
-        return '🔊';
+        return <Volume2 size={15} />;
       case 'text':
-        return '📄';
+        return <FileText size={15} />;
       default:
-        return '📋';
+        return <ClipboardList size={15} />;
     }
   };
 

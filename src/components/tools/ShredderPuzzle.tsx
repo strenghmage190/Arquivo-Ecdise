@@ -1,4 +1,4 @@
-import { RefreshCw, Eye, Users, Gamepad2, Lightbulb, Lock, Check, Wand2 } from 'lucide-react';
+import { RefreshCw, Eye, Users, Gamepad2, Lightbulb, Lock, Unlock, Check, Wand2, X, Hand, Image as ImageIcon } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import './ShredderPuzzle.css';
 
@@ -219,20 +219,20 @@ export default function ShredderPuzzle({
               className={`shredder-btn btn-toggle ${showRevealControl ? 'active' : ''}`}
               onClick={() => setShowRevealControl(!showRevealControl)}
             >
-              {showRevealControl ? '✕ Fechar Painel' : '🔓 Controles GM'}
+              {showRevealControl ? <><X size={14} /> Fechar Painel</> : <><Unlock size={14} /> Controles GM</>}
             </button>
             <button 
               className={`shredder-btn btn-toggle ${gmToggleMode ? 'active' : ''}`}
               onClick={() => setGmToggleMode(!gmToggleMode)}
               title="Toque nas peças para alternar entre revelada e oculta sem precisar de teclado"
             >
-              {gmToggleMode ? '✓ Modo Revelar Ativo' : '👆 Toque p/ Revelar'}
+              {gmToggleMode ? <><Check size={14} /> Modo Revelar Ativo</> : <><Hand size={14} /> Toque p/ Revelar</>}
             </button>
             <button 
               className="shredder-btn btn-view-mode"
               onClick={() => setGmViewMode(prev => prev === 'all' ? 'player' : 'all')}
             >
-              {gmViewMode === 'all' ? '👁️ Ver Tudo' : '👥 Ver Jogador'}
+              {gmViewMode === 'all' ? <><Eye size={14} /> Ver Tudo</> : <><Users size={14} /> Ver Jogador</>}
             </button>
             <button 
               className="shredder-btn"
@@ -242,7 +242,7 @@ export default function ShredderPuzzle({
               onTouchStart={() => setShowPreview(true)}
               onTouchEnd={() => setShowPreview(false)}
             >
-              🖼️ Preview
+              <ImageIcon size={14} /> Preview
             </button>
           </>
         )}
@@ -271,7 +271,7 @@ export default function ShredderPuzzle({
       {/* Preview Overlay (GM) */}
       {isGameMaster && showPreview && (
         <div className="shredder-preview-overlay">
-          <div className="shredder-preview-title">🖼️ Preview - Imagem Completa</div>
+          <div className="shredder-preview-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ImageIcon size={15} /> Preview - Imagem Completa</div>
           <img src={imgSrc} alt="Preview completo" className="shredder-preview-img" />
           <div className="shredder-preview-hint">Solte para fechar</div>
         </div>
@@ -349,14 +349,14 @@ export default function ShredderPuzzle({
               {/* GM Badge */}
               {isGameMaster && (
                 <div className={`shredder-piece-gm-badge ${revealedPieces.has(index) ? 'revealed' : 'hidden'}`}>
-                  <span>{revealedPieces.has(index) ? '👁️' : '🔒'}</span>
+                  <span>{revealedPieces.has(index) ? <Eye size={12} /> : <Lock size={12} />}</span>
                   <span>#{index + 1}</span>
                 </div>
               )}
               
               {/* Correct Mark */}
               {isCorrect && isRevealed && (
-                <div className="shredder-piece-correct-mark">✓</div>
+                <div className="shredder-piece-correct-mark"><Check size={13} /></div>
               )}
             </div>
           );
@@ -370,10 +370,10 @@ export default function ShredderPuzzle({
         <span dangerouslySetInnerHTML={{ __html: 
           isGameMaster 
             ? gmViewMode === 'all'
-              ? '🎮 <strong>GM:</strong> Vendo TODAS as peças. Use "Ver Jogador" para testar a visão dos players. Ative "Toque p/ Revelar" para alternar peças sem teclado.'
-              : '👥 <strong>GM:</strong> Visualizando como JOGADOR. Use os Controles GM para revelar peças.'
+              ? '<strong>GM:</strong> Vendo TODAS as peças. Use "Ver Jogador" para testar a visão dos players. Ative "Toque p/ Revelar" para alternar peças sem teclado.'
+              : '<strong>GM:</strong> Visualizando como JOGADOR. Use os Controles GM para revelar peças.'
             : revealedPieces.size === 0
-              ? '🔒 Aguarde o GM revelar peças para começar a reconstruir.'
+              ? 'Aguarde o GM revelar peças para começar a reconstruir.'
               : `<strong>Toque em duas tiras</strong> para trocar de posição (Toque 1 seleciona, Toque 2 troca). ${revealedPieces.size}/${total} peças disponíveis.`
         }} />
       </div>

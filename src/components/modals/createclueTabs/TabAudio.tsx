@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
-import { Info, Music, Trash2, Radio, Mic, Square } from 'lucide-react';
+import { Info, Music, Trash2, Radio, Mic, Square, Check } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 
 export default function TabAudio() {
@@ -28,7 +28,7 @@ export default function TabAudio() {
       mediaStreamRef.current.getTracks().forEach((t) => {
         try {
           t.stop();
-        } catch {}
+        } catch { }
       });
       mediaStreamRef.current = null;
     }
@@ -40,7 +40,7 @@ export default function TabAudio() {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try {
           mediaRecorderRef.current.stop();
-        } catch {}
+        } catch { }
       }
       mediaRecorderRef.current = null;
       stopMediaTracksAndTimer();
@@ -74,8 +74,8 @@ export default function TabAudio() {
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : '';
+          ? 'audio/webm'
+          : '';
 
       const recorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
@@ -217,56 +217,25 @@ export default function TabAudio() {
   };
 
   return (
-    <div className="cc-tab-content">
-      {/* Voice Microphone Recorder */}
-      <div
-        style={{
-          marginBottom: 16,
-          padding: '12px 14px',
-          borderRadius: 8,
-          border: isRecording
-            ? '1px solid rgba(255, 70, 70, 0.7)'
-            : '1px solid rgba(0, 243, 255, 0.25)',
-          background: isRecording ? 'rgba(255, 40, 40, 0.08)' : 'rgba(0, 243, 255, 0.04)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 10,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Mic size={16} color={isRecording ? '#ff5555' : 'var(--cc-neon)'} />
-            <strong style={{ fontSize: 13 }}>Gravador de Voz (Microfone)</strong>
+    <div className="ccm-tab-stack">
+      <section className={`ccm-recorder-box ${isRecording ? 'is-recording' : ''}`}>
+        <div className="ccm-recorder-row">
+          <div className="ccm-label-inline">
+            <Mic size={16} color={isRecording ? '#f87171' : 'var(--ccm-accent)'} />
+            <strong>Gravador de Voz (Microfone)</strong>
             {isRecording && (
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: '#ff6666',
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                  background: 'rgba(255, 0, 0, 0.16)',
-                }}
-              >
-                ● REC {formatTimer(recordSeconds)}
-              </span>
+              <span className="ccm-rec-badge">● REC {formatTimer(recordSeconds)}</span>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="ccm-btn-row">
             {!isRecording ? (
               <>
                 <select
                   value={recordTarget}
                   onChange={(e) => setRecordTarget(e.target.value as 'base' | 'hidden')}
-                  className="cc-input"
-                  style={{ width: 'auto', padding: '5px 8px', fontSize: 12 }}
+                  className="ccm-input"
+                  style={{ width: 'auto' }}
                   aria-label="Destino da gravação"
                 >
                   <option value="base">Destino: Áudio Base</option>
@@ -274,18 +243,16 @@ export default function TabAudio() {
                 </select>
                 <button
                   type="button"
-                  className="cc-btn cc-btn-cancel"
-                  style={{ borderColor: 'var(--cc-neon)', color: 'var(--cc-neon)' }}
+                  className="ccm-btn ccm-btn-primary"
                   onClick={() => startRecording(recordTarget)}
                 >
-                  🎙️ Gravar pelo Microfone
+                  <Mic size={14} /> Gravar pelo Microfone
                 </button>
               </>
             ) : (
               <button
                 type="button"
-                className="cc-btn cc-btn-save"
-                style={{ borderColor: '#ff5555', background: 'rgba(255, 50, 50, 0.22)', color: '#fff' }}
+                className="ccm-btn ccm-btn-danger"
                 onClick={stopAndUseRecording}
               >
                 <Square size={14} /> Parar & Usar ({recordTarget === 'hidden' ? 'Áudio Oculto' : 'Áudio Base'})
@@ -295,29 +262,29 @@ export default function TabAudio() {
         </div>
 
         {micError && (
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: '#ff6b6b' }}>
+          <p className="ccm-note" style={{ color: 'var(--ccm-danger)' }}>
             {micError}
           </p>
         )}
-      </div>
+      </section>
 
-      <div className="cc-section-header">
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          Áudio Base
-          <span data-tooltip-id="base-audio-tip" style={{ cursor: 'help' }}>
-            <Info size={16} color="var(--nexus-text-muted, #666)" />
-          </span>
-        </h3>
-        <Tooltip id="base-audio-tip" className="cyber-tooltip">
-          O áudio principal que será reproduzido quando a pista for analisada.
-        </Tooltip>
-      </div>
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            Áudio Base
+            <span data-tooltip-id="base-audio-tip" className="ccm-help-icon">
+              <Info size={15} />
+            </span>
+          </h3>
+          <Tooltip id="base-audio-tip" className="cyber-tooltip ccm-tooltip">
+            O áudio principal que será reproduzido quando a pista for analisada.
+          </Tooltip>
+        </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: 'var(--cc-text-muted)', marginBottom: 8 }}>
+        <p className="ccm-note">
           {mediaState.audioBasePreview ? (
-            <span style={{ color: '#00ff00' }}>
-              [ ✓ ] Áudio Base carregado{mediaState.audioBase?.name ? `: ${mediaState.audioBase.name}` : '.'}
+            <span style={{ color: 'var(--ccm-success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Check size={14} /> Áudio Base carregado{mediaState.audioBase?.name ? `: ${mediaState.audioBase.name}` : '.'}
             </span>
           ) : (
             <span>[ - ] Nenhum áudio base.</span>
@@ -325,9 +292,7 @@ export default function TabAudio() {
         </p>
 
         {mediaState.audioBasePreview && (
-          <div style={{ marginBottom: 10 }}>
-            <audio controls src={mediaState.audioBasePreview} style={{ width: '100%' }} />
-          </div>
+          <audio controls src={mediaState.audioBasePreview} className="ccm-audio-player" />
         )}
 
         <input
@@ -337,19 +302,17 @@ export default function TabAudio() {
           ref={baseAudioRef}
           onChange={handleBaseAudioSelect}
         />
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="ccm-btn-grid">
           <button
             type="button"
-            className="cc-btn cc-btn-cancel"
-            style={{ flex: 1, justifyContent: 'center' }}
+            className="ccm-btn"
             onClick={() => baseAudioRef.current?.click()}
           >
             <Music size={16} /> Selecionar Áudio Base
           </button>
           <button
             type="button"
-            className={mediaState.audioBasePreview ? 'cc-btn cc-btn-save' : 'cc-btn cc-btn-cancel'}
-            style={{ flex: 1, justifyContent: 'center' }}
+            className={`ccm-btn ${mediaState.audioBasePreview ? 'ccm-btn-primary' : ''}`}
             onClick={() => setEditorState((s) => ({ ...s, showAudioForgeFor: 'base' }))}
           >
             <Music size={16} /> Abrir AudioLab
@@ -357,62 +320,58 @@ export default function TabAudio() {
           {mediaState.audioBasePreview && (
             <button
               type="button"
-              className="cc-btn cc-btn-cancel"
-              style={{ borderColor: '#ff4444', color: '#ff6666' }}
+              className="ccm-btn ccm-btn-danger"
               onClick={handleRemoveBaseAudio}
             >
               <Trash2 size={16} /> Remover
             </button>
           )}
         </div>
-      </div>
+      </section>
 
-      <hr className="cc-divider" />
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Radio size={17} /> Frequência Alvo de Sintonia (Espectrograma / Rádio)
+          </h3>
+        </div>
 
-      <div className="cc-section-header">
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Radio size={18} />
-          Frequência Alvo de Sintonia (Espectrograma / Rádio)
-        </h3>
-      </div>
+        <div className="ccm-slider-field">
+          <div className="ccm-slider-head">
+            <label className="ccm-label">Frequência Alvo (0–100 Hz)</label>
+            <span className="ccm-slider-val">{mediaState.audioTargetFreq} Hz</span>
+          </div>
+          <input
+            type="range"
+            className="ccm-range"
+            min={0}
+            max={100}
+            value={mediaState.audioTargetFreq}
+            onChange={(e) =>
+              setMediaState((s) => ({ ...s, audioTargetFreq: parseInt(e.target.value, 10) || 0 }))
+            }
+          />
+        </div>
+      </section>
 
-      <div className="cc-field" style={{ marginBottom: 16 }}>
-        <label className="cc-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>Frequência Alvo (0–100 Hz)</span>
-          <strong style={{ color: 'var(--cc-neon)' }}>{mediaState.audioTargetFreq} Hz</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={mediaState.audioTargetFreq}
-          onChange={(e) =>
-            setMediaState((s) => ({ ...s, audioTargetFreq: parseInt(e.target.value, 10) || 0 }))
-          }
-          style={{ width: '100%', accentColor: 'var(--cc-neon)' }}
-        />
-      </div>
+      <section className="ccm-section ccm-section-accent">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            Áudio Oculto (Esteganografia)
+            <span data-tooltip-id="hidden-audio-tip" className="ccm-help-icon">
+              <Info size={15} />
+            </span>
+          </h3>
+          <Tooltip id="hidden-audio-tip" className="cyber-tooltip ccm-tooltip">
+            <span className="cyber-tooltip-title">[ AUDIO FORGE ]</span>
+            Oculte frequências, senhas ou imagens dentro do espectrograma. O áudio oculto será revelado apenas quando analisado no modo Espectrograma.
+          </Tooltip>
+        </div>
 
-      <hr className="cc-divider" />
-
-      <div className="cc-section-header">
-        <h3 className="cc-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          Áudio Oculto (Esteganografia)
-          <span data-tooltip-id="hidden-audio-tip" style={{ cursor: 'help' }}>
-            <Info size={16} color="var(--nexus-neon, #00ffff)" />
-          </span>
-        </h3>
-        <Tooltip id="hidden-audio-tip" className="cyber-tooltip">
-          <span className="cyber-tooltip-title">[ AUDIO FORGE ]</span>
-          Oculte frequências, senhas ou imagens dentro do espectrograma. O áudio oculto será revelado apenas quando analisado no modo Espectrograma.
-        </Tooltip>
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: 'var(--cc-text-muted)', marginBottom: 8 }}>
+        <p className="ccm-note">
           {mediaState.audioHiddenPreview ? (
-            <span style={{ color: '#00ff00' }}>
-              [ ✓ ] Áudio Oculto carregado{mediaState.audioHidden?.name ? `: ${mediaState.audioHidden.name}` : '.'}
+            <span style={{ color: 'var(--ccm-success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Check size={14} /> Áudio Oculto carregado{mediaState.audioHidden?.name ? `: ${mediaState.audioHidden.name}` : '.'}
             </span>
           ) : (
             <span>[ - ] Nenhum áudio oculto.</span>
@@ -420,9 +379,7 @@ export default function TabAudio() {
         </p>
 
         {mediaState.audioHiddenPreview && (
-          <div style={{ marginBottom: 10 }}>
-            <audio controls src={mediaState.audioHiddenPreview} style={{ width: '100%' }} />
-          </div>
+          <audio controls src={mediaState.audioHiddenPreview} className="ccm-audio-player" />
         )}
 
         <input
@@ -432,19 +389,17 @@ export default function TabAudio() {
           ref={hiddenAudioRef}
           onChange={handleHiddenAudioSelect}
         />
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="ccm-btn-grid">
           <button
             type="button"
-            className="cc-btn cc-btn-cancel"
-            style={{ flex: 1, justifyContent: 'center' }}
+            className="ccm-btn"
             onClick={() => hiddenAudioRef.current?.click()}
           >
             <Music size={16} /> Selecionar Áudio Oculto
           </button>
           <button
             type="button"
-            className={mediaState.audioHiddenPreview ? 'cc-btn cc-btn-save' : 'cc-btn cc-btn-cancel'}
-            style={{ flex: 1, justifyContent: 'center' }}
+            className={`ccm-btn ${mediaState.audioHiddenPreview ? 'ccm-btn-primary' : ''}`}
             onClick={() => setEditorState((s) => ({ ...s, showAudioForgeFor: 'hidden' }))}
           >
             <Music size={16} /> Abrir AudioLab
@@ -452,15 +407,14 @@ export default function TabAudio() {
           {mediaState.audioHiddenPreview && (
             <button
               type="button"
-              className="cc-btn cc-btn-cancel"
-              style={{ borderColor: '#ff4444', color: '#ff6666' }}
+              className="ccm-btn ccm-btn-danger"
               onClick={handleRemoveHiddenAudio}
             >
               <Trash2 size={16} /> Remover
             </button>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

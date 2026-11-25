@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Check, Copy, KeyRound } from 'lucide-react';
 import './HexViewer.css';
 
 interface Props {
@@ -78,7 +79,7 @@ export default function HexViewer({ hiddenMessage = '', focused = false, onSendT
             onClick={handleCopy}
             title="Copiar mensagem ou conteúdo hex"
           >
-            {copied ? '✓ Copiado' : '📋 Copiar Mensagem / Hex'}
+            {copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar Mensagem / Hex</>}
           </button>
           {onSendToDecoder && (hiddenMessage || content) && (
             <button
@@ -87,7 +88,7 @@ export default function HexViewer({ hiddenMessage = '', focused = false, onSendT
               onClick={() => onSendToDecoder(hiddenMessage || content)}
               title="Enviar para o Universal Decoder"
             >
-              🔐 Decoder
+              <KeyRound size={13} /> Decoder
             </button>
           )}
         </div>

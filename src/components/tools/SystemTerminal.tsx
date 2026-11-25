@@ -1,4 +1,4 @@
-import { Lock, FileText, AlertTriangle, Search, Thermometer } from 'lucide-react';
+import { Lock, FileText, AlertTriangle, Search, Thermometer, X } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import './SystemTerminal.css';
@@ -165,7 +165,7 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
       <div className="terminal-window" onClick={e => e.stopPropagation()}>
         <div className="terminal-header-bar">
           <span>C.R.I.S. TERMINAL [TTY-1]</span>
-          <button className="terminal-close-btn" onClick={() => onClose && onClose()}>✕</button>
+          <button className="terminal-close-btn" onClick={() => onClose && onClose()} aria-label="Fechar"><X size={15} /></button>
         </div>
         <div className="terminal-output">
           {history.map((line, i) => {

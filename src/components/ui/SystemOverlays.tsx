@@ -172,67 +172,6 @@ export default function SystemOverlays() {
     };
   }, []);
 
-  // Background hex data generator (static base + lightweight random mutation every 1.5s)
-  const createHexLines = (lines = 50): string[] => {
-    const parts: string[] = [];
-    const choices = '0123456789ABCDEF';
-    for (let i = 0; i < lines; i++) {
-      let line = '';
-      for (let j = 0; j < 12; j++) {
-        line += choices[Math.floor(Math.random() * 16)];
-        if (j % 2) line += ' ';
-      }
-      parts.push(line);
-    }
-    return parts;
-  };
-
-  const [leftHexLines, setLeftHexLines] = useState<string[]>(() => createHexLines(50));
-  const [rightHexLines, setRightHexLines] = useState<string[]>(() => createHexLines(50));
-
-  useEffect(() => {
-    const mutateLines = (prev: string[]) => {
-      const choices = '0123456789ABCDEF';
-      const next = prev.slice();
-      for (let k = 0; k < 2; k++) {
-        const lineIdx = Math.floor(Math.random() * next.length);
-        const chars = next[lineIdx].split('');
-        const hexPositions = chars
-          .map((ch, idx) => (ch !== ' ' ? idx : -1))
-          .filter((idx) => idx >= 0);
-        if (hexPositions.length > 0) {
-          const pos = hexPositions[Math.floor(Math.random() * hexPositions.length)];
-          chars[pos] = choices[Math.floor(Math.random() * 16)];
-          next[lineIdx] = chars.join('');
-        }
-      }
-      return next;
-    };
-
-    let iv: number | null = null;
-    const setupTimer = () => {
-      if (iv !== null) {
-        window.clearInterval(iv);
-        iv = null;
-      }
-      const reduced =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (isPerformanceMode() || isExtendedPerformanceMode() || reduced) return;
-      iv = window.setInterval(() => {
-        setLeftHexLines(mutateLines);
-        if (location.pathname !== '/') setRightHexLines(mutateLines);
-      }, 1500);
-    };
-
-    setupTimer();
-    window.addEventListener('ordo:performance-mode-change', setupTimer);
-    return () => {
-      if (iv !== null) window.clearInterval(iv);
-      window.removeEventListener('ordo:performance-mode-change', setupTimer);
-    };
-  }, [location.pathname]);
-
   return (
     <>
       <div className="hud-overlay-root">
@@ -290,6 +229,7 @@ export default function SystemOverlays() {
               role="status"
               aria-live="polite"
             >
+              <span className="membrane-pulse-dot" aria-hidden="true" />
               <div className="label">MEMBRANA LOCAL</div>
               <div className="bar-container">
                 <div className="fill danger" id="integrity-bar" ref={integrityRef} style={{ width: '99.4%' }} />
@@ -305,24 +245,6 @@ export default function SystemOverlays() {
         </header>
       </div>
 
-      <div className="background-data" style={{ left: 8 }} aria-hidden="true">
-        {leftHexLines.map((line, i) => (
-          <React.Fragment key={i}>
-            {line}
-            {i < leftHexLines.length - 1 && <br />}
-          </React.Fragment>
-        ))}
-      </div>
-      {location.pathname !== '/' && (
-        <div className="background-data" style={{ right: 8, left: 'auto' }} aria-hidden="true">
-          {rightHexLines.map((line, i) => (
-            <React.Fragment key={i}>
-              {line}
-              {i < rightHexLines.length - 1 && <br />}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
       {location.pathname === '/' && (
         <aside className="sigil-rail" aria-hidden="true">
           <span className="sigil-rail-mark sigil-sinais">A R C H I V O</span>

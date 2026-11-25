@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Crosshair, Maximize2, Radar } from 'lucide-react';
+import { ChevronDown, ChevronUp, Crosshair, Radar } from 'lucide-react';
 import './TacticalMinimap.css';
 
 export interface TacticalMinimapProps {
@@ -162,20 +162,12 @@ export const TacticalMinimap: React.FC<TacticalMinimapProps> = ({
           aria-expanded={isOpen}
           aria-label={isOpen ? 'Recolher minimapa' : 'Expandir minimapa'}
         >
-          <Radar size={13} />
-          <span>RADAR</span>
-          <span className="minimap-count tabular-nums">{visibleCards.length}</span>
+          <span className="minimap-title-group">
+            <Radar size={13} />
+            <span>RADAR</span>
+            <span className="minimap-count tabular-nums">{visibleCards.length}</span>
+          </span>
           {isOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-        </button>
-
-        <button
-          type="button"
-          className="minimap-fit-btn"
-          onClick={onZoomToFit}
-          title="Enquadrar Tudo (Zoom to Fit)"
-          aria-label="Enquadrar todas as pistas"
-        >
-          <Maximize2 size={12} />
         </button>
       </div>
 

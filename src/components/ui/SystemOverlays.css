@@ -130,6 +130,32 @@
   animation: hud-critical-pulse 2.2s ease-in-out infinite;
 }
 
+.system-monitor .membrane-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--membrane-accent);
+  box-shadow: 0 0 6px var(--membrane-glow);
+  flex-shrink: 0;
+}
+
+.system-monitor[data-urgency="crimson"] .membrane-pulse-dot {
+  animation: membrane-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes membrane-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+
 .system-monitor .label {
   color: var(--text-secondary, #94a3b8);
   letter-spacing: 1px;
@@ -346,7 +372,33 @@
     display: none;
   }
 
-  .system-monitor .label {
+  .system-monitor .membrane-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--membrane-accent);
+  box-shadow: 0 0 6px var(--membrane-glow);
+  flex-shrink: 0;
+}
+
+.system-monitor[data-urgency="crimson"] .membrane-pulse-dot {
+  animation: membrane-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes membrane-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+
+.system-monitor .label {
     display: none;
   }
 

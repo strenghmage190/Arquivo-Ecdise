@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Play, Pause } from 'lucide-react';
 import { isExtendedPerformanceMode } from '../../utils/performance';
 
 type Props = {
@@ -173,10 +174,13 @@ export default function RealTimeSpectrogram({ audioBuffer, minFreq = 1000, maxFr
               border: 'none', 
               borderRadius: 'var(--radius-sm, 4px)', 
               cursor: 'pointer',
-              fontWeight: 600
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
             }}
           >
-            {isPlaying ? '⏸ Parar' : '▶ Play'}
+            {isPlaying ? <><Pause size={14} /> Parar</> : <><Play size={14} /> Play</>}
           </button>
           <div style={{ color: '#aaa', fontSize: 12 }}>Waterfall: Retro Pixel (purple → orange → yellow)</div>
         </div>

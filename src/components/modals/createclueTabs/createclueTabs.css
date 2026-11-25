@@ -1,0 +1,896 @@
+/* ==========================================================================
+   createclueTabs.css — Design System Interno das 10 Abas + Modo Rápido
+   Impeccable Operate Mode: Zero nested cards, hairline sections, 820px measure
+   Scoped under .ccm-overlay
+   ========================================================================== */
+
+.ccm-overlay .ccm-tab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   FLAT SECTIONS (HAIRLINE SEPARATED — NO NESTED CARDS)
+   ========================================================================== */
+
+.ccm-overlay .ccm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.ccm-overlay .ccm-section + .ccm-section {
+  padding-top: 24px;
+  border-top: 1px solid var(--ccm-hairline);
+}
+
+.ccm-overlay .ccm-section-accent,
+.ccm-overlay .ccm-section-warn {
+  background: transparent;
+}
+
+.ccm-overlay .ccm-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ccm-overlay .ccm-section-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ccm-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ccm-text-strong);
+}
+
+.ccm-overlay .ccm-section-title svg {
+  color: var(--ccm-text-muted);
+}
+
+.ccm-overlay .ccm-section-subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ccm-text-muted);
+}
+
+.ccm-overlay .ccm-help-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ccm-text-muted);
+  cursor: help;
+}
+
+/* ==========================================================================
+   FORM GRIDS & FIELDS
+   ========================================================================== */
+
+.ccm-overlay .ccm-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.ccm-overlay .ccm-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.ccm-overlay .ccm-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.ccm-overlay .ccm-col-full {
+  grid-column: 1 / -1;
+}
+
+.ccm-overlay .ccm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ccm-overlay .ccm-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ccm-text);
+}
+
+.ccm-overlay .ccm-label-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ccm-overlay .ccm-label-accent {
+  color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-input {
+  width: 100%;
+  min-width: 0;
+  height: var(--ccm-control-h);
+  padding: 0 12px;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border);
+  border-radius: 8px;
+  color: var(--ccm-text-strong);
+  font-family: var(--ccm-sans);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 150ms var(--ccm-ease), box-shadow 150ms var(--ccm-ease), background-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-input:hover:not(:focus) {
+  border-color: oklch(0.42 0.016 250);
+}
+
+.ccm-overlay .ccm-input:focus {
+  border-color: var(--ccm-accent);
+  box-shadow: 0 0 0 3px var(--ccm-accent-dim);
+}
+
+.ccm-overlay .ccm-input::placeholder {
+  color: oklch(0.55 0.014 245);
+}
+
+.ccm-overlay textarea.ccm-input {
+  height: auto;
+  min-height: 84px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ccm-overlay select.ccm-input {
+  cursor: pointer;
+}
+
+.ccm-overlay .ccm-input-mono {
+  font-family: var(--ccm-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ccm-text-muted);
+}
+
+/* ==========================================================================
+   SEGMENTED CONTROL (SINGLE COMPACT TRACK) & PRESET BUTTON GROUPS
+   ========================================================================== */
+
+.ccm-overlay .ccm-segmented {
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+  padding: 3px;
+  gap: 3px;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border);
+  border-radius: 9px;
+}
+
+.ccm-overlay .ccm-segmented-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: calc(var(--ccm-control-h) - 6px);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ccm-text-muted);
+  font-family: var(--ccm-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms var(--ccm-ease), color 150ms var(--ccm-ease), border-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-segmented-btn:hover:not(:disabled):not(.active) {
+  color: var(--ccm-text-strong);
+  background: var(--ccm-surface);
+}
+
+.ccm-overlay .ccm-segmented-btn.active {
+  background: var(--ccm-accent-dim);
+  border-color: var(--ccm-accent-border);
+  color: var(--ccm-accent);
+  font-weight: 600;
+}
+
+.ccm-overlay .ccm-segmented-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ccm-overlay .ccm-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ccm-overlay .ccm-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--ccm-control-h);
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ccm-border);
+  background: var(--ccm-surface-inset);
+  color: var(--ccm-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 150ms var(--ccm-ease), background-color 150ms var(--ccm-ease), color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-preset-btn:hover:not(:disabled),
+.ccm-overlay .ccm-preset-btn.active {
+  background: var(--ccm-accent-dim);
+  border-color: var(--ccm-accent-border);
+  color: var(--ccm-accent);
+  font-weight: 600;
+}
+
+.ccm-overlay .ccm-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ccm-overlay .ccm-status-btn.is-verified.active {
+  background: oklch(0.76 0.14 150 / 0.14);
+  border-color: oklch(0.76 0.14 150 / 0.45);
+  color: var(--ccm-success);
+}
+
+.ccm-overlay .ccm-status-btn.is-theory.active {
+  background: oklch(0.8 0.12 75 / 0.14);
+  border-color: oklch(0.8 0.12 75 / 0.45);
+  color: var(--ccm-warn);
+}
+
+.ccm-overlay .ccm-status-btn.is-false.active {
+  background: oklch(0.68 0.18 22 / 0.14);
+  border-color: oklch(0.68 0.18 22 / 0.45);
+  color: var(--ccm-danger);
+}
+
+/* ==========================================================================
+   TOGGLE / CHECKBOX ROWS
+   ========================================================================== */
+
+.ccm-overlay .ccm-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ccm-border-subtle);
+  background: var(--ccm-surface-inset);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 150ms var(--ccm-ease), background-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-toggle-row:hover {
+  border-color: var(--ccm-border);
+  background: var(--ccm-surface);
+}
+
+.ccm-overlay .ccm-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ccm-overlay .ccm-toggle-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ccm-text);
+  line-height: 1.35;
+}
+
+.ccm-overlay .ccm-toggle-title.is-warn {
+  color: var(--ccm-warn);
+}
+
+.ccm-overlay .ccm-toggle-desc {
+  font-size: 11.5px;
+  color: var(--ccm-text-muted);
+  line-height: 1.35;
+}
+
+.ccm-overlay .ccm-checkbox-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid var(--ccm-border);
+  border-radius: 5px;
+  background: var(--ccm-bg);
+  position: relative;
+  cursor: pointer;
+  transition: border-color 150ms var(--ccm-ease), background-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-checkbox-input:checked {
+  background: var(--ccm-accent-dim);
+  border-color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-checkbox-input:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--ccm-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ==========================================================================
+   WARNING & INFO CALLOUTS
+   ========================================================================== */
+
+.ccm-overlay .ccm-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--ccm-border-subtle);
+  background: var(--ccm-surface-inset);
+  font-size: 13px;
+}
+
+.ccm-overlay .ccm-callout-danger {
+  border-color: oklch(0.68 0.18 22 / 0.45);
+  background: oklch(0.68 0.18 22 / 0.08);
+  color: oklch(0.88 0.08 22);
+}
+
+.ccm-overlay .ccm-callout-warn {
+  border-color: oklch(0.8 0.12 75 / 0.4);
+  background: oklch(0.8 0.12 75 / 0.08);
+  color: oklch(0.9 0.06 75);
+}
+
+.ccm-overlay .ccm-callout-info {
+  border-color: var(--ccm-accent-border);
+  background: var(--ccm-accent-dim);
+  color: var(--ccm-text);
+}
+
+.ccm-overlay .ccm-callout-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* ==========================================================================
+   SLIDERS WITH TABULAR-NUMS BADGE
+   ========================================================================== */
+
+.ccm-overlay .ccm-slider-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-slider-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border);
+  color: var(--ccm-accent);
+  font-family: var(--ccm-mono);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ccm-overlay .ccm-range {
+  width: 100%;
+  accent-color: var(--ccm-accent);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   DROPZONES, MEDIA PREVIEWS & COMPARATIVE LAYER CARDS
+   ========================================================================== */
+
+.ccm-overlay .ccm-dropzone {
+  border: 1px dashed var(--ccm-border);
+  border-radius: 9px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--ccm-surface-inset);
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 150ms var(--ccm-ease), border-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-dropzone:hover,
+.ccm-overlay .ccm-dropzone.dragging {
+  background: var(--ccm-accent-dim);
+  border-color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-dropzone-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ccm-text-strong);
+}
+
+.ccm-overlay .ccm-dropzone-sub {
+  font-size: 12px;
+  color: var(--ccm-text-muted);
+}
+
+.ccm-overlay .ccm-preview-box {
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border-subtle);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ccm-overlay .ccm-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ccm-text);
+}
+
+.ccm-overlay .ccm-preview-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ccm-overlay .ccm-preview-media {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  background: oklch(0.1 0.01 250);
+}
+
+.ccm-overlay .ccm-audio-player {
+  width: 100%;
+  height: 40px;
+}
+
+/* Comparative 4-card grid in TabVisual */
+.ccm-overlay .ccm-layers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ccm-overlay .ccm-layer-card {
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  transition: border-color 150ms var(--ccm-ease), background-color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-layer-card.is-clickable {
+  cursor: pointer;
+}
+
+.ccm-overlay .ccm-layer-card.is-active {
+  background: var(--ccm-surface);
+  border-color: var(--ccm-accent-border);
+}
+
+.ccm-overlay .ccm-layer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.ccm-overlay .ccm-layer-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ccm-text-muted);
+}
+
+.ccm-overlay .ccm-layer-card.is-active .ccm-layer-title {
+  color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-layer-badge {
+  font-family: var(--ccm-mono);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--ccm-surface-elevated);
+  color: var(--ccm-text-muted);
+}
+
+.ccm-overlay .ccm-layer-card.is-active .ccm-layer-badge {
+  background: var(--ccm-accent-dim);
+  color: var(--ccm-accent);
+}
+
+.ccm-overlay .ccm-layer-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  background: var(--ccm-bg);
+  border: 1px dashed var(--ccm-border-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ccm-overlay .ccm-layer-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ccm-overlay .ccm-layer-empty {
+  font-size: 11px;
+  color: var(--ccm-text-muted);
+  text-align: center;
+  padding: 4px;
+}
+
+.ccm-overlay .ccm-layer-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ccm-overlay .ccm-layer-actions .ccm-btn {
+  flex: 1;
+}
+
+.ccm-overlay .ccm-align-stage {
+  position: relative;
+  width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ccm-overlay .ccm-align-canvas {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.ccm-overlay .ccm-align-base {
+  display: block;
+  max-width: 100%;
+  max-height: 236px;
+  width: auto;
+  height: auto;
+}
+
+.ccm-overlay .ccm-align-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   INSIGHTS, MEGA-CLUE LIST & CHIPS
+   ========================================================================== */
+
+.ccm-overlay .ccm-list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ccm-overlay .ccm-list-card {
+  padding: 12px;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border-subtle);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ccm-overlay .ccm-insight-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ccm-overlay .ccm-scroll-list {
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--ccm-surface-inset);
+  border: 1px solid var(--ccm-border-subtle);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ccm-overlay .ccm-code-pill {
+  font-family: var(--ccm-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--ccm-surface-elevated);
+  border: 1px solid var(--ccm-border);
+  color: var(--ccm-accent);
+  white-space: nowrap;
+}
+
+.ccm-overlay .ccm-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ccm-overlay .ccm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--ccm-surface-elevated);
+  border: 1px solid var(--ccm-border);
+  color: var(--ccm-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 150ms var(--ccm-ease), color 150ms var(--ccm-ease);
+}
+
+.ccm-overlay .ccm-chip:hover {
+  border-color: var(--ccm-accent-border);
+  color: var(--ccm-accent);
+}
+
+/* ==========================================================================
+   RECORDER BAR (TabAudio)
+   ========================================================================== */
+
+.ccm-overlay .ccm-recorder-box {
+  padding: 14px;
+  border-radius: 9px;
+  border: 1px solid var(--ccm-border);
+  background: var(--ccm-surface-inset);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ccm-overlay .ccm-recorder-box.is-recording {
+  border-color: oklch(0.68 0.18 22 / 0.65);
+  background: oklch(0.68 0.18 22 / 0.08);
+}
+
+.ccm-overlay .ccm-recorder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ccm-overlay .ccm-rec-badge {
+  font-family: var(--ccm-mono);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ccm-danger);
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: oklch(0.68 0.18 22 / 0.16);
+}
+
+/* ==========================================================================
+   FAKE PHONE CHAT BUILDER
+   ========================================================================== */
+
+.ccm-overlay .ccm-chat-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+.ccm-overlay .ccm-chat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ccm-overlay .ccm-chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ccm-overlay .ccm-chat-msg-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 115px auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ccm-overlay .ccm-phone-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.ccm-overlay .ccm-phone-frame {
+  width: 100%;
+  max-width: 300px;
+  height: 460px;
+  position: relative;
+  border: 1px solid var(--ccm-border);
+  border-radius: 22px;
+  overflow: hidden;
+  background: oklch(0.1 0.01 250);
+}
+
+.ccm-overlay .ccm-chat-thumb {
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* ==========================================================================
+   RESPONSIVE (< 900px / < 768px)
+   ========================================================================== */
+
+@media (max-width: 899px) {
+  .ccm-overlay .ccm-layers-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ccm-overlay .ccm-chat-builder {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .ccm-overlay .ccm-grid-2,
+  .ccm-overlay .ccm-grid-3,
+  .ccm-overlay .ccm-grid-4,
+  .ccm-overlay .ccm-checkbox-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ccm-overlay .ccm-segmented {
+    flex-direction: column;
+  }
+
+  .ccm-overlay .ccm-input {
+    font-size: 16px;
+  }
+
+  .ccm-overlay .ccm-insight-row {
+    grid-template-columns: minmax(0, 1fr) 84px auto;
+  }
+
+  .ccm-overlay .ccm-chat-msg-head {
+    grid-template-columns: minmax(0, 1fr) 104px auto auto;
+  }
+}

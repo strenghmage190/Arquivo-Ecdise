@@ -1,4 +1,30 @@
-import { Lock, Settings, Pen, Eye, Search, Lightbulb, Copy } from 'lucide-react';
+import {
+  Lock,
+  Settings,
+  Pen,
+  Eye,
+  EyeOff,
+  Search,
+  Lightbulb,
+  Copy,
+  Zap,
+  FileText,
+  Music,
+  KeyRound,
+  Smartphone,
+  Sparkles,
+  SlidersHorizontal,
+  Puzzle,
+  Video,
+  Image as ImageIcon,
+  Pin,
+  Wrench,
+  ClipboardList,
+  Gift,
+  ChevronUp,
+  ChevronDown,
+  LucideIcon,
+} from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { VirtuosoGrid } from 'react-virtuoso';
 import {
@@ -20,14 +46,14 @@ type CreatorArchetype =
   | 'mega_clue'
   | 'complete';
 
-const ARCHETYPE_BUTTONS: Array<{ id: CreatorArchetype; label: string }> = [
-  { id: 'quick', label: '⚡ Pista Rápida' },
-  { id: 'forensic_doc', label: '📄 Documento Forense' },
-  { id: 'secret_audio', label: '🎵 Áudio / Espectrograma' },
-  { id: 'puzzle_lock', label: '🔐 Enigma / Senha' },
-  { id: 'fake_phone', label: '📱 Celular Falso' },
-  { id: 'mega_clue', label: '🌟 Mega-Pista' },
-  { id: 'complete', label: '🛠️ Avançado: Todas as 10 Abas' },
+const ARCHETYPE_BUTTONS: Array<{ id: CreatorArchetype; label: string; icon: LucideIcon }> = [
+  { id: 'quick', label: 'Pista Rápida', icon: Zap },
+  { id: 'forensic_doc', label: 'Documento Forense', icon: FileText },
+  { id: 'secret_audio', label: 'Áudio / Espectrograma', icon: Music },
+  { id: 'puzzle_lock', label: 'Enigma / Senha', icon: KeyRound },
+  { id: 'fake_phone', label: 'Celular Falso', icon: Smartphone },
+  { id: 'mega_clue', label: 'Mega-Pista', icon: Sparkles },
+  { id: 'complete', label: 'Avançado: Todas as 10 Abas', icon: SlidersHorizontal },
 ];
 
 interface Props {
@@ -225,19 +251,19 @@ export default function CreatorHub({
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'glitch_puzzle':
-        return '🧩';
+        return <Puzzle size={16} />;
       case 'mega_clue':
-        return '🔒';
+        return <Lock size={16} />;
       case 'video':
-        return '📹';
+        return <Video size={16} />;
       case 'audio':
-        return '🎵';
+        return <Music size={16} />;
       case 'image':
-        return '🖼';
+        return <ImageIcon size={16} />;
       case 'text':
-        return '📄';
+        return <FileText size={16} />;
       default:
-        return '📌';
+        return <Pin size={16} />;
     }
   };
 
@@ -289,7 +315,7 @@ export default function CreatorHub({
                     setShowCreatorModal(true);
                   }}
                 >
-                  ✨ CRIAR NOVA PISTA
+                  <Sparkles size={15} /> CRIAR NOVA PISTA
                 </button>
                 <button
                   className="btn-create-new"
@@ -301,23 +327,26 @@ export default function CreatorHub({
                     setShowCreatorModal(true);
                   }}
                 >
-                  👻 CRIAR PISTA OCULTA
+                  <EyeOff size={15} /> CRIAR PISTA OCULTA
                 </button>
               </div>
 
               <div className="archetype-bar">
                 <span className="archetype-bar-label">Criar por Arquétipo:</span>
                 <div className="archetype-buttons">
-                  {ARCHETYPE_BUTTONS.map((arch) => (
-                    <button
-                      key={arch.id}
-                      type="button"
-                      className="btn-archetype"
-                      onClick={() => handleCreateWithArchetype(arch.id)}
-                    >
-                      {arch.label}
-                    </button>
-                  ))}
+                  {ARCHETYPE_BUTTONS.map((arch) => {
+                    const ArchIcon = arch.icon;
+                    return (
+                      <button
+                        key={arch.id}
+                        type="button"
+                        className="btn-archetype"
+                        onClick={() => handleCreateWithArchetype(arch.id)}
+                      >
+                        <ArchIcon size={14} /> {arch.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -329,8 +358,8 @@ export default function CreatorHub({
                 className="gm-toolkit-toggle-btn"
                 onClick={() => setShowGMToolkit((prev) => !prev)}
               >
-                <span>🧰 UTILITÁRIOS DO MESTRE (BACKUP, LOTE & RESET)</span>
-                <span>{showGMToolkit ? '▲ Recolher' : '▼ Expandir'}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Wrench size={14} /> UTILITÁRIOS DO MESTRE (BACKUP, LOTE & RESET)</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{showGMToolkit ? <><ChevronUp size={14} /> Recolher</> : <><ChevronDown size={14} /> Expandir</>}</span>
               </button>
               {showGMToolkit && (
                 <GMToolkitPanel
@@ -351,7 +380,7 @@ export default function CreatorHub({
 
             {/* Lista de pistas existentes */}
             <div className="cards-list-section">
-              <h3>📋 PISTAS EXISTENTES ({cards.filter((c) => !c.is_hidden).length})</h3>
+              <h3><ClipboardList className="lucide-icon inline-icon" size={16} /> PISTAS EXISTENTES ({cards.filter((c) => !c.is_hidden).length})</h3>
 
               {loading ? (
                 <div className="loading-state">
@@ -400,7 +429,7 @@ export default function CreatorHub({
 
                         {card.rewardCode && (
                           <div className="card-meta">
-                            <span className="meta-label">🎁 Recompensa:</span>
+                            <span className="meta-label"><Gift className="lucide-icon inline-icon" size={14} /> Recompensa:</span>
                             <code className="reward-code">{card.rewardCode}</code>
                           </div>
                         )}
@@ -433,14 +462,14 @@ export default function CreatorHub({
                           title="Duplicar Pista"
                         >
                           <Copy className="lucide-icon inline-icon" size={15} />
-                          <span>📋 Duplicar Pista</span>
+                          <span>Duplicar Pista</span>
                         </button>
                         <button
                           className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`}
                           onClick={() => handleToggleHidden(card)}
                           title={card.is_hidden ? 'Tornar visível' : 'Tornar oculta'}
                         >
-                          {card.is_hidden ? '👁️' : '👻'}
+                          {card.is_hidden ? <Eye size={15} /> : <EyeOff size={15} />}
                         </button>
                       </div>
                     </div>
@@ -475,7 +504,7 @@ export default function CreatorHub({
                             onClick={(e) => e.stopPropagation()}
                             aria-label={`Selecionar ${card.title}`}
                           />
-                          <span className="card-icon">👻</span>
+                          <span className="card-icon"><EyeOff size={16} /></span>
                           <div className="card-title-section">
                             <h4>{card.title}</h4>
                             <span className="card-type">OCULTA - {getTypeLabel(card.type)}</span>
@@ -514,14 +543,14 @@ export default function CreatorHub({
                             title="Duplicar Pista"
                           >
                             <Copy className="lucide-icon inline-icon" size={15} />
-                            <span>📋 Duplicar Pista</span>
+                            <span>Duplicar Pista</span>
                           </button>
                           <button
                             className={`btn-action ${card.is_hidden ? 'btn-show' : 'btn-hide'}`}
                             onClick={() => handleToggleHidden(card)}
                             title={card.is_hidden ? 'Tornar visível' : 'Tornar oculta'}
                           >
-                            {card.is_hidden ? '👁️' : '👻'}
+                            {card.is_hidden ? <Eye size={15} /> : <EyeOff size={15} />}
                           </button>
                         </div>
                       </div>

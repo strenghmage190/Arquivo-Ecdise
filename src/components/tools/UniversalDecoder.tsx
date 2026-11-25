@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import CipherLib from '../../utils/ciphers';
 import { hexToText, xorDecodeHex, enigmaDecodeHex } from '../../utils/hexEncoders';
 import {
@@ -95,7 +96,7 @@ export default function UniversalDecoder({
             onClick={() => setShowCodesDrawer((v) => !v)}
             title="Códigos e senhas já desbloqueados"
           >
-            🔑 Códigos ({unlockedCodes.length})
+            <KeyRound size={14} /> Códigos ({unlockedCodes.length})
           </button>
         )}
       </div>
@@ -103,7 +104,7 @@ export default function UniversalDecoder({
       {investigationId && showCodesDrawer && (
         <div className="decoder-codes-drawer">
           <div className="decoder-codes-header">
-            <span>🔑 CÓDIGOS DESCOBERTOS ({unlockedCodes.length})</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={14} /> CÓDIGOS DESCOBERTOS ({unlockedCodes.length})</span>
             <button type="button" className="decoder-codes-close" onClick={() => setShowCodesDrawer(false)}>
               Fechar
             </button>

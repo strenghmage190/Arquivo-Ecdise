@@ -4,10 +4,10 @@
   bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
   z-index: var(--z-hud, 1000);
   width: 212px;
-  background: rgba(10, 14, 21, 0.95);
+  background: #0d121a;
   border: 1px solid var(--border, #29313d);
   border-radius: var(--radius-sm, 4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
   color: var(--text-primary, #f1f5f9);
   font-family: var(--font-system, monospace);
   user-select: none;
@@ -25,7 +25,7 @@
   gap: 6px;
   padding: 5px 8px;
   border-bottom: 1px solid var(--border, #29313d);
-  background: rgba(15, 20, 28, 0.96);
+  background: #111824;
 }
 
 .tactical-minimap.collapsed .tactical-minimap-header {
@@ -35,6 +35,8 @@
 .minimap-toggle-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
+  flex: 1;
   gap: 6px;
   padding: 2px 4px;
   border: none;
@@ -45,6 +47,12 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   cursor: pointer;
+}
+
+.minimap-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .minimap-count {

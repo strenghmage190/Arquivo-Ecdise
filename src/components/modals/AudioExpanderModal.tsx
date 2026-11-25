@@ -1,4 +1,4 @@
-import { Music } from 'lucide-react';
+import { Mic, X } from 'lucide-react';
 import React, { useState } from 'react';
 import AdvancedAudioLab from '../tools/AdvancedAudioLab';
 import useEscapeClose from './useEscapeClose';
@@ -36,14 +36,14 @@ export default function AudioExpanderModal({
       >
         {/* Header */}
         <div className="audio-expander-header">
-          <div className="audio-expander-title">🎙️ {title}</div>
+          <div className="audio-expander-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Mic size={16} /> {title}</div>
           <button 
             className="audio-expander-close" 
             onClick={onClose}
             title="Fechar (ESC)"
             aria-label="Fechar"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 

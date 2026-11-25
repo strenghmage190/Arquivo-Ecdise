@@ -1,197 +1,442 @@
-:root{
-  --bg-0:#0b0c10;
-  --bg-1:#14151b;
-  --panel:#151623;
-  --accent:#00d1ff; /* Nexus cyan */
-  --accent-2:#ffd800; /* secondary yellow */
-  --muted:#9aa0a6;
-  --glass:rgba(255,255,255,0.03);
+:root {
+  --bg-0: #0b0c10;
+  --bg-1: #14151b;
+  --panel: #151623;
+  --accent: #00d1ff;
+  /* Nexus cyan */
+  --accent-2: #ffd800;
+  /* secondary yellow */
+  --muted: #9aa0a6;
+  --glass: rgba(255, 255, 255, 0.03);
 }
 
-.enigma-chassis{
-  background:linear-gradient(180deg,var(--bg-1),#07070a);
-  padding:28px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,0.03);
-  box-shadow:0 8px 30px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
-  width:100%;
-  max-width:720px;
-  margin:10px auto;
-  color:#e7eef6;
-  font-family:Inter, Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
+.enigma-chassis {
+  background: linear-gradient(180deg, var(--bg-1), #07070a);
+  padding: 28px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  width: 100%;
+  max-width: 720px;
+  margin: 10px auto;
+  color: #e7eef6;
+  font-family: Inter, Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
 }
 
 /* Placa decorativa de marca/modelo */
-.enigma-plate{
-  display:inline-block;
-  background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);
-  color:var(--accent-2);
-  padding:6px 14px;
-  font-weight:700;
-  letter-spacing:2px;
-  border-radius:6px;
-  border:1px solid rgba(255,255,255,0.03);
-  margin:0 auto 18px auto;
+.enigma-plate {
+  display: inline-block;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  color: var(--accent-2);
+  padding: 6px 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  margin: 0 auto 18px auto;
 }
 
 /* Área dos Rotores */
-.rotors-display{
-  display:flex;
-  gap:18px;
-  justify-content:center;
-  padding:14px;
-  margin-bottom:22px;
-  background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.03);
+.rotors-display {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  padding: 14px;
+  margin-bottom: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 /* Janela Individual do Rotor */
-.rotor-window{
-  position:relative;
-  width:110px;
-  height:150px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
+.rotor-window {
+  position: relative;
+  width: 110px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* O "Rotor" em si (a parte redonda/metálica) */
-.rotor-wheel{
-  width:76px;
-  height:76px;
-  border-radius:10px;
-  background:linear-gradient(180deg,#2a2b36,#0f1116);
-  border:1px solid rgba(255,255,255,0.04);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 8px 18px rgba(0,0,0,0.6), inset 0 2px 10px rgba(255,255,255,0.02);
+.rotor-wheel {
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2a2b36, #0f1116);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6), inset 0 2px 10px rgba(255, 255, 255, 0.02);
 }
 
 /* rotor select (model label) */
-.rotor-select{
-  position:absolute;
-  top:8px;
-  left:8px;
-  background:transparent;
-  color:var(--muted);
-  border:1px solid rgba(255,255,255,0.03);
-  padding:4px 6px;
-  border-radius:6px;
-  font-size:12px;
+.rotor-select {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 
 
-.rotor-number { margin-top: 8px; }
+.rotor-number {
+  margin-top: 8px;
+}
 
-.rotor-letter{
+.rotor-letter {
   font-family: 'Share Tech Mono', monospace;
-  font-size:34px;
-  font-weight:700;
-  color:var(--accent-2);
-  letter-spacing:1px;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--accent-2);
+  letter-spacing: 1px;
 }
 
 /* Controles (Botões cima/baixo) */
-.rotor-window .rotor-controls{
-  display:flex;
-  flex-direction:column;
-  position:absolute;
-  top:0;
-  width:100%;
-  height:100%;
-  justify-content:space-between;
-  align-items:center;
-  pointer-events:none;
+.rotor-window .rotor-controls {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
 }
 
-.rotor-window button{
-  pointer-events:auto;
-  width:74px;
-  height:28px;
-  border-radius:8px;
-  border:1px solid rgba(255,255,255,0.03);
-  background:linear-gradient(180deg,#0f1116,#1a1b22);
-  color:var(--muted);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 6px 12px rgba(0,0,0,0.6);
-  transition:all 0.12s ease;
+.rotor-window button {
+  pointer-events: auto;
+  width: 74px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: linear-gradient(180deg, #0f1116, #1a1b22);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+  transition: all 0.12s ease;
 }
 
 /* Moldando os botões para parecerem engrenagens */
 .rotor-window button:first-of-type {
   border-radius: 6px 6px 0 0;
-  margin-bottom: -5px; /* Conecta visualmente ao rotor */
+  margin-bottom: -5px;
+  /* Conecta visualmente ao rotor */
   padding-bottom: 5px;
 }
+
 .rotor-window button:last-of-type {
   border-radius: 0 0 6px 6px;
   margin-top: -5px;
   padding-top: 5px;
 }
 
-.rotor-window button:hover{ color:var(--accent); transform:translateY(-1px);}
-.rotor-window button:active{ transform:translateY(1px); box-shadow:inset 0 2px 6px rgba(0,0,0,0.6);}
+.rotor-window button:hover {
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.rotor-window button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
 
 /* Adicionando ícones de seta via CSS puro nos botões */
-.rotor-window button::after{ content:''; display:block; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;}
-.rotor-window button:first-of-type::after{ border-bottom:8px solid currentColor; }
-.rotor-window button:last-of-type::after{ border-top:8px solid currentColor; }
+.rotor-window button::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+}
+
+.rotor-window button:first-of-type::after {
+  border-bottom: 8px solid currentColor;
+}
+
+.rotor-window button:last-of-type::after {
+  border-top: 8px solid currentColor;
+}
 
 /* Ajuste fino do input de anel */
-.ring-input{
-  position:absolute; top:6px; right:8px; width:28px; height:28px; border-radius:50%; background:linear-gradient(180deg,#0b0c10,#17171b); color:var(--muted); border:1px solid rgba(255,255,255,0.03); font-size:12px; text-align:center; line-height:28px;
+.ring-input {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #0b0c10, #17171b);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  text-align: center;
+  line-height: 28px;
 }
-.ring-input:focus{ outline:none; box-shadow:0 0 8px rgba(0,209,255,0.12); border-color:var(--accent); }
+
+.ring-input:focus {
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 209, 255, 0.12);
+  border-color: var(--accent);
+}
 
 /* Reflector control styling */
-.reflector-label{ color:var(--muted); font-size:12px; margin-right:6px; }
-.reflector-select{ background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); padding:6px 8px; border-radius:6px; }
+.reflector-label {
+  color: var(--muted);
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.reflector-select {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
 
 /* Lampboard */
-.lampboard{ display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:8px; background:linear-gradient(180deg,#071018,#0d1116); border:1px solid rgba(255,255,255,0.03); font-family:'Share Tech Mono', monospace; color:var(--accent); font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,0.6), inset 0 -2px 12px rgba(0,0,0,0.35); }
-.lampboard::after{ content:''; display:block; width:8px; height:8px; border-radius:50%; background:linear-gradient(90deg,var(--accent),#0ff); margin-left:8px; box-shadow:0 0 8px rgba(0,209,255,0.3); }
+.lampboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #071018, #0d1116);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 -2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.lampboard::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--accent), #0ff);
+  margin-left: 8px;
+  box-shadow: 0 0 8px rgba(0, 209, 255, 0.3);
+}
 
 /* Área de Visualização do Texto (Simulando lâmpadas/fitas) */
-.enigma-keyboard{ width:100%; padding:18px; border-radius:10px; background:linear-gradient(180deg,#07080b,#0b0d11); border:1px solid rgba(255,255,255,0.02); font-family:'Courier Prime', monospace; color:#dbeeff; font-size:16px; letter-spacing:1px; min-height:120px; box-shadow:inset 0 4px 18px rgba(0,0,0,0.6); word-break:break-all; }
+.enigma-keyboard {
+  width: 100%;
+  padding: 18px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #07080b, #0b0d11);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  font-family: 'Courier Prime', monospace;
+  color: #dbeeff;
+  font-size: 16px;
+  letter-spacing: 1px;
+  min-height: 120px;
+  box-shadow: inset 0 4px 18px rgba(0, 0, 0, 0.6);
+  word-break: break-all;
+}
 
 /* Inputs do Plugboard */
-.plugboard-input{ width:100%; padding:12px 14px; margin-top:12px; background:linear-gradient(180deg,#0e1116,#0b0c10); color:var(--muted); border:1px solid rgba(255,255,255,0.03); border-radius:8px; font-family:'Share Tech Mono', monospace; font-size:13px; box-shadow:inset 0 2px 6px rgba(0,0,0,0.6); }
-.plugboard-input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 14px rgba(0,209,255,0.06); }
-.plugboard-input::placeholder{ color:rgba(255,255,255,0.06); text-transform:uppercase; }
+.plugboard-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: linear-gradient(180deg, #0e1116, #0b0c10);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.plugboard-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(0, 209, 255, 0.06);
+}
+
+.plugboard-input::placeholder {
+  color: rgba(255, 255, 255, 0.06);
+  text-transform: uppercase;
+}
 
 /* Remove number spinner */
-.enigma-chassis input[type=number]::-webkit-inner-spin-button, .enigma-chassis input[type=number]::-webkit-outer-spin-button{ -webkit-appearance:none; margin:0; }
+.enigma-chassis input[type=number]::-webkit-inner-spin-button,
+.enigma-chassis input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 /* Responsividade */
-@media (max-width:700px){ .enigma-chassis{ padding:16px; } .rotors-display{ gap:10px; } .rotor-window{ width:88px; height:130px;} .rotor-wheel{ width:64px; height:64px;} .rotor-letter{ font-size:28px;} .rotor-window button{ width:64px;} .ring-input{ right:6px; top:6px; width:24px; height:24px; line-height:24px; font-size:11px; } }
+@media (max-width:700px) {
+  .enigma-chassis {
+    padding: 16px;
+  }
+
+  .rotors-display {
+    gap: 10px;
+  }
+
+  .rotor-window {
+    width: 88px;
+    height: 130px;
+  }
+
+  .rotor-wheel {
+    width: 64px;
+    height: 64px;
+  }
+
+  .rotor-letter {
+    font-size: 28px;
+  }
+
+  .rotor-window button {
+    width: 64px;
+  }
+
+  .ring-input {
+    right: 6px;
+    top: 6px;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 11px;
+  }
+}
 
 /* General styling for the Enigma Machine component */
-.machine-settings,.rotor-settings,.plugboard,.text-areas{ margin-bottom:18px; }
-label{ font-weight:600; color:var(--muted); display:block; margin-bottom:8px; }
-select,input,textarea{ width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); background:#0b0d11; color:#dbeeff; }
-select:focus,input:focus,textarea:focus{ outline:none; box-shadow:0 4px 18px rgba(0,209,255,0.06); border-color:var(--accent); }
-textarea{ min-height:96px; resize:vertical; }
-button{ background:linear-gradient(180deg,var(--accent),#00a7c7); color:#04121a; border:none; padding:10px 14px; min-height:var(--control-h-md, 40px); border-radius:8px; font-weight:700; cursor:pointer; }
-button:hover{ filter:brightness(.95); }
-.rotor{ display:flex; flex-direction:column; gap:8px; }
-.rotor-settings{ display:flex; gap:14px; }
-.text-areas{ display:flex; gap:14px; }
-.text-areas>div{ flex:1; }
-.plugboard input{ text-transform:uppercase; letter-spacing:1px; }
-.lampboard{ color:var(--accent); font-family:'Share Tech Mono', monospace; font-weight:800; }
-.output-display{ margin-top:12px; padding:12px; background:#081018; border:1px solid rgba(0,209,255,0.06); border-radius:8px; }
-.output-display label{ color:var(--muted); font-weight:700; }
-.output-text{ font-family:'Share Tech Mono', monospace; color:var(--accent-2); font-size:18px; letter-spacing:1px; word-break:break-all; }
+.machine-settings,
+.rotor-settings,
+.plugboard,
+.text-areas {
+  margin-bottom: 18px;
+}
+
+label {
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+select,
+input,
+textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: #0b0d11;
+  color: #dbeeff;
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 4px 18px rgba(0, 209, 255, 0.06);
+  border-color: var(--accent);
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.enigma-chassis button {
+  background: linear-gradient(180deg, var(--accent), #00a7c7);
+  color: #04121a;
+  border: none;
+  padding: 10px 14px;
+  min-height: var(--control-h-md, 40px);
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(.95);
+}
+
+.rotor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rotor-settings {
+  display: flex;
+  gap: 14px;
+}
+
+.text-areas {
+  display: flex;
+  gap: 14px;
+}
+
+.text-areas>div {
+  flex: 1;
+}
+
+.plugboard input {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.lampboard {
+  color: var(--accent);
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 800;
+}
+
+.output-display {
+  margin-top: 12px;
+  padding: 12px;
+  background: #081018;
+  border: 1px solid rgba(0, 209, 255, 0.06);
+  border-radius: 8px;
+}
+
+.output-display label {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.output-text {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--accent-2);
+  font-size: 18px;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
 
 /* custom scrollbar for output areas */
-.enigma-chassis ::-webkit-scrollbar{ height:10px; width:10px; }
-.enigma-chassis ::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,var(--accent),#00a7c7); border-radius:10px; }
+.enigma-chassis ::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.enigma-chassis ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), #00a7c7);
+  border-radius: 10px;
+}
 
 /* small helper */
-.muted{ color:var(--muted); font-size:12px; }
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}

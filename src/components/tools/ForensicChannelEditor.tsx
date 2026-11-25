@@ -739,7 +739,7 @@ export default function ForensicChannelEditor({
               onClick={handleFitToBase}
               title="Centralizar e ajustar escala à proporção da imagem base"
             >
-              📐 Encaixar na Proporção da Base
+              <Target size={14} /> Encaixar na Proporção da Base
             </button>
             <button
               type="button"
