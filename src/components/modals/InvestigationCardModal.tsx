@@ -1,7 +1,9 @@
-import { Check, X, Lock, RefreshCw, Thermometer } from 'lucide-react';
+import { Check, X, Lock, RefreshCw, Thermometer, Trash2, Plus, Upload, HelpCircle, Smartphone } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useEscapeClose from './useEscapeClose';
+import Button from '../ui/Button';
+import ModalSurface from '../ui/ModalSurface';
 import { InvestigationCard, InvestigationCardInsight, createInvestigationCard, updateInvestigationCard, deleteInvestigationCard } from '../../api/investigations';
 import { uploadInvestigationImage } from '../../utils/storage';
 import { validateImageFile } from '../../utils/fileValidators';
@@ -408,11 +410,14 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         onClick={(e) => e.stopPropagation()}
         {...(isMobile ? swipeHandlers : {})}
         style={{ 
-          width: isMobile ? '100vw' : 720, 
-          height: isMobile ? '100vh' : 'auto',
-          maxWidth: isMobile ? '100vw' : '95vw',
-          maxHeight: isMobile ? '100vh' : '90vh',
-          overflowY: isMobile ? 'auto' : 'visible'
+          width: isMobile ? '100vw' : 'min(94vw, 760px)', 
+          height: isMobile ? '100dvh' : 'auto',
+          maxWidth: isMobile ? '100vw' : '760px',
+          maxHeight: isMobile ? '100dvh' : '90dvh',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          paddingTop: isMobile ? 'env(safe-area-inset-top, 16px)' : undefined,
+          paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 16px)' : undefined,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -507,7 +512,7 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         tempMegaClueData.required_puzzle_ids.map((id: string, index: number) => (
                           <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, padding: '6px', background: '#111', borderRadius: 4 }}>
                             <span style={{ flex: 1, fontSize: 12, color: '#aaa', wordBreak: 'break-all' }}>{id}</span>
-                            <button type="button" onClick={() => handleRemoveRequiredId(index)} style={{ padding: '4px 8px', background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>🗑️ Remover</button>
+                            <button type="button" onClick={() => handleRemoveRequiredId(index)} style={{ padding: '4px 8px', background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trash2 size={12} /> Remover</button>
                           </div>
                         ))
                       )}
@@ -522,12 +527,12 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         placeholder="Cole o UUID do puzzle..."
                         onKeyDown={(e) => { if (e.key === 'Enter') handleAddRequiredId(); }}
                       />
-                      <button type="button" onClick={handleAddRequiredId} style={{ padding: '6px 10px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>➕ Adicionar</button>
+                      <button type="button" onClick={handleAddRequiredId} style={{ padding: '6px 10px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Plus size={13} /> Adicionar</button>
                     </div>
                     
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button" onClick={handleCancelMegaClueEdit} style={{ flex: 1, padding: '8px 12px', background: '#333', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
-                      <button type="button" onClick={handleSaveMegaClueChanges} style={{ flex: 1, padding: '8px 12px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✓ Salvar</button>
+                      <button type="button" onClick={handleSaveMegaClueChanges} style={{ flex: 1, padding: '8px 12px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Check size={14} /> Salvar</button>
                     </div>
                   </div>
                 )}
@@ -556,14 +561,14 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                 {/* UV Layer */}
                 <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #333' }}>
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span>📤 Camada UV (opcional)</span>
+                    <span><Upload className="lucide-icon inline-icon" size={14} /> Camada UV (opcional)</span>
                     {uvUrl && (
                       <button
                         type="button"
                         onClick={() => handleRemoveLayer('uv')}
-                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                       >
-                        🗑️ Remover
+                        <Trash2 size={12} /> Remover
                       </button>
                     )}
                   </label>
@@ -602,9 +607,9 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         input.click();
                       }}
                       disabled={layerUploading === 'uv'}
-                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     >
-                      {layerUploading === 'uv' ? '⏳ Enviando...' : '⬆️ Fazer Upload'}
+                      {layerUploading === 'uv' ? 'Enviando...' : <><Upload size={13} /> Fazer Upload</>}
                     </button>
                   )}
                 </div>
@@ -617,9 +622,9 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                       <button
                         type="button"
                         onClick={() => handleRemoveLayer('thermal')}
-                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        style={{ padding: '4px 8px', fontSize: 12, background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                       >
-                        🗑️ Remover
+                        <Trash2 size={12} /> Remover
                       </button>
                     )}
                   </label>
@@ -658,9 +663,9 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
                         input.click();
                       }}
                       disabled={layerUploading === 'thermal'}
-                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                      style={{ width: '100%', padding: '8px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     >
-                      {layerUploading === 'thermal' ? '⏳ Enviando...' : '⬆️ Fazer Upload'}
+                      {layerUploading === 'thermal' ? 'Enviando...' : <><Upload size={13} /> Fazer Upload</>}
                     </button>
                   )}
                 </div>
@@ -672,9 +677,9 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
               <label>Status</label>
               {isGameMaster ? (
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                  <button type="button" onClick={() => setStatus(status === 'verified' ? null : 'verified')} style={{ padding: '6px 10px', background: status === 'verified' ? '#27ae60' : '#222', color: status === 'verified' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✔ Confirmado</button>
-                  <button type="button" onClick={() => setStatus(status === 'theory' ? null : 'theory')} style={{ padding: '6px 10px', background: status === 'theory' ? '#f1c40f' : '#222', color: status === 'theory' ? '#222' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>? Teoria</button>
-                  <button type="button" onClick={() => setStatus(status === 'false' ? null : 'false')} style={{ padding: '6px 10px', background: status === 'false' ? '#e74c3c' : '#222', color: status === 'false' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✖ Falso</button>
+                  <button type="button" onClick={() => setStatus(status === 'verified' ? null : 'verified')} style={{ padding: '6px 10px', background: status === 'verified' ? '#27ae60' : '#222', color: status === 'verified' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={13} /> Confirmado</button>
+                  <button type="button" onClick={() => setStatus(status === 'theory' ? null : 'theory')} style={{ padding: '6px 10px', background: status === 'theory' ? '#f1c40f' : '#222', color: status === 'theory' ? '#222' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}><HelpCircle size={13} /> Teoria</button>
+                  <button type="button" onClick={() => setStatus(status === 'false' ? null : 'false')} style={{ padding: '6px 10px', background: status === 'false' ? '#e74c3c' : '#222', color: status === 'false' ? '#fff' : '#ddd', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}><X size={13} /> Falso</button>
                 </div>
               ) : (
                 <div style={{ marginTop: 6 }}>
@@ -698,13 +703,13 @@ export default function InvestigationCardModal({ open, onClose, investigationId,
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose}>FECHAR</button>
+          <Button variant="secondary" size="md" onClick={onClose}>FECHAR</Button>
           {isGameMaster && (
             <>
               {existing && (
-                <button className="btn-danger" onClick={handleDelete}>DELETAR</button>
+                <Button variant="caseDelete" size="md" onClick={handleDelete}>DELETAR</Button>
               )}
-              <button className="btn-primary" onClick={handleSave}>SALVAR ALTERAÇÕES</button>
+              <Button variant="primary" size="md" onClick={handleSave}>SALVAR ALTERAÇÕES</Button>
             </>
           )}
         </div>

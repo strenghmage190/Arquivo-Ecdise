@@ -5,29 +5,55 @@ export { markPerfKeep };
 export function throttle<T extends (...args: any[]) => void>(fn: T, wait = 100) {
   let last = 0;
   let timer: any = null;
-  return function throttled(this: any, ...args: any[]) {
+  const throttled = function (this: any, ...args: any[]) {
     const now = Date.now();
     const effWait = getOptimizedInterval(wait, isExtendedPerformanceMode() ? 3 : 1);
     if (now - last >= effWait) {
       last = now;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
       fn.apply(this, args);
       return;
     }
     clearTimeout(timer);
     timer = setTimeout(() => {
       last = Date.now();
+      timer = null;
       fn.apply(this, args);
     }, effWait - (now - last));
-  } as T;
+  } as T & { cancel: () => void };
+
+  throttled.cancel = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  return throttled;
 }
 
 export function debounce<T extends (...args: any[]) => void>(fn: T, wait = 200) {
   let timer: any = null;
-  return function debounced(this: any, ...args: any[]) {
+  const debounced = function (this: any, ...args: any[]) {
     clearTimeout(timer);
     const effWait = getOptimizedInterval(wait, isExtendedPerformanceMode() ? 3 : 1);
-    timer = setTimeout(() => fn.apply(this, args), effWait);
-  } as T;
+    timer = setTimeout(() => {
+      timer = null;
+      fn.apply(this, args);
+    }, effWait);
+  } as T & { cancel: () => void };
+
+  debounced.cancel = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  return debounced;
 }
 
 export function startAdaptiveLoop(cb: (dt: number) => void, targetFps = 30) {
@@ -56,10 +82,10 @@ export function startAdaptiveLoop(cb: (dt: number) => void, targetFps = 30) {
 
 export function createCanvasController(canvas: HTMLCanvasElement | null, draw: (ctx: CanvasRenderingContext2D) => void) {
   if (!canvas) {
-    return { start: () => {}, stop: () => {}, setScale: (_: number) => {} };
+    return { start: () => {}, stop: () => {}, setScale: (_: number) => {}, markKeep: (_: HTMLElement | null) => () => {} };
   }
   const ctx = canvas.getContext('2d');
-  if (!ctx) return { start: () => {}, stop: () => {}, setScale: (_: number) => {} };
+  if (!ctx) return { start: () => {}, stop: () => {}, setScale: (_: number) => {}, markKeep: (_: HTMLElement | null) => () => {} };
 
   let running = false;
   let scale = 1;
@@ -84,8 +110,19 @@ export function createCanvasController(canvas: HTMLCanvasElement | null, draw: (
   }
 
   return {
-    start() { if (!running) { running = true; raf = requestAnimationFrame(paint); } },
-    stop() { running = false; if (raf) cancelAnimationFrame(raf); },
+    start() {
+      if (!running) {
+        running = true;
+        raf = requestAnimationFrame(paint);
+      }
+    },
+    stop() {
+      running = false;
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    },
     setScale(s: number) { scale = s; },
     markKeep(el: HTMLElement | null) { return markPerfKeep(el); },
   };

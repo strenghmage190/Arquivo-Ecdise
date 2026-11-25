@@ -178,7 +178,7 @@
     linear-gradient(rgb(203 213 225 / 2%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(203 213 225 / 2%) 1px, transparent 1px);
   background-size: 50px 50px;
-  pointer-events: none;
+  pointer-events: none !important;
   z-index: 2;
   opacity: 0.5;
 }
@@ -296,10 +296,12 @@
   inset: 0;
   background-color: rgb(11 12 16 / 95%);
   backdrop-filter: none;
-  z-index: 25000;
+  z-index: var(--z-modals, 10000);
+  overscroll-behavior: contain;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: clamp(8px, 2vw, 20px);
   animation: fadeInBackdrop 0.2s ease-out;
 }
 
@@ -313,10 +315,10 @@
 }
 
 .inspect-file {
-  width: 90vw;
-  height: 88vh;
+  width: min(96vw, 1400px);
+  height: min(92dvh, 900px);
   max-width: 1400px;
-  max-height: 95vh;
+  max-height: 900px;
   background-color: var(--nexus-dark, #0b0c10);
   border: 1px solid rgb(203 213 225 / 15%);
   box-shadow:
@@ -324,11 +326,12 @@
     0 0 40px rgb(203 213 225 / 8%);
   display: flex;
   flex-direction: column;
-  border-radius: 0;
-  overflow: hidden; /* nothing may escape the modal bounds */
+  border-radius: 4px;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
   font-family: "Share Tech Mono", "Roboto Mono", monospace;
   animation: modalSlideIn 0.25s ease-out;
+  position: relative;
 }
 
 @keyframes modalSlideIn {
@@ -351,38 +354,39 @@
   border-bottom: 1px solid rgb(203 213 225 / 12%);
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 12px 20px;
+  align-items: center;
+  padding: 8px 16px;
   flex-shrink: 0;
-  gap: 14px;
-  flex-wrap: nowrap; /* prevent wrapping to keep layout clean */
+  gap: 12px;
+  flex-wrap: wrap;
   box-shadow: 0 2px 12px rgb(0 0 0 / 40%);
   position: relative;
   z-index: 120;
 }
 
 /* Ensure header items lay out in a single row and do not overflow into the visual area */
-/* z-index and positioning handled in main .inspect-header rule above */
 
 .inspect-header .meta-info {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  flex: 1 1 auto; /* allow meta to take remaining space but shrink if needed */
-  min-width: 0; /* enable text truncation */
-  overflow: hidden;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
   position: relative;
   z-index: 1;
 }
 .inspect-header .meta-info .case-stamp {
   flex: 0 0 auto;
-  color: #888;
-  font-size: 11px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 .inspect-header .meta-info .type-tag {
   flex: 0 0 auto;
-  margin-left: 6px;
+  margin-left: 2px;
   font-size: 11px;
 }
 
@@ -394,20 +398,37 @@
   max-width: calc(100% - 220px); /* reserve space for actions */
 }
 
+.media-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+
+.media-toggle .btn-tool-tab {
+  padding: 4px 10px;
+  font-size: 11px;
+  min-height: 32px;
+  height: 32px;
+}
+
 /* Actions container */
 .actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  flex-wrap: wrap; /* allow wrapping when buttons overflow */
-  max-width: 65%; /* allow more space for actions on wide screens */
+  flex-wrap: wrap;
+  overflow-x: auto;
+  scrollbar-width: none;
   box-sizing: border-box;
-  overflow: visible; /* allow dropdowns to extend beyond */
   -webkit-overflow-scrolling: touch;
   position: relative;
   z-index: 5;
+}
+.actions::-webkit-scrollbar {
+  display: none;
 }
 
 /* Menu de Botões */
@@ -552,12 +573,19 @@
 }
 
 /* Ensure the visual/content area is a rigid compartment that scrolls internally when needed */
-.inspect-file > .inspect-visual-area,
-.inspect-file > .evidence-display-area {
+.inspect-file > .inspect-visual-area {
   overflow: auto; /* allow scrolling when content is larger than container */
   position: relative;
   display: flex;
   align-items: stretch;
+  justify-content: center;
+}
+
+.inspect-file > .evidence-display-area {
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -621,97 +649,172 @@
   text-shadow: 0 0 10px rgb(0 204 255 / 60%);
 }
 
-.btn-close-modal {
-  /* This class is only used in mobile media queries */
-  background: rgb(230 57 70 / 8%);
-  border: 1px solid rgb(230 57 70 / 20%);
+.btn-close-modal,
+.btn-close {
+  background: rgb(230 57 70 / 10%);
+  border: 1px solid rgb(230 57 70 / 30%);
   color: var(--nexus-glitch, #e63946);
-  font-size: 22px;
   cursor: pointer;
-  margin-left: 8px;
-  padding: 6px 12px;
-  border-radius: 0;
+  margin-left: 6px;
+  padding: 0;
+  border-radius: 4px;
   transition: all 0.2s ease;
-  font-weight: bold;
-  width: 36px;
-  height: 36px;
-  display: flex;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 0 10px rgb(230 57 70 / 15%);
 }
 
-.btn-close-modal:hover {
+.btn-close-modal:hover,
+.btn-close:hover {
   color: #fff;
-  background: rgb(230 57 70 / 20%);
-  border-color: rgb(230 57 70 / 50%);
-  box-shadow: 0 0 20px rgb(230 57 70 / 40%);
+  background: rgb(230 57 70 / 25%);
+  border-color: #ff003c;
+  box-shadow: 0 0 18px rgb(230 57 70 / 50%);
   transform: none;
 }
 
-/* --- ÁREA VISUAL PRINCIPAL --- */
-/* Main content area that holds images, videos, phone mockups, etc. */
+.btn-close-modal:active,
+.btn-close:active {
+  transform: scale(0.95);
+  background: rgb(230 57 70 / 35%);
+}
+
+.btn-close-modal:focus-visible,
+.btn-close:focus-visible {
+  outline: 2px solid var(--border-accent, #00f3ff);
+  outline-offset: 2px;
+}
+
+/* --- CORPO SPLIT VIEW (DESKTOP >= 960px) --- */
+.inspect-body-split {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 420px);
+  overflow: hidden;
+  position: relative;
+  transition: grid-template-columns 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inspect-body-split.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr) 0px;
+}
+
+/* Coluna esquerda: Palco dedicado da Imagem / Mídia */
 .inspect-visual-area {
-  flex: 1 1 auto; /* Ocupa todo o espaço sobrando */
-  position: relative; /* Para os HUDs flutuarem aqui dentro */
-  background: linear-gradient(180deg, #000 0%, #0b0c10 100%);
-  overflow: auto; /* Allow scrolling for large content */
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  width: 100%;
+  position: relative;
+  background: #000;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px; /* altura mínima para garantir visualização */
-  max-height: calc(100% - 160px); /* limitar para não empurrar o footer */
-  transition: all 0.28s ease; /* animação suave ao expandir/contrair */
   z-index: 10;
-
-  /* Sutil efeito grid Nexus */
-
-  background-image:
-    linear-gradient(rgb(203 213 225 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(203 213 225 / 2%) 1px, transparent 1px);
-  background-size: 50px 50px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* Quando o áudio está expandido, permita scroll interno na área visual para que o usuário
-   consiga rolar/abaixar o espectrograma se ele for maior que a altura disponível. */
+/* Botão discreto para recolher/expandir o painel lateral */
+.btn-toggle-sidebar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 120;
+  background: rgba(11, 12, 16, 0.82);
+  border: 1px solid rgba(203, 213, 225, 0.18);
+  color: var(--nexus-blue, #cbd5e1);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn-toggle-sidebar:hover {
+  background: rgba(0, 243, 255, 0.12);
+  border-color: rgba(0, 243, 255, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-toggle-sidebar:active {
+  transform: scale(0.96);
+}
+
+/* Quando o áudio está expandido, permita scroll interno */
 .inspect-file.audio-expanded .inspect-visual-area {
   overflow: auto;
-  align-items: flex-start; /* alinhar topo para permitir rolagem "para baixo" */
-  padding: 12px 20px; /* um pouco de espaçamento interno para conforto */
+  align-items: flex-start;
+  padding: 12px 20px;
 }
 
-/* ===== Evidence display area: Mesa de Luz (Grid Tecnológico) ===== */
+/* ===== Evidence display area: Palco de Luz Centralizado ===== */
 .evidence-display-area {
   width: 100%;
-  height: auto; /* let content determine height while still respecting min/max */
-  min-height: 40vh;
-  max-height: 72vh;
-  background-color: #000; /* Fundo base */
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  background-color: #000;
   background-image:
-    linear-gradient(rgb(203 213 225 / 3%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(203 213 225 / 3%) 1px, transparent 1px),
-    radial-gradient(ellipse at center, rgb(203 213 225 / 2%), transparent 70%);
-  background-size:
-    60px 60px,
-    60px 60px,
-    100% 100%;
+    linear-gradient(rgb(203 213 225 / 2.5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(203 213 225 / 2.5%) 1px, transparent 1px);
+  background-size: 50px 50px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* prevent images from breaking layout */
-  box-shadow: inset 0 0 60px rgb(203 213 225 / 5%);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Viewport com overflow hidden para isolar o transform */
+.image-zoom-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .evidence-display-area img,
 .evidence-display-area canvas {
-  max-width: 98%;
-  max-height: 98%;
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
-  box-shadow: 0 0 20px rgb(0 0 0 / 80%);
-  border: 1px solid rgb(255 255 255 / 4%);
   display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* --- THERMAL / TACTICAL UI --- */
@@ -1051,7 +1154,7 @@
 .img-zoom-btn:hover { transform: translateY(-2px); }
 
 /* Small compact controls for fullscreen (use HUD styling) */
-.fullscreen-stage .image-controls { right: 28px; bottom: 80px; }
+.fullscreen-stage .image-controls { right: 20px; top: 76px; bottom: auto; z-index: 30020; }
 .fullscreen-stage .img-zoom-btn { background: rgba(0,243,255,0.08); border:1px solid rgba(0,243,255,0.12); color:#cbd5e1; }
 
 /* Optional small zoom level indicator */
@@ -1441,31 +1544,49 @@ input[type="number"].filter-number {
   text-shadow: 0 0 8px rgb(0 136 255 / 60%);
 }
 
-/* --- RODAPÉ --- */
+/* --- PAINEL LATERAL DE DETALHES (SPLIT VIEW) --- */
 .inspect-details {
-  /* Reduce the vertical footprint of the details area so the visual/video
-     area gets more space. Details remain scrollable when content is large. */
-
-  height: auto;
-  min-height: 80px;
-  max-height: 24vh; /* smaller than before to prioritize the video */
-  background: linear-gradient(180deg, rgb(11 12 16 / 95%), rgb(10 15 20 / 98%));
-  border-top: 2px solid rgb(203 213 225 / 15%);
-  padding: 16px; /* slightly reduced padding */
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  background: linear-gradient(180deg, #0b0c10 0%, #0d1117 100%);
+  border-top: none;
+  border-left: 1px solid rgb(203 213 225 / 15%);
+  padding: 20px 18px;
   display: flex;
+  flex-direction: column;
   gap: 16px;
-  overflow: auto; /* allow details to scroll internally */
-  box-shadow: 0 -4px 20px rgb(0 0 0 / 50%);
-  flex-shrink: 0;
-}
-
-/* Left column inside the details that holds description and metadata. It scrolls */
-.text-col {
-  flex: 1;
   overflow-y: auto;
-  padding-right: 15px;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  box-shadow: -4px 0 20px rgb(0 0 0 / 50%);
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgb(203 213 225 / 30%) rgb(0 0 0 / 30%);
+}
+
+/* Coluna de texto/metadados que rola suavemente */
+.text-col {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  padding-right: 4px;
+}
+
+/* Coluna de controles fixos (Editar dados, Status, Ordem Z) */
+.controls-col {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+  border-top: 1px solid rgb(203 213 225 / 12%);
+  padding-top: 16px;
+  margin-top: 4px;
 }
 .text-col::-webkit-scrollbar {
   width: 8px;
@@ -1576,7 +1697,8 @@ input[type="number"].filter-number {
   height: auto !important;
   min-height: 55px;
   padding: 10px 15px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
   gap: 10px;
   max-height: 25vh; /* prevent header from taking too much space */
   overflow: visible;
@@ -1658,34 +1780,6 @@ input[type="number"].filter-number {
   color: #d4af7a;
   line-height: 1.5;
   box-shadow: inset 0 0 12px rgb(198 164 95 / 5%);
-}
-
-/* Lock screen indicator */
-.btn-close {
-  background: rgb(230 57 70 / 8%);
-  border: 1px solid rgb(230 57 70 / 20%);
-  color: var(--nexus-glitch, #e63946);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 0;
-  transition: all 0.2s ease;
-  font-weight: bold;
-  flex-shrink: 0;
-  min-width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 10; /* ensure it stays on top */
-}
-
-.btn-close:hover {
-  color: #fff;
-  background: rgb(230 57 70 / 20%);
-  border-color: rgb(230 57 70 / 50%);
-  box-shadow: 0 0 20px rgb(230 57 70 / 40%);
 }
 
 /* Accessibility improvements */
@@ -1896,31 +1990,304 @@ input[type="number"].filter-number {
   cursor: grab !important;
 }
 
-/* Show controls only while hovering for less visual clutter */
-.image-controls { opacity: 0; transition: opacity 140ms ease; }
-.image-zoomable:hover .image-controls { opacity: 1; }
+/* Keep controls visible for desktop and touch devices */
+.image-controls { opacity: 1; transition: opacity 140ms ease; }
 
 .image-zoomable .large-evidence-img,
 .image-zoomable canvas,
 .image-zoomable img { cursor: zoom-in; }
 
-/* Mobile / narrow viewport tweaks: transform modal into fullscreen, make HUDs bottom sheets,
-   keep header actions horizontally scrollable, stack details, and ensure close button is reachable */
-@media (max-width: 768px) {
-  /* Existing behaviors kept but compressed: make modal fullscreen and reduce spacing/font sizes */
+/* =========================================
+   LOCK SCREEN & GM SECURITY SEPARATION
+   ========================================= */
+.lock-screen-container {
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at center, #11151c 0%, #060709 100%);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gm-bypass-banner {
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: rgba(198, 164, 95, 0.12);
+  border: 1px solid #c6a45f;
+  border-radius: 8px;
+  box-shadow: 0 0 16px rgba(198, 164, 95, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.gm-bypass-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dfb76c;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.btn-gm-bypass {
+  flex: 1;
+  min-height: 48px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #c6a45f 0%, #dfb76c 100%);
+  color: #0b0c10;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.btn-gm-bypass-temp {
+  background: #1c222d;
+  color: #c6a45f;
+  border: 1px solid #c6a45f;
+}
+
+.lock-password-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(16, 20, 28, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+.lock-icon {
+  color: #f39c12;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 8px rgba(243, 156, 18, 0.4));
+}
+
+.lock-title {
+  margin: 0 0 8px 0;
+  color: #eee;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.lock-hint {
+  margin: 0 0 16px 0;
+  color: #8892b0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.lock-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lock-password-input {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  background: #090c10;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  color: #00ffaa;
+  font-size: 16px !important; /* strictly >= 16px to prevent iOS zoom */
+  text-align: center;
+  padding: 0 12px;
+  letter-spacing: 1px;
+  box-sizing: border-box;
+}
+
+.lock-password-input:focus {
+  outline: none;
+  border-color: #00ffaa;
+  box-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+}
+
+.lock-error-msg {
+  color: #ff4d4f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lock-submit-btn {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  background: #00ffaa;
+  color: #050e09;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.2s;
+}
+
+.lock-keypad-wrapper {
+  margin-top: 16px;
+  width: 100%;
+}
+
+/* =========================================
+   GM TOGGLE & CONTROLS
+   ========================================= */
+.gm-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.gm-toggle-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  background: #141922;
+  border: 1px solid #2a3441;
+  border-radius: 6px;
+  color: #8892b0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.2s ease;
+}
+
+.gm-toggle-tab.active {
+  background: #1c2738;
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+}
+
+.gm-hidden-section {
+  padding: 12px;
+  background: rgba(198, 164, 95, 0.08);
+  border: 1px dashed rgba(198, 164, 95, 0.3);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.clue-status-control, .z-order-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.status-button-group, .z-button-group {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.btn-status, .btn-z-order {
+  min-height: 38px;
+  padding: 6px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid #2a3441;
+  background: #121720;
+  color: #8892b0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-status {
+  flex: 1 1 80px;
+  min-width: 75px;
+}
+
+.btn-z-order {
+  flex: 1 1 120px;
+  min-width: 100px;
+}
+
+.btn-status.pending.active {
+  background: rgba(243, 156, 18, 0.2);
+  border-color: #f39c12;
+  color: #f39c12;
+}
+
+.btn-status.confirmed.active {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+
+.btn-status.debunked.active {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.btn-z-order:hover, .btn-z-order:active {
+  background: #1c2738;
+  color: #00e5ff;
+  border-color: #00e5ff;
+}
+
+/* Mobile / narrow viewport (< 960px): Mídia em destaque no topo (52dvh a 60dvh) + Metadados/Ações abaixo */
+@media (max-width: 959px) {
+  .inspect-backdrop {
+    padding: 0 !important;
+  }
+
   .inspect-file {
     position: fixed !important;
     inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
     border-radius: 0 !important;
     border: none !important;
     font-size: 14px !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: auto !important;
+    overflow: hidden !important;
+    padding-top: max(0px, var(--safe-top, 0px)) !important;
+    padding-bottom: max(0px, var(--safe-bottom, 0px)) !important;
+    padding-left: max(0px, var(--safe-left, 0px)) !important;
+    padding-right: max(0px, var(--safe-right, 0px)) !important;
   }
 
   .inspect-header {
@@ -1928,35 +2295,101 @@ input[type="number"].filter-number {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
-    height: 56px !important;
-    min-height: 56px !important;
-    padding-right: 64px !important;
-    gap: 6px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 6px 12px !important;
+    padding-right: 58px !important;
+    gap: 8px !important;
   }
   .inspect-header::-webkit-scrollbar { display: none; }
 
-  .inspect-header .btn-close,
-  .inspect-header .btn-close-modal {
+  .inspect-header .meta-info {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+
+  .inspect-header .btn-close-modal,
+  .inspect-header .btn-close {
     position: fixed !important;
-    top: 8px !important;
-    right: 8px !important;
+    top: max(6px, var(--safe-top, 6px)) !important;
+    right: max(8px, var(--safe-right, 8px)) !important;
     z-index: 9999 !important;
-    background: rgba(0,0,0,0.75) !important;
-    border-radius: 8px !important;
-    border: 1px solid rgba(255,255,255,0.06) !important;
-    width: 40px !important;
-    height: 40px !important;
+    background: rgba(0,0,0,0.85) !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    touch-action: manipulation;
   }
 
-  /* Reduce sizes for buttons/actions to fit narrow header without wrapping */ 
-  .actions { max-width: 100%; overflow-x: auto; gap: 4px; flex-wrap: nowrap !important; scrollbar-width: none; }
+  .actions {
+    max-width: 100%;
+    overflow-x: auto;
+    gap: 6px;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+    align-items: center;
+  }
   .actions::-webkit-scrollbar { display: none; }
-  .btn-tool-tab { padding: 6px 6px; font-size: 10px; min-width: auto; height: 34px; flex-shrink: 0; letter-spacing: 0; }
-  .btn-tool-tab.active-green, .btn-tool-tab.active-blue, .btn-tool-tab.active-purple { padding: 6px 6px; }
-  /* HUD -> bottom sheet */ 
+
+  .btn-tool-tab {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    min-width: auto;
+    min-height: 38px !important;
+    height: 38px !important;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+
+  /* O container split se comporta como fluxo vertical com scroll suave */
+  .inspect-body-split {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Mídia no topo ocupando 56dvh sem cortes */
+  .inspect-body-split .inspect-visual-area {
+    height: clamp(280px, 56dvh, 60dvh) !important;
+    min-height: clamp(280px, 56dvh, 60dvh) !important;
+    max-height: 60dvh !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+
+  .inspect-body-split .evidence-display-area {
+    min-height: auto !important;
+    max-height: none !important;
+    padding: 4px !important;
+    flex: 1 1 100% !important;
+  }
+
+  /* Painel de detalhes rolável logo abaixo da foto */
+  .inspect-body-split .inspect-details {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid rgb(203 213 225 / 15%) !important;
+    overflow-y: visible !important;
+    padding: 16px 14px max(24px, var(--safe-bottom, 24px)) !important;
+  }
+
+  .btn-toggle-sidebar {
+    display: none !important;
+  }
+
+  /* HUD -> bottom sheet no mobile */ 
   .tools-hud-panel, .filters-overlay-panel {
     position: fixed !important;
     top: auto !important;
@@ -1965,74 +2398,117 @@ input[type="number"].filter-number {
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 40vh !important;
+    max-height: 48vh !important;
     height: auto !important;
     border-radius: 12px 12px 0 0 !important;
-    padding: 12px !important;
+    padding: 16px 14px max(16px, var(--safe-bottom, 16px)) !important;
     overflow: auto !important;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.7) !important;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.85) !important;
     z-index: 950 !important;
     animation: none !important;
   }
-  /* Allow modal content to scroll under the fixed bottom HUD by adding
-     extra bottom padding equal to HUD height so footer/metadata can be scrolled
-     into view above the HUD. Also enable overall modal scrolling. */
-  .inspect-file {
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
 
-  .inspect-visual-area {
-    /* reduce extra bottom padding so details sit after the visual area in normal flow */
-    padding-bottom: 16px !important;
-  }
-
-  /* ensure metadata/footer rises above HUD when scrolled into view */
-  .inspect-details {
-    position: relative !important;
-    z-index: 960 !important;
-  }
-  .tools-hud-panel::-webkit-scrollbar, .filters-overlay-panel::-webkit-scrollbar { width: 6px !important; }
-  .tools-hud-panel .hud-title { font-size: 11px; }
-  .inspect-visual-area, .evidence-display-area {
-    min-height: auto !important;
-    max-height: none !important;
-    padding: 6px !important;
-    flex: 0 0 auto !important;
-  }
-  .inspect-details { flex-direction: column !important; max-height: 30vh !important; min-height: 60px !important; padding: 10px !important; overflow: auto !important; }
-  .text-col { padding-right: 0 !important; margin-bottom: 8px !important; max-height: 50% !important; font-size: 13px !important; }
-  .controls-col { width: 100% !important; display: flex !important; flex-direction: row !important; gap: 8px !important; overflow-x: auto !important; order: -1 !important; }
-  .image-controls, .waveform-controls { right: 12px !important; top: 12px !important; z-index: 980 !important; }
   .ui-corners, .grid-overlay, .thermal-scale { display: none !important; }
-  .filter-number { width: 56px; font-size: 12px; }
-  .filter-range { height: 6px; }
-  .image-zoomable .large-evidence-img, .image-zoomable canvas, .image-zoomable img { cursor: grab; }
-  .image-zoomable:active .large-evidence-img, .image-zoomable:active canvas, .image-zoomable:active img { cursor: grabbing; }
-  /* ensure touch smooth scrolling inside modal */ 
-  .inspect-file, .tools-hud-panel, .filters-overlay-panel { -webkit-overflow-scrolling: touch; }
-  /* Keep details in the normal document flow so they appear after the visual area
-     when the user scrolls; ensure Edit button is not fixed on mobile so scrolling
-     order is natural. */
-  .inspect-details {
-    position: static !important;
-    margin-top: 8px !important;
-    max-height: none !important;
-    min-height: 40px !important;
-    padding: 10px !important;
-    overflow: visible !important;
-    background: linear-gradient(180deg, rgb(11 12 16 / 95%), rgb(10 15 20 / 98%)) !important;
-    border-top: 2px solid rgb(203 213 225 / 15%) !important;
-    border-radius: 6px !important;
-    z-index: auto !important;
-  }
+}
 
-  .btn-edit-ref {
-    position: static !important;
-    margin: 10px 12px !important;
-    z-index: auto !important;
-  }
+/* Zerar seleção nativa na área visual para impedir overlay vermelho do ::selection */
+.inspect-visual-area,
+.evidence-display-area,
+.image-zoom-viewport,
+.image-zoom-wrapper,
+.large-evidence-img,
+.uv-container,
+.main-evidence {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-user-drag: none !important;
+}
 
+.inspect-visual-area ::selection,
+.evidence-display-area ::selection,
+.image-zoom-viewport ::selection,
+.image-zoom-wrapper ::selection,
+.large-evidence-img ::selection,
+.uv-container ::selection,
+.main-evidence ::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.inspect-visual-area ::-moz-selection,
+.evidence-display-area ::-moz-selection,
+.image-zoom-viewport ::-moz-selection,
+.image-zoom-wrapper ::-moz-selection,
+.large-evidence-img ::-moz-selection,
+.uv-container ::-moz-selection,
+.main-evidence ::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Floating Zoom Controls */
+.image-controls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 110;
+  pointer-events: auto;
+  background: rgba(11, 12, 16, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.2);
+  padding: 4px;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.img-zoom-btn {
+  background: rgba(203, 213, 225, 0.08);
+  border: 1px solid rgba(203, 213, 225, 0.15);
+  color: #cbd5e1;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  font-family: "Share Tech Mono", monospace;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.img-zoom-btn:hover {
+  background: rgba(0, 243, 255, 0.18);
+  border-color: rgba(0, 243, 255, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.img-zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.zoom-level-badge {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  color: var(--nexus-blue, #cbd5e1);
+  padding: 0 6px;
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .inspection-modal-open { overflow: hidden !important; overscroll-behavior: none; touch-action: none; }
@@ -2062,3 +2538,16 @@ input[type="number"].filter-number {
 
 
 .filter-range, input[type="range"] { touch-action: pan-y; }
+
+
+.inspect-quick-forensics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.inspect-quick-forensics .btn-tool-tab {
+  font-size: 12px;
+  padding: 6px 10px;
+}

@@ -24,11 +24,13 @@
 }
 
 .audio-mixer-container {
+  container-type: inline-size;
+  container-name: audio-mixer;
   width: 95%;
   max-width: 1400px;
   max-height: 92vh;
   background: linear-gradient(145deg, #0a0e15, #050810);
-  border-radius: 16px;
+  border-radius: var(--radius-lg, 16px);
   box-shadow:
     0 20px 60px rgb(0 0 0 / 80%),
     0 0 30px rgb(0 243 255 / 10%);
@@ -612,6 +614,49 @@
   border-radius: 4px;
 }
 
-.effects-panel::-webkit-scrollbar-thumb:hover {
+.btn-transport {
+  min-height: var(--control-h-md, 40px);
+  padding: 0 var(--space-4, 16px);
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-toggle {
+  min-height: var(--control-h-md, 40px);
+  padding: 0 var(--space-4, 16px);
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-save-mixer,
+.btn-cancel-mixer {
+  min-height: var(--control-h-md, 40px);
+  padding: 0 var(--space-4, 16px);
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@container audio-mixer (max-width: 640px) {
+  .transport-controls {
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+  }
+  .btn-transport,
+  .btn-toggle,
+  .btn-save-mixer,
+  .btn-cancel-mixer {
+    min-height: var(--control-h-md-mobile, 44px);
+    width: 100%;
+  }
+  .effects-grid {
+    grid-template-columns: 1fr;
+  }
+}
   background: rgb(0 243 255 / 50%);
 }

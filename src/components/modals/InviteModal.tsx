@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabaseClient';
+import { X } from 'lucide-react';
 import './InviteModal.css';
 
 interface Props {
@@ -11,37 +11,26 @@ interface Props {
 
 export default function InviteModal({ isOpen, onClose, investigationId, inviteLink }: Props) {
   const [email, setEmail] = useState('');
-  const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    async function loadMembers() {
-      // Placeholder: in a real setup we'd query an RPC or view that joins investigation_members -> auth.users
-      // For now, we leave members empty or simulate a load.
-      try {
-        // Example fetch if you had a view: await supabase.from('investigation_members_view').select('*').eq('investigation_id', investigationId)
-        setMembers([]);
-      } catch (e) {
-        // ignore
-      }
-    }
-    if (isOpen) loadMembers();
-  }, [isOpen, investigationId]);
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose, investigationId]);
 
   const handleInvite = async () => {
     if (!email) return;
     setLoading(true);
 
     try {
-      // Supabase doesn't allow direct user lookup by email from client for security reasons.
-      // In production you'd have an Edge Function that resolves email -> user_id and adds investigation_members.
-      alert(`CONVITE ENVIADO PARA: ${email}. O jogador precisa ter uma conta no site. Se ele entrar no site, o caso aparecerá para ele.`);
-
-      // Example Edge Function call:
-      // const { data, error } = await supabase.functions.invoke('invite-player', { body: { investigationId, email } });
-      // if (error) throw error;
-
+      alert(
+        `CONVITE ENVIADO PARA: ${email}. O jogador precisa ter uma conta no site. Se ele entrar no site, o caso aparecerá para ele.`
+      );
     } catch (e: any) {
       alert(`Erro: ${e.message}`);
     } finally {
@@ -51,11 +40,11 @@ export default function InviteModal({ isOpen, onClose, investigationId, inviteLi
   };
 
   const handleCopy = async (text: string) => {
+    if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-      alert('Link copiado para a área de transferência!');
+      window.setTimeout(() => setCopied(false), 1800);
     } catch (e) {
       console.error('copy failed', e);
       alert('Falha ao copiar. Selecione e copie manualmente.');
@@ -65,40 +54,57 @@ export default function InviteModal({ isOpen, onClose, investigationId, inviteLi
   if (!isOpen) return null;
 
   return (
-    <div className="invite-backdrop" onClick={onClose}>
+    <div className="invite-backdrop" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title" onClick={onClose}>
       <div className="invite-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>CONVIDAR AGENTES PARA O CASO</h2>
-
-        {/* If parent passed an inviteLink prop, show it for easy copy */}
-        {(/* @ts-ignore */ (window as any).__inviteLinkProvided) ? null : null}
-
-        <div style={{ marginBottom: 12 }}>
-          <p>Envie este link para jogadores — ele permite que entrem direto no caso.</p>
+        <div className="invite-modal-header">
+          <h2 id="invite-modal-title">CONVIDAR AGENTES PARA O CASO</h2>
+          <button
+            type="button"
+            className="invite-modal-close"
+            onClick={onClose}
+            aria-label="Fechar modal de convite"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* The investigationId prop remains available for legacy flows */}
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary, #94a3b8)' }}>
+            Envie este link para jogadores — ele permite que entrem direto no caso.
+          </p>
+        </div>
+
+        <div className="invite-link-row">
           <input
             readOnly
             value={inviteLink || ''}
-            placeholder="Gere o link no botão ✉️"
-            style={{ flex: 1, background: '#000', border: '1px solid #444', color: '#c6a45f', padding: 8 }}
+            placeholder="Gere o link no botão de convite"
+            aria-label="Link de convite"
+            className="invite-link-input"
           />
-          <button onClick={() => handleCopy(inviteLink || '')} style={{ background: '#c6a45f', color: '#000', border: 'none', cursor: 'pointer' }}>COPIAR</button>
+          <button
+            type="button"
+            onClick={() => handleCopy(inviteLink || '')}
+            className="invite-copy-btn"
+            disabled={!inviteLink}
+          >
+            {copied ? 'COPIADO!' : 'COPIAR'}
+          </button>
         </div>
 
-        <hr style={{ borderColor: '#333', margin: '12px 0' }} />
+        <hr style={{ borderColor: 'var(--border, #29313d)', margin: '16px 0' }} />
 
-        <div style={{ color: '#aaa', fontSize: 13, marginTop: 8 }}>
+        <div style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: 13, marginTop: 8 }}>
           <div style={{ marginBottom: 8 }}>Ou convide por email (legado, precisa de Edge Function):</div>
           <div className="invite-form">
             <input
               type="email"
               placeholder="email.do.agente@exemplo.com"
+              aria-label="Email do agente"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button onClick={handleInvite} disabled={loading}>
+            <button type="button" onClick={handleInvite} disabled={loading || !email.trim()}>
               {loading ? 'ENVIANDO...' : 'CONVIDAR'}
             </button>
           </div>

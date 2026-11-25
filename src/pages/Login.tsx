@@ -138,8 +138,13 @@ export default function Login() {
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 10 }}>
-          <button type="button" onClick={() => navigate('/reset-password')} style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', cursor: 'pointer' }} aria-label="Redefinir senha">
+        <div style={{ textAlign: 'center', marginTop: 4 }}>
+          <button
+            type="button"
+            className="auth-link-btn"
+            onClick={() => navigate('/reset-password')}
+            aria-label="Redefinir senha"
+          >
             Esqueci minha senha
           </button>
         </div>

@@ -31,22 +31,124 @@
   opacity: 1;
 }
 
+.connection-group.dimmed {
+  opacity: 0.25;
+  transition: opacity 200ms ease;
+}
+
+.connection-group.highlighted .connection-path {
+  stroke-width: 3.5;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Rótulo opcional no fio */
+.connection-label-group {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.connection-label-bg {
+  fill: rgba(10, 14, 21, 0.96);
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.connection-label-text {
+  fill: var(--text-primary, #f1f5f9);
+  font-family: var(--font-system, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Hover effect */
 .connection-group:hover .connection-path {
   color: var(--text-primary);
   stroke-width: 3;
 }
 
+/* Pulso luminoso discreto em conexões confirmadas e místicas */
+.connection-pulse {
+  display: none;
+  pointer-events: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 16 144;
+  opacity: 0;
+}
+
+.connection-group.type-confirmed .connection-pulse,
+.connection-group.type-mystic .connection-pulse {
+  display: block;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation: connection-pulse-flow 2.8s linear infinite;
+}
+
+.connection-group.type-mystic .connection-pulse {
+  animation-duration: 3.4s;
+  opacity: 0.82;
+}
+
+@keyframes mystic-line-breath {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 0.96;
+  }
+}
+
+.connection-group.type-mystic .connection-path {
+  animation: mystic-line-breath 5s ease-in-out infinite;
+}
+
+@keyframes connection-pulse-flow {
+  from {
+    stroke-dashoffset: 160;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+body.performance-mode .connection-pulse,
+[data-performance-mode="on"] .connection-pulse,
+body.performance-mode .connection-group.type-mystic .connection-path,
+[data-performance-mode="on"] .connection-group.type-mystic .connection-path {
+  animation: none !important;
+}
+
+body.performance-mode .connection-pulse,
+[data-performance-mode="on"] .connection-pulse {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-pulse {
+    display: none !important;
+    animation: none !important;
+  }
+  .connection-group.type-mystic .connection-path {
+    animation: none !important;
+  }
+}
+
 /* --- ESTILO DO MENU DE CONTEXTO --- */
 .connection-context-menu {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-modals, 2000);
   background-color: #11141b;
   border: 1px solid #29313d;
   border-radius: 0;
   box-shadow: 0 10px 24px rgb(0 0 0 / 45%);
   padding: 4px 0;
-  min-width: 120px;
+  min-width: 140px;
   animation: fadeIn 0.1s ease-out;
 }
 

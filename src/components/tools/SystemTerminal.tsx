@@ -1,4 +1,4 @@
-import { Lock, FileText, AlertTriangle, Search, Thermometer } from 'lucide-react';
+import { Lock, FileText, AlertTriangle, Search, Thermometer, X } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import './SystemTerminal.css';
@@ -158,9 +158,15 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
 
   if (!isOpen) return null;
 
+  const quickCommands = ['help', 'list', 'scan', 'clear', 'exit'];
+
   const node = (
     <div className="terminal-overlay" onClick={() => onClose && onClose()}>
       <div className="terminal-window" onClick={e => e.stopPropagation()}>
+        <div className="terminal-header-bar">
+          <span>C.R.I.S. TERMINAL [TTY-1]</span>
+          <button className="terminal-close-btn" onClick={() => onClose && onClose()} aria-label="Fechar"><X size={15} /></button>
+        </div>
         <div className="terminal-output">
           {history.map((line, i) => {
             // Destaque especial para linhas termais
@@ -171,15 +177,34 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
           })}
           <div ref={bottomRef} />
         </div>
+
+        {/* Chips de comandos rápidos para acesso móvel */}
+        <div className="terminal-quick-chips">
+          {quickCommands.map(cmd => (
+            <button
+              key={cmd}
+              type="button"
+              className="terminal-chip"
+              onClick={() => {
+                setInput(cmd);
+              }}
+            >
+              {cmd}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleCommand} className="terminal-input-row">
           <span>root@ordo:~#</span>
           <input
             autoFocus
             value={input}
             onChange={e => setInput(e.target.value)}
-            onBlur={e => (e.target as HTMLInputElement).focus()}
             disabled={processing}
           />
+          <button type="submit" className="terminal-send-btn" disabled={processing || !input.trim()}>
+            OK
+          </button>
         </form>
       </div>
     </div>

@@ -1,22 +1,20 @@
 /**
  * 🔗 useBlobUrl.ts
- * Custom hook para gerenciar URLs de blob com limpeza automática
+ * Custom hook para gerenciar URLs de blob com limpeza automática garantida no unmount
  */
 
 import { useState, useEffect, useRef } from 'react';
 
-export function useBlobUrl(file: File | null): string | null {
+export function useBlobUrl(file: File | Blob | null): string | null {
   const [url, setUrl] = useState<string | null>(null);
   const urlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Cleanup previous URL
     if (urlRef.current) {
       URL.revokeObjectURL(urlRef.current);
       urlRef.current = null;
     }
 
-    // Create new URL if file exists
     if (file) {
       try {
         const objectUrl = URL.createObjectURL(file);
@@ -30,7 +28,6 @@ export function useBlobUrl(file: File | null): string | null {
       setUrl(null);
     }
 
-    // Cleanup on unmount
     return () => {
       if (urlRef.current) {
         URL.revokeObjectURL(urlRef.current);
@@ -43,22 +40,24 @@ export function useBlobUrl(file: File | null): string | null {
 }
 
 /**
- * Hook for managing multiple blob URLs
+ * Hook for managing multiple blob URLs with full cleanup of removed keys and on unmount
  */
-export function useBlobUrls(files: Record<string, File | null>): Record<string, string | null> {
+export function useBlobUrls(
+  files: Record<string, File | Blob | null>
+): Record<string, string | null> {
   const [urls, setUrls] = useState<Record<string, string | null>>({});
   const urlsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
+    // Revoke all previous URLs (including keys removed from `files`)
+    Object.values(urlsRef.current).forEach((prevUrl) => {
+      URL.revokeObjectURL(prevUrl);
+    });
+    urlsRef.current = {};
+
     const newUrls: Record<string, string | null> = {};
 
-    // Cleanup old URLs and create new ones
     Object.entries(files).forEach(([key, file]) => {
-      if (urlsRef.current[key]) {
-        URL.revokeObjectURL(urlsRef.current[key]);
-        delete urlsRef.current[key];
-      }
-
       if (file) {
         try {
           const objectUrl = URL.createObjectURL(file);
@@ -75,10 +74,9 @@ export function useBlobUrls(files: Record<string, File | null>): Record<string, 
 
     setUrls(newUrls);
 
-    // Cleanup on unmount
     return () => {
-      Object.values(urlsRef.current).forEach(url => {
-        URL.revokeObjectURL(url);
+      Object.values(urlsRef.current).forEach((activeUrl) => {
+        URL.revokeObjectURL(activeUrl);
       });
       urlsRef.current = {};
     };

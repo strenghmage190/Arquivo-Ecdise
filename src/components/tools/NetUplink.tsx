@@ -34,13 +34,25 @@ export default function NetUplink({ onClose }: { onClose: () => void }) {
         <button className="os-btn-close" onClick={onClose} aria-label="Fechar conexão"><X size={16} /></button>
       </div>
 
-      <div className="os-content os-content-split">
-        <div className="uplink-tabs">
-          <button onClick={() => setActiveTab('status')} className={activeTab === 'status' ? 'uplink-tab active' : 'uplink-tab'}>› STATUS</button>
-          <button onClick={() => setActiveTab('invite')} className={activeTab === 'invite' ? 'uplink-tab active' : 'uplink-tab'}>› CONVIDAR</button>
+      <div className="os-content os-content-split" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+        <div className="uplink-tabs" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('status')}
+            className={activeTab === 'status' ? 'uplink-tab active' : 'uplink-tab'}
+            style={{ minHeight: 38, padding: '8px 16px', touchAction: 'manipulation' }}
+          >
+            › STATUS
+          </button>
+          <button
+            onClick={() => setActiveTab('invite')}
+            className={activeTab === 'invite' ? 'uplink-tab active' : 'uplink-tab'}
+            style={{ minHeight: 38, padding: '8px 16px', touchAction: 'manipulation' }}
+          >
+            › CONVIDAR
+          </button>
         </div>
 
-        <div style={{flex:1}}>
+        <div style={{ flex: 1, minWidth: 0, overflowX: 'hidden' }}>
           {activeTab === 'status' && (
             <div className="remote-dashboard">
               <div className="map-panel">

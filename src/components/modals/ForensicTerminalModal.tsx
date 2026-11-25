@@ -130,6 +130,19 @@ export default function ForensicTerminalModal({ isOpen, onClose, baseAudioSample
               autoComplete="off"
               spellCheck="false"
             />
+            {/* Quick chips para mobile */}
+            <div className="ftm-chips">
+              {['ORDOS', 'NEXUS', 'ECDISE', 'CHAVE_01'].map(key => (
+                <button
+                  key={key}
+                  type="button"
+                  className="ftm-chip"
+                  onClick={() => setPassword(key)}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button 

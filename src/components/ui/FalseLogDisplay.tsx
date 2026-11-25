@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { isExtendedPerformanceMode, getOptimizedInterval } from '../../utils/performance';
+import { getOptimizedInterval } from '../../utils/performance';
 
 const FAKE_LOGS = [
   '[NEXUS.KERNEL] Membrane pressure: 94.2% CRITICAL',
@@ -45,17 +45,19 @@ export const FalseLogDisplay: React.FC<Props> = ({ opacity = 0.06 }) => {
 
   return (
     <div
+      aria-hidden="true"
       style={{
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
+        userSelect: 'none',
         opacity,
         fontSize: '9px',
-        fontFamily: "'Courier New', monospace",
+        fontFamily: 'var(--font-terminal, "Courier New", monospace)',
         color: '#00f3ff',
         overflow: 'hidden',
         lineHeight: 1.4,
-        padding: '12px',
+        padding: 'var(--space-3)',
       }}
     >
       {logs.map((log, idx) => (

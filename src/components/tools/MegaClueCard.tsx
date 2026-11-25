@@ -1,4 +1,4 @@
-import { Check, X, Edit3, Settings, Save, Lock } from 'lucide-react';
+import { Check, X, Edit3, Settings, Save, Lock, Unlock, BookOpen, Target, ArrowDownToLine } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchCards, updateInvestigationCard } from '../../api/investigations';
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
@@ -333,7 +333,7 @@ export default function MegaClueCard({
                 </button>
               )}
               {onClose && (
-                <button className="close-btn" onClick={onClose}>✖</button>
+                <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
               )}
             </div>
           </div>
@@ -431,7 +431,7 @@ export default function MegaClueCard({
                     }}
                     disabled={submitting}
                   >
-                    ✕ Cancelar
+                    <X size={13} /> Cancelar
                   </button>
                   <button
                     onClick={handleSaveChanges}
@@ -453,7 +453,7 @@ export default function MegaClueCard({
             )}
 
             <div className="unlock-banner">
-              <div className="unlock-icon">🔓</div>
+              <div className="unlock-icon"><Unlock size={20} /></div>
               <div className="unlock-text">MEGA-PISTA DESBLOQUEADA</div>
             </div>
 
@@ -470,12 +470,12 @@ export default function MegaClueCard({
             )}
 
             <div className="truth-box">
-              <h3>📖 A VERDADE COMPLETA</h3>
+              <h3><BookOpen className="lucide-icon inline-icon" size={16} /> A VERDADE COMPLETA</h3>
               <div className="truth-content">{finalTruthText || description}</div>
             </div>
 
             <div className="codes-collected">
-              <h4>🎯 CÓDIGOS DESBLOQUEADOS:</h4>
+              <h4><Target className="lucide-icon inline-icon" size={15} /> CÓDIGOS DESBLOQUEADOS:</h4>
               <div className="codes-list">
                 {collectedCodes.map((code, idx) => (
                   <div key={idx} className="code-badge">
@@ -524,7 +524,7 @@ export default function MegaClueCard({
               </button>
             )}
             {onClose && (
-              <button className="close-btn" onClick={onClose}>✖</button>
+              <button className="close-btn" onClick={onClose} aria-label="Fechar"><X size={16} /></button>
             )}
           </div>
         </div>
@@ -622,7 +622,7 @@ export default function MegaClueCard({
                   }}
                   disabled={submitting}
                 >
-                  ✕ Cancelar
+                  <X size={13} /> Cancelar
                 </button>
                 <button
                   onClick={handleSaveChanges}
@@ -682,7 +682,7 @@ export default function MegaClueCard({
                   <div key={idx} className={`code-slot ${code ? 'unlocked' : 'locked'}`}>
                     {code ? (
                       <>
-                        <div className="slot-icon">✓</div>
+                        <div className="slot-icon"><Check size={14} /></div>
                         <div className="slot-code">{code}</div>
                       </>
                     ) : (
@@ -698,7 +698,7 @@ export default function MegaClueCard({
           </div>
 
           <div className="code-submit-section">
-            <h4>📥 SUBMETER CÓDIGO:</h4>
+            <h4><ArrowDownToLine className="lucide-icon inline-icon" size={15} /> SUBMETER CÓDIGO:</h4>
 
             {feedback && <div className={`feedback-message ${feedback.type}`}>{feedback.message}</div>}
 

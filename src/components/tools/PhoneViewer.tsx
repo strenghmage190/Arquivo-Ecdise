@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react';
+import { Lock, Mic } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import NumericKeypad from './NumericKeypad';
 import PatternLock from './PatternLock';
@@ -49,10 +49,13 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
      return () => clearInterval(interval);
    }, []);
 
-   // Auto-scroll para a última mensagem
+   // Auto-scroll suave para a última mensagem
    useEffect(() => {
      if (chatBodyRef.current) {
-       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+       chatBodyRef.current.scrollTo({
+         top: chatBodyRef.current.scrollHeight,
+         behavior: 'smooth'
+       });
      }
    }, [chatData, unlocked]);
    
@@ -131,7 +134,7 @@ export default function PhoneViewer({ chatData, contactName, isLocked = false, p
                 <div className="phone-input-area">
                    <span className="input-icon">+</span>
                    <div className="fake-input">Mensagem...</div>
-                   <span className="input-icon">🎤</span>
+                   <span className="input-icon"><Mic size={15} /></span>
                 </div>
              </>
           )}

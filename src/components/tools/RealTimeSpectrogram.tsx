@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Play, Pause } from 'lucide-react';
 import { isExtendedPerformanceMode } from '../../utils/performance';
 
 type Props = {
@@ -37,7 +38,9 @@ function colorForValue(v: number) {
 
 export default function RealTimeSpectrogram({ audioBuffer, minFreq = 1000, maxFreq = 12000, width = 800, height = 256 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; freq: string } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -148,15 +151,83 @@ export default function RealTimeSpectrogram({ audioBuffer, minFreq = 1000, maxFr
     startDraw();
   }
 
-  return (
-    <div style={{background:'#000', padding:8, borderRadius:8}}>
-      <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:8}}>
-        <button onClick={() => { isPlaying ? stop() : play(); }} style={{padding:'6px 10px', background:'#6b21a8', color:'#fff', border:'none', borderRadius:6}}>{isPlaying ? '⏸ Parar' : '▶ Play'}</button>
-        <div style={{color:'#aaa', fontSize:12}}>Waterfall: Retro Pixel (purple → orange → yellow)</div>
+    const updateHoverCoords = (clientX: number, clientY: number) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const percentY = Math.max(0, Math.min(1, 1 - y / rect.height));
+      const freqHz = minFreq + percentY * (maxFreq - minFreq);
+      setHoverInfo({ x, y, freq: `${(freqHz / 1000).toFixed(2)} kHz` });
+    };
+
+    return (
+      <div style={{ background: '#000', padding: 8, borderRadius: 8, position: 'relative' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => { isPlaying ? stop() : play(); }} 
+            style={{ 
+              minHeight: 'var(--control-h-md, 40px)', 
+              padding: '0 16px', 
+              background: '#6b21a8', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 'var(--radius-sm, 4px)', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {isPlaying ? <><Pause size={14} /> Parar</> : <><Play size={14} /> Play</>}
+          </button>
+          <div style={{ color: '#aaa', fontSize: 12 }}>Waterfall: Retro Pixel (purple → orange → yellow)</div>
+        </div>
+        <div 
+          ref={containerRef}
+          style={{ width: '100%', maxWidth: width, height, overflow: 'hidden', position: 'relative', cursor: 'crosshair', touchAction: 'none' }}
+          onMouseMove={(e) => updateHoverCoords(e.clientX, e.clientY)}
+          onMouseLeave={() => setHoverInfo(null)}
+          onTouchStart={(e) => {
+            if (e.touches.length > 0) updateHoverCoords(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchMove={(e) => {
+            if (e.touches.length > 0) updateHoverCoords(e.touches[0].clientX, e.touches[0].clientY);
+          }}
+          onTouchEnd={() => setHoverInfo(null)}
+          onTouchCancel={() => setHoverInfo(null)}
+        >
+          <canvas ref={canvasRef} width={width} height={height} style={{ imageRendering: 'pixelated', width: '100%', height: '100%', background: '#000', display: 'block' }} />
+          
+          {hoverInfo && (
+            <>
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: hoverInfo.x, width: 1, background: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, top: hoverInfo.y, height: 1, background: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  left: hoverInfo.x, 
+                  top: Math.max(8, hoverInfo.y - 40), 
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(0,0,0,0.9)', 
+                  color: '#00f3ff', 
+                  border: '1px solid #00f3ff',
+                  borderRadius: 4, 
+                  padding: '3px 8px', 
+                  fontSize: 11, 
+                  fontFamily: 'monospace', 
+                  pointerEvents: 'none', 
+                  whiteSpace: 'nowrap',
+                  zIndex: 10,
+                  boxShadow: '0 0 10px rgba(0, 243, 255, 0.4)'
+                }}
+              >
+                {hoverInfo.freq}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-      <div style={{width, height, overflow:'hidden'}}>
-        <canvas ref={canvasRef} width={width} height={height} style={{imageRendering:'pixelated', width:'100%', height:'auto', background:'#000'}} />
-      </div>
-    </div>
-  );
+    );
 }

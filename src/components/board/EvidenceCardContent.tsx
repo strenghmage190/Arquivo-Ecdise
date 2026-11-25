@@ -1,11 +1,12 @@
 import { Check, Lock } from 'lucide-react';
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import MysteryImage from './MysteryImage'
 import './EvidenceCardContent.css'
 
 interface EvidenceCardContentProps {
   id: string
   image?: string
+  hasImage?: boolean
   hiddenSrc?: string
   title?: string
   isUV?: boolean
@@ -17,6 +18,9 @@ interface EvidenceCardContentProps {
   playerView?: boolean
   hasUV?: boolean
   hasHiddenAudio?: boolean
+  hasAudio?: boolean
+  hasVideo?: boolean
+  hasChat?: boolean
   performanceMode?: boolean
   blurred?: boolean
 }
@@ -35,14 +39,20 @@ interface EvidenceCardContentProps {
 const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   id,
   image,
+  hasImage = false,
   hiddenSrc,
+  title = '',
   isUV = false,
   locked = false,
+  fileType = 'image',
   cardType = 'normal',
   isGameMaster = false,
   playerView = false,
   hasUV = false,
   hasHiddenAudio = false,
+  hasAudio = false,
+  hasVideo = false,
+  hasChat = false,
   performanceMode = false,
   blurred = false
 }) => {
@@ -59,6 +69,17 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const reducedMotion = performanceMode || prefersReducedMotion
   const showBlur = blurred && !isGameMaster
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+
+  useEffect(() => {
+    const onAudioState = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ cardId?: string; playing?: boolean }>).detail;
+      if (!detail || detail.cardId !== id) return;
+      setIsAudioPlaying(Boolean(detail.playing));
+    };
+    window.addEventListener('ordo:card-audio-state', onAudioState);
+    return () => window.removeEventListener('ordo:card-audio-state', onAudioState);
+  }, [id]);
 
   // Gera código de encriptação único
   const encryptionCode = useMemo(() => {
@@ -73,8 +94,12 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
           <div className="lock-overlay encrypted-full">
             <div className="encryption-text-wrapper">
               <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
-              <div className="access-denied">ACESSO NEGADO</div>
+              <div className="access-denied">[REDIGIDO] // ACESSO NEGADO</div>
               <div className="encryption-code">MODO ECONÔMICO</div>
+              <div className="redacted-dossier-bars" aria-hidden="true">
+                <div className="redacted-dossier-bar" style={{ width: '92%' }} />
+                <div className="redacted-dossier-bar" style={{ width: '68%' }} />
+              </div>
             </div>
           </div>
         </>
@@ -86,8 +111,13 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
         <div className="lock-overlay encrypted-full">
           <div className="encryption-text-wrapper">
             <span className="lock-icon"><Lock className="lucide-icon inline-icon" size={16} /></span>
-            <div className="access-denied">ACESSO NEGADO</div>
+            <div className="access-denied">[REDIGIDO] // ACESSO NEGADO</div>
             <div className="encryption-code">{encryptionCode}</div>
+            <div className="redacted-dossier-bars" aria-hidden="true">
+              <div className="redacted-dossier-bar" style={{ width: '94%' }} />
+              <div className="redacted-dossier-bar" style={{ width: '74%' }} />
+              <div className="redacted-dossier-bar" style={{ width: '56%' }} />
+            </div>
           </div>
         </div>
       </>
@@ -156,7 +186,93 @@ const EvidenceCardContent: React.FC<EvidenceCardContentProps> = ({
   }
 
   if (!image) {
-    return <div className="loading-placeholder-content" />
+    if (hasImage) {
+      return <div className="loading-placeholder-content" />
+    }
+
+    const isChatOrPhone = hasChat || /telefone|phone|chat|sms|whats|ligação|chamada|conversa|mensagem/i.test(title);
+    const isAudioPreview = !isChatOrPhone && (fileType === 'audio' || (hasAudio && fileType !== 'video' && !hasVideo));
+
+    if (isAudioPreview) {
+      const bars = [18, 34, 24, 52, 68, 42, 76, 58, 30, 64, 82, 46, 28, 56, 70, 38, 22, 48, 32, 20];
+      return (
+        <div className="diegetic-preview diegetic-audio" aria-hidden="true">
+          <div className="diegetic-header">
+            <span className="diegetic-tag">AUDIO // WAVEFORM</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              {isAudioPlaying && !reducedMotion && (
+                <span className="mini-audio-eq" aria-hidden="true">
+                  <span /><span /><span /><span />
+                </span>
+              )}
+              <span className="diegetic-code">CH-01</span>
+            </span>
+          </div>
+          <svg className="diegetic-svg" viewBox="0 0 220 76" preserveAspectRatio="xMidYMid meet">
+            <line x1="8" y1="38" x2="212" y2="38" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="1" strokeDasharray="3 3" />
+            {bars.map((h, i) => {
+              const x = 12 + i * 10;
+              const y = 38 - h / 2;
+              const active = i >= 5 && i <= 14;
+              return (
+                <rect
+                  key={i}
+                  x={x}
+                  y={y}
+                  width="5"
+                  height={h}
+                  rx="1"
+                  fill={active ? 'rgba(56, 189, 248, 0.72)' : 'rgba(148, 163, 184, 0.38)'}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      );
+    }
+
+    if (isChatOrPhone) {
+      return (
+        <div className="diegetic-preview diegetic-chat" aria-hidden="true">
+          <div className="diegetic-header">
+            <span className="diegetic-tag">REGISTRO // CHAT</span>
+            <span className="diegetic-code">LOG</span>
+          </div>
+          <svg className="diegetic-svg" viewBox="0 0 220 76" preserveAspectRatio="xMidYMid meet">
+            <rect x="10" y="6" width="124" height="18" rx="3" fill="rgba(30, 41, 59, 0.95)" stroke="rgba(148, 163, 184, 0.35)" strokeWidth="1" />
+            <line x1="18" y1="13" x2="96" y2="13" stroke="rgba(226, 232, 240, 0.65)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="18" y1="18" x2="68" y2="18" stroke="rgba(148, 163, 184, 0.45)" strokeWidth="1.5" strokeLinecap="round" />
+
+            <rect x="86" y="30" width="124" height="18" rx="3" fill="rgba(23, 37, 84, 0.75)" stroke="rgba(56, 189, 248, 0.45)" strokeWidth="1" />
+            <line x1="94" y1="37" x2="188" y2="37" stroke="rgba(186, 230, 253, 0.78)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="94" y1="42" x2="152" y2="42" stroke="rgba(125, 211, 252, 0.48)" strokeWidth="1.5" strokeLinecap="round" />
+
+            <rect x="10" y="54" width="98" height="16" rx="3" fill="rgba(30, 41, 59, 0.95)" stroke="rgba(148, 163, 184, 0.35)" strokeWidth="1" />
+            <line x1="18" y1="62" x2="82" y2="62" stroke="rgba(226, 232, 240, 0.55)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+      );
+    }
+
+    return (
+      <div className="diegetic-preview diegetic-doc" aria-hidden="true">
+        <div className="diegetic-header">
+          <span className="diegetic-tag">{fileType === 'video' || hasVideo ? 'SINAL // VÍDEO' : 'ARQUIVO // CLASSIFICADO'}</span>
+          <span className="diegetic-code">DOC</span>
+        </div>
+        <svg className="diegetic-svg" viewBox="0 0 220 76" preserveAspectRatio="xMidYMid meet">
+          <rect x="12" y="6" width="196" height="64" rx="2" fill="rgba(15, 23, 42, 0.8)" stroke="rgba(148, 163, 184, 0.25)" strokeWidth="1" />
+          <line x1="22" y1="18" x2="112" y2="18" stroke="rgba(226, 232, 240, 0.68)" strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="148" y="13" width="48" height="10" fill="none" stroke="rgba(230, 57, 70, 0.65)" strokeWidth="1" />
+          <line x1="22" y1="31" x2="188" y2="31" stroke="rgba(148, 163, 184, 0.4)" strokeWidth="2" strokeLinecap="round" />
+          <line x1="22" y1="41" x2="146" y2="41" stroke="rgba(148, 163, 184, 0.35)" strokeWidth="2" strokeLinecap="round" />
+          <rect x="152" y="38" width="38" height="6" fill="rgba(148, 163, 184, 0.24)" />
+          <line x1="22" y1="51" x2="172" y2="51" stroke="rgba(148, 163, 184, 0.35)" strokeWidth="2" strokeLinecap="round" />
+          <rect x="22" y="57" width="54" height="5" fill="rgba(148, 163, 184, 0.24)" />
+          <line x1="82" y1="60" x2="140" y2="60" stroke="rgba(148, 163, 184, 0.3)" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </div>
+    );
   }
 
   // =======================================================================

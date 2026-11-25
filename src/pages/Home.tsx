@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil } from 'lucide-react';
+import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil, Search } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import styles from './Home.module.scss';
 import Desktop from '../components/layout/Desktop';
@@ -53,9 +53,11 @@ const HERO_CONTENT = [
 ];
 
 const CASE_EVOLUTIONS = [
-  'METAMORFOSE',
-  'ENCARNAÇÃO',
-  'APOTEOSE',
+  'ESTÁGIO 0 (LATENTE)',
+  'ESTÁGIO 1 (METAMORFOSE)',
+  'ESTÁGIO 2 (ENCARNAÇÃO)',
+  'ESTÁGIO 3 (APOTEOSE)',
+  'ESTÁGIO 4 (TRANSCENDER)',
   'SÍNTESE',
   'QUIMERA',
   'SINGULARIDADE',
@@ -98,11 +100,47 @@ export default function Home() {
   const [imageMode, setImageMode] = useState<'default' | 'url' | 'upload'>('default');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [membraneState, setMembraneState] = useState<{ state: 'calm' | 'amber' | 'crimson'; value: number }>({
+    state: 'crimson',
+    value: 99.4,
+  });
+
+  const filteredCases = useMemo(() => {
+    if (!searchQuery.trim()) return cases;
+    const q = searchQuery.toLowerCase().trim();
+    return cases.filter((c: any) =>
+      c.title?.toLowerCase().includes(q) ||
+      c.description?.toLowerCase().includes(q) ||
+      c.element?.toLowerCase().includes(q) ||
+      c.evolution?.toLowerCase().includes(q)
+    );
+  }, [cases, searchQuery]);
 
   useEffect(() => {
     setHeroElement(HERO_CONTENT[Math.floor(Math.random() * HERO_CONTENT.length)]);
     fetchCases();
   }, []);
+
+  useEffect(() => {
+    const onMembraneState = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail;
+      if (detail && typeof detail === 'object' && typeof detail.value === 'number') {
+        setMembraneState({ state: detail.state || 'crimson', value: detail.value });
+      }
+    };
+    window.addEventListener('ordo:membrane-state', onMembraneState);
+    return () => window.removeEventListener('ordo:membrane-state', onMembraneState);
+  }, []);
+
+  useEffect(() => {
+    if (!showCreateModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowCreateModal(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showCreateModal]);
 
   async function fetchCases() {
     const res = await supabase
@@ -223,9 +261,9 @@ export default function Home() {
                 </span>
               ))}
             </div>
-            <div className={styles['membrane-readout']}>
+            <div className={styles['membrane-readout']} data-urgency={membraneState.state}>
               <span>MEMBRANA LOCAL</span>
-              <strong>99.4%</strong>
+              <strong className="tabular-nums">{membraneState.value.toFixed(1)}%</strong>
             </div>
             <div className={styles['archive-readout-meta']}>
               <span><ShieldCheck size={13} /> ACESSO INSTITUCIONAL</span>
@@ -258,7 +296,31 @@ export default function Home() {
               <div className={styles['eyebrow']}>REGISTROS // EM OBSERVAÇÃO</div>
               <h2 id="case-list-title">Casos em investigação</h2>
             </div>
-            <span className={styles['section-index']}>ARQUIVO 07 / {String(cases.length).padStart(2, '0')}</span>
+            <div className={styles['section-tools']}>
+              <div className={styles['search-bar']}>
+                <Search size={14} className={styles['search-icon']} aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder="Filtrar casos..."
+                  aria-label="Filtrar casos"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={styles['search-input']}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className={styles['search-clear']}
+                    title="Limpar busca"
+                    aria-label="Limpar busca"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <span className={styles['section-index']}>ARQUIVO 07 / {String(filteredCases.length).padStart(2, '0')}</span>
+            </div>
           </header>
 
           <div className={styles['case-grid']}>
@@ -268,7 +330,7 @@ export default function Home() {
               <small>Registrar um novo caso</small>
             </button>
 
-            {cases.map((currentCase, index) => {
+            {filteredCases.map((currentCase, index) => {
               const art = getCaseArt(currentCase.id || index, currentCase.element);
               const cleanId = String(currentCase.id).split(':')[0];
               return (
@@ -336,12 +398,17 @@ export default function Home() {
             })}
           </div>
 
-          {cases.length === 0 && (
+          {cases.length === 0 ? (
             <div className={styles['empty-state']}>
               <span>NENHUM REGISTRO INDEXADO</span>
               <small>O primeiro caso ainda aguarda autorização de abertura.</small>
             </div>
-          )}
+          ) : filteredCases.length === 0 ? (
+            <div className={styles['empty-state']}>
+              <span>NENHUM CASO CORRESPONDE AO FILTRO</span>
+              <small>Tente buscar por outro termo, elemento ou evolução.</small>
+            </div>
+          ) : null}
         </section>
 
         <footer className={styles['telemetry-ticker']} aria-label="Telemetria da Ordem">
@@ -407,50 +474,49 @@ export default function Home() {
               rows={3}
             />
             <label>Imagem de capa (opcional)</label>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: '11px', color: 'var(--home-muted)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                <input type="radio" name="imgMode" checked={imageMode === 'default'} onChange={() => { setImageMode('default'); setCoverUrl(''); }} /> Padrão
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                <input type="radio" name="imgMode" checked={imageMode === 'url'} onChange={() => setImageMode('url')} /> Link da Web
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                <input type="radio" name="imgMode" checked={imageMode === 'upload'} onChange={() => setImageMode('upload')} /> Enviar Arquivo
-              </label>
+            <div className={styles['image-mode-tabs']} role="tablist" aria-label="Origem da imagem de capa">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={imageMode === 'default'}
+                className={`${styles['image-mode-btn']} ${imageMode === 'default' ? styles['image-mode-btn-active'] : ''}`}
+                onClick={() => { setImageMode('default'); setCoverUrl(''); }}
+              >
+                Padrão
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={imageMode === 'url'}
+                className={`${styles['image-mode-btn']} ${imageMode === 'url' ? styles['image-mode-btn-active'] : ''}`}
+                onClick={() => setImageMode('url')}
+              >
+                Link da Web
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={imageMode === 'upload'}
+                className={`${styles['image-mode-btn']} ${imageMode === 'upload' ? styles['image-mode-btn-active'] : ''}`}
+                onClick={() => setImageMode('upload')}
+              >
+                Enviar Arquivo
+              </button>
             </div>
             {imageMode === 'default' && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  marginBottom: '16px', 
-                  overflowX: 'auto', 
-                  paddingBottom: '8px',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'var(--home-muted) transparent'
-                }}
-              >
+              <div className={styles['cover-picker-strip']}>
                 {Object.entries(ARCHIVE_ART).map(([key, src]) => {
                   const isSelected = coverUrl === src || (!coverUrl && key === newElement);
                   return (
-                    <button 
-                      key={key} 
+                    <button
+                      key={key}
                       type="button"
                       onClick={() => setCoverUrl(src)}
-                      style={{ 
-                        flex: '0 0 70px',
-                        padding: 0, 
-                        border: isSelected ? '2px solid var(--nexus-blue)' : '2px solid transparent', 
-                        background: 'none', 
-                        cursor: 'pointer',
-                        opacity: isSelected ? 1 : 0.6,
-                        transition: 'all 0.2s ease',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}
+                      className={`${styles['cover-thumb-btn']} ${isSelected ? styles['cover-thumb-btn-active'] : ''}`}
                       title={key}
+                      aria-label={`Selecionar capa ${key}`}
                     >
-                      <img src={src} alt={key} style={{ width: '100%', height: '48px', objectFit: 'cover', display: 'block' }} />
+                      <img src={src} alt={key} />
                     </button>
                   );
                 })}
@@ -458,42 +524,59 @@ export default function Home() {
             )}
             {imageMode === 'url' && (
               <input
+                type="url"
                 className={styles['quick-input']}
                 placeholder="https://..."
+                aria-label="URL da imagem de capa"
                 value={coverUrl}
                 onChange={(event) => setCoverUrl(event.target.value)}
               />
             )}
             {imageMode === 'upload' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className={styles['quick-input']}
-                  disabled={uploadingImage}
-                  style={{ padding: '8px' }}
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    setUploadingImage(true);
-                    try {
-                      const fileExt = file.name.split('.').pop();
-                      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-                      const path = `case-covers/${fileName}`;
-                      const { error } = await supabase.storage.from('investigation-assets').upload(path, file);
-                      if (error) throw error;
-                      const { data } = supabase.storage.from('investigation-assets').getPublicUrl(path);
-                      setCoverUrl(data.publicUrl);
-                    } catch (error) {
-                      console.error(error);
-                      alert('Erro ao enviar imagem');
-                    } finally {
-                      setUploadingImage(false);
-                    }
-                  }}
-                />
-                {uploadingImage && <small style={{ color: 'var(--home-muted)' }}>Enviando arquivo...</small>}
-                {coverUrl && !uploadingImage && <small style={{ color: 'var(--home-conhecimento)' }}>Arquivo enviado com sucesso!</small>}
+              <div className={styles['cover-upload-box']}>
+                <label className={styles['upload-trigger']}>
+                  <span>{uploadingImage ? 'ENVIANDO ARQUIVO...' : 'ESCOLHER IMAGEM DO DISPOSITIVO'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingImage}
+                    className={styles['upload-file-input']}
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setUploadingImage(true);
+                      try {
+                        const fileExt = file.name.split('.').pop() || 'png';
+                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                        const path = `case-covers/${fileName}`;
+                        const { error } = await supabase.storage.from('investigation-assets').upload(path, file);
+                        if (error) throw error;
+                        const { data } = supabase.storage.from('investigation-assets').getPublicUrl(path);
+                        setCoverUrl(data.publicUrl);
+                      } catch (error) {
+                        console.error(error);
+                        alert('Erro ao enviar imagem');
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                    }}
+                  />
+                </label>
+                {coverUrl && !uploadingImage && (
+                  <div className={styles['cover-preview-row']}>
+                    <img src={coverUrl} alt="Prévia da capa" className={styles['cover-preview-img']} />
+                    <div className={styles['cover-preview-meta']}>
+                      <small style={{ color: 'var(--home-conhecimento)' }}>Arquivo enviado com sucesso!</small>
+                      <button
+                        type="button"
+                        className={styles['secondary-action']}
+                        onClick={() => setCoverUrl('')}
+                      >
+                        Remover capa
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <div className={styles['quick-actions']}>

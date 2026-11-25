@@ -129,6 +129,8 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     timers.current.push(t);
   };
 
+  const quickCommands = ['ajuda', correctPassword || 'ORDOS', 'status', 'bypass', 'clear'];
+
   return (
     <div className="nexus-container">
       <div className="server-grid-bg" />
@@ -149,6 +151,22 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
           {/* Boot messages will be added dynamically */}
         </div>
 
+        {/* Chips de atalhos rápidos posicionados acima do input / teclado */}
+        {bootComplete && (
+          <div className="terminal-quick-chips">
+            {quickCommands.map((cmd) => (
+              <button
+                key={cmd}
+                type="button"
+                className="terminal-chip"
+                onClick={() => setInput(cmd)}
+              >
+                {cmd}
+              </button>
+            ))}
+          </div>
+        )}
+
         <form className="console-input-wrapper" onSubmit={handleSubmit} style={{ opacity: bootComplete ? 1 : 0.3, pointerEvents: bootComplete ? 'auto' : 'none' }}>
           <span className="input-prefix">QUERY_INPUT_&gt;</span>
           <input
@@ -159,6 +177,9 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
             placeholder={bootComplete ? "Digite a senha de bypass..." : "Aguardando boot..."}
             disabled={!bootComplete}
           />
+          <button type="submit" className="terminal-submit-btn" disabled={!bootComplete || !input.trim()}>
+            ENVIAR
+          </button>
           <div className="scanline" />
         </form>
       </div>

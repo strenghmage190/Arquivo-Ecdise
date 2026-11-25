@@ -25,6 +25,58 @@ export default defineConfig({
   },
   build: {
     target: 'es2015',
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          // React core & DOM
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/react-router-dom') ||
+            id.includes('node_modules/@remix-run')
+          ) {
+            return 'vendor-react';
+          }
+
+          // Audio processing & players
+          if (
+            id.includes('node_modules/wavesurfer.js') ||
+            id.includes('node_modules/@wavesurfer') ||
+            id.includes('node_modules/howler') ||
+            id.includes('node_modules/use-sound') ||
+            id.includes('node_modules/lamejs')
+          ) {
+            return 'vendor-audio';
+          }
+
+          // Security, Crypto & Backend APIs
+          if (
+            id.includes('node_modules/@supabase') ||
+            id.includes('node_modules/@marsidev/react-turnstile') ||
+            id.includes('node_modules/nanoid')
+          ) {
+            return 'vendor-crypto';
+          }
+
+          // UI libraries, icons, toast, motions
+          if (
+            id.includes('node_modules/lucide-react') ||
+            id.includes('node_modules/framer-motion') ||
+            id.includes('node_modules/sonner') ||
+            id.includes('node_modules/react-hot-toast') ||
+            id.includes('node_modules/react-tooltip') ||
+            id.includes('node_modules/driver.js') ||
+            id.includes('node_modules/react-virtuoso')
+          ) {
+            return 'vendor-ui';
+          }
+        },
+      },
+    },
   },
   server: {
     host: true,

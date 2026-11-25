@@ -111,6 +111,68 @@
   }
 }
 
+.terminal-quick-chips {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(0, 243, 255, 0.1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.terminal-quick-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.terminal-chip {
+  background: rgba(0, 243, 255, 0.08);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  color: #00f3ff;
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.terminal-chip:hover {
+  background: rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+}
+
+.terminal-chip:active {
+  transform: scale(0.95);
+}
+
+.terminal-submit-btn {
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid #00f3ff;
+  color: #00f3ff;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  min-height: 36px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.terminal-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .term-hint {
   margin-top: 12px;
   color: #bdb;
@@ -326,6 +388,68 @@
   100% {
     transform: translateX(0);
   }
+}
+
+.terminal-quick-chips {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(0, 243, 255, 0.1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.terminal-quick-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.terminal-chip {
+  background: rgba(0, 243, 255, 0.08);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  color: #00f3ff;
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.terminal-chip:hover {
+  background: rgba(0, 243, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+}
+
+.terminal-chip:active {
+  transform: scale(0.95);
+}
+
+.terminal-submit-btn {
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid #00f3ff;
+  color: #00f3ff;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  min-height: 36px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.terminal-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .term-hint {

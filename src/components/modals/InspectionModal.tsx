@@ -1,4 +1,4 @@
-import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer } from 'lucide-react';
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown, ArrowLeft, FolderOpen, Microscope, Keyboard, Languages, FileText, Video, MessageSquare, SlidersHorizontal, Flashlight, Puzzle, Pencil, Clock, CheckCircle2, XCircle, KeyRound, Smartphone, Play, Pause, Layers } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -14,8 +14,11 @@ import UniversalDecoder from '../tools/UniversalDecoder';
 import NumericKeypad from '../tools/NumericKeypad';
 import AudioViewerModal from './AudioViewerModal';
 import WaveSurfer from 'wavesurfer.js';
+import useEscapeClose from './useEscapeClose';
 import './InspectionModal.css';
 import { markPerfKeep } from '../../utils/performance';
+import usePerformanceMode from '../../utils/usePerformanceMode';
+import { markCardSeen, recordUnlockedCode } from '../../utils/playerTracking';
 import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
@@ -28,11 +31,30 @@ interface Props {
   card: any;
   onEdit?: () => void;
   isGameMaster: boolean;
+  playerView?: boolean;
+  performanceMode?: boolean;
+  initialForensicMode?: 'none' | 'channel' | 'hex' | 'lens' | 'decoder';
+  onSendToDecoder?: (text: string, mode?: string) => void;
   externalBaseId?: string;
   externalHiddenId?: string;
 }
 
-export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameMaster, externalBaseId, externalHiddenId }: Props) {
+export default function InspectionModal({
+  isOpen,
+  onClose,
+  card,
+  onEdit,
+  isGameMaster,
+  playerView,
+  performanceMode: performanceModeProp,
+  initialForensicMode = 'none',
+  onSendToDecoder,
+  externalBaseId,
+  externalHiddenId,
+}: Props) {
+  const { enabled: perfModeFromHook } = usePerformanceMode();
+  const effectivePerformanceMode = performanceModeProp ?? perfModeFromHook;
+  const effectivePlayerView = playerView ?? !isGameMaster;
   const isCardLocked = (c: any) => {
     const v = c?.is_locked;
     if (v === true || v === 1) return true;
@@ -45,13 +67,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return false;
   };
 
-  const [isUnlocked, setIsUnlocked] = useState(!isCardLocked(card) || isGameMaster);
+  useEscapeClose(isOpen, onClose);
+  const initialLocked = isCardLocked(card);
+  const [isUnlocked, setIsUnlocked] = useState(!initialLocked);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [gmActiveTab, setGmActiveTab] = useState<'public' | 'hidden'>('public');
+  const [audioIsMuted, setAudioIsMuted] = useState(false);
+
   const isMounted = React.useRef(true);
   React.useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   React.useEffect(() => {
-    setIsUnlocked(!isCardLocked(card) || isGameMaster);
+    setIsUnlocked(!isCardLocked(card));
     setShowGlitchSolver(false);
+    setPasswordInput('');
+    setPasswordError(false);
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
@@ -62,8 +93,117 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   const [localThermal, setLocalThermal] = useState(false);
   const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100 });
   const [showFilters, setShowFilters] = useState(false);
-  const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
+  const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>(initialForensicMode || 'none');
+  const [decoderPayloadOverride, setDecoderPayloadOverride] = useState<string | undefined>(undefined);
   const [forensicChannel, setForensicChannel] = useState<'all' | 'r' | 'g' | 'b'>('all');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleUpdateStatus = async (newStatus: 'pending' | 'confirmed' | 'debunked') => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id) return;
+    try {
+      const updated = await updateInvestigationCard(cardObj.id, {
+        status: newStatus,
+        metadata: { ...(cardObj.metadata || {}), status: newStatus }
+      } as any);
+      if (isMounted.current) setServerCard(updated);
+    } catch (err) {
+      console.error('Falha ao atualizar status da pista:', err);
+    }
+  };
+
+  const handleUpdateZIndex = async (delta: number) => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id) return;
+    const currentZ = Number(cardObj.z_index ?? 1);
+    const newZ = Math.max(0, currentZ + delta);
+    try {
+      const updated = await updateInvestigationCard(cardObj.id, { z_index: newZ } as any);
+      if (isMounted.current) setServerCard(updated);
+    } catch (err) {
+      console.error('Falha ao atualizar z_index da pista:', err);
+    }
+  };
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (fileRef.current?.requestFullscreen) {
+          await fileRef.current.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      // Fallback handled by internal fullscreenOpen state
+    }
+    setFullscreenOpen(prev => !prev);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cardObj = serverCard || card;
+    const lockPass = String(cardObj?.lock_password || '').trim();
+    const entered = passwordInput.trim();
+    if (entered && lockPass && entered.toLowerCase() === lockPass.toLowerCase()) {
+      persistUnlockForCard();
+      setPasswordError(false);
+      setPasswordInput('');
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  const handleToggleAudioMute = () => {
+    const nextMuted = !audioIsMuted;
+    setAudioIsMuted(nextMuted);
+    if (audioElementRef.current) {
+      audioElementRef.current.muted = nextMuted;
+    }
+    if (waveSurferRef.current) {
+      waveSurferRef.current.setMuted(nextMuted);
+    }
+  };
+
+  const handleEvidencePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+    e.currentTarget.style.setProperty('--uv-radius', '140px');
+  };
+
+  const handleEvidenceTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 1) {
+      const t = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = t.clientX - rect.left;
+      const y = t.clientY - rect.top;
+      e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+      e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+      e.currentTarget.style.setProperty('--uv-radius', '140px');
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setForensicMode(initialForensicMode || 'none');
+      setDecoderPayloadOverride(undefined);
+    }
+  }, [isOpen, initialForensicMode, card?.id]);
+
+  // Marca pista como vista para o jogador ao abrir o InspectionModal (quando não está bloqueada)
+  useEffect(() => {
+    if (!isOpen || !card?.id || !card?.investigation_id) return;
+    if (isCardLocked(card) && !isUnlocked && !isGameMaster) return;
+    markCardSeen(String(card.investigation_id), String(card.id), {
+      isGameMaster,
+      playerView: effectivePlayerView,
+    });
+  }, [isOpen, card, isUnlocked, isGameMaster, effectivePlayerView]);
 
   const disableAllBut = React.useCallback((mode: string) => {
     // filters
@@ -248,9 +388,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
   };
 
   // Persist unlock to server so the card remains unlocked permanently
-  const persistUnlockForCard = async () => {
+  const persistUnlockForCard = async (unlockedCode?: string, lockType: 'keypad' | 'terminal' = 'keypad') => {
     setIsUnlocked(true);
     const cardObj = serverCard || card;
+    if (cardObj?.investigation_id && cardObj?.id && unlockedCode) {
+      recordUnlockedCode(
+        String(cardObj.investigation_id),
+        {
+          cardId: String(cardObj.id),
+          cardTitle: cardObj.title || 'Evidência Protegida',
+          code: String(unlockedCode),
+          lockType,
+        },
+        { isGameMaster, playerView: effectivePlayerView }
+      );
+    }
     if (!cardObj || !cardObj.id) return;
     try {
       const updates: any = { is_locked: false, lock_password: null };
@@ -593,16 +745,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       setAudioDuration(dur);
     });
 
-    let lastUpdate = 0;
-    const updatePos = () => {
-      const now = Date.now();
-      if (now - lastUpdate > 250) {
-        setAudioPosition(ws.getCurrentTime() || 0);
-        lastUpdate = now;
-      }
-    };
-    ws.on('audioprocess', updatePos);
-    ws.on('timeupdate', updatePos);
+
 
     ws.on('play', () => setAudioIsPlaying(true));
     ws.on('pause', () => setAudioIsPlaying(false));
@@ -684,9 +827,8 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     if (!container.querySelector('.image-controls')) {
       const controls = document.createElement('div');
       controls.className = 'image-controls';
-      controls.innerHTML = '<button type="button" class="img-zoom-btn">+</button><button type="button" class="img-zoom-btn">−</button>';
-      // Só adiciona se não for fullscreen (fullscreen tem HUD próprio)
-      if (!fullscreenOpen) container.appendChild(controls);
+      controls.innerHTML = '<button type="button" class="img-zoom-btn" title="Aumentar zoom" aria-label="Aumentar zoom">+</button><span class="image-zoom-badge zoom-level-badge">100%</span><button type="button" class="img-zoom-btn" title="Diminuir zoom" aria-label="Diminuir zoom">−</button><button type="button" class="img-zoom-btn btn-zoom-reset" title="Recentralizar zoom" aria-label="Recentralizar zoom">↺</button>';
+      container.appendChild(controls);
     }
 
     // Estado local do Zoom (Mutable para performance)
@@ -699,18 +841,29 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       startY: 0
     };
 
-    const updateTransform = () => {
-      transformTarget.style.width = `${state.scale * 100}%`;
-      transformTarget.style.height = `${state.scale * 100}%`;
-      transformTarget.style.transform = `translate(${state.pointX}px, ${state.pointY}px)`;
+    const updateTransform = (animate = false) => {
+      if (animate && !effectivePerformanceMode) {
+        transformTarget.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+      } else {
+        transformTarget.style.transition = 'none';
+      }
+      transformTarget.style.width = '100%';
+      transformTarget.style.height = '100%';
+      transformTarget.style.transform = `translate3d(${state.pointX}px, ${state.pointY}px, 0) scale(${state.scale})`;
       transformTarget.style.cursor = state.scale > 1 ? (state.panning ? 'grabbing' : 'grab') : 'default';
+      const badge = container.querySelector('.image-zoom-badge');
+      if (badge) badge.textContent = `${Math.round(state.scale * 100)}%`;
     };
 
     // --- HANDLERS DE MOUSE/TOUCH ---
 
     const onMouseDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
+      if ('button' in e && e.button !== 0) return;
+      if (e.cancelable) e.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch {}
       if (state.scale <= 1) return; // Só arrasta se tiver zoom
-      e.preventDefault();
       state.panning = true;
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -719,7 +872,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       state.startX = clientX - state.pointX;
       state.startY = clientY - state.pointY;
 
-      // ATIVA modo performance durante o movimento (pode ficar levemente borrado mas melhora fluidez)
+      // ATIVA modo performance durante o movimento
       try {
         transformTarget.style.willChange = 'transform';
       } catch (err) { }
@@ -729,7 +882,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     const onMouseMove = (e: MouseEvent | TouchEvent) => {
       if (!state.panning) return;
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -784,12 +937,22 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     const btns = container.querySelectorAll('.img-zoom-btn');
     const btnIn = btns[0];
     const btnOut = btns[1];
+    const btnReset = btns[2];
 
     const handleIn = (e: Event) => { e.stopPropagation(); zoom(0.5); };
     const handleOut = (e: Event) => { e.stopPropagation(); zoom(-0.5); };
+    const handleReset = (e: Event) => {
+      e.stopPropagation();
+      state.scale = 1;
+      state.pointX = 0;
+      state.pointY = 0;
+      transformTarget.style.transformOrigin = 'center center';
+      updateTransform(true);
+    };
 
     if (btnIn) btnIn.addEventListener('click', handleIn);
     if (btnOut) btnOut.addEventListener('click', handleOut);
+    if (btnReset) btnReset.addEventListener('click', handleReset);
 
     // Adiciona eventos ao container (para pegar o click em qualquer lugar)
     container.addEventListener('mousedown', onMouseDown);
@@ -804,34 +967,70 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
     // Wheel Zoom (Mouse)
     const onWheel = (e: WheelEvent) => {
-      try { e.preventDefault(); } catch (err) { }
-      const delta = -Math.sign(e.deltaY) * 0.25;
-      const step = Math.abs(state.scale) > 2 ? delta * 0.8 : delta;
-      zoom(step, e.clientX, e.clientY);
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch (err) { }
+      const rawDy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 100 : e.deltaY;
+      const dy = Math.max(-120, Math.min(120, rawDy));
+      if (dy === 0) return;
+      const targetScale = Math.max(1, Math.min(10, state.scale * Math.exp(-dy * 0.0022)));
+      zoom(targetScale - state.scale, e.clientX, e.clientY);
     };
     container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Double Tap / Double Click Reset
+    // Double Tap / Double Click Toggle: Fit (100%) <-> Zoom 200% centrado no ponto clicado/tocado
     const onDblClick = (clientX: number, clientY: number) => {
       if (state.scale > 1) {
         state.scale = 1;
         state.pointX = 0;
         state.pointY = 0;
-        updateTransform();
+        transformTarget.style.transformOrigin = 'center center';
+        updateTransform(true);
       } else {
-        zoom(1.5, clientX, clientY);
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = transformTarget.getBoundingClientRect();
+        const originXPct = targetRect.width > 0
+          ? Math.max(0, Math.min(100, ((clientX - targetRect.left) / targetRect.width) * 100))
+          : 50;
+        const originYPct = targetRect.height > 0
+          ? Math.max(0, Math.min(100, ((clientY - targetRect.top) / targetRect.height) * 100))
+          : 50;
+        transformTarget.style.transformOrigin = `${originXPct.toFixed(1)}% ${originYPct.toFixed(1)}%`;
+
+        const cx = clientX - containerRect.left;
+        const cy = clientY - containerRect.top;
+        const mouseOffsetX = cx - containerRect.width / 2;
+        const mouseOffsetY = cy - containerRect.height / 2;
+
+        state.scale = 2;
+        state.pointX = -mouseOffsetX;
+        state.pointY = -mouseOffsetY;
+        updateTransform(true);
       }
     };
-    const onDblClickWrapper = (e: MouseEvent) => onDblClick(e.clientX, e.clientY);
+    const onDblClickWrapper = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
+      if (e.cancelable) e.preventDefault();
+      try { window.getSelection()?.removeAllRanges(); } catch {}
+      onDblClick(e.clientX, e.clientY);
+    };
     container.addEventListener('dblclick', onDblClickWrapper);
 
     let lastTap = 0;
     const onTouchStartDouble = (e: TouchEvent) => {
-      const currentTime = new Date().getTime();
+      if (e.touches.length !== 1) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.image-controls, .img-zoom-btn')) return;
+      const currentTime = Date.now();
       const tapLength = currentTime - lastTap;
       if (tapLength < 300 && tapLength > 0) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
+        try { window.getSelection()?.removeAllRanges(); } catch {}
         onDblClick(e.touches[0].clientX, e.touches[0].clientY);
+        lastTap = 0;
+        return;
       }
       lastTap = currentTime;
     };
@@ -840,6 +1039,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
     return () => {
       if (btnIn) btnIn.removeEventListener('click', handleIn);
       if (btnOut) btnOut.removeEventListener('click', handleOut);
+      if (btnReset) btnReset.removeEventListener('click', handleReset);
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mousemove', onMouseMove);
       container.removeEventListener('mouseup', onMouseUp);
@@ -854,10 +1054,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
       // Cleanup transform and reset will-change so browser may re-render in full quality
       try { transformTarget.style.willChange = 'auto'; } catch (err) { }
       transformTarget.style.transform = '';
+      transformTarget.style.transformOrigin = 'center center';
+      transformTarget.style.transition = '';
       transformTarget.style.width = '100%';
       transformTarget.style.height = '100%';
     };
-  }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel]);
+  }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel, effectivePerformanceMode]);
 
   // Renderizador inteligente da Área Visual
   const renderVisualContent = () => {
@@ -939,7 +1141,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             borderRadius: '12px',
             maxWidth: '500px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px', filter: 'drop-shadow(0 0 8px rgba(0, 243, 255, 0.6))' }}>🗂️</div>
+            <div style={{ marginBottom: '12px', color: '#00f3ff', display: 'flex', justifyContent: 'center' }}><Layers size={44} /></div>
             <h3 style={{
               margin: '0 0 8px',
               color: '#e9fcff',
@@ -975,7 +1177,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               onClick={() => setShredderModalOpen(true)}
               className="btn-reconstructor"
             >
-              🧩 ABRIR RECONSTRUTOR
+              <Puzzle className="lucide-icon inline-icon" size={16} /> ABRIR RECONSTRUTOR
             </button>
           </div>
         </div>
@@ -1074,7 +1276,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             src={audioSrc || undefined}
             preload="metadata"
             style={{ display: 'none' }}
-            onEnded={() => setAudioIsPlaying(false)}
+            onPlay={() => window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: true } }))}
+            onPause={() => window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: false } }))}
+            onEnded={() => {
+              setAudioIsPlaying(false);
+              window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard.id, playing: false } }));
+            }}
             onTimeUpdate={(e) => setAudioPosition((e.target as HTMLAudioElement).currentTime || 0)}
             onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
           />
@@ -1092,13 +1299,23 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8, flexWrap: 'wrap' }}>
             <button
               onClick={handleTogglePlay}
               className="btn-tool-tab"
-              style={{ minWidth: 110 }}
+              style={{ minWidth: 110, minHeight: 44, touchAction: 'manipulation' }}
             >
-              {audioIsPlaying ? '⏸ Pausar' : '▶ Reproduzir'}
+              {audioIsPlaying ? <><Pause size={14} /> Pausar</> : <><Play size={14} /> Reproduzir</>}
+            </button>
+
+            <button
+              onClick={handleToggleAudioMute}
+              className={`btn-tool-tab ${audioIsMuted ? 'active-red' : ''}`}
+              style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
+              title={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+              aria-label={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+            >
+              {audioIsMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
 
             <input
@@ -1108,11 +1325,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               step={0.1}
               value={Math.min(audioPosition, audioDuration || 0)}
               onChange={(e) => handleSeek(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#00f3ff' }}
+              style={{ flex: 1, accentColor: '#00f3ff', minHeight: 44, touchAction: 'pan-y' }}
               aria-label="Linha do tempo do áudio"
             />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 13, minWidth: 80, justifyContent: 'flex-end' }}>
               <span>{formatTime(audioPosition)}</span>
               <span style={{ opacity: 0.6 }}>/</span>
               <span>{formatTime(audioDuration)}</span>
@@ -1174,7 +1391,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   }}
                   style={{ marginTop: 6 }}
                 >
-                  🧩 ABRIR DECODIFICADOR
+                  <Puzzle className="lucide-icon inline-icon" size={15} /> ABRIR DECODIFICADOR
                 </button>
               </div>
             </div>
@@ -1184,7 +1401,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
       if (securityLocked) return renderSecurityLocked();
       return (
-        <div className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}>
+        <div
+          className={`evidence-display-area ${localThermal ? 'termal-mode' : ''}`}
+          onPointerDown={handleEvidencePointerMove}
+          onPointerMove={handleEvidencePointerMove}
+          onTouchStart={handleEvidenceTouchMove}
+          onTouchMove={handleEvidenceTouchMove}
+          style={{ touchAction: 'none' }}
+        >
           <div className="grid-overlay" aria-hidden />
 
           {(() => {
@@ -1198,25 +1422,27 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             } catch (e) { reveal = null; }
             return (
               <>
-                <div className="image-zoom-wrapper" style={{ position: 'relative', width: '100%', height: '100%' }}>
-                  <MysteryImage
-                    baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
-                    hiddenSrc={currentCard.image_uv_url}
-                    filterLayerSrc={currentCard.image_filter_layer}
-                    filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                    revealSettings={fullscreenOnlyTreatment ? null : reveal}
-                    isUVMode={localUV}
-                    fit="contain"
-                    className="large-evidence-img"
-                    style={{ height: '100%', width: '100%' }}
-                    forensicChannel={forensicChannel}
-                    allowImageUVControl={false}
-                  />
-                  {localThermal && !fullscreenOpen && (
-                    <div className="thermal-overlay" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
-                      <canvas className="thermal-canvas" ref={thermalCanvasRef} />
-                    </div>
-                  )}
+                <div className="image-zoom-viewport">
+                  <div className="image-zoom-wrapper" style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MysteryImage
+                      baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
+                      hiddenSrc={currentCard.image_uv_url}
+                      filterLayerSrc={currentCard.image_filter_layer}
+                      filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
+                      revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                      isUVMode={localUV}
+                      fit="contain"
+                      className="large-evidence-img"
+                      style={{ height: '100%', width: '100%' }}
+                      forensicChannel={forensicChannel}
+                      allowImageUVControl={false}
+                    />
+                    {localThermal && !fullscreenOpen && (
+                      <div className="thermal-overlay" aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
+                        <canvas className="thermal-canvas" ref={thermalCanvasRef} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             );
@@ -1261,7 +1487,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         <div className="inspect-file" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
           <div className="inspect-header">
             <div className="meta-info"><span className="case-stamp">EVIDÊNCIA — N/D</span></div>
-            <div className="actions"><button className="btn-close" onClick={onClose}>&times;</button></div>
+            <div className="actions"><button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button></div>
           </div>
           <div style={{ padding: 20, color: '#ccc' }}>
             <h3>Sem dados do cartão</h3>
@@ -1450,25 +1676,25 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
             const isMobile = (typeof window !== 'undefined' && window.innerWidth <= 768);
             return (menuView === 'media' && isMobile) ? (
               <>
-                <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}>⬅ VOLTAR</button>
+                <button type="button" className="btn-tool-tab" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('tools')}><ArrowLeft className="lucide-icon inline-icon" size={14} /> VOLTAR</button>
                 <hr className="divider" />
                 {hasImage && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}>📸 FOTO</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('image'); setShowMoreTools(false); }}><Camera className="lucide-icon inline-icon" size={15} /> FOTO</button>
                 )}
                 {hasVideo && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}>🎥 VÍDEO</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('video'); setShowMoreTools(false); }}><Video className="lucide-icon inline-icon" size={15} /> VÍDEO</button>
                 )}
                 {hasAudio && (
                   <button type="button" className={`btn-tool-tab ${visualMode === 'audio' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('audio'); setShowMoreTools(false); }}><Music className="lucide-icon inline-icon" size={16} /> ÁUDIO</button>
                 )}
                 {hasChat && (
-                  <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}>💬 CHATS</button>
+                  <button type="button" className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { setVisualMode('phone'); setShowMoreTools(false); }}><MessageSquare className="lucide-icon inline-icon" size={15} /> CHATS</button>
                 )}
               </>
             ) : (
               <>
                 <button type="button" className="btn-tool-tab btn-highlight" style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => setMenuView('media')}>
-                  📂 MÍDIA ({mediaCount}) ▸
+                  <FolderOpen className="lucide-icon inline-icon" size={15} /> MÍDIA ({mediaCount}) ▸
                 </button>
                 <hr className="divider" />
                 {(() => {
@@ -1491,15 +1717,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       }}
                       title={isLocked ? 'Use o Terminal de Busca para desbloquear' : 'Ativar visão termográfica'}
                     >
-                      <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL {isLocked ? '🔒' : ''}
+                      <Thermometer className="lucide-icon inline-icon" size={16} /> TERMAL {isLocked ? <Lock className="lucide-icon inline-icon" size={13} /> : null}
                     </button>
                   );
                 })()}
 
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}>🔬 FORENSE</button>
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}>⌨ INSPECIONAR CÓDIGO</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'channel' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('forense'); setShowMoreTools(false); }}><Microscope className="lucide-icon inline-icon" size={15} /> FORENSE</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'hex' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('hex'); setShowMoreTools(false); }}><Keyboard className="lucide-icon inline-icon" size={15} /> INSPECIONAR CÓDIGO</button>
                 <button type="button" className={`btn-tool-tab ${forensicMode === 'decoder' ? 'active-blue' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('decoder'); setShowMoreTools(false); }}><Lock className="lucide-icon inline-icon" size={16} /> DECODIFICADOR</button>
-                <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}>🧿 TRADUZIR</button>
+                <button type="button" className={`btn-tool-tab ${forensicMode === 'lens' ? 'active-purple' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left' }} onClick={() => { disableAllBut('lens'); setShowMoreTools(false); }}><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</button>
               </>
             )
           })()}
@@ -1524,7 +1750,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   <span title="Evidência protegida" style={{ marginLeft: 8, color: '#f39c12', fontWeight: 700 }}><Lock className="lucide-icon inline-icon" size={16} /></span>
                 )}
                 {hasRecord && (
-                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}>🧾</span>
+                  <span title="Prontuário disponível" style={{ marginLeft: 8, color: '#9ee7c8', fontWeight: 700 }}><FileText className="lucide-icon inline-icon" size={15} /></span>
                 )}
                 {currentCard.metadata?.type && <span className="type-tag">{currentCard.metadata.type}</span>}
                 {contactNameInferred && (
@@ -1532,14 +1758,14 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 )}
 
                 {/* Toggle buttons for available media types (desktop only) */}
-                <div className="media-toggle" style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <div className="media-toggle" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                   {hasImage && (
                     <button
                       type="button"
                       className={`btn-tool-tab ${visualMode === 'image' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('image'); }}
                     >
-                      📸 FOTO
+                      <Camera className="lucide-icon inline-icon" size={15} /> FOTO
                     </button>
                   )}
                   {hasVideo && (
@@ -1548,7 +1774,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       className={`btn-tool-tab ${visualMode === 'video' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('video'); }}
                     >
-                      🎥 VÍDEO
+                      <Video className="lucide-icon inline-icon" size={15} /> VÍDEO
                     </button>
                   )}
                   {hasAudio && (
@@ -1566,7 +1792,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                       className={`btn-tool-tab ${visualMode === 'phone' ? 'active-green' : ''}`}
                       onClick={(e) => { e.stopPropagation(); setVisualMode('phone'); }}
                     >
-                      💬 CHATS
+                      <MessageSquare className="lucide-icon inline-icon" size={15} /> CHATS
                     </button>
                   )}
                 </div>
@@ -1597,7 +1823,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                         setExpanderAudioSrc(String(audioSrc));
 
                         setTimeout(() => {
-                          setAudioExpanderOpen(true);
+                          if (isMounted.current) setAudioExpanderOpen(true);
                           console.log('[InspectionModal] Audio modal opened');
                           audioExpanderLockRef.current = false;
                         }, 50);
@@ -1613,19 +1839,28 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   }}
                   style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                 >
-                  {visualMode === 'audio' ? '🎵 EXPANDIR' : visualMode === 'phone' ? '📱 EXPANDIR' : '🔍 EXPANDIR'}
+                  {visualMode === 'audio' ? <><Music className="lucide-icon inline-icon" size={15} /> EXPANDIR</> : visualMode === 'phone' ? <><Smartphone className="lucide-icon inline-icon" size={15} /> EXPANDIR</> : <><Search className="lucide-icon inline-icon" size={15} /> EXPANDIR</>}
                 </button>
 
-                <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}>🧪 TRATAMENTO</button>
+                <button
+                  type="button"
+                  className="btn-tool-tab btn-fullscreen"
+                  title="Alternar Tela Cheia"
+                  onClick={handleToggleFullscreen}
+                >
+                  <Maximize2 className="lucide-icon inline-icon" size={16} /> TELA CHEIA
+                </button>
 
-                <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}>🔦 LUZ UV</button>
+                <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}><SlidersHorizontal className="lucide-icon inline-icon" size={15} /> TRATAMENTO</button>
+
+                <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}><Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV</button>
 
                 {isGlitchPuzzleGlobal && (
                   <button
                     className={`btn-tool-tab ${showGlitchSolver ? 'active-green' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setShowGlitchSolver(true); }}
                   >
-                    🧩 DECODIFICAR
+                    <Puzzle className="lucide-icon inline-icon" size={15} /> DECODIFICAR
                   </button>
                 )}
 
@@ -1658,12 +1893,12 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                 {/* Expandir button moved to main toolbar as contextual control */}
 
-                <button className="btn-close" onClick={onClose}>&times;</button>
+                <button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button>
               </div>
             </>
           ) : (
             <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-              <button className="btn-close" onClick={onClose}>✖</button>
+              <button className="btn-close-modal btn-close" onClick={onClose} aria-label="Fechar modal" title="Fechar modal"><X size={18} /></button>
             </div>
           )}
         </div>
@@ -1677,20 +1912,36 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               const lockPass = card.lock_password;
               const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
               if (isNumeric) {
-                return <NumericKeypad code={lockPass} onUnlock={persistUnlockForCard} />;
+                return (
+                  <NumericKeypad
+                    code={lockPass}
+                    onUnlock={(unlockedCode) => persistUnlockForCard(unlockedCode || String(lockPass), 'keypad')}
+                  />
+                );
               }
               return (
                 <HackingTerminal
                   correctPassword={lockPass}
-                  onUnlock={persistUnlockForCard}
+                  onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
                   hint={card.description_public}
                 />
               );
             })()}
           </div>
         ) : (
-          <React.Fragment>
+          <div className={`inspect-body-split ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             <div className={`inspect-visual-area ${isGlitchPuzzleGlobal && showGlitchSolver ? 'is-glitching glitch-mode' : ''}`} style={{ position: 'relative' }}>
+              {visualMode !== 'phone' && (
+                <button
+                  type="button"
+                  className="btn-toggle-sidebar"
+                  onClick={() => setSidebarCollapsed(prev => !prev)}
+                  title={sidebarCollapsed ? "Expandir painel de informações" : "Recolher painel de informações (Foco total)"}
+                  aria-label={sidebarCollapsed ? "Expandir painel lateral" : "Recolher painel lateral"}
+                >
+                  {sidebarCollapsed ? '◀ DETALHES' : 'RECOLHER ▶'}
+                </button>
+              )}
               {renderVisualContent()}
               {visualMode === 'phone' && (
                 <button
@@ -1763,14 +2014,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 <div className="tools-hud-panel">
                   <div className="hud-title">ESTAÇÃO DE DECIFRAGEM</div>
                   <div style={{ width: '100%' }}>
-                    <UniversalDecoder />
+                    <UniversalDecoder
+                      initialInput={
+                        decoderPayloadOverride !== undefined
+                          ? decoderPayloadOverride
+                          : (currentCard.metadata?.cipher_text || currentCard.description_public || '')
+                      }
+                      investigationId={currentCard?.investigation_id ? String(currentCard.investigation_id) : undefined}
+                    />
                   </div>
                 </div>
               )}
 
               {forensicMode === 'lens' && (
                 <div className="tools-hud-panel">
-                  <div className="hud-title">🧿 TRADUZIR</div>
+                  <div className="hud-title"><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</div>
                   <div style={{ width: '100%' }}>
                     <DecipherLens realText={currentCard.metadata?.real_text} cipherText={currentCard.metadata?.cipher_text} />
                   </div>
@@ -1779,9 +2037,21 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
               {forensicMode === 'hex' && (
                 <div className="tools-hud-panel">
-                  <div className="hud-title">⌨️ INSPETOR HEXADECIMAL</div>
+                  <div className="hud-title"><Keyboard className="lucide-icon inline-icon" size={15} /> INSPETOR HEXADECIMAL</div>
                   <div style={{ width: '100%' }}>
-                    <HexViewer hiddenMessage={currentCard.metadata?.hex_code || currentCard.metadata?.hex_hidden_message || ''} />
+                    <HexViewer
+                      hiddenMessage={
+                        currentCard.metadata?.hex_code ||
+                        currentCard.metadata?.hex_hidden_message ||
+                        currentCard.metadata?.technical_note ||
+                        ''
+                      }
+                      focused={true}
+                      onSendToDecoder={(hexText) => {
+                        setDecoderPayloadOverride(hexText);
+                        setForensicMode('decoder');
+                      }}
+                    />
                   </div>
                 </div>
               )}
@@ -1789,24 +2059,84 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               {/* audio is displayed via the 'audio' visual mode/tab now */}
             </div>
 
-            {visualMode !== 'phone' && (
-              <div className="inspect-details">
+            {visualMode !== 'phone' && !sidebarCollapsed && (
+              <aside className="inspect-details" aria-label="Detalhes da evidência">
 
                 {/* Coluna com SCROLL automático */}
                 <div className="text-col">
                   <h2>{card.title}</h2>
 
-                  <span className="desc-title">DESCRIÇÃO:</span>
-                  <p className="public-desc">
-                    {card.description_public || "Nenhuma descrição fornecida."}
-                  </p>
-
-                  {isGameMaster && card.description_hidden && (
-                    <div className="gm-note">
-                      <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
-                      {card.description_hidden}
+                  {/* Toggle Mestre: Público vs Oculto */}
+                  {isGameMaster && (
+                    <div className="gm-mode-toggle">
+                      <button
+                        type="button"
+                        className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                        onClick={() => setGmActiveTab('public')}
+                      >
+                        <Eye size={16} /> MODO PÚBLICO
+                      </button>
+                      <button
+                        type="button"
+                        className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                        onClick={() => setGmActiveTab('hidden')}
+                      >
+                        <Lock size={16} /> MODO OCULTO (MESTRE)
+                      </button>
                     </div>
                   )}
+
+                  {(!isGameMaster || gmActiveTab === 'public') ? (
+                    <>
+                      <span className="desc-title">DESCRIÇÃO:</span>
+                      <p className="public-desc">
+                        {card.description_public || "Nenhuma descrição fornecida."}
+                      </p>
+                    </>
+                  ) : (
+                    isGameMaster && gmActiveTab === 'hidden' && (
+                      <div className="gm-hidden-section">
+                        <span className="desc-title" style={{ color: '#c6a45f' }}>
+                          <Lock className="lucide-icon inline-icon" size={16} /> DESCRIÇÃO OCULTA (CONFIDENCIAL):
+                        </span>
+                        <div className="gm-note" style={{ marginTop: 6 }}>
+                          {card.description_hidden || "Nenhuma descrição oculta registrada."}
+                        </div>
+                        {card.lock_password && (
+                          <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
+                            <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                  {/* Ações Rápidas: Enviar para Decoder / Abrir no Hex (seguro: apenas conteúdo público/cifrado, nunca description_hidden) */}
+                  <div className="inspect-quick-forensics">
+                    <button
+                      type="button"
+                      className="btn-tool-tab"
+                      onClick={() => {
+                        const safeText = currentCard.metadata?.cipher_text || currentCard.description_public || '';
+                        if (onSendToDecoder) {
+                          onSendToDecoder(safeText);
+                        } else {
+                          setDecoderPayloadOverride(safeText);
+                          setForensicMode('decoder');
+                        }
+                      }}
+                      title="Enviar texto público/cifrado para o Decoder"
+                    >
+                      <KeyRound className="lucide-icon inline-icon" size={15} /> Enviar para Decoder
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-tool-tab"
+                      onClick={() => setForensicMode(prev => prev === 'hex' ? 'none' : 'hex')}
+                      title="Abrir conteúdo técnico/hex no Inspetor Hexadecimal"
+                    >
+                      <Keyboard className="lucide-icon inline-icon" size={15} /> Abrir no Hex
+                    </button>
+                  </div>
 
                   {/* Mega-clue: Verdade final e imagem (visível quando desbloqueada ou para GMs) */}
                   {megaClueMeta && (
@@ -1838,20 +2168,20 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
                       {/* Mostrar APENAS field_values com valores reais */}
                       <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
-                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>📋 Informações do Arquivo</div>
+                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>Informações do Arquivo</div>
                         {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
                           // Só mostra se tem valor real
                           if (!val && val !== 0) return null;
 
                           const labelMap: Record<string, string> = {
-                            date_created: '📅 Data',
-                            gps_coords: '📍 Localização',
-                            device_owner: '👤 Proprietário',
-                            camera_model: '📷 Câmera',
-                            technical_note: '🔧 Nota Técnica',
-                            chat_contact_name: '💬 Contato',
-                            stamp: '🔖 Carimbo',
-                            external_link: '🔗 Link Externo'
+                            date_created: 'Data',
+                            gps_coords: 'Localização',
+                            device_owner: 'Proprietário',
+                            camera_model: 'Câmera',
+                            technical_note: 'Nota Técnica',
+                            chat_contact_name: 'Contato',
+                            stamp: 'Carimbo',
+                            external_link: 'Link Externo'
                           };
                           const label = labelMap[key] || key;
                           return (
@@ -1892,12 +2222,66 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
 
                 {/* Coluna de Botões Fixos */}
-                <div className="controls-col" style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 200, flexShrink: 0 }}>
+                <div className="controls-col">
                   {isGameMaster && (
                     <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                      ✎ EDITAR DADOS
+                      <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
                     </button>
                   )}
+
+                  {/* Status da Pista */}
+                  <div className="clue-status-control">
+                    <span className="control-label" style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>STATUS DA PISTA:</span>
+                    <div className="status-button-group">
+                      <button
+                        type="button"
+                        className={`btn-status pending ${(currentCard.status === 'pending' || !currentCard.status) ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('pending')}
+                        title="Marcar como pendente"
+                      >
+                        <Clock className="lucide-icon inline-icon" size={14} /> PENDENTE
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-status confirmed ${currentCard.status === 'confirmed' ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('confirmed')}
+                        title="Marcar como confirmada"
+                      >
+                        <CheckCircle2 className="lucide-icon inline-icon" size={14} /> CONFIRMADA
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-status debunked ${currentCard.status === 'debunked' ? 'active' : ''}`}
+                        onClick={() => handleUpdateStatus('debunked')}
+                        title="Marcar como descartada"
+                      >
+                        <XCircle className="lucide-icon inline-icon" size={14} /> DESCARTADA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Ordem de Camada Z */}
+                  <div className="z-order-controls">
+                    <span className="control-label" style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>ORDEM Z:</span>
+                    <div className="z-button-group">
+                      <button
+                        type="button"
+                        className="btn-z-order"
+                        onClick={() => handleUpdateZIndex(1)}
+                        title="Trazer para frente"
+                      >
+                        <ArrowUp size={16} /> ELEVAR (Z: {currentCard.z_index ?? 1})
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-z-order"
+                        onClick={() => handleUpdateZIndex(-1)}
+                        title="Enviar para trás"
+                      >
+                        <ArrowDown size={16} /> REBAIXAR
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Exemplo de botão extra se for pessoa */}
                   {card.metadata?.type === 'person' && (
@@ -1913,7 +2297,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   )}
                 </div>
 
-              </div>
+              </aside>
             )}
 
             {visualMode === 'phone' && showPhoneDetails && (
@@ -1922,14 +2306,48 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                   <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
                     <div style={{ paddingRight: 10 }}>
                       <h2 style={{ color: '#f2f2f2', marginTop: 0 }}>{card.title}</h2>
-                      <span className="desc-title">DESCRIÇÃO:</span>
-                      <p className="public-desc">{card.description_public || 'Nenhuma descrição fornecida.'}</p>
 
-                      {isGameMaster && card.description_hidden && (
-                        <div className="gm-note">
-                          <strong style={{ color: '#c6a45f' }}><Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:</strong><br />
-                          {card.description_hidden}
+                      {/* Toggle Mestre: Público vs Oculto */}
+                      {isGameMaster && (
+                        <div className="gm-mode-toggle" style={{ marginBottom: 10 }}>
+                          <button
+                            type="button"
+                            className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                            onClick={() => setGmActiveTab('public')}
+                          >
+                            <Eye size={14} /> PÚBLICO
+                          </button>
+                          <button
+                            type="button"
+                            className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                            onClick={() => setGmActiveTab('hidden')}
+                          >
+                            <Lock size={14} /> OCULTO
+                          </button>
                         </div>
+                      )}
+
+                      {(!isGameMaster || gmActiveTab === 'public') ? (
+                        <>
+                          <span className="desc-title">DESCRIÇÃO:</span>
+                          <p className="public-desc">{card.description_public || 'Nenhuma descrição fornecida.'}</p>
+                        </>
+                      ) : (
+                        isGameMaster && gmActiveTab === 'hidden' && (
+                          <div className="gm-hidden-section">
+                            <span className="desc-title" style={{ color: '#c6a45f' }}>
+                              <Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:
+                            </span>
+                            <div className="gm-note" style={{ marginTop: 6 }}>
+                              {card.description_hidden || 'Nenhuma descrição oculta registrada.'}
+                            </div>
+                            {card.lock_password && (
+                              <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
+                                <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
+                              </div>
+                            )}
+                          </div>
+                        )
                       )}
 
                       {card.metadata && Object.keys(card.metadata).length > 0 && (
@@ -1966,11 +2384,11 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                     </div>
                   </div>
 
-                  <div style={{ width: 200, flexShrink: 0 }}>
+                  <div className="controls-col">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {isGameMaster && (
                         <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                          ✎ EDITAR DADOS
+                          <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
                         </button>
                       )}
                       {card.metadata?.type === 'person' && (
@@ -1989,7 +2407,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </div>
               </div>
             )}
-          </React.Fragment>
+          </div>
         )}
       </div>
     </div>
@@ -2029,7 +2447,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               <span className="glitch-title">Painel de Sincronização</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)}>✖</button>
+              <button className="btn-tool-tab" onClick={() => setShowGlitchSolver(false)} aria-label="Fechar"><X size={15} /></button>
             </div>
           </div>
           <div className="glitch-solver-body">
@@ -2067,7 +2485,15 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
 
           {/* ÁREA DA IMAGEM (STAGE) */}
           {/* A classe fullscreen-stage é alvo do nosso useEffect de Zoom novo */}
-          <div className="fullscreen-stage" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fullscreen-stage"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={handleEvidencePointerMove}
+            onPointerMove={handleEvidencePointerMove}
+            onTouchStart={handleEvidenceTouchMove}
+            onTouchMove={handleEvidenceTouchMove}
+            style={{ touchAction: 'none' }}
+          >
             {visualMode === 'phone' ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <PhoneViewer
@@ -2114,7 +2540,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
               {/* Botões de Ação */}
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button className={`btn-hud ${localUV ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalUV(!localUV) }}>
-                  🔦 LUZ UV
+                  <Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV
                 </button>
 
                 <button className={`btn-hud ${localThermal ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setLocalThermal(!localThermal) }}>
@@ -2122,7 +2548,7 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
                 </button>
 
                 <button className={`btn-hud ${forensicMode !== 'none' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setForensicMode(p => p === 'channel' ? 'none' : 'channel') }}>
-                  🔬 FORENSE
+                  <Microscope className="lucide-icon inline-icon" size={15} /> FORENSE
                 </button>
 
                 {forensicMode === 'channel' && (
@@ -2162,25 +2588,9 @@ export default function InspectionModal({ isOpen, onClose, card, onEdit, isGameM
         </div>, document.body
       )}
 
-      <AudioViewerModal
-        isOpen={audioExpanderOpen}
-        onClose={() => setAudioExpanderOpen(false)}
-        audioSrc={expanderAudioSrc}
-        title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'}
-      />
+      {audioExpanderOpen && <AudioViewerModal isOpen={audioExpanderOpen} onClose={() => setAudioExpanderOpen(false)} audioSrc={expanderAudioSrc} title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'} />}
 
-      <ShredderPuzzleModal
-        isOpen={shredderModalOpen}
-        onClose={() => setShredderModalOpen(false)}
-        imgSrc={unifiedMedia.imageUrl || currentCard.image_url}
-        rows={parsedMetadata?.shred_rows || 1}
-        cols={parsedMetadata?.shred_cols || 8}
-        isGameMaster={isGameMaster}
-        investigationId={currentCard.investigation_id}
-        cardId={currentCard.id}
-        evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'}
-        onPuzzleSolved={() => setPuzzleSolved(true)}
-      />
+      {shredderModalOpen && <ShredderPuzzleModal isOpen={shredderModalOpen} onClose={() => setShredderModalOpen(false)} imgSrc={unifiedMedia.imageUrl || currentCard.image_url} rows={parsedMetadata?.shred_rows || 1} cols={parsedMetadata?.shred_cols || 8} isGameMaster={isGameMaster} investigationId={currentCard.investigation_id} cardId={currentCard.id} evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'} onPuzzleSolved={() => setPuzzleSolved(true)} />}
     </>
   );
 }

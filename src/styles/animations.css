@@ -7,11 +7,12 @@
  * Import this file in main CSS entry point to avoid conflicts.
  */
 
-/* ============================================================================
-   WINDOW & MODAL ANIMATIONS
-   ========================================================================== */
+@layer base {
+  /* ============================================================================
+     WINDOW & MODAL ANIMATIONS
+     ========================================================================== */
 
-@keyframes openWindow {
+  @keyframes openWindow {
   from {
     transform: translate(-50%, -48%) scale(0.98);
     opacity: 0;
@@ -573,28 +574,13 @@
   }
 }
 
-@keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
+  @keyframes fadeInOverlay {
+    from {
+      opacity: 0;
+    }
 
-  to {
-    opacity: 1;
-  }
-}
-
-/* ============================================================================
-   SCREEN/CODE ANIMATIONS
-   ========================================================================== */
-
-@keyframes turnOnScreen {
-  0% {
-    opacity: 0;
-    transform: scale(1.1);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
+    to {
+      opacity: 1;
+    }
   }
 }

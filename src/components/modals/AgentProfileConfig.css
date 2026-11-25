@@ -14,24 +14,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 15000;
-  padding: 20px;
+  z-index: var(--z-modals, 2000);
+  padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
+  overscroll-behavior: contain;
 }
 
 .agent-profile-content {
-  background: linear-gradient(180deg, rgb(5 8 10 / 92%), rgb(5 8 10 / 85%));
-  border: 1px solid rgb(0 243 255 / 20%);
-  border-radius: 8px;
+  background: var(--surface, #11141b);
+  border: 1px solid var(--border, rgb(0 243 255 / 20%));
+  border-radius: var(--radius-md, 8px);
   max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
+  width: min(94vw, 900px);
+  max-height: 90dvh;
   overflow-y: auto;
-  padding: 30px;
+  overscroll-behavior: contain;
+  padding: var(--space-6, 24px);
   box-shadow:
     0 20px 50px rgb(0 0 0 / 60%),
     0 0 25px rgb(0 243 255 / 12%);
   position: relative;
-  font-family: "Share Tech Mono", monospace;
+  font-family: var(--font-system, "Share Tech Mono", monospace);
 }
 
 .profile-header {
@@ -334,11 +336,23 @@
 
 /* Responsive */
 @media (width <= 768px) {
-  .profile-form {
-    grid-template-columns: 1fr;
+  .agent-profile-modal {
+    padding: 0;
   }
 
   .agent-profile-content {
-    padding: 20px;
+    width: 100vw;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: var(--space-4, 16px);
+    padding-top: env(safe-area-inset-top, 16px);
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  .profile-form {
+    grid-template-columns: 1fr;
+    gap: var(--space-4, 16px);
   }
 }

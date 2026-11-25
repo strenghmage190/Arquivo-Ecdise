@@ -1,4 +1,3 @@
-import { Hand, Pen } from 'lucide-react';
 import React, { useState, lazy, Suspense } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -10,8 +9,8 @@ const Home = lazy(() => import('./pages/Home'));
 const InvestigationPage = lazy(() => import('./pages/Investigation'));
 const InvitePage = lazy(() => import('./pages/Invite'));
 const MobileTestPage = lazy(() => import('./pages/MobileTestPage'));
-import SystemOverlays from './components/ui/SystemOverlays';
-import BottomNavigationBar from './components/BottomNavigationBar';
+const SystemOverlays = lazy(() => import('./components/ui/SystemOverlays'));
+const BottomNavigationBar = lazy(() => import('./components/BottomNavigationBar'));
 const ForensicBenchmarkPage = lazy(() => import('./pages/__dev/ForensicBenchmarkPage'));
 // ConnectionLine removed for production layout
 import { Pencil } from 'lucide-react';
@@ -64,6 +63,26 @@ const InspectionModal: React.FC<InspectionModalProps> = ({ isOpen, onClose, onSa
   );
 };
 
+const ForensicLoader: React.FC<{ message?: string }> = ({ message = 'INICIALIZANDO SISTEMA FORENSE...' }) => (
+  <div className="min-h-screen bg-[#05080a] flex flex-col items-center justify-center text-emerald-400 font-mono p-4 select-none">
+    <div className="relative flex items-center justify-center mb-6">
+      <div className="w-16 h-16 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
+      <div className="absolute w-8 h-8 border border-emerald-500/40 border-b-emerald-300 rounded-full animate-ping" />
+      <div className="absolute text-[10px] tracking-widest text-emerald-300 font-bold">C.R.I.S.</div>
+    </div>
+    <div className="text-xs uppercase tracking-[0.25em] text-emerald-400 mb-2 font-bold animate-pulse">
+      [ ORDO REALITAS // PROTOCOLO FORENSE ]
+    </div>
+    <div className="text-[13px] tracking-wider text-emerald-200/80 max-w-xs text-center font-mono">
+      {message}
+    </div>
+    <div className="mt-4 flex items-center gap-1.5 text-[11px] text-emerald-500/60">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+      <span>SINCRONIZANDO REGISTROS CLASSIFICADOS</span>
+    </div>
+  </div>
+);
+
 function App() {
   const [interactionMode, setInteractionMode] = useState<'pan' | 'edit'>('pan');
   const isMobile = useIsMobile();
@@ -79,7 +98,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <div className="app-container">
-          <Suspense fallback={<div className="text-white text-center">Carregando...</div>}>
+          <Suspense fallback={<ForensicLoader />}>
             <Routes>
               <Route path="/login" element={<Login />} />
               
@@ -121,10 +140,14 @@ function App() {
             </Routes>
           </Suspense>
           </div>
-          <SystemOverlays />
+          <Suspense fallback={null}>
+            <SystemOverlays />
+          </Suspense>
       </BrowserRouter>
       {/* Interaction toggle moved into mobile-only FAB in this file; removed global hand button */}
-      <BottomNavigationBar />
+      <Suspense fallback={null}>
+        <BottomNavigationBar />
+      </Suspense>
       <Toaster 
         position={isMobile ? "bottom-center" : "bottom-right"} 
         containerStyle={{

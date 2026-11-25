@@ -1,26 +1,28 @@
 .al-synth-panel {
+  container-type: inline-size;
+  container-name: synth-panel;
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: var(--spacing-sm);
-  gap: var(--spacing-sm);
+  padding: var(--space-2, 8px);
+  gap: var(--space-2, 8px);
 }
 
 .al-synth-header {
-  font-family: var(--font-mono);
-  color: var(--color-neon-purple);
+  font-family: var(--font-terminal, monospace);
+  color: var(--el-energia-soft, #bc13fe);
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding-bottom: var(--spacing-xs);
+  gap: var(--space-1, 4px);
+  padding-bottom: var(--space-1, 4px);
   border-bottom: 1px solid rgba(188, 19, 254, 0.2);
 }
 
 .al-synth-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4, 16px);
   flex: 1;
 }
 
@@ -32,7 +34,7 @@
 
 .al-synth-control label {
   font-size: 12px;
-  color: var(--color-text-dim);
+  color: var(--text-secondary, #6a8aaa);
 }
 
 .al-synth-control select,
@@ -41,9 +43,9 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   padding: 6px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  border-radius: 4px;
+  font-family: var(--font-terminal, monospace);
+  font-size: 16px; /* evita zoom mobile */
+  border-radius: var(--radius-sm, 4px);
   width: 100%;
 }
 
@@ -57,15 +59,22 @@
   justify-content: center;
   gap: 8px;
   background: rgba(188, 19, 254, 0.1);
-  border: 1px solid var(--color-neon-purple);
-  color: var(--color-neon-purple);
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
+  border: 1px solid var(--el-energia-soft, #bc13fe);
+  color: var(--el-energia-soft, #bc13fe);
+  min-height: var(--control-h-md, 40px);
+  padding: 0 var(--space-4, 16px);
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-terminal, monospace);
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: auto;
+}
+
+@container synth-panel (max-width: 400px) {
+  .al-synth-generate-btn {
+    min-height: var(--control-h-md-mobile, 44px);
+  }
 }
 
 .al-synth-generate-btn:hover {

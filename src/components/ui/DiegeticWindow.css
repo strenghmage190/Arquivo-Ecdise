@@ -1,25 +1,23 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
-
 .diegetic-window {
-  width: 880px;
-  max-width: calc(100% - 48px);
-  background: linear-gradient(180deg, rgb(5 8 10 / 95%), rgb(5 8 10 / 88%));
-  border: 2px solid rgb(0 243 255 / 20%);
+  width: min(94vw, 880px);
+  max-height: 90dvh;
+  background: linear-gradient(180deg, rgb(11 12 16 / 98%), rgb(17 20 27 / 96%));
+  border: 1px solid var(--border, #29313d);
   box-shadow:
-    0 12px 40px rgb(0 0 0 / 70%),
-    0 0 20px rgb(0 243 255 / 8%);
-  color: #e9fcff;
-  border-radius: 6px;
+    0 16px 50px rgb(0 0 0 / 85%),
+    0 0 20px rgb(230 57 70 / 10%);
+  color: var(--text-primary, #f1f5f9);
+  border-radius: var(--radius-sm, 4px);
   overflow: hidden;
-  z-index: 13000;
+  z-index: var(--z-modals, 2000);
   position: fixed;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  max-height: 96vh;
   display: flex;
   flex-direction: column;
-  font-family: "Share Tech Mono", monospace;
+  font-family: var(--font-system, monospace);
+  overscroll-behavior: contain;
 }
 
 .diegetic-titlebar {
@@ -27,18 +25,25 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: rgb(0 243 255 / 5%);
-  border-bottom: 1px solid rgb(0 243 255 / 15%);
-  font-family: "Share Tech Mono", monospace;
-  color: #00f3ff;
-  font-size: 13px;
+  background: rgb(0 0 0 / 40%);
+  border-bottom: 1px solid var(--border, #29313d);
+  font-family: var(--font-system, monospace);
+  color: var(--text-primary, #f1f5f9);
+  font-size: var(--font-size-xs, 13px);
   letter-spacing: 2px;
   text-transform: uppercase;
-  gap: 12px;
+  gap: var(--space-3, 12px);
+  flex-shrink: 0;
 }
 
 .title-left {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--institutional-red, #e63946);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .title-extra {
@@ -46,64 +51,80 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  min-width: 0;
 }
 
 .diegetic-body {
-  padding: 14px;
-  overflow: hidden;
+  padding: var(--space-4, 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  flex: 1;
 }
 
 .title-controls {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .ctrl-btn {
   background: transparent;
-  border: 1px solid rgb(0 243 255 / 20%);
-  color: #00f3ff;
-  width: 28px;
-  height: 22px;
+  border: 1px solid var(--border, #29313d);
+  color: var(--text-secondary, #94a3b8);
+  width: 32px;
+  height: 28px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm, 4px);
+  touch-action: manipulation;
 }
 
 .ctrl-btn:hover {
-  border-color: #00f3ff;
-  box-shadow: 0 0 8px rgb(0 243 255 / 20%);
+  border-color: var(--text-primary, #f1f5f9);
+  color: var(--text-primary, #f1f5f9);
 }
 
 .ctrl-btn.close {
-  border-color: rgb(255 0 60 / 30%);
-  color: #ff003c;
+  border-color: rgb(230 57 70 / 40%);
+  color: var(--institutional-red, #e63946);
 }
 
 .ctrl-btn.close:hover {
-  border-color: #ff003c;
-  box-shadow: 0 0 8px rgb(255 0 60 / 20%);
+  background: var(--institutional-red, #e63946);
+  color: #fff;
+  box-shadow: 0 0 10px rgb(230 57 70 / 50%);
 }
 
 .diegetic-minibar {
   position: fixed;
-  left: 12px;
-  bottom: 12px;
-  background: rgb(5 8 10 / 95%);
+  left: calc(env(safe-area-inset-left, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  background: var(--surface, #11141b);
   padding: 10px 14px;
-  border-radius: 6px;
-  border: 1px solid rgb(0 243 255 / 20%);
+  min-height: var(--control-h-md, 40px);
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border, #29313d);
   cursor: pointer;
-  z-index: 14000;
-  font-family: "Share Tech Mono", monospace;
-  color: #00f3ff;
-  transition: all 0.2s;
+  z-index: var(--z-hud, 1000);
+  font-family: var(--font-system, monospace);
+  color: var(--text-primary, #f1f5f9);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
+  touch-action: manipulation;
 }
 
 .diegetic-minibar:hover {
-  border-color: #00f3ff;
-  box-shadow: 0 0 12px rgb(0 243 255 / 15%);
+  border-color: var(--institutional-red, #e63946);
 }
 
-.diegetic-minibar .mini-title {
-  font-size: 12px;
-  letter-spacing: 1px;
+@media (pointer: coarse) {
+  .ctrl-btn {
+    min-width: var(--control-h-md-mobile, 44px);
+    min-height: var(--control-h-md-mobile, 44px);
+  }
 }

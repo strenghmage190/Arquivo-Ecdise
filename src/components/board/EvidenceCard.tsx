@@ -1,4 +1,4 @@
-import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
+import { Check, CircleHelp, Eye, FileText, FolderOpen, Image as ImageIcon, KeyRound, Keyboard, Link2, Lock, MessageSquare, Pencil, Thermometer, User, Video, Volume2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 import './EvidenceCard.css'
 import EvidenceCardContent from './EvidenceCardContent'
@@ -30,9 +30,13 @@ export interface EvidenceCardProps {
   performanceMode?: boolean
   blurred?: boolean
   element?: string | null
+  semanticCompact?: boolean
+  isNew?: boolean
+  onSendToDecoder?: () => void
+  onOpenHex?: () => void
 }
 
-const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null }) => {
+const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title = 'RELATÓRIO GÊMEOS', isUV = false, status = null, onToggleStatus, onOpen, onEdit, locked = false, hasRecord = false, fileType = 'image', hasUV = false, hasHiddenAudio = false, hasAudio = false, hasVideo = false, hasChat = false, hasThermal = false, hasStamp = false, hasExternalLink = false, isGameMaster = false, playerView = false, cardType = 'normal', performanceMode = false, blurred = false, element = null, semanticCompact = false, isNew = false, onSendToDecoder, onOpenHex }) => {
   // DEBUG: Log de props importantes
   if (cardType !== 'normal' || locked || isUV) {
     console.log(`[EvidenceCard ${id}] cardType=${cardType}, locked=${locked}, isGameMaster=${isGameMaster}, playerView=${playerView}, isUV=${isUV}`)
@@ -45,10 +49,74 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
   const shortId = id ? (String(id).length > 10 ? `${String(id).slice(0, 8)}...` : String(id)) : '';
 
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMotion = performanceMode || prefersReducedMotion;
+
+  // Efeito rápido de decrypt/scramble (~250ms) quando status muda ou pista é revelada
+  const prevStatusRef = useRef<string | null | undefined>(status);
+  const prevLockedRef = useRef<boolean>(locked);
+  const prevCardTypeRef = useRef<string>(cardType);
+  const [stampFlash, setStampFlash] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [scrambledTitle, setScrambledTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    const statusChanged = prevStatusRef.current !== status;
+    const justUnlocked = prevLockedRef.current && !locked;
+    const justRevealedFromHidden = prevCardTypeRef.current === 'hidden' && cardType !== 'hidden';
+    prevStatusRef.current = status;
+    prevLockedRef.current = locked;
+    prevCardTypeRef.current = cardType;
+
+    if ((!statusChanged && !justUnlocked && !justRevealedFromHidden) || reducedMotion) return;
+
+    setStampFlash(true);
+    const flashTimer = window.setTimeout(() => setStampFlash(false), 260);
+    let revealTimer: number | null = null;
+    if (justUnlocked || justRevealedFromHidden) {
+      setIsRevealing(true);
+      revealTimer = window.setTimeout(() => setIsRevealing(false), 360);
+    }
+
+    const baseTitle = cardType === 'hidden' ? `[OCULTA] ${title}` : title;
+    const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%';
+    let step = 0;
+    const totalSteps = 5;
+    const scrambleInterval = window.setInterval(() => {
+      step += 1;
+      if (step >= totalSteps) {
+        window.clearInterval(scrambleInterval);
+        setScrambledTitle(null);
+        return;
+      }
+      const revealCount = Math.floor((step / totalSteps) * baseTitle.length);
+      const next = baseTitle
+        .split('')
+        .map((ch, idx) => (ch === ' ' || idx < revealCount ? ch : glyphs[Math.floor(Math.random() * glyphs.length)]))
+        .join('');
+      setScrambledTitle(next);
+    }, 50);
+
+    return () => {
+      window.clearTimeout(flashTimer);
+      if (revealTimer !== null) window.clearTimeout(revealTimer);
+      window.clearInterval(scrambleInterval);
+      setScrambledTitle(null);
+    };
+  }, [status, locked, title, cardType, reducedMotion]);
+
   // Lazy render para economizar re-renders e trabalho de imagem fora da viewport
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
+
+  useEffect(() => {
+    if (!hasScanned || reducedMotion) return;
+    setIsRevealing(true);
+    const t = window.setTimeout(() => setIsRevealing(false), 360);
+    return () => window.clearTimeout(t);
+  }, [hasScanned, reducedMotion]);
+
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -95,6 +163,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
     status ? `status-${(status === 'verified' ? 'true' : status)}` : '',
     isUV ? 'is-uv' : '',
     locked ? 'is-locked' : '',
+    stampFlash ? 'stamp-flash' : '',
+    isRevealing ? 'is-revealing' : '',
+    semanticCompact ? 'semantic-compact' : '',
     performanceMode ? 'performance-mode' : ''
   ].filter(Boolean).join(' ');
 
@@ -145,6 +216,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {hasStamp && <div className="type-badge small stamp" title="Carimbo"><Check size={14} /></div>}
           {hasExternalLink && <div className="type-badge small link" title="Link Externo"><Link2 size={14} /></div>}
           {cardType === 'hidden' && <div className="type-badge small hidden" title="Pista Oculta"><Eye size={14} /></div>}
+          {isNew && !(isGameMaster && !playerView) && (
+            <div className="evidence-new-badge" title="Pista recém-descoberta ainda não aberta">NOVA</div>
+          )}
         </div>
 
         {/* <Check className="lucide-icon inline-icon" size={16} /> Content container with view classes - NO NESTING */}
@@ -152,7 +226,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           <EvidenceCardContent
             id={id}
             image={isVisible ? image : undefined}
+            hasImage={Boolean(image)}
             hiddenSrc={hiddenSrc}
+            title={title}
             isUV={isUV}
             locked={locked}
             cardType={cardType}
@@ -160,6 +236,9 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
             playerView={playerView}
             hasUV={hasUV}
             hasHiddenAudio={hasHiddenAudio}
+            hasAudio={hasAudio}
+            hasVideo={hasVideo}
+            hasChat={hasChat}
             fileType={fileType}
             performanceMode={performanceMode}
             blurred={blurred}
@@ -173,8 +252,14 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
           {locked && <span className="clue-inline-icon" title="Evidência Protegida por Senha"><Lock size={14} /></span>}
           {hasRecord && <span className="clue-inline-icon" title="Prontuário / Ficha da vítima"><User size={14} /></span>}
         </div>
-        <h3 style={{ marginTop: 6 }}>{locked && !isGameMaster ? '#######' : cardType === 'hidden' ? `[OCULTA] ${title}` : title}</h3>
-        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[ASSIGNED]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
+        <h3 style={{ marginTop: 6 }}>
+          {locked && !isGameMaster ? (
+            <span className="redacted-block" aria-label="Conteúdo redigido">[REDIGIDO]</span>
+          ) : (
+            scrambledTitle ?? (cardType === 'hidden' ? `[OCULTA] ${title}` : title)
+          )}
+        </h3>
+        {status && <span className="evidence-state-stamp" aria-label="Estado da evidência">{status === 'false' ? '[DESCARTADO]' : status === 'theory' ? '' : '[VALIDADO]'}</span>}
       </div>
 
       <div className="decision-bar">
@@ -194,6 +279,26 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
         <button className="btn-decision open" onClick={(e) => { e.stopPropagation(); if (onOpen) onOpen(); }} title="Abrir Arquivo" aria-label="open">
           <FolderOpen size={16} />
         </button>
+        {(!locked || (isGameMaster && !playerView)) && onSendToDecoder && (
+          <button
+            className="btn-decision decoder"
+            onClick={(e) => { e.stopPropagation(); onSendToDecoder(); }}
+            title="Enviar para Decoder"
+            aria-label="Enviar para Decoder"
+          >
+            <KeyRound size={16} />
+          </button>
+        )}
+        {(!locked || (isGameMaster && !playerView)) && onOpenHex && (
+          <button
+            className="btn-decision hex"
+            onClick={(e) => { e.stopPropagation(); onOpenHex(); }}
+            title="Abrir no Hex"
+            aria-label="Abrir no Hex"
+          >
+            <Keyboard size={16} />
+          </button>
+        )}
         {isGameMaster && !playerView && onEdit && (
           <button className="btn-decision edit" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Editar Pista" aria-label="edit">
             <Pencil size={16} />
@@ -206,7 +311,7 @@ const EvidenceCard: React.FC<EvidenceCardProps> = ({ id, image, hiddenSrc, title
 
 const propsAreEqual = (prev: EvidenceCardProps, next: EvidenceCardProps) => {
   const keys: Array<keyof EvidenceCardProps> = [
-    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element'
+    'id','image','hiddenSrc','title','isUV','status','locked','hasRecord','fileType','hasUV','hasHiddenAudio','hasAudio','hasVideo','hasChat','hasThermal','hasStamp','hasExternalLink','isGameMaster','playerView','cardType','performanceMode','blurred','element','semanticCompact','isNew'
   ];
   // Nota: onEdit e onOpen são funções, comparação por referência pode causar re-renders
   return keys.every((k) => prev[k] === next[k]);

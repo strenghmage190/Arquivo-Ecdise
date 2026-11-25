@@ -1,7 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { eventManager } from '../utils/EventManager';
 
-interface MouseEventHandlers {
+export interface MouseEventHandlers {
   onMouseMove?: (e: MouseEvent) => void;
   onMouseDown?: (e: MouseEvent) => void;
   onMouseUp?: (e: MouseEvent) => void;
@@ -12,77 +12,76 @@ interface MouseEventHandlers {
 }
 
 /**
- * Hook centralizado para eventos globais de mouse/touch
- * Previne duplicação de event listeners
- * 
- * @example
- * useGlobalMouseEvents({
- *   onMouseUp: () => setDragging(false),
- *   onTouchEnd: () => setDragging(false)
- * });
+ * Hook centralizado para eventos globais de mouse/touch.
+ * Usa ref estável para evitar re-inscrições desnecessárias a cada render.
  */
 export function useGlobalMouseEvents(handlers: MouseEventHandlers) {
-  // Memoizar handlers para evitar re-registros
-  const memoizedHandlers = useCallback(() => handlers, [
-    handlers.onMouseMove,
-    handlers.onMouseDown,
-    handlers.onMouseUp,
-    handlers.onTouchStart,
-    handlers.onTouchEnd,
-    handlers.onMouseOver,
-    handlers.onMouseOut
-  ]);
+  const handlersRef = useRef<MouseEventHandlers>(handlers);
+  handlersRef.current = handlers;
+
+  const hasMouseMove = Boolean(handlers.onMouseMove);
+  const hasMouseDown = Boolean(handlers.onMouseDown);
+  const hasMouseUp = Boolean(handlers.onMouseUp);
+  const hasTouchStart = Boolean(handlers.onTouchStart);
+  const hasTouchEnd = Boolean(handlers.onTouchEnd);
+  const hasMouseOver = Boolean(handlers.onMouseOver);
+  const hasMouseOut = Boolean(handlers.onMouseOut);
 
   useEffect(() => {
     const unsubscribers: Array<() => void> = [];
-    const currentHandlers = memoizedHandlers();
 
-    // Registrar handlers customizados
-    if (currentHandlers.onMouseMove) {
+    if (hasMouseMove) {
       unsubscribers.push(
-        eventManager.on('global:mousemove', currentHandlers.onMouseMove)
+        eventManager.on('global:mousemove', (e: MouseEvent) => handlersRef.current.onMouseMove?.(e))
       );
     }
 
-    if (currentHandlers.onMouseDown) {
+    if (hasMouseDown) {
       unsubscribers.push(
-        eventManager.on('global:mousedown', currentHandlers.onMouseDown)
+        eventManager.on('global:mousedown', (e: MouseEvent) => handlersRef.current.onMouseDown?.(e))
       );
     }
 
-    if (currentHandlers.onMouseUp) {
+    if (hasMouseUp) {
       unsubscribers.push(
-        eventManager.on('global:mouseup', currentHandlers.onMouseUp)
+        eventManager.on('global:mouseup', (e: MouseEvent) => handlersRef.current.onMouseUp?.(e))
       );
     }
 
-    if (currentHandlers.onTouchStart) {
+    if (hasTouchStart) {
       unsubscribers.push(
-        eventManager.on('global:touchstart', currentHandlers.onTouchStart as any)
+        eventManager.on('global:touchstart', (e: any) => handlersRef.current.onTouchStart?.(e))
       );
     }
 
-    if (currentHandlers.onTouchEnd) {
+    if (hasTouchEnd) {
       unsubscribers.push(
-        eventManager.on('global:touchend', currentHandlers.onTouchEnd as any)
+        eventManager.on('global:touchend', (e: any) => handlersRef.current.onTouchEnd?.(e))
       );
     }
 
-    if (currentHandlers.onMouseOver) {
+    if (hasMouseOver) {
       unsubscribers.push(
-        eventManager.on('global:mouseover', currentHandlers.onMouseOver)
+        eventManager.on('global:mouseover', (e: MouseEvent) => handlersRef.current.onMouseOver?.(e))
       );
     }
 
-    if (currentHandlers.onMouseOut) {
+    if (hasMouseOut) {
       unsubscribers.push(
-        eventManager.on('global:mouseout', currentHandlers.onMouseOut)
+        eventManager.on('global:mouseout', (e: MouseEvent) => handlersRef.current.onMouseOut?.(e))
       );
     }
 
-    // Cleanup
-    return () => unsubscribers.forEach(unsub => unsub());
-  }, [memoizedHandlers]);
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }, [
+    hasMouseMove,
+    hasMouseDown,
+    hasMouseUp,
+    hasTouchStart,
+    hasTouchEnd,
+    hasMouseOver,
+    hasMouseOut,
+  ]);
 }
 
 /**
@@ -90,12 +89,16 @@ export function useGlobalMouseEvents(handlers: MouseEventHandlers) {
  * Inicializa os listeners nativos e repassa para o EventManager
  */
 export function setupGlobalMouseListeners() {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
   let rafId: number | null = null;
   let lastMouseEvent: MouseEvent | null = null;
 
   const handleMouseMove = (e: MouseEvent) => {
     lastMouseEvent = e;
-    
+
     if (rafId === null) {
       rafId = requestAnimationFrame(() => {
         if (lastMouseEvent) {
@@ -134,14 +137,15 @@ export function setupGlobalMouseListeners() {
   window.addEventListener('mousedown', handleMouseDown);
   window.addEventListener('mouseup', handleMouseUp);
   window.addEventListener('touchstart', handleTouchStart, { passive: true });
-  window.addEventListener('touchend', handleTouchEnd);
+  window.addEventListener('touchend', handleTouchEnd, { passive: true });
   window.addEventListener('mouseover', handleMouseOver);
   window.addEventListener('mouseout', handleMouseOut);
 
-  console.log('[useGlobalMouseEvents] Global mouse listeners initialized');
-
-  // Retornar cleanup (se necessário)
   return () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mousedown', handleMouseDown);
     window.removeEventListener('mouseup', handleMouseUp);

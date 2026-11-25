@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { MessageSquare } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { fetchInvestigationById, fetchCardsForInvestigation, updateInvestigationCard } from '../../api/investigations';
 import { fetchConnectionsForInvestigation } from '../../api/connections';
@@ -321,7 +322,7 @@ export default function InvestigationBoard() {
             if (chatList && Array.isArray(chatList) && chatList.length > 0) {
               return (
                 <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ background: '#0b1220', border: '1px solid #223', padding: '4px 6px', borderRadius: 6, fontSize: 12, color: '#c6a45f' }}>💬</div>
+                  <div style={{ background: '#0b1220', border: '1px solid #223', padding: '4px 6px', borderRadius: 6, fontSize: 12, color: '#c6a45f', display: 'inline-flex', alignItems: 'center' }}><MessageSquare size={13} /></div>
                   <div style={{ fontSize: 12, color: '#d1d5db', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(chatList[0]?.text || '').slice(0, 64)}</div>
                 </div>
               );

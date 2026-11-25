@@ -35,7 +35,7 @@ export default function Investigation() {
 
   if (error) {
     return (
-      <div className="nexus-page" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>
+      <div className="nexus-page" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh'}}>
         <div style={{textAlign:'center', color:'var(--nexus-blue)'}}>
           <h2 style={{color:'var(--nexus-glitch)'}}>ACESSO NEGADO</h2>
           <p style={{color:'var(--muted)'}}>{error}</p>
@@ -45,24 +45,11 @@ export default function Investigation() {
     );
   }
 
-  if (!investigation) return <div className="nexus-page"><div className="container">Caso não encontrado.</div></div>;
+  if (!investigation) return <div className="nexus-page" style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="container">Caso não encontrado.</div></div>;
 
   return (
-    <div className="nexus-page container">
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
-        <div>
-          <h1 style={{margin:0, color:'#dff'}}>{investigation.title}</h1>
-          <div style={{color:'var(--muted)', fontSize:13}}>{new Date(investigation.created_at).toLocaleString()}</div>
-        </div>
-      </div>
-
-      <div style={{marginTop:18}}>
-        <p style={{color:'var(--muted)'}}>{investigation.description}</p>
-      </div>
-
-      <div style={{marginTop:20}}>
-        <InvestigationBoard investigationId={id as string} />
-      </div>
+    <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', overflow: 'hidden' }}>
+      <InvestigationBoard investigationId={id as string} />
     </div>
   );
 }

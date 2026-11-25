@@ -1,9 +1,10 @@
-import { Music, Palette } from 'lucide-react';
+import { Music, Palette, X, Play, Pause, MoveVertical, MoveHorizontal, Activity, Radio, Flame, Diamond, Mountain, Microscope, Terminal } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import ForensicTerminalModal from './ForensicTerminalModal';
+import ModalSurface from '../ui/ModalSurface';
 import './AudioViewerModal.css';
 
 interface Props {
@@ -62,6 +63,7 @@ export default function AudioViewerModal({
       responsive: true,
       backend: 'MediaElement',
       minPxPerSec: 250,
+      interact: true,
     });
 
     wavesurferRef.current = ws;
@@ -199,8 +201,9 @@ export default function AudioViewerModal({
             className="audio-viewer-close" 
             onClick={onClose}
             title="Fechar (ESC)"
+            aria-label="Fechar"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -216,7 +219,7 @@ export default function AudioViewerModal({
             onClick={handlePlayPause}
             title={isPlaying ? 'Pausar' : 'Reproduzir'}
           >
-            {isPlaying ? '⏸ PAUSAR' : '▶ REPRODUZIR'}
+            {isPlaying ? <><Pause size={14} /> PAUSAR</> : <><Play size={14} /> REPRODUZIR</>}
           </button>
           <div className="audio-viewer-time">
             <span className="time-current">{currentTime}</span>
@@ -228,7 +231,7 @@ export default function AudioViewerModal({
         {/* Controles de Espectrograma */}
         <div className="audio-viewer-spectrum-controls">
           <div className="spectrum-control-group">
-            <label>📏 Altura:</label>
+            <label><MoveVertical className="lucide-icon inline-icon" size={14} /> Altura:</label>
             <input 
               type="range" 
               min="150" 
@@ -242,7 +245,7 @@ export default function AudioViewerModal({
           </div>
 
           <div className="spectrum-control-group">
-            <label>📐 Escala Horizontal:</label>
+            <label><MoveHorizontal className="lucide-icon inline-icon" size={14} /> Escala Horizontal:</label>
             <input 
               type="range" 
               min="0.5" 
@@ -256,7 +259,7 @@ export default function AudioViewerModal({
           </div>
 
           <div className="spectrum-control-group">
-            <label>📶 Freq Máxima:</label>
+            <label><Activity className="lucide-icon inline-icon" size={14} /> Freq Máxima:</label>
             <input 
               type="range" 
               min={2000} 
@@ -270,7 +273,7 @@ export default function AudioViewerModal({
           </div>
 
           <div className="spectrum-control-group">
-            <label>📻 Sensibilidade:</label>
+            <label><Radio className="lucide-icon inline-icon" size={14} /> Sensibilidade:</label>
             <input 
               type="range" 
               min={-100} 
@@ -291,21 +294,21 @@ export default function AudioViewerModal({
                 onClick={() => setColorScheme('hot')}
                 title="Hot"
               >
-                🔥
+                <Flame size={14} />
               </button>
               <button 
                 className={`spectrum-color-btn ${colorScheme === 'cyan' ? 'active cyan' : ''}`}
                 onClick={() => setColorScheme('cyan')}
                 title="Cyan"
               >
-                💠
+                <Diamond size={14} />
               </button>
               <button 
                 className={`spectrum-color-btn ${colorScheme === 'magma' ? 'active magma' : ''}`}
                 onClick={() => setColorScheme('magma')}
                 title="Magma"
               >
-                🌋
+                <Mountain size={14} />
               </button>
             </div>
           </div>
@@ -319,14 +322,14 @@ export default function AudioViewerModal({
               }}
               title="Analisar áudio e ajustar visualização automaticamente"
             >
-              🔬 ANÁLISE RÁPIDA
+              <Microscope size={14} /> ANÁLISE RÁPIDA
             </button>
             <button 
               className={`spectrum-action-btn ${showTerminal ? 'active' : ''}`}
               onClick={() => setShowTerminal(!showTerminal)}
               title="Abrir Terminal Forense para ler mensagens ocultas LSB"
             >
-              💻 TERMINAL LSB
+              <Terminal size={14} /> TERMINAL LSB
             </button>
             <button 
               className="spectrum-action-btn"

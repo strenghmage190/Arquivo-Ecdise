@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
-import { Network, Info, UserRound } from 'lucide-react';
+import { Network, Info, Trash2, Image as ImageIcon, FolderOpen, Check } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 import { supabase } from '../../../supabaseClient';
 
@@ -8,9 +8,16 @@ interface Props {
   investigationId: string;
 }
 
+interface PuzzleItem {
+  id: string;
+  title: string;
+  rewardCode?: string;
+}
+
 export default function TabMegaClue({ investigationId }: Props) {
-  const { coreState, megaClueState, setMegaClueState, registerUrl, revokeUrl } = useClueModal();
-  const [availablePuzzles, setAvailablePuzzles] = useState<{ id: string; title: string }[]>([]);
+  const { coreState, megaClueState, setMegaClueState, setMediaState, registerUrl, revokeUrl } =
+    useClueModal();
+  const [availablePuzzles, setAvailablePuzzles] = useState<PuzzleItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -20,8 +27,16 @@ export default function TabMegaClue({ investigationId }: Props) {
       const url = URL.createObjectURL(file);
       if (megaClueState.megaImagePreview) revokeUrl(megaClueState.megaImagePreview);
       registerUrl(url);
-      setMegaClueState(s => ({ ...s, megaImageFile: file, megaImagePreview: url }));
+      setMegaClueState((s) => ({ ...s, megaImageFile: file, megaImagePreview: url }));
+      setMediaState((s) => ({ ...s, removedMegaImage: false }));
     }
+    e.target.value = '';
+  };
+
+  const handleRemoveMegaImage = () => {
+    revokeUrl(megaClueState.megaImagePreview);
+    setMegaClueState((s) => ({ ...s, megaImageFile: null, megaImagePreview: null }));
+    setMediaState((s) => ({ ...s, removedMegaImage: true }));
   };
 
   useEffect(() => {
@@ -29,16 +44,32 @@ export default function TabMegaClue({ investigationId }: Props) {
       try {
         const { data, error } = await supabase
           .from('investigation_cards')
-          .select('id, title')
+          .select('id, title, metadata')
           .eq('investigation_id', investigationId)
           .eq('type', 'glitch_puzzle');
-        
+
         if (error) {
           console.error('Erro ao buscar puzzles:', error);
           return;
         }
 
-        const puzzles = (data || []).map((card: any) => ({ id: card.id, title: card.title }));
+        const puzzles: PuzzleItem[] = (data || []).map((card: any) => {
+          let meta = card.metadata;
+          if (typeof meta === 'string') {
+            try {
+              meta = JSON.parse(meta);
+            } catch {
+              meta = {};
+            }
+          }
+          const rewardCode =
+            meta?.glitch_puzzle?.reward_code || meta?.security_layer?.reward_code || undefined;
+          return {
+            id: card.id,
+            title: card.title || 'Sem Título',
+            rewardCode,
+          };
+        });
         setAvailablePuzzles(puzzles);
       } catch (err) {
         console.error('fetchAvailablePuzzles error:', err);
@@ -51,107 +82,135 @@ export default function TabMegaClue({ investigationId }: Props) {
   }, [investigationId]);
 
   const togglePuzzle = (id: string) => {
-    setMegaClueState(s => {
+    setMegaClueState((s) => {
       const current = s.megaRequiredPuzzleIds || [];
       const isSelected = current.includes(id);
       if (isSelected) {
-        return { ...s, megaRequiredPuzzleIds: current.filter(p => p !== id) };
+        return { ...s, megaRequiredPuzzleIds: current.filter((p) => p !== id) };
       } else {
         return { ...s, megaRequiredPuzzleIds: [...current, id] };
       }
     });
   };
 
-  const filteredPuzzles = availablePuzzles.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredPuzzles = availablePuzzles.filter((p) =>
+    p.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="field-block">
+    <div className="ccm-tab-stack">
       {coreState.evidenceType === 'mega_clue' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span className="field-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              CONFIGURAÇÃO MEGA CLUE
-              <span data-tooltip-id="mega-tip" style={{ display: 'flex', cursor: 'help' }}>
-                <Info size={16} color="#00ffff" />
-              </span>
-            </span>
-          </div>
-          <Tooltip id="mega-tip" className="cyber-tooltip">
-            <span className="cyber-tooltip-title">[ MEGA CLUE ]</span>
-            A Mega Clue requer que outras pistas sejam resolvidas para revelar a verdade final.
-          </Tooltip>
+          <section className="ccm-section">
+            <div className="ccm-section-head">
+              <h3 className="ccm-section-title">
+                CONFIGURAÇÃO MEGA CLUE
+                <span data-tooltip-id="mega-tip" className="ccm-help-icon">
+                  <Info size={15} />
+                </span>
+              </h3>
+              <Tooltip id="mega-tip" className="cyber-tooltip ccm-tooltip">
+                <span className="cyber-tooltip-title">[ MEGA CLUE ]</span>
+                A Mega Clue requer que outras pistas sejam resolvidas para revelar a verdade final.
+              </Tooltip>
+            </div>
 
-          <div style={{ marginTop: 16 }}>
-            <label className="field-title">Texto da Verdade Final</label>
-            <textarea
-              className="cc-input"
-              style={{ minHeight: 80, resize: 'vertical' }}
-              value={megaClueState.megaFinalTruthText}
-              onChange={(e) => setMegaClueState(s => ({ ...s, megaFinalTruthText: e.target.value }))}
-              placeholder="O texto revelado quando todas as pistas requeridas forem solucionadas..."
-            />
-          </div>
+            <div className="ccm-field">
+              <label className="ccm-label">Texto da Verdade Final *</label>
+              <textarea
+                className="ccm-input"
+                rows={4}
+                value={megaClueState.megaFinalTruthText}
+                onChange={(e) => setMegaClueState((s) => ({ ...s, megaFinalTruthText: e.target.value }))}
+                placeholder="O texto revelado quando todas as pistas requeridas forem solucionadas..."
+              />
+            </div>
+          </section>
 
-          <div style={{ marginTop: 24, padding: 16, border: '1px solid rgba(255,100,0,0.2)', borderRadius: 8, background: 'rgba(0,0,0,0.3)' }}>
-            <h4 style={{ color: '#ff6400', marginTop: 0, marginBottom: 12 }}>🖼 IMAGEM DA VERDADE (OPCIONAL)</h4>
-            
-            <div style={{ display: 'flex', gap: 10 }}>
+          <section className="ccm-section ccm-section-warn">
+            <div className="ccm-section-head">
+              <h3 className="ccm-section-title">
+                <ImageIcon size={15} /> Imagem da Verdade (Opcional)
+              </h3>
+            </div>
+
+            <div className="ccm-btn-row">
               <input type="file" accept="image/*" hidden ref={fileInputRef} onChange={handleMegaImageSelect} />
-              <button className="cc-btn cc-btn-save" style={{ flex: 1, justifyContent: 'center' }} onClick={() => fileInputRef.current?.click()}>
-                📂 SELECIONAR IMAGEM
+              <button
+                type="button"
+                className="ccm-btn ccm-btn-primary"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FolderOpen size={14} /> Selecionar Imagem
               </button>
+              {megaClueState.megaImagePreview && (
+                <button
+                  type="button"
+                  className="ccm-btn ccm-btn-danger"
+                  onClick={handleRemoveMegaImage}
+                >
+                  <Trash2 size={15} /> Remover
+                </button>
+              )}
             </div>
 
             {megaClueState.megaImagePreview && (
-              <div style={{ marginTop: 16, padding: 10, background: 'rgba(0,0,0,0.5)', borderRadius: 6, border: '1px solid rgba(255,100,0,0.2)' }}>
-                <div style={{ color: '#888', fontSize: 11, marginBottom: 8 }}>✓ Imagem Final: {megaClueState.megaImageFile?.name}</div>
-                <img src={megaClueState.megaImagePreview} alt="Imagem Final" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 4 }} />
+              <div className="ccm-preview-box">
+                <div className="ccm-preview-head">
+                  <span>
+                    <Check size={13} /> Imagem Final{megaClueState.megaImageFile?.name ? `: ${megaClueState.megaImageFile.name}` : ' carregada'}
+                  </span>
+                </div>
+                <img src={megaClueState.megaImagePreview} alt="Imagem Final" className="ccm-preview-media" />
               </div>
             )}
-          </div>
+          </section>
 
-          <div style={{ marginTop: 24 }}>
-            <label className="field-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Network size={16} color="var(--cc-neon)" />
-              Puzzles Requeridos (Checklist)
-            </label>
-            
+          <section className="ccm-section">
+            <div className="ccm-section-head">
+              <h3 className="ccm-section-title">
+                <Network size={16} /> Puzzles Requeridos *
+              </h3>
+              <span className="ccm-code-pill">
+                {(megaClueState.megaRequiredPuzzleIds || []).length} selecionado(s)
+              </span>
+            </div>
+
             <input
               type="text"
-              className="cc-input"
+              className="ccm-input"
               placeholder="Buscar puzzles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ marginBottom: 12 }}
             />
 
-            <div style={{
-              maxHeight: 200,
-              overflowY: 'auto',
-              background: 'rgba(0,0,0,0.3)',
-              border: '1px solid var(--cc-border)',
-              borderRadius: 6,
-              padding: 8
-            }}>
+            <div className="ccm-scroll-list">
               {filteredPuzzles.length === 0 ? (
-                <div style={{ color: 'var(--cc-text-muted)', fontSize: 13, textAlign: 'center', padding: 10 }}>
+                <div className="ccm-note" style={{ textAlign: 'center', padding: 12 }}>
                   Nenhum puzzle encontrado.
                 </div>
               ) : (
-                filteredPuzzles.map(puzzle => (
-                  <label key={puzzle.id} className="cc-checkbox" style={{ display: 'flex', margin: '8px 0', padding: '4px 8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={(megaClueState.megaRequiredPuzzleIds || []).includes(puzzle.id)}
-                      onChange={() => togglePuzzle(puzzle.id)}
-                    />
-                    <span className="checkmark"></span>
-                    <span style={{ color: 'var(--cc-text)', fontSize: 14 }}>{puzzle.title || 'Sem Título'}</span>
+                filteredPuzzles.map((puzzle) => (
+                  <label key={puzzle.id} className="ccm-toggle-row">
+                    <span className="ccm-toggle-text">
+                      <span className="ccm-toggle-title">{puzzle.title}</span>
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {puzzle.rewardCode && (
+                        <code className="ccm-code-pill">{puzzle.rewardCode}</code>
+                      )}
+                      <input
+                        type="checkbox"
+                        className="ccm-checkbox-input"
+                        checked={(megaClueState.megaRequiredPuzzleIds || []).includes(puzzle.id)}
+                        onChange={() => togglePuzzle(puzzle.id)}
+                      />
+                    </div>
                   </label>
                 ))
               )}
             </div>
-          </div>
+          </section>
         </>
       )}
     </div>

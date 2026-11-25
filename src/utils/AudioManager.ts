@@ -82,6 +82,9 @@ class AudioManager {
       // Cria novo contexto de áudio
       const ctx = new AudioContext();
       this.audioContext = ctx;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
       
       // Track no global (para debugging)
       (window as any).__AUDIO_CONTEXT_INSTANCES__ = ((window as any).__AUDIO_CONTEXT_INSTANCES__ || 0) + 1;

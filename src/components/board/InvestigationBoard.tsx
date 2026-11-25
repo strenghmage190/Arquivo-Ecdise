@@ -3,27 +3,42 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  BoxSelect,
   CalendarDays,
   Check,
   CircleHelp,
   Crown,
   Eye,
+  FileText,
   Flashlight,
   FolderOpen,
   Glasses,
+  Grid,
   LayoutGrid,
+  LayoutPanelTop,
   Layers2,
   Lightbulb,
+  KeyRound,
+  Keyboard,
   Link2,
   Lock,
   LocateFixed,
   Mail,
+  Maximize2,
   Menu,
+  Navigation,
+  Pin,
   Plus,
+  Radar,
   Redo2,
   RotateCcw,
   Search,
   Settings,
+  SlidersHorizontal,
+  StickyNote,
+  Unlock,
+  SquareDashed,
+  Tag,
   Terminal,
   Trash2,
   Undo2,
@@ -51,9 +66,19 @@ import MysteryImage from './MysteryImage';
 import './MysteryEffects.css';
 import './EvidenceCard.css';
 import './investigation.css';
+import './investigation.lenses.css';
 import './InvestigationBoard.css';
 import EvidenceCard from './EvidenceCard';
-import { organizeByTimeline, organizeByElement } from '../../utils/layoutAlgorithms';
+import TacticalMinimap from './TacticalMinimap';
+import BoardZonesLayer, { MagneticGuides } from './BoardZonesLayer';
+import { useBoardStore, BoardZone } from '../../store/boardStore';
+import {
+  organizeByTimeline,
+  organizeByElement,
+  organizeByGrid,
+  organizeByVeracity,
+  unstackCards,
+} from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
@@ -69,7 +94,19 @@ import BottomSheet from '../ui/BottomSheet';
 import usePerformanceMode from '../../utils/usePerformanceMode';
 import BottomNavigationBar from '../BottomNavigationBar';
 import ConnectionLine from '../ConnectionLine';
+import InteractionToggleButton from '../InteractionToggleButton';
+import { FloatingNudgePad } from '../ui/FloatingNudgePad';
+import { TouchContextMenu } from '../ui/TouchContextMenu';
+import {
+  getUnlockedCodes,
+  markCardSeen,
+  PLAYER_TRACKING_EVENT,
+  recordUnlockedCode,
+  shouldShowNewBadge,
+  UnlockedCodeEntry,
+} from '../../utils/playerTracking';
 // Local fallback for BoardButton (avoids missing module error)
+const CrosshairIconProxy = () => <LocateFixed size={18} />;
 const BoardButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'default' }> = ({ variant, children, className, ...props }) => {
   const base = 'board-button';
   const vclass = variant === 'primary' ? 'board-button--primary' : '';
@@ -84,7 +121,7 @@ interface Props {
   investigationId: string;
 }
 
-const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any) => {
+const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin, uvTouchPos }: any) => {
   const [overlayPos, setOverlayPos] = useState<{ x: number; y: number; over: boolean } | null>(null);
 
   useEffect(() => {
@@ -109,14 +146,19 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any)
     };
   }, [isUV, boardRef]);
 
-  if (!overlayPos || !overlayPos.over) return null;
+  // Se houver toque ativo na lente UV, ele prevalece
+  const activePos = (uvTouchPos && uvTouchPos.active)
+    ? { x: uvTouchPos.x, y: uvTouchPos.y, over: true }
+    : overlayPos;
 
-  const worldX = origin.x + (overlayPos.x / zoom);
-  const worldY = origin.y + (overlayPos.y / zoom);
+  if (!activePos || !activePos.over) return null;
+
+  const worldX = origin.x + (activePos.x / zoom);
+  const worldY = origin.y + (activePos.y / zoom);
 
   if (performanceMode) {
     return (
-      <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3100 }}>
+      <div className="global-uv-overlay-lite" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 'var(--z-uv, 800)' }}>
         <div style={{
           position: 'absolute',
           left: worldX,
@@ -146,9 +188,10 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin }: any)
   }
 
   return (
-    <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3000 }}>
+    <div className="global-uv-overlay" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 'var(--z-uv, 800)' }}>
       <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', mixBlendMode: 'screen', filter: 'blur(12px)', boxShadow: '0 0 120px 40px rgba(179,102,255,0.45)' }} />
       <div style={{ position: 'absolute', left: worldX, top: worldY, transform: 'translate(-50%, -50%)', width: 220, height: 220, borderRadius: '50%', background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(180,102,255,0.18) 40%, rgba(80,10,120,0.5) 80%, transparent 100%)`, pointerEvents: 'none' }} />
+      {uvTouchPos?.active && <div className="global-uv-touch-ring" style={{ left: worldX, top: worldY }} />}
     </div>
   );
 };
@@ -160,6 +203,11 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   // Context menu state for connection right-click
   const [connectionContextMenu, setConnectionContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
+  const [pins, setPins] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<{id: string, type: 'pin', x: number, y: number} | null>(null);
+  const [noteMode, setNoteMode] = useState(false);
+  const [pinMode, setPinMode] = useState(false);
+  const [pinType, setPinType] = useState<'vermelho'|'azul'|'verde'>('vermelho');
   const [modalOpen, setModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -182,11 +230,33 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     toggle: togglePerformanceMode,
   } = usePerformanceMode();
 
-  // rAF batching to reduce state churn while dragging/panning
+  // rAF batching to reduce state churn while dragging/panning/zooming
   const positionFrameRef = useRef<number | null>(null);
   const pendingPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const originFrameRef = useRef<number | null>(null);
   const pendingOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingZoomRef = useRef<number | null>(null);
+  const [cameraAnimating, setCameraAnimating] = useState(false);
+  const cameraAnimTimerRef = useRef<number | null>(null);
+
+  const triggerCameraAnimation = useCallback(() => {
+    if (cameraAnimTimerRef.current !== null) {
+      window.clearTimeout(cameraAnimTimerRef.current);
+    }
+    setCameraAnimating(true);
+    cameraAnimTimerRef.current = window.setTimeout(() => {
+      cameraAnimTimerRef.current = null;
+      setCameraAnimating(false);
+    }, 210);
+  }, []);
+
+  const cancelCameraAnimation = useCallback(() => {
+    if (cameraAnimTimerRef.current !== null) {
+      window.clearTimeout(cameraAnimTimerRef.current);
+      cameraAnimTimerRef.current = null;
+      setCameraAnimating(false);
+    }
+  }, []);
 
   const flushPendingPositions = () => {
     const pending = pendingPositionsRef.current;
@@ -210,19 +280,36 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     }
   };
 
-  const flushPendingOrigin = () => {
-    if (!pendingOriginRef.current) return;
-    const next = pendingOriginRef.current;
+  const flushPendingCamera = () => {
+    const nextOrigin = pendingOriginRef.current;
+    const nextZoom = pendingZoomRef.current;
     pendingOriginRef.current = null;
-    setOrigin(next);
+    pendingZoomRef.current = null;
+    if (nextZoom !== null) setZoom(nextZoom);
+    if (nextOrigin !== null) setOrigin(nextOrigin);
   };
 
   const scheduleOriginUpdate = (x: number, y: number) => {
-    pendingOriginRef.current = { x, y };
+    const next = { x, y };
+    originRef.current = next;
+    pendingOriginRef.current = next;
     if (originFrameRef.current === null) {
       originFrameRef.current = requestAnimationFrame(() => {
         originFrameRef.current = null;
-        flushPendingOrigin();
+        flushPendingCamera();
+      });
+    }
+  };
+
+  const scheduleCameraUpdate = (nextZoom: number, nextOrigin: { x: number; y: number }) => {
+    zoomRef.current = nextZoom;
+    originRef.current = nextOrigin;
+    pendingZoomRef.current = nextZoom;
+    pendingOriginRef.current = nextOrigin;
+    if (originFrameRef.current === null) {
+      originFrameRef.current = requestAnimationFrame(() => {
+        originFrameRef.current = null;
+        flushPendingCamera();
       });
     }
   };
@@ -231,6 +318,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return () => {
       if (positionFrameRef.current !== null) cancelAnimationFrame(positionFrameRef.current);
       if (originFrameRef.current !== null) cancelAnimationFrame(originFrameRef.current);
+      if (cameraAnimTimerRef.current !== null) window.clearTimeout(cameraAnimTimerRef.current);
     };
   }, []);
 
@@ -257,17 +345,73 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   useEffect(() => { originRef.current = origin; }, [origin]);
   const [isGameMaster, setIsGameMaster] = useState(false);
   const [doomsdayTarget, setDoomsdayTarget] = useState<number | null>(null);
+  const [membraneState, setMembraneState] = useState<'calm' | 'amber' | 'crimson'>('calm');
+
+  useEffect(() => {
+    const computeFromDoomsday = () => {
+      if (!doomsdayTarget) return null;
+      const remainingMs = Math.max(0, doomsdayTarget - Date.now());
+      // Considera janela de 60 min para tensão progressiva (0% -> 100%)
+      const tensionPct = Math.min(100, Math.max(0, (1 - remainingMs / (60 * 60 * 1000)) * 100));
+      if (tensionPct > 75) return 'crimson' as const;
+      if (tensionPct >= 41) return 'amber' as const;
+      return 'calm' as const;
+    };
+
+    const next = computeFromDoomsday();
+    if (next) {
+      setMembraneState(next);
+      if (performanceMode) return;
+      const iv = window.setInterval(() => {
+        const updated = computeFromDoomsday();
+        if (updated) setMembraneState(updated);
+      }, 5000);
+      return () => window.clearInterval(iv);
+    }
+
+    const onMembraneEvent = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ state?: 'calm' | 'amber' | 'crimson'; value?: number } | 'calm' | 'amber' | 'crimson'>).detail;
+      const nextState = typeof detail === 'string' ? detail : detail?.state;
+      if (nextState === 'calm' || nextState === 'amber' || nextState === 'crimson') {
+        setMembraneState(nextState);
+      }
+    };
+    window.addEventListener('ordo:membrane-state', onMembraneEvent);
+    return () => window.removeEventListener('ordo:membrane-state', onMembraneEvent);
+  }, [doomsdayTarget, performanceMode]);
   const [playerView, setPlayerView] = useState<boolean>(() => true);
   const isMobile = useIsMobile();
   const { width: windowWidth, height: windowHeight } = useWindowSize();
-  // Mobile touch mode: 'pan' = move camera, 'interact' = select/drag cards
+  // Mobile touch mode: 'pan' = move camera (1 finger pan), 'edit' = select/drag cards (2 finger pan)
   const isMobileDevice = isMobile;
-  const [touchMode, setTouchMode] = useState<'pan' | 'interact'>(isMobileDevice ? 'pan' : 'interact');
+  const [touchMode, setTouchMode] = useState<'pan' | 'edit'>(isMobileDevice ? 'pan' : 'edit');
   const [touchModeNotice, setTouchModeNotice] = useState<string | null>(null);
-  // Pinch-to-zoom states
-  const [isPinching, setIsPinching] = useState(false);
-  const [initialDistance, setInitialDistance] = useState(0);
-  const [initialZoom, setInitialZoom] = useState(1);
+  const [marqueeTouchMode, setMarqueeTouchMode] = useState(false);
+  const [tapToPlaceMode, setTapToPlaceMode] = useState(false);
+  const [uvFollowTouch, setUvFollowTouch] = useState(false);
+  const [uvTouchPos, setUvTouchPos] = useState<{ x: number; y: number; active: boolean } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'theory' | 'false'>('all');
+  const [magneticGuides, setMagneticGuides] = useState<MagneticGuides>({ x: null, y: null });
+  const [connectionLabelDraft, setConnectionLabelDraft] = useState('');
+  const bgLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bgTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const {
+    snapToGrid,
+    gridSize,
+    toggleSnapToGrid,
+    minimapOpen,
+    toggleMinimapOpen,
+    zonesByInvestigation,
+    setZonesForInvestigation,
+  } = useBoardStore();
+  const zones = zonesByInvestigation[investigationId] || [];
+  // Pinch-to-zoom ref (synchronous to avoid stale closures and re-attaching listeners)
+  const pinchRef = useRef<{
+    initialDist: number;
+    initialZoom: number;
+    worldMidX: number;
+    worldMidY: number;
+  } | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const selectedIdsRef = useRef<string[]>([]);
 
@@ -281,6 +425,21 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [unlockingCard, setUnlockingCard] = useState<any | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [decoderOpen, setDecoderOpen] = useState(false);
+  const [decoderInitialInput, setDecoderInitialInput] = useState<string>('');
+  const [decoderInitialMode, setDecoderInitialMode] = useState<string | undefined>(undefined);
+  const [inspectInitialForensicMode, setInspectInitialForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
+  const [codesPanelOpen, setCodesPanelOpen] = useState(false);
+  const [, setTrackingVersion] = useState(0);
+  const [unlockedCodes, setUnlockedCodes] = useState<UnlockedCodeEntry[]>(() =>
+    investigationId ? getUnlockedCodes(investigationId) : []
+  );
+  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const [quickNotePos, setQuickNotePos] = useState<{ x: number; y: number } | null>(null);
+  const [quickNoteTitle, setQuickNoteTitle] = useState('');
+  const [quickNoteText, setQuickNoteText] = useState('');
+  const [quickNoteColor, setQuickNoteColor] = useState('#fef08a');
+  const [quickNoteTag, setQuickNoteTag] = useState('Teoria');
+  const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   const [caseTitle, setCaseTitle] = useState('CARREGANDO...');
   const [connectionMode, setConnectionMode] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
@@ -308,6 +467,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [showFinder, setShowFinder] = useState(false);
   const [showOrganizeMenu, setShowOrganizeMenu] = useState(false);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [showGmMenu, setShowGmMenu] = useState(false);
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [contextMenu, setContextMenu] = useState<null | { type: 'card' | 'bg'; targetId?: string; x: number; y: number }>(null);
   
@@ -318,7 +478,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const [decoderUnlocked, setDecoderUnlocked] = useState(false);
   const [showDecoderModal, setShowDecoderModal] = useState(false);
   const [showCodePrompt, setShowCodePrompt] = useState(false);
-  const anyModalOpen = modalOpen || createModalOpen || inviteOpen || Boolean(inspectCard) || Boolean(unlockingCard) || terminalOpen || decoderOpen || showDecoderModal || showCodePrompt || sketchOpen;
+  const anyModalOpen = modalOpen || createModalOpen || inviteOpen || Boolean(inspectCard) || Boolean(unlockingCard) || terminalOpen || decoderOpen || showDecoderModal || showCodePrompt || sketchOpen || quickNoteOpen || codesPanelOpen;
+
+  useEffect(() => {
+    if (!investigationId) return;
+    const refreshTracking = () => {
+      setUnlockedCodes(getUnlockedCodes(investigationId));
+      setTrackingVersion((v) => v + 1);
+    };
+    refreshTracking();
+    window.addEventListener(PLAYER_TRACKING_EVENT, refreshTracking);
+    return () => window.removeEventListener(PLAYER_TRACKING_EVENT, refreshTracking);
+  }, [investigationId]);
 
   // Hide HUD/header overlays while any modal is active
   useEffect(() => {
@@ -347,6 +518,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     startWorldY?: number;
   } | null>(null);
   const panningRef = useRef<any>(null);
+  const bgClickStartRef = useRef<{ x: number; y: number } | null>(null);
   const lastTapRef = useRef<number>(0);
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
   // Ref mirror of localPositions to avoid stale closures inside global listeners
@@ -391,9 +563,32 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     }
   };
 
-  const handleConnectionContextMenu = (e: React.MouseEvent, connectionId: string) => {
-    e.preventDefault();
+  const handleConnectionContextMenu = (e: React.MouseEvent | { clientX: number; clientY: number }, connectionId: string) => {
+    if ('preventDefault' in e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    const existing = connections.find((c) => c.id === connectionId);
+    setConnectionLabelDraft(existing?.metadata?.label || '');
     setConnectionContextMenu({ x: e.clientX, y: e.clientY, id: connectionId });
+  };
+
+  const handleSaveConnectionLabel = async () => {
+    if (!connectionContextMenu) return;
+    const existing = connections.find((c) => c.id === connectionContextMenu.id);
+    const nextMeta = { ...(existing?.metadata || {}), label: connectionLabelDraft.trim() || undefined };
+    try {
+      await (supabase as any)
+        .from('investigation_connections')
+        .update({ metadata: nextMeta })
+        .eq('id', connectionContextMenu.id);
+      setConnections((prev) =>
+        prev.map((c) => (c.id === connectionContextMenu.id ? { ...c, metadata: nextMeta } : c))
+      );
+      setConnectionContextMenu(null);
+      showToast({ id: 'conn-label-updated', message: 'Rótulo da conexão atualizado' });
+    } catch (err) {
+      console.error('Erro ao salvar rótulo da conexão', err);
+    }
   };
 
   const handleDeleteConnection = async () => {
@@ -404,6 +599,25 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       await loadBoard();
     } catch (err) {
       console.error('Erro ao deletar conexão', err);
+    }
+  };
+
+  const handleChangeConnectionType = async (type: 'confirmed' | 'theory' | 'mystic') => {
+    if (!connectionContextMenu) return;
+    const color = type === 'theory' ? '#f9a825' : type === 'mystic' ? '#7e57c2' : '#c62828';
+    try {
+      await (supabase as any)
+        .from('investigation_connections')
+        .update({
+          color,
+          metadata: { type }
+        })
+        .eq('id', connectionContextMenu.id);
+      setConnectionContextMenu(null);
+      await loadBoard();
+      showToast({ id: 'conn-type-updated', message: `Conexão alterada para ${type}` });
+    } catch (err) {
+      console.error('Erro ao atualizar tipo de conexão', err);
     }
   };
 
@@ -692,6 +906,65 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     loadBoard();
   }, [investigationId]);
 
+  // Carregar zonas do localStorage por investigação
+  useEffect(() => {
+    if (!investigationId) return;
+    try {
+      const raw = localStorage.getItem(`ordo_zones_${investigationId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setZonesForInvestigation(investigationId, parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, [investigationId, setZonesForInvestigation]);
+
+  const persistZones = useCallback(
+    (nextZones: BoardZone[]) => {
+      setZonesForInvestigation(investigationId, nextZones);
+      try {
+        localStorage.setItem(`ordo_zones_${investigationId}`, JSON.stringify(nextZones));
+      } catch {
+        // ignore
+      }
+    },
+    [investigationId, setZonesForInvestigation]
+  );
+
+  const handleAddZone = useCallback(() => {
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
+    const viewH = boardRect?.height ?? windowHeight;
+    const cx = originRef.current.x + viewW / (2 * (zoomRef.current || 1));
+    const cy = originRef.current.y + viewH / (2 * (zoomRef.current || 1));
+    const newZone: BoardZone = {
+      id: `zone-${Date.now()}`,
+      title: `ZONA ${zones.length + 1}`,
+      x: Math.round(cx - 260),
+      y: Math.round(cy - 180),
+      width: 520,
+      height: 360,
+      color: '#64748b',
+    };
+    persistZones([...zones, newZone]);
+    showToast({ id: 'zone-created', message: 'Moldura de zona criada. Duplo clique no título para renomear.' });
+  }, [zones, persistZones, windowWidth, windowHeight]);
+
+  const handleUpdateZone = useCallback(
+    (id: string, patch: Partial<BoardZone>) => {
+      persistZones(zones.map((z) => (z.id === id ? { ...z, ...patch } : z)));
+    },
+    [zones, persistZones]
+  );
+
+  const handleDeleteZone = useCallback(
+    (id: string) => {
+      persistZones(zones.filter((z) => z.id !== id));
+    },
+    [zones, persistZones]
+  );
+
   const pendingUpdatesRef = useRef<Record<string, any>>({});
   const realtimeUpdateTimeout = useRef<any>(null);
 
@@ -903,6 +1176,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
     // finalize card dragging and persist positions
     if (draggingRef.current) {
+      setMagneticGuides({ x: null, y: null });
       const d = draggingRef.current;
       const id = d.id;
       if (id) {
@@ -1001,130 +1275,55 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return () => { document.body.style.overflow = prev || ''; };
   }, []);
 
-  // TODO: implement pointer/mouse move handlers that update `cards` or a localPositions map
-  // Implement global move handlers to update localPositions while dragging
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      // update marquee if active
-      if (marqueeStartRef.current) {
-        const board = boardRef.current?.getBoundingClientRect();
-        if (!board) return;
-        const sx = e.clientX - board.left;
-        const sy = e.clientY - board.top;
-        const start = marqueeStartRef.current;
-        const left = Math.min(start.sx, sx);
-        const top = Math.min(start.sy, sy);
-        const width = Math.abs(sx - start.sx);
-        const height = Math.abs(sy - start.sy);
-        setMarqueeRect({ left, top, width, height });
-        // compute selection in board coords
-        const bx1 = Math.min(start.bx, sx / zoom + origin.x);
-        const by1 = Math.min(start.by, sy / zoom + origin.y);
-        const bx2 = Math.max(start.bx, sx / zoom + origin.x);
-        const by2 = Math.max(start.by, sy / zoom + origin.y);
-        const sel: string[] = [];
-        const CARD_W = 220;
-        const CARD_H = 160;
-        cards.forEach((c) => {
-          const p = localPositions[c.id] || { x: c.x || 100, y: c.y || 100 };
-          const cx1 = p.x;
-          const cy1 = p.y;
-          const cx2 = p.x + CARD_W;
-          const cy2 = p.y + CARD_H;
-          const overlap = !(cx2 < bx1 || cx1 > bx2 || cy2 < by1 || cy1 > by2);
-          if (overlap) sel.push(c.id);
-        });
-        setSelectedIds(sel);
-        return; // marquee handled
-      }
-      const p = panningRef.current;
-      if (p) {
-        const dx = e.clientX - p.startX;
-        const dy = e.clientY - p.startY;
-        scheduleOriginUpdate(p.originX - dx / zoom, p.originY - dy / zoom);
-        return;
-      }
-      const d = draggingRef.current;
-      if (!d || !d.id) return;
-      // Deadzone: ignore tiny mouse jitter to avoid interfering with double-clicks
-      if (!d.hasMoved) {
-        const sx = d.startX ?? e.clientX;
-        const sy = d.startY ?? e.clientY;
-        const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
-        if (dist < 5) return; // still a click, not a drag
-        d.hasMoved = true;
-      }
-      // compute movement relative to the corkboard element using world coordinates
-      const board = boardRef.current?.getBoundingClientRect();
-      const screenX = board ? (e.clientX - board.left) : e.clientX;
-      const screenY = board ? (e.clientY - board.top) : e.clientY;
-      const worldX = origin.x + screenX / zoom;
-      const worldY = origin.y + screenY / zoom;
-      // if multiple selected and the dragged id is part of selection, move all selected
-      const sel = selectedIdsRef.current || [];
-      if (sel.length > 0 && sel.includes(d.id)) {
-        sel.forEach((sid) => {
-          const base = (d.origPositions && d.origPositions[sid]) ? d.origPositions[sid] : (localPositions[sid] || { x: d.origX, y: d.origY });
-          const offset = (d.pointerOffsets && d.pointerOffsets[sid]) ? d.pointerOffsets[sid] : { ox: (d.startWorldX ?? worldX) - base.x, oy: (d.startWorldY ?? worldY) - base.y };
-          schedulePositionUpdate(sid, { x: worldX - offset.ox, y: worldY - offset.oy });
-        });
-        // schedule saves for all
-        sel.forEach((sid) => scheduleDebouncedSave(sid));
-      } else {
-        const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
-        const newX = worldX - offset.ox;
-        const newY = worldY - offset.oy;
-        schedulePositionUpdate(d.id, { x: newX, y: newY });
-        if (d.id) scheduleDebouncedSave(d.id);
-      }
-      if (connectionMode && connectionStart) setMousePos({ x: e.clientX, y: e.clientY });
-    };
+  // Update marquee selection rectangle and selected cards from pointer/touch coordinates
+  const updateMarqueeSelection = useCallback((clientX: number, clientY: number) => {
+    const start = marqueeStartRef.current;
+    const board = boardRef.current?.getBoundingClientRect();
+    if (!start || !board) return;
+    const z = zoomRef.current || 1;
+    const orig = originRef.current;
+    const sx = clientX - board.left;
+    const sy = clientY - board.top;
+    const left = Math.min(start.sx, sx);
+    const top = Math.min(start.sy, sy);
+    const width = Math.abs(sx - start.sx);
+    const height = Math.abs(sy - start.sy);
+    setMarqueeRect({ left, top, width, height });
 
-    const handleTouchMove = (e: TouchEvent) => {
-      const p = panningRef.current;
-      const t = e.touches[0];
-      if (p) {
-        const dx = t.clientX - p.startX;
-        const dy = t.clientY - p.startY;
-        scheduleOriginUpdate(p.originX - dx / zoom, p.originY - dy / zoom);
-        return;
-      }
-      const d = draggingRef.current;
-      if (!d || !d.id) return;
-      // Deadzone for touch as well
-      if (!d.hasMoved) {
-        const sx = d.startX ?? t.clientX;
-        const sy = d.startY ?? t.clientY;
-        const dist = Math.hypot(t.clientX - sx, t.clientY - sy);
-        if (dist < 5) return;
-        d.hasMoved = true;
-      }
-      const board = boardRef.current?.getBoundingClientRect();
-      const screenX = board ? (t.clientX - board.left) : t.clientX;
-      const screenY = board ? (t.clientY - board.top) : t.clientY;
-      const worldX = origin.x + screenX / zoom;
-      const worldY = origin.y + screenY / zoom;
-      const offset = (d.pointerOffsets && d.pointerOffsets[d.id]) ? d.pointerOffsets[d.id] : { ox: (d.startWorldX ?? worldX) - (d.origX ?? 0), oy: (d.startWorldY ?? worldY) - (d.origY ?? 0) };
-      const newX = worldX - offset.ox;
-      const newY = worldY - offset.oy;
-      schedulePositionUpdate(d.id, { x: newX, y: newY });
-      if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
-      if (d.id) scheduleDebouncedSave(d.id);
-      if (connectionMode && connectionStart) setMousePos({ x: t.clientX, y: t.clientY });
-      if (d.id) scheduleDebouncedSave(d.id);
-    };
-
-    // replace with global listeners that read latest zoom/origin via refs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const bx1 = Math.min(start.bx, sx / z + orig.x);
+    const by1 = Math.min(start.by, sy / z + orig.y);
+    const bx2 = Math.max(start.bx, sx / z + orig.x);
+    const by2 = Math.max(start.by, sy / z + orig.y);
+    const sel: string[] = [];
+    const CARD_W = 220;
+    const CARD_H = 160;
+    (cardsRef.current || []).forEach((c) => {
+      const p = localPositionsRef.current[c.id] || { x: c.x || 100, y: c.y || 100 };
+      const cx1 = p.x;
+      const cy1 = p.y;
+      const cx2 = p.x + CARD_W;
+      const cy2 = p.y + CARD_H;
+      const overlap = !(cx2 < bx1 || cx1 > bx2 || cy2 < by1 || cy1 > by2);
+      if (overlap) sel.push(c.id);
+    });
+    setSelectedIds(sel);
   }, []);
 
   // Global mouse/touch handler using refs to avoid stale closures
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // 0. Marquee selection
+      if (marqueeStartRef.current) {
+        updateMarqueeSelection(e.clientX, e.clientY);
+        return;
+      }
+
       // 1. Panning
       if (panningRef.current) {
-        const dx = (e.clientX - panningRef.current.startX) / zoomRef.current;
-        const dy = (e.clientY - panningRef.current.startY) / zoomRef.current;
+        cancelCameraAnimation();
+        const z = zoomRef.current || 1;
+        const dx = (e.clientX - panningRef.current.startX) / z;
+        const dy = (e.clientY - panningRef.current.startY) / z;
         scheduleOriginUpdate(panningRef.current.originX - dx, panningRef.current.originY - dy);
       }
 
@@ -1132,8 +1331,31 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       if (draggingRef.current && draggingRef.current.isDragging) {
         const d = draggingRef.current as any;
         const worldNow = getWorldPosition(e.clientX, e.clientY);
-        const nextX = worldNow.x - (d.offsetX || 0);
-        const nextY = worldNow.y - (d.offsetY || 0);
+        let nextX = worldNow.x - (d.offsetX || 0);
+        let nextY = worldNow.y - (d.offsetY || 0);
+        if (snapToGrid && gridSize > 0) {
+          nextX = Math.round(nextX / gridSize) * gridSize;
+          nextY = Math.round(nextY / gridSize) * gridSize;
+        }
+        // Magnetic alignment guides against other cards (threshold 8px)
+        let guideX: number | null = null;
+        let guideY: number | null = null;
+        const SNAP_THRESHOLD = 8;
+        const allCards = cardsRef.current || [];
+        for (let i = 0; i < allCards.length; i += 1) {
+          const other = allCards[i];
+          if (!other || other.id === d.id) continue;
+          const op = localPositionsRef.current[other.id] || { x: other.x ?? 100, y: other.y ?? 100 };
+          if (Math.abs(op.x - nextX) <= SNAP_THRESHOLD) {
+            nextX = op.x;
+            guideX = op.x;
+          }
+          if (Math.abs(op.y - nextY) <= SNAP_THRESHOLD) {
+            nextY = op.y;
+            guideY = op.y;
+          }
+        }
+        setMagneticGuides({ x: guideX, y: guideY });
         schedulePositionUpdate(d.id, { x: nextX, y: nextY });
         // schedule save (debounced)
         if (d.id) scheduleDebouncedSave(d.id);
@@ -1141,7 +1363,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     };
 
     const handleMouseUp = () => {
+      if (marqueeStartRef.current) {
+        marqueeStartRef.current = null;
+        setMarqueeRect(null);
+      }
       if (draggingRef.current) {
+        setMagneticGuides({ x: null, y: null });
         try { forceSaveCard((draggingRef.current as any).id); } catch (e) {}
         draggingRef.current = null;
       }
@@ -1154,12 +1381,23 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
     // Also handle touch events globally so dragging via touch works reliably on mobile
     const handleTouchMoveWindow = (ev: TouchEvent) => {
+      if (ev.touches.length >= 2 || pinchRef.current) {
+        panningRef.current = null;
+        return;
+      }
       ev.preventDefault();
       const t = ev.touches[0];
       if (!t) return;
 
+      // 0. Marquee selection
+      if (marqueeStartRef.current) {
+        updateMarqueeSelection(t.clientX, t.clientY);
+        return;
+      }
+
       // 1. Panning
       if (panningRef.current) {
+        cancelCameraAnimation();
         const dx = (t.clientX - panningRef.current.startX) / (zoomRef.current || 1);
         const dy = (t.clientY - panningRef.current.startY) / (zoomRef.current || 1);
         scheduleOriginUpdate(panningRef.current.originX - dx, panningRef.current.originY - dy);
@@ -1305,13 +1543,26 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     setRedoStack([]);
   };
 
-  const handleAutoOrganize = async (mode: 'timeline' | 'grid') => {
+  const cardsRef = useRef<any[]>([]);
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  const handleAutoOrganize = async (mode: 'timeline' | 'element' | 'grid' | 'veracity' | 'unstack') => {
     if (cards.length === 0) return;
-    if (!window.confirm('Isso vai reorganizar todos os cards na tela. Continuar?')) return;
 
     setIsOrganizing(true);
     try {
-      const newLayout = mode === 'timeline' ? organizeByTimeline(cards) : organizeByElement(cards);
+      const newLayout =
+        mode === 'timeline'
+          ? organizeByTimeline(cards)
+          : mode === 'element'
+            ? organizeByElement(cards)
+            : mode === 'veracity'
+              ? organizeByVeracity(cards)
+              : mode === 'unstack'
+                ? unstackCards(cards, localPositions)
+                : organizeByGrid(cards);
 
       // Capture previous positions for undo
       const beforePositions = newLayout.map(p => ({ id: p.id, x: (localPositions[p.id]?.x ?? cards.find(c=>c.id===p.id)?.x ?? 0), y: (localPositions[p.id]?.y ?? cards.find(c=>c.id===p.id)?.y ?? 0) }));
@@ -1551,13 +1802,71 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return { x: pos.x + rectWidth / 2, y: pos.y + rectHeight / 2 };
   };
 
-  const panToPosition = (x: number, y: number) => {
+  const panToPosition = useCallback((x: number, y: number) => {
     const boardRect = boardRef.current?.getBoundingClientRect();
     const viewW = boardRect?.width ?? windowWidth;
-    const viewH = boardRect?.height ?? window.innerHeight;
-    // center the given board coords (x,y) in view
-    setOrigin({ x: x - viewW / (2 * zoom), y: y - viewH / (2 * zoom) });
-  };
+    const viewH = boardRect?.height ?? windowHeight;
+    const z = zoomRef.current || 1;
+    const nextOrigin = { x: x - viewW / (2 * z), y: y - viewH / (2 * z) };
+    originRef.current = nextOrigin;
+    triggerCameraAnimation();
+    setOrigin(nextOrigin);
+  }, [windowWidth, windowHeight, triggerCameraAnimation]);
+
+  const panToCard = useCallback((cardId: string) => {
+    const pos = localPositionsRef.current[cardId] || cardsRef.current.find((c) => c.id === cardId);
+    if (!pos) return;
+    const cx = (pos.x ?? 100) + 122;
+    const cy = (pos.y ?? 100) + 143;
+    panToPosition(cx, cy);
+    setSelectedIds([cardId]);
+  }, [panToPosition]);
+
+  const zoomToFit = useCallback(() => {
+    const canSeeHidden = isGameMaster && !playerView && showHiddenClues;
+    const visible = (cardsRef.current || []).filter((c) => c && (!c.is_hidden || canSeeHidden));
+    if (visible.length === 0) {
+      setZoom(1);
+      setOrigin({ x: 0, y: 0 });
+      return;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    visible.forEach((c) => {
+      const p = localPositionsRef.current[c.id] || { x: c.x ?? 100, y: c.y ?? 100 };
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + 244);
+      maxY = Math.max(maxY, p.y + 286);
+    });
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
+    const viewH = boardRect?.height ?? windowHeight;
+    const boxW = Math.max(1, maxX - minX);
+    const boxH = Math.max(1, maxY - minY);
+    const padding = 180;
+    const nextZoom = Math.min(2.2, Math.max(0.15, Math.min(viewW / (boxW + padding), viewH / (boxH + padding))));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const nextOrigin = { x: centerX - viewW / (2 * nextZoom), y: centerY - viewH / (2 * nextZoom) };
+    zoomRef.current = nextZoom;
+    originRef.current = nextOrigin;
+    triggerCameraAnimation();
+    setZoom(nextZoom);
+    setOrigin(nextOrigin);
+  }, [isGameMaster, playerView, showHiddenClues, windowWidth, windowHeight, triggerCameraAnimation]);
+
+  // Ouvir evento global de Toast "Localizar" / centralizar pista
+  useEffect(() => {
+    const onLocate = (ev: Event) => {
+      const cardId = (ev as CustomEvent<{ cardId?: string }>).detail?.cardId;
+      if (cardId) panToCard(cardId);
+    };
+    window.addEventListener('ordo:locate-card', onLocate);
+    return () => window.removeEventListener('ordo:locate-card', onLocate);
+  }, [panToCard]);
 
   const parseCardMetadata = (card: any) => {
     const meta = card?.metadata ?? (card?.data && card.data.metadata);
@@ -1624,7 +1933,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     return Boolean(lockedFlag || password);
   };
 
-  const openEvidenceViewer = useCallback((card: any) => {
+  const openEvidenceViewer = useCallback((card: any, initialForensic: 'none' | 'channel' | 'hex' | 'lens' | 'decoder' = 'none') => {
     try {
       const pos = localPositionsRef.current[card?.id];
       if (pos) {
@@ -1635,8 +1944,165 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     } catch {
       // ignore centering failures
     }
+    if (card?.id && investigationId) {
+      markCardSeen(String(investigationId), String(card.id), { isGameMaster, playerView });
+    }
+    setInspectInitialForensicMode(initialForensic);
     setInspectCard(card);
-  }, []);
+  }, [investigationId, isGameMaster, playerView]);
+
+  const getSafeDecoderText = useCallback((card: any): string => {
+    if (!card) return '';
+    const meta = parseCardMetadata(card);
+    if (!canEdit && isCardLocked(card, meta)) return '';
+    return String(meta?.cipher_text || card?.description_public || '');
+  }, [canEdit]);
+
+  const handleSendCardToDecoder = useCallback((card: any) => {
+    const safeText = getSafeDecoderText(card);
+    if (!safeText && !canEdit && isCardLocked(card, parseCardMetadata(card))) {
+      showToast({ id: 'decoder-locked', message: 'Desbloqueie a evidência antes de enviar para o Decoder.' }, 3000);
+      return;
+    }
+    setDecoderInitialInput(safeText);
+    setDecoderInitialMode(undefined);
+    setDecoderOpen(true);
+  }, [getSafeDecoderText, canEdit, showToast]);
+
+  const handleOpenCardInHex = useCallback((card: any) => {
+    const meta = parseCardMetadata(card);
+    if (!canEdit && isCardLocked(card, meta)) {
+      handleCardOpen(card);
+      return;
+    }
+    const hydratedMedia = resolveUnifiedMedia(card, meta, { revealBase: true });
+    openEvidenceViewer({ ...card, ...hydratedMedia, metadata: meta }, 'hex');
+  }, [canEdit, openEvidenceViewer]);
+
+  const getViewportCenterWorldPos = useCallback(() => {
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const viewW = boardRect?.width ?? windowWidth;
+    const viewH = boardRect?.height ?? window.innerHeight;
+    const CARD_W = 220;
+    const CARD_H = 160;
+    return {
+      x: Math.round(originRef.current.x + (viewW / 2) / zoom - CARD_W / 2),
+      y: Math.round(originRef.current.y + (viewH / 2) / zoom - CARD_H / 2),
+    };
+  }, [windowWidth, zoom]);
+
+  const handleOpenQuickNote = useCallback((pos?: { x: number; y: number }) => {
+    if (!canEdit) return;
+    setQuickNotePos(pos || getViewportCenterWorldPos());
+    setQuickNoteTitle('');
+    setQuickNoteText('');
+    setQuickNoteColor('#fef08a');
+    setQuickNoteTag('Teoria');
+    setQuickNoteOpen(true);
+  }, [canEdit, getViewportCenterWorldPos]);
+
+  const handleCreateQuickNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canEdit || !investigationId) return;
+    const title = quickNoteTitle.trim() || 'Nota Rápida';
+    const text = quickNoteText.trim();
+    if (!text) {
+      showToast({ id: 'quick-note-empty', message: 'Escreva o texto da nota.' }, 2500);
+      return;
+    }
+    setQuickNoteSaving(true);
+    try {
+      const pos = quickNotePos || getViewportCenterWorldPos();
+      const created: any = await api.createInvestigationCard({
+        investigation_id: investigationId,
+        title,
+        description_public: text,
+        x: pos.x,
+        y: pos.y,
+        type: 'text',
+        is_hidden: false,
+        tags: quickNoteTag ? [quickNoteTag] : [],
+        insights: [],
+        metadata: {
+          quick_note: true,
+          note_color: quickNoteColor,
+          theory_tag: quickNoteTag,
+        },
+      } as any);
+      setQuickNoteOpen(false);
+      await loadBoard();
+      if (created?.id) {
+        setLastCreatedId(created.id);
+        setTimeout(() => setLastCreatedId(null), 5000);
+      }
+      showToast({ id: 'quick-note-ok', message: '📝 Nota rápida adicionada ao quadro!' }, 2500);
+    } catch (err) {
+      console.error('Erro ao criar nota rápida:', err);
+      showToast({ id: 'quick-note-err', message: 'Falha ao criar nota rápida.' }, 3200);
+    } finally {
+      setQuickNoteSaving(false);
+    }
+  };
+
+  // Ctrl+V: Colar imagem diretamente no quadro (apenas Mestre ativo com canEdit === true)
+  useEffect(() => {
+    const onPaste = async (e: ClipboardEvent) => {
+      if (!canEdit || !investigationId) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (active) {
+        const tag = active.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable) {
+          return;
+        }
+      }
+      if (anyModalOpen) return;
+
+      const items = e.clipboardData?.items;
+      if (!items || items.length === 0) return;
+
+      let imageFile: File | null = null;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          imageFile = items[i].getAsFile();
+          if (imageFile) break;
+        }
+      }
+      if (!imageFile) return;
+
+      e.preventDefault();
+      const pos = getViewportCenterWorldPos();
+      showToast({ id: 'paste-upload', message: 'Colando imagem no quadro...' }, 4000);
+      try {
+        const uploadedUrl = await uploadInvestigationImage(imageFile, investigationId);
+        const baseName = imageFile.name ? imageFile.name.replace(/\.[^.]+$/, '') : '';
+        const title = baseName && baseName !== 'image' ? baseName : `Evidência Colada`;
+        const created: any = await api.createInvestigationCard({
+          investigation_id: investigationId,
+          title,
+          image_url: uploadedUrl,
+          x: pos.x,
+          y: pos.y,
+          type: 'image',
+          is_hidden: false,
+          tags: [],
+          insights: [],
+          metadata: { pasted_from_clipboard: true },
+        } as any);
+        await loadBoard();
+        if (created?.id) {
+          setLastCreatedId(created.id);
+          setTimeout(() => setLastCreatedId(null), 5000);
+        }
+        showToast({ id: 'paste-ok', message: '✓ Imagem colada como nova pista!' }, 2800);
+      } catch (err) {
+        console.error('Erro ao colar imagem no quadro:', err);
+        showToast({ id: 'paste-err', message: 'Falha ao colar imagem no quadro.' }, 3400);
+      }
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [canEdit, investigationId, anyModalOpen, getViewportCenterWorldPos, showToast]);
 
   const handleCardOpen = useCallback((card: any) => {
     const metadata = parseCardMetadata(card);
@@ -1749,6 +2215,19 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           setUnlockingCard(updatedCard);
         }
 
+        if (investigationId) {
+          recordUnlockedCode(
+            investigationId,
+            {
+              cardId: String(unlockingCard.id),
+              cardTitle: unlockingCard.title || 'Mega-Pista',
+              code,
+              lockType: 'mega_clue',
+            },
+            { isGameMaster, playerView }
+          );
+        }
+
         showToast({ id: `unlock-${unlockingCard.id}`, message: successMessage }, 3200);
         return { success: true, message: successMessage, closeModal: unlockedNow };
       }
@@ -1770,6 +2249,18 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
 
       const updatedMeta = { ...metadata, unlocked_at: new Date().toISOString() };
       await api.updateInvestigationCard(unlockingCard.id, { is_locked: false, metadata: updatedMeta } as any);
+      if (investigationId) {
+        recordUnlockedCode(
+          investigationId,
+          {
+            cardId: String(unlockingCard.id),
+            cardTitle: unlockingCard.title || 'Evidência Protegida',
+            code,
+            lockType: 'prompt',
+          },
+          { isGameMaster, playerView }
+        );
+      }
       showToast({ id: `unlock-${unlockingCard.id}`, message: 'Acesso concedido' }, 3200);
       setUnlockingCard(null);
       openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false });
@@ -1796,100 +2287,149 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
     setCreateModalOpen(true);
   };
 
-  // Zoom helpers: centralize math and use refs to avoid stale closures
-  const zoomBy = useCallback((delta: number) => {
-    setZoom((prev) => {
-      const candidate = prev + delta;
-      const newZoom = Math.min(Math.max(candidate, 0.1), 3);
-      const boardRect = boardRef.current?.getBoundingClientRect();
-      const originNow = originRef.current;
-      if (boardRect && originNow) {
-        const centerX = originNow.x + (boardRect.width / 2) / prev;
-        const centerY = originNow.y + (boardRect.height / 2) / prev;
-        const newOriginX = centerX - (boardRect.width / 2) / newZoom;
-        const newOriginY = centerY - (boardRect.height / 2) / newZoom;
-        setOrigin({ x: newOriginX, y: newOriginY });
-      }
-      return newZoom;
-    });
-  }, []);
+  // Zoom helpers: multiplicative scaling centered on viewport, using refs to avoid stale closures
+  const zoomToFactor = useCallback((factor: number) => {
+    const prev = zoomRef.current || 1;
+    const newZoom = Math.min(Math.max(prev * factor, 0.1), 3);
+    if (Math.abs(newZoom - prev) < 0.0001) return;
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const originNow = originRef.current;
+    let nextOrigin = originNow;
+    if (boardRect && originNow) {
+      const centerX = originNow.x + (boardRect.width / 2) / prev;
+      const centerY = originNow.y + (boardRect.height / 2) / prev;
+      nextOrigin = {
+        x: centerX - (boardRect.width / 2) / newZoom,
+        y: centerY - (boardRect.height / 2) / newZoom,
+      };
+    }
+    zoomRef.current = newZoom;
+    originRef.current = nextOrigin;
+    triggerCameraAnimation();
+    setZoom(newZoom);
+    setOrigin(nextOrigin);
+  }, [triggerCameraAnimation]);
 
-  const zoomIn = useCallback(() => zoomBy(0.1), [zoomBy]);
-  const zoomOut = useCallback(() => zoomBy(-0.1), [zoomBy]);
+  const zoomIn = useCallback(() => zoomToFactor(1.2), [zoomToFactor]);
+  const zoomOut = useCallback(() => zoomToFactor(1 / 1.2), [zoomToFactor]);
   const resetZoom = useCallback(() => {
+    const prev = zoomRef.current || 1;
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    const originNow = originRef.current;
+    let nextOrigin = { x: 0, y: 0 };
+    if (boardRect && originNow) {
+      const centerX = originNow.x + (boardRect.width / 2) / prev;
+      const centerY = originNow.y + (boardRect.height / 2) / prev;
+      nextOrigin = {
+        x: centerX - boardRect.width / 2,
+        y: centerY - boardRect.height / 2,
+      };
+    }
+    zoomRef.current = 1;
+    originRef.current = nextOrigin;
+    triggerCameraAnimation();
     setZoom(1);
-    setOrigin({ x: 0, y: 0 });
-  }, []);
+    setOrigin(nextOrigin);
+  }, [triggerCameraAnimation]);
 
   // Wheel-based zoom (Ctrl/Cmd + wheel) and scroll-pan when not holding Ctrl, plus pinch-to-zoom
   useEffect(() => {
+    const normalizeDelta = (delta: number, mode: number) => {
+      if (mode === 1) return delta * 16; // DOM_DELTA_LINE
+      if (mode === 2) return delta * 100; // DOM_DELTA_PAGE
+      return delta;
+    };
+
     const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = -e.deltaY;
-        const scaleFactor = 0.05;
-        // compute new zoom and adjust origin so zoom centers on mouse pointer
-        const boardRect = boardRef.current?.getBoundingClientRect();
-        const pointerX = e.clientX;
-        const pointerY = e.clientY;
-        setZoom(prev => {
-          const candidate = prev + (delta > 0 ? scaleFactor : -scaleFactor);
-          const newZoom = Math.min(Math.max(candidate, 0.1), 3);
-          if (boardRect) {
-            // world coords under pointer before zoom
-            const worldX = origin.x + (pointerX - boardRect.left) / prev;
-            const worldY = origin.y + (pointerY - boardRect.top) / prev;
-            // adjust origin so the same world point stays under the pointer after zoom
-            const newOriginX = worldX - (pointerX - boardRect.left) / newZoom;
-            const newOriginY = worldY - (pointerY - boardRect.top) / newZoom;
-            setOrigin({ x: newOriginX, y: newOriginY });
-          }
-          return newZoom;
-        });
+      e.preventDefault();
+      cancelCameraAnimation();
+
+      const dx = normalizeDelta(e.deltaX, e.deltaMode);
+      const dyRaw = normalizeDelta(e.deltaY, e.deltaMode);
+
+      // Shift + wheel => pan; horizontal-only trackpad swipe => horizontal pan
+      if (e.shiftKey || (dyRaw === 0 && dx !== 0)) {
+        const z = zoomRef.current || 1;
+        const curr = pendingOriginRef.current || originRef.current;
+        scheduleOriginUpdate(curr.x + dx / z, curr.y + dyRaw / z);
         return;
       }
-      e.preventDefault();
-      const curr = pendingOriginRef.current || origin;
-      scheduleOriginUpdate(curr.x + e.deltaX / zoom, curr.y + e.deltaY / zoom);
+
+      if (dyRaw === 0) return;
+
+      const dy = Math.max(-120, Math.min(120, dyRaw));
+      const prevZoom = zoomRef.current || 1;
+      const factor = Math.exp(-dy * 0.0022);
+      const newZoom = Math.min(Math.max(prevZoom * factor, 0.1), 3);
+      const boardRect = boardRef.current?.getBoundingClientRect();
+      const currOrigin = pendingOriginRef.current || originRef.current;
+
+      if (boardRect) {
+        const offsetX = e.clientX - boardRect.left;
+        const offsetY = e.clientY - boardRect.top;
+        const worldX = currOrigin.x + offsetX / prevZoom;
+        const worldY = currOrigin.y + offsetY / prevZoom;
+        const nextOrigin = {
+          x: worldX - offsetX / newZoom,
+          y: worldY - offsetY / newZoom,
+        };
+        scheduleCameraUpdate(newZoom, nextOrigin);
+      } else {
+        scheduleCameraUpdate(newZoom, currOrigin);
+      }
     };
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         e.preventDefault();
-        setIsPinching(true);
+        cancelCameraAnimation();
+        panningRef.current = null;
+        draggingRef.current = null;
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
-        const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-        setInitialDistance(distance);
-        setInitialZoom(zoom);
+        const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+        const boardRect = boardRef.current?.getBoundingClientRect();
+        const midX = (touch1.clientX + touch2.clientX) / 2;
+        const midY = (touch1.clientY + touch2.clientY) / 2;
+        const currZoom = zoomRef.current || 1;
+        const currOrigin = pendingOriginRef.current || originRef.current;
+        const worldMidX = boardRect ? currOrigin.x + (midX - boardRect.left) / currZoom : currOrigin.x;
+        const worldMidY = boardRect ? currOrigin.y + (midY - boardRect.top) / currZoom : currOrigin.y;
+        pinchRef.current = {
+          initialDist: Math.max(dist, 1),
+          initialZoom: currZoom,
+          worldMidX,
+          worldMidY,
+        };
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && isPinching) {
+      if (e.touches.length === 2 && pinchRef.current) {
         e.preventDefault();
+        const ps = pinchRef.current;
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
-        const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-        const newZoom = initialZoom * (distance / initialDistance);
-        setZoom(Math.max(0.1, Math.min(3, newZoom)));
-        // Center zoom on midpoint of touches
+        const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+        const newZoom = Math.max(0.1, Math.min(3, ps.initialZoom * (dist / ps.initialDist)));
         const boardRect = boardRef.current?.getBoundingClientRect();
         if (boardRect) {
           const midX = (touch1.clientX + touch2.clientX) / 2;
           const midY = (touch1.clientY + touch2.clientY) / 2;
-          const worldX = origin.x + (midX - boardRect.left) / zoom;
-          const worldY = origin.y + (midY - boardRect.top) / zoom;
-          const newOriginX = worldX - (midX - boardRect.left) / newZoom;
-          const newOriginY = worldY - (midY - boardRect.top) / newZoom;
-          setOrigin({ x: newOriginX, y: newOriginY });
+          const nextOrigin = {
+            x: ps.worldMidX - (midX - boardRect.left) / newZoom,
+            y: ps.worldMidY - (midY - boardRect.top) / newZoom,
+          };
+          scheduleCameraUpdate(newZoom, nextOrigin);
+        } else {
+          scheduleCameraUpdate(newZoom, originRef.current);
         }
       }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
-        setIsPinching(false);
+        pinchRef.current = null;
       }
     };
 
@@ -1899,6 +2439,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       boardEl.addEventListener('touchstart', handleTouchStart, { passive: false });
       boardEl.addEventListener('touchmove', handleTouchMove, { passive: false });
       boardEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+      boardEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     }
     return () => {
       if (boardEl) {
@@ -1906,9 +2447,10 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         boardEl.removeEventListener('touchstart', handleTouchStart as any);
         boardEl.removeEventListener('touchmove', handleTouchMove as any);
         boardEl.removeEventListener('touchend', handleTouchEnd as any);
+        boardEl.removeEventListener('touchcancel', handleTouchEnd as any);
       }
     };
-  }, [zoom, origin, isPinching, initialDistance, initialZoom]);
+  }, [cancelCameraAnimation]);
 
   // Listener para eventos do Menu Mobile
   useEffect(() => {
@@ -1940,11 +2482,25 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           setOrigin({ x: 0, y: 0 });
           setZoom(1);
           break;
+        case 'fit-view':
+          zoomToFit();
+          break;
+        case 'minimap':
+          toggleMinimapOpen();
+          break;
+        case 'marquee':
+          setMarqueeTouchMode((prev) => {
+            const next = !prev;
+            showToast({ id: 'mob-marquee', message: next ? 'Seleção em Área: arraste no fundo' : 'Seleção em Área desativada' });
+            return next;
+          });
+          break;
+        case 'snap-grid':
+          toggleSnapToGrid();
+          showToast({ id: 'mob-snap', message: !snapToGrid ? 'Snap to Grid: ATIVADO' : 'Snap to Grid: DESATIVADO' });
+          break;
         case 'organize':
-          // Abre o menu de organizar ou organiza direto
-          if (window.confirm("Reorganizar o quadro automaticamente?")) {
-             handleAutoOrganize('timeline');
-          }
+          setShowOrganizeMenu(true);
           break;
         case 'decoder':
           setDecoderOpen(true);
@@ -1975,10 +2531,39 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       window.removeEventListener('investigation:tool', handleMobileTool as EventListener);
       try { delete (window as any).handleInvestigationTool; } catch (e) {}
     };
-  }, [connectionMode, isUV, undo, redo, togglePerformanceMode, handleAutoOrganize]); // Adicione dependências relevantes
+  }, [connectionMode, isUV, undo, redo, togglePerformanceMode, zoomToFit, toggleMinimapOpen, toggleSnapToGrid, snapToGrid]);
+
+  // Cross-Highlight: compute connected neighbor IDs when 1 card is selected
+  const activeCrossHighlightIds = React.useMemo(() => {
+    if (selectedIds.length !== 1) return null;
+    const focusId = selectedIds[0];
+    const connected = new Set<string>([focusId]);
+    connections.forEach((c) => {
+      if (c.from_card_id === focusId && c.to_card_id) connected.add(c.to_card_id);
+      if (c.to_card_id === focusId && c.from_card_id) connected.add(c.from_card_id);
+    });
+    return connected;
+  }, [selectedIds, connections]);
+
+  const connectedNeighborsForSingle = React.useMemo(() => {
+    if (selectedIds.length !== 1) return [];
+    const focusId = selectedIds[0];
+    const ids = new Set<string>();
+    connections.forEach((c) => {
+      if (c.from_card_id === focusId && c.to_card_id) ids.add(c.to_card_id);
+      if (c.to_card_id === focusId && c.from_card_id) ids.add(c.from_card_id);
+    });
+    return Array.from(ids)
+      .map((id) => cards.find((c) => c.id === id))
+      .filter((c): c is any => Boolean(c && (!c.is_hidden || (isGameMaster && !playerView && showHiddenClues))));
+  }, [selectedIds, connections, cards, isGameMaster, playerView, showHiddenClues]);
 
   return (
-    <div className="investigation-board" data-performance-mode={performanceMode ? 'on' : 'off'}>
+    <div
+      className="investigation-board"
+      data-performance-mode={performanceMode ? 'on' : 'off'}
+      data-membrane-state={membraneState}
+    >
       {terminalMessage && <div className="reveal-hud">{terminalMessage}</div>}
       <header className="investigation-header">
         <div className="header-left">
@@ -2005,6 +2590,20 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                <button className="hud-btn" onClick={() => { toggleCardStatus(contextMenu.targetId!, 'false', []); setContextMenu(null); }} title="Descartar / Falso"><X size={16} /></button>
              </div>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
+             {(() => {
+               const targetCard = cards.find((c) => c.id === contextMenu.targetId);
+               if (!targetCard) return null;
+               const targetMeta = parseCardMetadata(targetCard);
+               const isTargetLockedForViewer = !canEdit && isCardLocked(targetCard, targetMeta);
+               if (isTargetLockedForViewer) return null;
+               return (
+                 <>
+                   <button className="hud-btn" onClick={() => { handleSendCardToDecoder(targetCard); setContextMenu(null); }}><KeyRound size={15} /> Enviar para Decoder</button>
+                   <button className="hud-btn" onClick={() => { handleOpenCardInHex(targetCard); setContextMenu(null); }}><Keyboard size={15} /> Abrir no Hex</button>
+                   <hr style={{borderColor:'#333', margin:'4px 0'}} />
+                 </>
+               );
+             })()}
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }}><ArrowUp size={15} /> Trazer para Frente</button>
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }}><ArrowDown size={15} /> Mandar para Trás</button>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
@@ -2032,7 +2631,12 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           ) : (
             <>
              <div className="context-menu-title">MESA DE INVESTIGAÇÃO</div>
-             <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }}><Plus size={15} /> Nova Pista Aqui</button>
+             {canEdit && (
+               <>
+                 <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; setCreateModalPos({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setCreateModalOpen(true); setContextMenu(null); }}><Plus size={15} /> Nova Pista Aqui</button>
+                 <button className="hud-btn" onClick={() => { const CARD_W = 220; const CARD_H = 160; handleOpenQuickNote({ x: Math.round(contextMenu.x - CARD_W/2), y: Math.round(contextMenu.y - CARD_H/2) }); setContextMenu(null); }}><StickyNote size={15} /> Nota Rápida</button>
+               </>
+             )}
              <button className="hud-btn" onClick={() => { handleAutoOrganize('timeline'); setContextMenu(null); }}><CalendarDays size={15} /> Organizar Timeline</button>
              <button className="hud-btn" onClick={() => { setOrigin({x:0, y:0}); setContextMenu(null); }}><LocateFixed size={15} /> Resetar Câmera</button>
             </>
@@ -2042,183 +2646,341 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       })()}
       {/* Header moved to dedicated element above */}
 
-      {/* BARRA DE NAVEGAÇÃO MOBILE (NOVA) */}
+      {/* BARRA DE NAVEGAÇÃO MOBILE */}
       {isMobileDevice && (
-        <BottomNavigationBar isGameMaster={isGameMaster} />
+        <>
+          <BottomNavigationBar
+            isGameMaster={isGameMaster}
+            activeTools={{
+              search: showFinder,
+              uv: isUV,
+              connect: connectionMode,
+              marquee: marqueeTouchMode,
+              'snap-grid': snapToGrid,
+              minimap: minimapOpen,
+              terminal: terminalOpen,
+              performance: performanceMode,
+            }}
+          />
+          <InteractionToggleButton
+            mode={touchMode}
+            onToggle={() => {
+              setTouchMode(prev => {
+                const next = prev === 'pan' ? 'edit' : 'pan';
+                setTouchModeNotice(next === 'pan' ? 'Modo Panorâmica: arraste com 1 dedo' : 'Modo Edição: toque e mova pistas');
+                setTimeout(() => setTouchModeNotice(null), 3000);
+                return next;
+              });
+            }}
+          />
+        </>
       )}
 
+      {/* SIDEBAR: Modos & Criação */}
       {!isMobileDevice && (
-        <div 
-          className="investigation-toolbar" 
-          data-game-master={isGameMaster ? 'true' : 'false'} 
-          data-player-view={playerView ? 'true' : 'false'}
-        >
-        {/* Grupo 1: Ações Principais */}
-        <div className="toolbar-group">
-          {/* Criar Nova Evidência - Apenas para GM e quando NÃO está em playerView */}
-          {canEdit && (
-            <button 
-              className="hud-btn primary" 
-              onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
-              data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
-              data-gm-only="true"
-            >
-              <Settings size={16} /> HUB DE CRIAÇÃO
-            </button>
-          )}
-
-          {isGameMaster && (
-            <>
-              <button className="hud-btn icon-only" onClick={async () => {
-                 try {
-                   const invite = await api.createInviteLink(investigationId);
-                   if (invite?.invite_code) {
-                     const url = `${window.location.origin}/invite/${invite.invite_code}`;
-                     setInviteLink(url);
-                   }
-                 } catch (e) {
-                   console.error('Falha ao gerar link de convite', e);
-                   alert('Falha ao gerar link de convite');
-                 }
-                 setInviteOpen(true);
-              }} data-tooltip="Convidar jogadores" data-gm-only="true"><Mail size={16} /></button>
-              <button 
-                 className={`hud-btn icon-only ${playerView ? 'active' : ''}`}
-                 onClick={() => setPlayerView(!playerView)}
-                 data-tooltip={playerView ? "Voltar à Visão Mestre" : "Trocar para Visão Jogador"}
-                 data-gm-only="true"
-              >
-                 {playerView ? <Eye size={16} /> : <Glasses size={16} />}
-              </button>
-              <button 
-                 className={`hud-btn icon-only ${showHiddenClues ? 'active' : ''}`}
-                 onClick={() => setShowHiddenClues(!showHiddenClues)}
-                 data-tooltip={showHiddenClues ? "Ocultar pistas escondidas" : "Mostrar pistas escondidas (GM)"}
-                 data-gm-only="true"
-              >
-                 <Eye size={16} />
-              </button>
-              <button 
-                 className={`hud-btn icon-only ${gmOverwatchOpen ? 'active' : ''}`}
-                 onClick={() => setGmOverwatchOpen(!gmOverwatchOpen)}
-                 data-tooltip="GM Overwatch - Painel de Controle"
-                 data-gm-only="true"
-              >
-                 <Crown size={16} />
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Grupo 2: Ferramentas */}
-        <div className="toolbar-group">
-          <button 
-            className={`hud-btn icon-only connection ${connectionMode ? 'active' : ''}`} 
-            onClick={() => setConnectionMode(prev => { const next = !prev; if (!next) setConnectionStart(null); return next; })} 
-            data-tooltip={connectionMode ? "Sair do modo conexão" : "Conectar pistas"}
+        <nav className="investigation-sidebar" aria-label="Modos e Criação do Quadro">
+          <button
+            className={`tbtn ${!connectionMode && !noteMode && !pinMode && !tapToPlaceMode && !isUV && !marqueeTouchMode ? 'on' : ''}`}
+            onClick={() => {
+              setConnectionMode(false);
+              setNoteMode(false);
+              setPinMode(false);
+              setTapToPlaceMode(false);
+              setIsUV(false);
+              setMarqueeTouchMode(false);
+            }}
+            title="Mover / Selecionar (V)"
           >
-            <Link2 size={16} />
+            <LocateFixed size={18} />MOVER
           </button>
-
-          {connectionMode && (
+          {canEdit && (
             <>
-              <button 
-                className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
-                style={{ opacity: connectionType==='confirmed'?1:0.5, border: connectionType==='confirmed'?'1px solid var(--border)':'none' }}
-                data-tooltip="Fato"
-              >
-                <div style={{width:10, height:10, background:'#c62828'}} />
+              <button className="tbtn" onClick={handleCreateClue} title="Criar Nova Pista no Centro (P)">
+                <Plus size={18} />PISTA
               </button>
-              <button 
-                className="hud-btn icon-only"
-                onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
-                style={{ opacity: connectionType==='theory'?1:0.5, border: connectionType==='theory'?'1px solid var(--border)':'none' }}
-                data-tooltip="Teoria"
+              <button
+                className={`tbtn ${tapToPlaceMode ? 'on' : ''}`}
+                onClick={() => {
+                  setConnectionMode(false);
+                  setNoteMode(false);
+                  setPinMode(false);
+                  setMarqueeTouchMode(false);
+                  setTapToPlaceMode((v) => !v);
+                }}
+                title="Toque no quadro para posicionar nova pista"
               >
-                <div style={{width:10, height:10, background:'#f9a825'}} />
+                <CrosshairIconProxy />INSERIR
               </button>
-              <button 
-                className="hud-btn icon-only" 
-                onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
-                style={{ opacity: connectionType==='mystic'?1:0.5, border: connectionType==='mystic'?'1px solid var(--border)':'none' }}
-                data-tooltip="Sobrenatural"
-              >
-                <div style={{width:10, height:10, background:'#7e57c2'}} />
+              <button className={`tbtn ${noteMode ? 'on' : ''}`} onClick={() => { setConnectionMode(false); setPinMode(false); setTapToPlaceMode(false); setMarqueeTouchMode(false); setNoteMode((v) => !v); }} title="Nota (N)">
+                <FileText size={18} />NOTA
+              </button>
+              <div className="tbtn-wrap">
+                <button
+                  className={`tbtn ${pinMode ? 'on' : ''}`}
+                  onClick={() => { setConnectionMode(false); setNoteMode(false); setTapToPlaceMode(false); setMarqueeTouchMode(false); setPinMode((v) => !v); }}
+                  title="Pin"
+                >
+                  <Pin size={18} />PIN
+                </button>
+                {pinMode && (
+                  <div className="sidebar-flyout" role="group" aria-label="Cor do Pin">
+                    <span className="sidebar-flyout-label">COR DO PIN</span>
+                    <div className="sidebar-flyout-dots">
+                      <button type="button" className={`pin-dot ${pinType === 'vermelho' ? 'active' : ''}`} style={{ background: '#e63946' }} onClick={() => setPinType('vermelho')} title="Pino vermelho" aria-label="Pino vermelho" />
+                      <button type="button" className={`pin-dot ${pinType === 'azul' ? 'active' : ''}`} style={{ background: '#3b82f6' }} onClick={() => setPinType('azul')} title="Pino azul" aria-label="Pino azul" />
+                      <button type="button" className={`pin-dot ${pinType === 'verde' ? 'active' : ''}`} style={{ background: '#eab308' }} onClick={() => setPinType('verde')} title="Pino amarelo" aria-label="Pino amarelo" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button className="tbtn" onClick={handleAddZone} title="Criar Moldura / Zona de Grupo">
+                <SquareDashed size={18} />ZONA
               </button>
             </>
           )}
-
-          <button className="hud-btn icon-only" onClick={() => setDecoderOpen(true)} data-tooltip="Decodificador de Texto"><Lock size={16} /></button>
-        </div>
-
-        {/* Grupo 3: Organização & Edição */}
-        <div className="toolbar-group">
-          <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar"><Search size={16} /></button>
-          <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowOrganizeMenu(!showOrganizeMenu)} data-tooltip="Organizar"><Layers2 size={16} /></button>
-            {showOrganizeMenu && (
-              <div className="dropdown-menu">
-                <div className="dropdown-header">Organizar</div>
-                <button onClick={() => { handleAutoOrganize('timeline'); setShowOrganizeMenu(false); }}><CalendarDays size={15} /> Por Data</button>
-                <button onClick={() => { handleAutoOrganize('grid'); setShowOrganizeMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
-                <button onClick={() => {
-                  const newPos: Record<string, { x: number; y: number }> = { ...localPositions };
-                  cards.forEach((c, i) => {
-                    const col = i % 5;
-                    const row = Math.floor(i / 5);
-                    const x = 100 + col * 260;
-                    const y = 100 + row * 300;
-                    newPos[c.id] = { x, y };
-                    api.updateInvestigationCard(c.id, { x, y }).catch((e) => console.warn('force grid save failed', e));
-                  });
-                  setLocalPositions(newPos);
-                  setOrigin({ x: -50, y: -50 });
-                  setShowOrganizeMenu(false);
-                }}><Layers2 size={15} /> Desempilhar</button>
-              </div>
-            )}
-          </div>
-
-          <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer"><Undo2 size={16} /></button>
-          <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer"><Redo2 size={16} /></button>
-        </div>
-
-        {/* Grupo 4: Ferramentas Avançadas */}
-        <div className="toolbar-group">
-
-          {/* Post-it button removed */}
-          
-          <div style={{ position: 'relative' }}>
-            <button className="hud-btn icon-only" onClick={() => setShowToolsMenu(!showToolsMenu)} data-tooltip="Mais Ferramentas"><Settings size={16} /></button>
-            {showToolsMenu && (
-              <div className="dropdown-menu">
-                <div className="dropdown-header">Ferramentas</div>
-                <button onClick={() => { setIsUV(!isUV); setShowToolsMenu(false); }} className={isUV ? 'active-uv' : ''}>
-                  <Flashlight size={15} /> Luz UV {isUV ? '(Ativa)' : ''}
+          <div className="sdiv" />
+          <div className="tbtn-wrap">
+            <button
+              className={`tbtn ${connectionMode ? 'on' : ''}`}
+              onClick={() => {
+                setNoteMode(false);
+                setPinMode(false);
+                setTapToPlaceMode(false);
+                setMarqueeTouchMode(false);
+                setConnectionMode((prev) => {
+                  const next = !prev;
+                  if (!next) setConnectionStart(null);
+                  return next;
+                });
+              }}
+              title="Conectar Pistas (C)"
+            >
+              <Link2 size={18} />FIO
+            </button>
+            {connectionMode && (
+              <div className="sidebar-flyout" role="group" aria-label="Tipo de Fio">
+                <span className="sidebar-flyout-label">TIPO DE FIO</span>
+                <button
+                  type="button"
+                  className={`sidebar-flyout-btn ${connectionType === 'confirmed' ? 'active' : ''}`}
+                  onClick={() => { setConnectionType('confirmed'); setConnectionColor('#c62828'); }}
+                >
+                  <span className="flyout-swatch" style={{ background: '#c62828' }} />FATO
                 </button>
-                <button onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}>
-                  <Terminal size={15} /> Terminal C.R.I.S.
+                <button
+                  type="button"
+                  className={`sidebar-flyout-btn ${connectionType === 'theory' ? 'active' : ''}`}
+                  onClick={() => { setConnectionType('theory'); setConnectionColor('#f9a825'); }}
+                >
+                  <span className="flyout-swatch" style={{ background: '#f9a825' }} />TEORIA
+                </button>
+                <button
+                  type="button"
+                  className={`sidebar-flyout-btn ${connectionType === 'mystic' ? 'active' : ''}`}
+                  onClick={() => { setConnectionType('mystic'); setConnectionColor('#7e57c2'); }}
+                >
+                  <span className="flyout-swatch" style={{ background: '#7e57c2' }} />SOBRENATURAL
                 </button>
               </div>
             )}
           </div>
           <button
-            className={`hud-btn icon-only ${performanceMode ? 'active' : ''}`}
-            onClick={togglePerformanceMode}
-            data-tooltip={performanceMode ? 'Modo performance ativado (reduz efeitos e processos)' : 'Ativar modo performance (reduz efeitos e processos)'}
+            className={`tbtn ${marqueeTouchMode ? 'on' : ''}`}
+            onClick={() => {
+              setConnectionMode(false);
+              setNoteMode(false);
+              setPinMode(false);
+              setTapToPlaceMode(false);
+              setMarqueeTouchMode((v) => !v);
+            }}
+            title="Seleção em Área — arraste no quadro para selecionar várias pistas (ou Shift + arrastar)"
           >
-            <Zap size={16} />
+            <BoxSelect size={18} />ÁREA
           </button>
-        </div>
+        </nav>
+      )}
 
-        {/* Grupo 5: Zoom */}
-        <div className="toolbar-group" style={{ marginLeft: 'auto', padding: '0 8px', minWidth: 120, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
-          <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir"><ZoomOut size={16} /></button>
-          <span className="toolbar-zoom-value">{(zoom * 100).toFixed(0)}%</span>
-          <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar"><ZoomIn size={16} /></button>
-          <button className="hud-btn icon-only" onClick={resetZoom} data-tooltip="Reset"><RotateCcw size={16} /></button>
-        </div>
+      {!isMobileDevice && (
+        <div
+          className="investigation-toolbar"
+          data-game-master={isGameMaster ? 'true' : 'false'}
+          data-player-view={playerView ? 'true' : 'false'}
+        >
+          {/* Grupo 1: Criação */}
+          {canEdit && (
+            <div className="toolbar-group" role="group" aria-label="Ações Principais">
+              <button
+                className="hud-btn primary"
+                onClick={() => { console.debug('HUD: CreatorHub opened', { isGameMaster, playerView, canEdit }); setCreateModalOpen(true); }}
+                data-tooltip="Criar Nova Evidência: pistas, puzzles, mega-pistas"
+                data-gm-only="true"
+              >
+                <Settings size={16} /> HUB DE CRIAÇÃO
+              </button>
+            </div>
+          )}
+
+          {/* Grupo 2: Controle do Mestre (Dropdown compacto) */}
+          {isGameMaster && (
+            <div className="toolbar-group" role="group" aria-label="Controle do Mestre" style={{ position: 'relative' }}>
+              <button
+                className={`hud-btn ${(playerView || showHiddenClues || gmOverwatchOpen) ? 'active' : ''}`}
+                onClick={() => { setShowGmMenu(!showGmMenu); setShowToolsMenu(false); }}
+                data-tooltip="Opções do Mestre (Convite, Visão Jogador, Ocultas, Overwatch)"
+                data-gm-only="true"
+                aria-expanded={showGmMenu}
+              >
+                <Crown size={16} /> Mestre
+              </button>
+              {showGmMenu && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-header">CONTROLE DO MESTRE</div>
+                  <button
+                    onClick={async () => {
+                      setShowGmMenu(false);
+                      try {
+                        const invite = await api.createInviteLink(investigationId);
+                        if (invite?.invite_code) {
+                          setInviteLink(`${window.location.origin}/invite/${invite.invite_code}`);
+                        }
+                      } catch (e) {
+                        console.error('Falha ao gerar link de convite', e);
+                        alert('Falha ao gerar link de convite');
+                      }
+                      setInviteOpen(true);
+                    }}
+                  >
+                    <Mail size={15} /> Convidar Jogadores
+                  </button>
+                  <button
+                    onClick={() => { setPlayerView(!playerView); setShowGmMenu(false); }}
+                    style={playerView ? { color: '#38bdf8' } : undefined}
+                  >
+                    {playerView ? <Eye size={15} /> : <Glasses size={15} />}
+                    {playerView ? 'Voltar à Visão Mestre' : 'Visão do Jogador'}
+                  </button>
+                  <button
+                    onClick={() => { setShowHiddenClues(!showHiddenClues); setShowGmMenu(false); }}
+                    style={showHiddenClues ? { color: '#38bdf8' } : undefined}
+                  >
+                    <Eye size={15} />
+                    {showHiddenClues ? 'Ocultar Pistas Escondidas' : 'Mostrar Pistas Escondidas'}
+                  </button>
+                  <button
+                    onClick={() => { setGmOverwatchOpen(!gmOverwatchOpen); setShowGmMenu(false); }}
+                    style={gmOverwatchOpen ? { color: '#f9a825' } : undefined}
+                  >
+                    <Crown size={15} /> GM Overwatch
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Grupo 3: Investigação, Filtros & Busca */}
+          <div className="toolbar-group" role="group" aria-label="Investigação e Filtros">
+            <button
+              className="hud-btn"
+              onClick={() => setCodesPanelOpen(true)}
+              data-tooltip="Códigos e Senhas Desbloqueados"
+            >
+              <KeyRound size={15} /> Códigos{unlockedCodes.length > 0 ? ` (${unlockedCodes.length})` : ''}
+            </button>
+            <button
+              className={`hud-btn icon-only ${isUV ? 'active-uv' : ''}`}
+              onClick={() => setIsUV(!isUV)}
+              data-tooltip={isUV ? 'Desativar Luz Ultravioleta (UV)' : 'Ativar Luz Ultravioleta (UV)'}
+              aria-label="Alternar Luz Ultravioleta (UV)"
+              aria-pressed={isUV}
+            >
+              <Flashlight size={16} />
+            </button>
+            <button
+              className={`hud-btn ${statusFilter !== 'all' ? 'active' : ''}`}
+              onClick={() => {
+                const order: Array<'all' | 'verified' | 'theory' | 'false'> = ['all', 'verified', 'theory', 'false'];
+                const next = order[(order.indexOf(statusFilter) + 1) % order.length];
+                setStatusFilter(next);
+              }}
+              data-tooltip="Filtrar por Status (Esmaecimento)"
+              aria-label="Filtrar por Status"
+            >
+              {statusFilter === 'all' ? 'TODOS' : statusFilter === 'verified' ? 'FATOS' : statusFilter === 'theory' ? 'TEORIAS' : 'FALSOS'}
+            </button>
+            <button className={`hud-btn icon-only ${showFinder ? 'active' : ''}`} onClick={() => setShowFinder(!showFinder)} data-tooltip="Buscar pistas (Ctrl+F)" aria-label="Buscar pistas">
+              <Search size={16} />
+            </button>
+          </div>
+
+          {/* Grupo 4: Histórico & Mais Ferramentas */}
+          <div className="toolbar-group" role="group" aria-label="Histórico e Ferramentas">
+            <button className="hud-btn icon-only" onClick={() => undo()} disabled={undoStack.length === 0} data-tooltip="Desfazer (Ctrl+Z)" aria-label="Desfazer">
+              <Undo2 size={16} />
+            </button>
+            <button className="hud-btn icon-only" onClick={() => redo()} disabled={redoStack.length === 0} data-tooltip="Refazer (Ctrl+Y)" aria-label="Refazer">
+              <Redo2 size={16} />
+            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                className={`hud-btn icon-only ${(showToolsMenu || terminalOpen || snapToGrid || performanceMode) ? 'active' : ''}`}
+                onClick={() => { setShowToolsMenu(!showToolsMenu); setShowGmMenu(false); }}
+                data-tooltip="Mais ferramentas (Terminal, Decodificador, Organizar, Grid)"
+                aria-label="Mais ferramentas"
+                aria-expanded={showToolsMenu}
+              >
+                <SlidersHorizontal size={16} />
+              </button>
+              {showToolsMenu && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-header">FERRAMENTAS</div>
+                  <button
+                    onClick={() => { setTerminalOpen(!terminalOpen); setShowToolsMenu(false); }}
+                    style={terminalOpen ? { color: '#38bdf8' } : undefined}
+                  >
+                    <Terminal size={15} /> Terminal C.R.I.S.
+                  </button>
+                  <button onClick={() => { setDecoderOpen(true); setShowToolsMenu(false); }}>
+                    <Lock size={15} /> Decodificador de Texto
+                  </button>
+                  <button
+                    onClick={() => { toggleSnapToGrid(); setShowToolsMenu(false); }}
+                    style={snapToGrid ? { color: '#38bdf8' } : undefined}
+                  >
+                    <Grid size={15} /> Snap to Grid: {snapToGrid ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={() => { togglePerformanceMode(); setShowToolsMenu(false); }}
+                    style={performanceMode ? { color: '#f9a825' } : undefined}
+                  >
+                    <Zap size={15} /> Modo Performance: {performanceMode ? 'ON' : 'OFF'}
+                  </button>
+                  <div className="dropdown-header" style={{ marginTop: 4, borderTop: '1px solid var(--border)', paddingTop: 6 }}>ORGANIZAR PISTAS</div>
+                  <button onClick={() => { handleAutoOrganize('timeline'); setShowToolsMenu(false); }}><CalendarDays size={15} /> Por Data</button>
+                  <button onClick={() => { handleAutoOrganize('element'); setShowToolsMenu(false); }}><LayoutGrid size={15} /> Por Elemento</button>
+                  <button onClick={() => { handleAutoOrganize('veracity'); setShowToolsMenu(false); }}><Check size={15} /> Por Status</button>
+                  <button onClick={() => { handleAutoOrganize('grid'); setShowToolsMenu(false); }}><Grid size={15} /> Em Grade</button>
+                  <button onClick={() => { handleAutoOrganize('unstack'); setShowToolsMenu(false); }}><Layers2 size={15} /> Desempilhar</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Grupo 5: Câmera */}
+          <div className="toolbar-group toolbar-zoom" role="group" aria-label="Câmera">
+            <button className="hud-btn icon-only" onClick={zoomOut} data-tooltip="Diminuir Zoom" aria-label="Diminuir Zoom"><ZoomOut size={16} /></button>
+            <button
+              type="button"
+              className="hud-btn tabular-nums toolbar-zoom-value"
+              onClick={resetZoom}
+              data-tooltip="Resetar Zoom para 100%"
+              aria-label="Resetar Zoom para 100%"
+              style={{ fontSize: 11, fontWeight: 700, minWidth: 46, justifyContent: 'center', padding: '0 6px' }}
+            >
+              {(zoom * 100).toFixed(0)}%
+            </button>
+            <button className="hud-btn icon-only" onClick={zoomIn} data-tooltip="Aumentar Zoom" aria-label="Aumentar Zoom"><ZoomIn size={16} /></button>
+            <button className="hud-btn icon-only" onClick={zoomToFit} data-tooltip="Enquadrar Tudo (Zoom to Fit)" aria-label="Enquadrar Tudo"><Maximize2 size={16} /></button>
+          </div>
         </div>
       )}
 
@@ -2236,18 +2998,31 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       }} />
 
       {showFinder && (
-        <TerminalSearch onSearch={handleTerminalSearch} onClose={() => { setShowFinder(false); setTerminalMessage(null); }} />
+        <TerminalSearch
+          cards={cards.filter((c) => !c.is_hidden || (isGameMaster && !playerView && showHiddenClues))}
+          onSelectCard={(cardId) => panToCard(cardId)}
+          onSearch={handleTerminalSearch}
+          onClose={() => { setShowFinder(false); setTerminalMessage(null); }}
+        />
       )}
 
-      {/* Modais (mantidos) */}
-      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
+      {/* Modais */}
       <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
       {inspectCard && (
         <InspectionModal
           isOpen={!!inspectCard}
           card={inspectCard}
           isGameMaster={isGameMaster}
-          onClose={() => setInspectCard(null)}
+          playerView={viewerMode}
+          performanceMode={performanceMode}
+          initialForensicMode={inspectInitialForensicMode}
+          onSendToDecoder={(text, mode) => {
+            setInspectCard(null);
+            setDecoderInitialInput(text);
+            if (mode) setDecoderInitialMode(mode);
+            setDecoderOpen(true);
+          }}
+          onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
           onEdit={() => {
             // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
             setEditingCard(inspectCard);
@@ -2259,35 +3034,182 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         />
       )}
 
+      {tapToPlaceMode && (
+        <div className="tap-to-place-banner" role="status">
+          <span>TOQUE NO QUADRO PARA POSICIONAR A PISTA</span>
+          <button type="button" onClick={() => setTapToPlaceMode(false)}>CANCELAR</button>
+        </div>
+      )}
+
       <div
         ref={boardRef}
-        className="corkboard-canvas"
+        className={[
+          'corkboard-canvas',
+          zoom < 0.48 ? 'semantic-zoom-low' : '',
+          activeCrossHighlightIds ? 'cross-highlight-active' : '',
+          statusFilter !== 'all' ? 'filtering-active' : '',
+          snapToGrid ? 'snap-grid-active' : '',
+          isUV && uvFollowTouch ? 'uv-touch-locked' : '',
+          marqueeTouchMode ? 'marquee-mode' : '',
+        ].filter(Boolean).join(' ')}
         onTouchStart={(e) => {
           try {
+            if (bgLongPressTimerRef.current) {
+              clearTimeout(bgLongPressTimerRef.current);
+              bgLongPressTimerRef.current = null;
+            }
+            // Se modo UV estiver ativo com Seguir o Toque, toque move a lente e trava pan
+            if (isUV && uvFollowTouch) {
+              const t0 = e.touches[0];
+              if (t0 && boardRef.current) {
+                const rect = boardRef.current.getBoundingClientRect();
+                setUvTouchPos({ x: t0.clientX - rect.left, y: t0.clientY - rect.top, active: true });
+                return;
+              }
+            }
+
+            // Toque para posicionar nova pista
+            if (tapToPlaceMode && e.touches.length === 1 && boardRef.current && (e.target === boardRef.current || e.target === e.currentTarget)) {
+              const t0 = e.touches[0];
+              const rect = boardRef.current.getBoundingClientRect();
+              const worldX = origin.x + (t0.clientX - rect.left) / zoom;
+              const worldY = origin.y + (t0.clientY - rect.top) / zoom;
+              setCreateModalPos({ x: Math.round(worldX - 122), y: Math.round(worldY - 143) });
+              setTapToPlaceMode(false);
+              setCreateModalOpen(true);
+              return;
+            }
+
+            // Marquee selection via touch
+            if (marqueeTouchMode && e.touches.length === 1 && boardRef.current) {
+              const t0 = e.touches[0];
+              const rect = boardRef.current.getBoundingClientRect();
+              const sx = t0.clientX - rect.left;
+              const sy = t0.clientY - rect.top;
+              const bx = sx / zoom + origin.x;
+              const by = sy / zoom + origin.y;
+              marqueeStartRef.current = { sx, sy, bx, by };
+              setMarqueeRect({ left: sx, top: sy, width: 0, height: 0 });
+              return;
+            }
+
             const t = (e.touches && e.touches[0]) as Touch | undefined;
             if (!t) return;
-            // start pan when touching the background (not a card) — always enabled on mobile
+            // Long-press no fundo abre menu contextual
+            if ((e.target === boardRef.current || e.target === e.currentTarget) && e.touches.length === 1 && boardRef.current) {
+              bgTouchStartRef.current = { x: t.clientX, y: t.clientY };
+              const rect = boardRef.current.getBoundingClientRect();
+              const wx = origin.x + (t.clientX - rect.left) / zoom;
+              const wy = origin.y + (t.clientY - rect.top) / zoom;
+              bgLongPressTimerRef.current = setTimeout(() => {
+                bgLongPressTimerRef.current = null;
+                panningRef.current = null;
+                setContextMenu({ type: 'bg', x: wx, y: wy });
+              }, 520);
+            }
+            // No modo 'pan', 1 dedo move a câmera no fundo
+            // No modo 'edit', 2 dedos movem a câmera (1 dedo edita/arrasta)
             if (e.target === boardRef.current || e.target === e.currentTarget) {
-              if (e.touches.length === 1) {
+              if (touchMode === 'pan' && e.touches.length === 1) {
                 panningRef.current = { startX: t.clientX, startY: t.clientY, originX: origin.x, originY: origin.y } as any;
+              } else if (touchMode === 'edit' && e.touches.length === 2) {
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const midX = (t1.clientX + t2.clientX) / 2;
+                const midY = (t1.clientY + t2.clientY) / 2;
+                panningRef.current = { startX: midX, startY: midY, originX: origin.x, originY: origin.y } as any;
               }
             }
           } catch (err) { /* ignore */ }
+        }}
+        onTouchMove={(e) => {
+          if (bgLongPressTimerRef.current && bgTouchStartRef.current && e.touches[0]) {
+            const dx = Math.abs(e.touches[0].clientX - bgTouchStartRef.current.x);
+            const dy = Math.abs(e.touches[0].clientY - bgTouchStartRef.current.y);
+            if (dx > 10 || dy > 10) {
+              clearTimeout(bgLongPressTimerRef.current);
+              bgLongPressTimerRef.current = null;
+            }
+          }
+          if (isUV && uvFollowTouch && boardRef.current) {
+            const t0 = e.touches[0];
+            if (t0) {
+              const rect = boardRef.current.getBoundingClientRect();
+              setUvTouchPos({ x: t0.clientX - rect.left, y: t0.clientY - rect.top, active: true });
+            }
+          }
+        }}
+        onTouchEnd={(e) => {
+          const wasPendingLongPress = Boolean(bgLongPressTimerRef.current);
+          if (bgLongPressTimerRef.current) {
+            clearTimeout(bgLongPressTimerRef.current);
+            bgLongPressTimerRef.current = null;
+          }
+          const t = e.changedTouches?.[0];
+          if ((e.target === boardRef.current || e.target === e.currentTarget) && bgTouchStartRef.current && t && wasPendingLongPress) {
+            const dist = Math.hypot(t.clientX - bgTouchStartRef.current.x, t.clientY - bgTouchStartRef.current.y);
+            if (dist < 10) {
+              clearSelection();
+            }
+          }
+          bgTouchStartRef.current = null;
+          if (uvTouchPos) {
+            setUvTouchPos(prev => prev ? { ...prev, active: false } : null);
+          }
         }}
         onMouseMove={(e) => {
           // UV overlay now handled by GlobalUVOverlay component natively
         }}
         onMouseLeave={() => { }}
+        onClick={(e) => {
+          if ((e.target === boardRef.current || e.target === e.currentTarget) && bgClickStartRef.current) {
+            const dist = Math.hypot(e.clientX - bgClickStartRef.current.x, e.clientY - bgClickStartRef.current.y);
+            if (dist < 6) {
+              clearSelection();
+            }
+          }
+          bgClickStartRef.current = null;
+        }}
         onMouseDown={(e) => {
           if (e.target === boardRef.current || e.target === e.currentTarget) {
+            bgClickStartRef.current = (e.button === 0 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !marqueeTouchMode)
+              ? { x: e.clientX, y: e.clientY }
+              : null;
             // close any open context menu when clicking the background
             setContextMenu(null);
+            setSelectedItem(null);
+            setShowGmMenu(false);
+            setShowToolsMenu(false);
             const board = boardRef.current?.getBoundingClientRect();
             if (!board) return;
+            const sx = e.clientX - board.left;
+            const sy = e.clientY - board.top;
+            const worldX = origin.x + sx / zoom;
+            const worldY = origin.y + sy / zoom;
+
+            if (tapToPlaceMode) {
+              setCreateModalPos({ x: Math.round(worldX - 122), y: Math.round(worldY - 143) });
+              setTapToPlaceMode(false);
+              setCreateModalOpen(true);
+              return;
+            }
+            if (noteMode) {
+              const newNote = { id: Date.now().toString(), x: worldX, y: worldY, text: '', color: '#fcd34d' };
+              setNotes([...notes, newNote]);
+              setNoteMode(false);
+              return;
+            }
+            if (pinMode) {
+              const newPin = { id: Date.now().toString(), x: worldX, y: worldY, type: pinType };
+              setPins([...pins, newPin]);
+              setPinMode(false);
+              return;
+            }
+
             const isLeft = e.button === 0;
             const isMiddle = e.button === 1;
-            // Shift + left-drag => marquee selection
-            if (isLeft && e.shiftKey) {
+            // Shift + left-drag or Marquee touch mode => marquee selection
+            if (isLeft && (e.shiftKey || marqueeTouchMode)) {
               const sx = e.clientX - board.left;
               const sy = e.clientY - board.top;
               const bx = sx / zoom + origin.x;
@@ -2314,13 +3236,23 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
           setContextMenu({ type: 'bg', x: worldX, y: worldY });
         }}
       >
+        <div className="board-ambient-scanline" aria-hidden="true" />
+        <div className="board-membrane-vignette" aria-hidden="true" />
         {marqueeRect && <div className="marquee-rect" style={{ left: marqueeRect.left, top: marqueeRect.top, width: marqueeRect.width, height: marqueeRect.height }} />}
         <div
-          className="board-transform-layer"
-          style={{ transform: `translate(${-origin.x}px, ${-origin.y}px) scale(${zoom})`, transformOrigin: '0 0' }}
+          className={`board-transform-layer${cameraAnimating ? ' camera-animating' : ''}`}
+          style={{ transform: `scale(${zoom}) translate3d(${-origin.x}px, ${-origin.y}px, 0)`, transformOrigin: '0 0' }}
         >
+          <BoardZonesLayer
+            zones={zones}
+            zoom={zoom}
+            canEdit={canEdit}
+            guides={magneticGuides}
+            onUpdateZone={handleUpdateZone}
+            onDeleteZone={handleDeleteZone}
+          />
           {isUV && (
-            <GlobalUVOverlay isUV={isUV} performanceMode={performanceMode} boardRef={boardRef} zoom={zoom} origin={origin} />
+            <GlobalUVOverlay isUV={isUV} performanceMode={performanceMode} boardRef={boardRef} zoom={zoom} origin={origin} uvTouchPos={uvTouchPos} />
           )}
           {/* overflow visible prevents SVG clipping for lines that extend past view */}
           <svg className="connections-layer" style={{ overflow: 'visible' }}>
@@ -2328,23 +3260,32 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
               const a = getCardCenter(conn.from_card_id);
               const b = getCardCenter(conn.to_card_id);
               if (!a || !b) return null;
-              // prefer explicit saved color, otherwise derive from metadata.type
               const savedColor = (conn.color || (conn.metadata && conn.metadata.color) || null) as string | null;
               const type = (conn.metadata && conn.metadata.type) || 'confirmed';
               const stroke = savedColor || (type === 'theory' ? '#f9a825' : type === 'mystic' ? '#7e57c2' : '#c62828');
-              const dash = type === 'theory' ? '6 6' : type === 'mystic' ? '2 6' : undefined;
-              const width = type === 'mystic' ? 2.5 : 3;
               const cls = `connection-line type-${type}`;
+              const isHighlighted = activeCrossHighlightIds
+                ? (activeCrossHighlightIds.has(conn.from_card_id) && activeCrossHighlightIds.has(conn.to_card_id))
+                : false;
+              const isDimmed = activeCrossHighlightIds ? !isHighlighted : false;
               return (
-                  <ConnectionLine
+                <ConnectionLine
                   key={conn.id}
                   pathData={`M ${a.x} ${a.y} L ${b.x} ${b.y}`}
-                    onSelect={(e) => { e.stopPropagation(); /* selection logic can go here */ }}
-                    onContextMenu={(e) => handleConnectionContextMenu(e, conn.id)}
-                    onDoubleClick={(e) => { e.stopPropagation(); handleDeleteConnectionById(conn.id); }}
+                  midpoint={{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }}
+                  label={conn.metadata?.label || null}
+                  onSelect={(e) => {
+                    e.stopPropagation();
+                    handleConnectionContextMenu(e, conn.id);
+                  }}
+                  onContextMenu={(e) => handleConnectionContextMenu(e, conn.id)}
+                  onTouchContextMenu={(pos) => handleConnectionContextMenu(pos, conn.id)}
+                  onDoubleClick={(e) => { e.stopPropagation(); handleDeleteConnectionById(conn.id); }}
                   style={{ color: stroke }}
                   className={cls}
-                  isSelected={false}
+                  isSelected={connectionContextMenu?.id === conn.id}
+                  isHighlighted={isHighlighted}
+                  isDimmed={isDimmed}
                 />
               );
             })}
@@ -2361,14 +3302,77 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             })()}
           </svg>
 
-          {connectionContextMenu && (
-            <div
-              className="connection-context-menu"
-              style={{ top: connectionContextMenu.y, left: connectionContextMenu.x }}
-            >
-              <button onClick={handleDeleteConnection}><Trash2 size={15} /> Apagar Conexão</button>
-            </div>
-          )}
+          {connectionContextMenu && (() => {
+            const activeConn = connections.find((c) => c.id === connectionContextMenu.id);
+            const fromCard = activeConn ? cards.find((c) => c.id === activeConn.from_card_id) : null;
+            const toCard = activeConn ? cards.find((c) => c.id === activeConn.to_card_id) : null;
+            return (
+              <div
+                className="connection-context-menu"
+                style={{
+                  position: 'fixed',
+                  top: Math.min(connectionContextMenu.y, Math.max(12, windowHeight - 280)),
+                  left: Math.min(connectionContextMenu.x, Math.max(12, windowWidth - 230)),
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                <div className="context-menu-title">CONEXÃO / FIO</div>
+                <div style={{ display: 'flex', gap: 4, padding: '2px 4px 6px' }}>
+                  <input
+                    type="text"
+                    value={connectionLabelDraft}
+                    onChange={(e) => setConnectionLabelDraft(e.target.value)}
+                    placeholder="Rótulo curto no fio..."
+                    maxLength={24}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '4px 6px',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                      fontSize: 12,
+                      fontFamily: 'var(--font-system)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveConnectionLabel}
+                    style={{ width: 'auto', minWidth: 40, justifyContent: 'center', color: '#38bdf8' }}
+                  >
+                    OK
+                  </button>
+                </div>
+                <button onClick={() => handleChangeConnectionType('confirmed')} style={{ color: '#ff6b77' }}>
+                  <div style={{ width: 8, height: 8, background: '#c62828', borderRadius: '50%' }} /> Fato Confirmado
+                </button>
+                <button onClick={() => handleChangeConnectionType('theory')} style={{ color: '#f9a825' }}>
+                  <div style={{ width: 8, height: 8, background: '#f9a825', borderRadius: '50%' }} /> Teoria / Hipótese
+                </button>
+                <button onClick={() => handleChangeConnectionType('mystic')} style={{ color: '#b366ff' }}>
+                  <div style={{ width: 8, height: 8, background: '#7e57c2', borderRadius: '50%' }} /> Sobrenatural / Oculto
+                </button>
+                {(fromCard || toCard) && (
+                  <>
+                    <div className="context-menu-divider" />
+                    {fromCard && (
+                      <button onClick={() => { panToCard(fromCard.id); setConnectionContextMenu(null); }} style={{ color: '#38bdf8' }}>
+                        <Navigation size={14} /> Ir para: {String(fromCard.title || 'Origem').slice(0, 18)}
+                      </button>
+                    )}
+                    {toCard && (
+                      <button onClick={() => { panToCard(toCard.id); setConnectionContextMenu(null); }} style={{ color: '#38bdf8' }}>
+                        <Navigation size={14} /> Ir para: {String(toCard.title || 'Destino').slice(0, 18)}
+                      </button>
+                    )}
+                  </>
+                )}
+                <div className="context-menu-divider" />
+                <button onClick={handleDeleteConnection} className="context-danger"><Trash2 size={15} /> Apagar Conexão</button>
+              </div>
+            );
+          })()}
 
           {cards.filter(card => !card.is_hidden || (isGameMaster && showHiddenClues)).map((card) => {
             const pos = localPositions[card.id] || { x: card.x || 100, y: card.y || 100 };
@@ -2387,11 +3391,24 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             })();
             const isSelected = selectedIds.includes(card.id);
             const isNew = lastCreatedId === card.id;
+            const cardStatus = (card as any)?.metadata?.status || '';
+            const matchesStatusFilter = statusFilter === 'all' || cardStatus === statusFilter;
+            const isCrossHighlighted = activeCrossHighlightIds ? activeCrossHighlightIds.has(card.id) : false;
+            const isDimmed = (activeCrossHighlightIds && !isCrossHighlighted) || (statusFilter !== 'all' && !matchesStatusFilter);
             return (
                 <div
                 key={card.id}
-                  className={`card-node ${isSelected ? 'selected' : ''} ${isNew ? 'newly-created' : ''} ${touchMode === 'interact' ? 'mobile-interactive' : ''} ${card.is_hidden && showHiddenClues ? 'hidden-clue' : ''}`}
-                  data-status={(card as any)?.metadata?.status || ''}
+                  className={[
+                    'card-node',
+                    isSelected ? 'selected' : '',
+                    isNew ? 'newly-created' : '',
+                    touchMode === 'edit' ? 'mobile-interactive' : '',
+                    card.is_hidden && showHiddenClues ? 'hidden-clue' : '',
+                    matchesStatusFilter && statusFilter !== 'all' ? 'match-filter' : '',
+                    isCrossHighlighted ? 'cross-highlighted' : '',
+                    isDimmed ? 'dimmed-card' : '',
+                  ].filter(Boolean).join(' ')}
+                  data-status={cardStatus}
                   style={{ left: pos.x, top: pos.y, pointerEvents: 'auto' }}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -2452,12 +3469,30 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                   if (!ev.shiftKey && !ev.ctrlKey && !ev.metaKey) toggleSelect(card.id, false);
                 }}
                 onTouchStart={(ev) => {
+                  // Se for gesto multi-toque (ex: pinch-to-zoom com 2 dedos), não intercepta nem seleciona o card
+                  if (ev.touches.length > 1) {
+                    draggingRef.current = null;
+                    return;
+                  }
                   ev.stopPropagation();
+                  if (connectionMode) {
+                    onCardClickWhenConnecting(card.id);
+                    return;
+                  }
                   const t = ev.touches[0];
-                  // On touch, default to selecting this card (no modifier keys)
-                  const newSelected = [card.id];
-                  setSelectedIds(newSelected);
-                  const affected = [card.id];
+                  // If in pan touchMode, do not drag cards; let pan take precedence
+                  if (touchMode === 'pan') {
+                    // Just select on tap
+                    if (!selectedIds.includes(card.id)) {
+                      setSelectedIds([card.id]);
+                    }
+                    return;
+                  }
+                  // In edit mode:
+                  const isMulti = selectedIds.length > 1 && selectedIds.includes(card.id);
+                  const newSelected = isMulti ? selectedIds : [card.id];
+                  if (!isMulti) setSelectedIds(newSelected);
+                  const affected = newSelected;
                   const origPositions: Record<string, { x: number; y: number }> = {};
                   affected.forEach((id) => {
                     const p = localPositions[id] || (() => {
@@ -2547,39 +3582,365 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
                     }}
                     onOpen={() => handleCardOpen(card)}
                     onEdit={() => handleEditCard(card)}
+                    isNew={shouldShowNewBadge(investigationId, card, { isGameMaster, playerView })}
+                    onSendToDecoder={() => handleSendCardToDecoder(card)}
+                    onOpenHex={() => handleOpenCardInHex(card)}
                     performanceMode={performanceMode}
+                    semanticCompact={zoom < 0.48}
                   />
                 </div>
               </div>
             );
           })}
 
-          {/* Sticky notes layer removed */}
+          {notes.map(note => (
+            <div 
+              key={`note-${note.id}`} 
+              className="note-node" 
+              style={{ left: note.x, top: note.y }}
+              onPointerDown={(e) => {
+                if ((e.target as HTMLElement).closest('button, [contenteditable="true"]')) return;
+                e.stopPropagation();
+                setSelectedItem(null);
+                const target = e.currentTarget;
+                target.setPointerCapture(e.pointerId);
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const origX = note.x;
+                const origY = note.y;
+                const onMove = (ev: PointerEvent) => {
+                  const dx = (ev.clientX - startX) / zoom;
+                  const dy = (ev.clientY - startY) / zoom;
+                  setNotes(prev => prev.map(n => n.id === note.id ? { ...n, x: origX + dx, y: origY + dy } : n));
+                };
+                const onUp = (ev: PointerEvent) => {
+                  target.removeEventListener('pointermove', onMove);
+                  target.removeEventListener('pointerup', onUp);
+                  target.releasePointerCapture(ev.pointerId);
+                };
+                target.addEventListener('pointermove', onMove);
+                target.addEventListener('pointerup', onUp);
+              }}
+            >
+              <div className="note-hdr">
+                <span>NOTA</span>
+                <button
+                  type="button"
+                  className="n-close"
+                  aria-label="Apagar nota"
+                  title="Apagar nota"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNotes(prev => prev.filter(n => n.id !== note.id));
+                  }}
+                >
+                  x
+                </button>
+              </div>
+              <div className="note-content" contentEditable suppressContentEditableWarning onBlur={(e) => {
+                const text = e.currentTarget.textContent;
+                setNotes(prev => prev.map(n => n.id === note.id ? { ...n, text } : n));
+              }} onPointerDown={(e) => e.stopPropagation()}>{note.text}</div>
+            </div>
+          ))}
 
-          {touchModeNotice && (
-            <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
-          )}
+          {pins.map(pin => {
+            const size = pin.size || 24;
+            let pPos = { x: pin.x, y: pin.y };
+            if (pin.attachedTo && localPositionsRef.current[pin.attachedTo]) {
+              pPos = { 
+                x: localPositionsRef.current[pin.attachedTo].x + pin.offsetX, 
+                y: localPositionsRef.current[pin.attachedTo].y + pin.offsetY 
+              };
+            }
+            return (
+              <div 
+                key={`pin-${pin.id}`} 
+                className="pin-3d" 
+                style={{ position: 'absolute', left: pPos.x, top: pPos.y, width: size, height: size, background: `url(/pins/pin-${pin.type}.png) no-repeat center center / contain`, transform: 'translate(-50%, -100%)', zIndex: 5000, cursor: 'pointer' }} 
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPins(pins.filter(p => p.id !== pin.id));
+                  if (selectedItem?.id === pin.id) setSelectedItem(null);
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (connectionMode) {
+                    onCardClickWhenConnecting(`pin-${pin.id}`);
+                    return;
+                  }
+                  if (e.button === 0) setSelectedItem({ id: pin.id, type: 'pin', x: pPos.x, y: pPos.y });
+                  const target = e.currentTarget;
+                  target.setPointerCapture(e.pointerId);
+                  const startX = e.clientX;
+                  const startY = e.clientY;
+                  const origX = pPos.x;
+                  const origY = pPos.y;
+                  let moved = false;
+                  const onMove = (ev: PointerEvent) => {
+                    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) moved = true;
+                    const dx = (ev.clientX - startX) / zoom;
+                    const dy = (ev.clientY - startY) / zoom;
+                    setPins(prev => prev.map(p => p.id === pin.id ? { ...p, x: origX + dx, y: origY + dy, attachedTo: undefined } : p));
+                    if (moved) setSelectedItem(null);
+                  };
+                  const onUp = (ev: PointerEvent) => {
+                    target.removeEventListener('pointermove', onMove);
+                    target.removeEventListener('pointerup', onUp);
+                    target.releasePointerCapture(ev.pointerId);
+                    if (moved) {
+                      const dx = (ev.clientX - startX) / zoom;
+                      const dy = (ev.clientY - startY) / zoom;
+                      const finalX = origX + dx;
+                      const finalY = origY + dy;
+                      const CARD_W = 220; const CARD_H = 160;
+                      const parentCard = cards.find(c => {
+                        const cPos = localPositionsRef.current[c.id] || { x: c.x || 100, y: c.y || 100 };
+                        return finalX >= cPos.x && finalX <= cPos.x + CARD_W && finalY >= cPos.y && finalY <= cPos.y + CARD_H;
+                      });
+                      if (parentCard) {
+                        const cPos = localPositionsRef.current[parentCard.id] || { x: parentCard.x || 100, y: parentCard.y || 100 };
+                        setPins(prev => prev.map(p => p.id === pin.id ? { ...p, x: finalX, y: finalY, attachedTo: parentCard.id, offsetX: finalX - cPos.x, offsetY: finalY - cPos.y } : p));
+                      }
+                    }
+                  };
+                  target.addEventListener('pointermove', onMove);
+                  target.addEventListener('pointerup', onUp);
+                }}
+              />
+            );
+          })}
 
-          {/* Pinch overlay */}
-          {isPinching && (
-            <div className="pinch-overlay" style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: 'rgba(0,0,0,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              pointerEvents: 'none',
-              zIndex: 1000
-            }}>
-              <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}><LocateFixed size={16} /> Pinch to Zoom</div>
+          {selectedItem && selectedItem.type === 'pin' && (
+            <div 
+              className="pin-context-menu" 
+              style={{ position: 'absolute', left: selectedItem.x + 20, top: selectedItem.y - 40, background: '#1c1917', color: '#fff', padding: 16, borderRadius: 12, zIndex: 9999, width: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', border: '1px solid #333' }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.05em', marginBottom: 12, color: '#fcd34d' }}>ALFINETE</div>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontWeight: 700 }}>COR</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'vermelho'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#e63946', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'vermelho' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'azul'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#3b82f6', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'azul' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+                 <div onClick={() => setPins(pins.map(p => p.id === selectedItem.id ? {...p, type: 'verde'} : p))} style={{width: 24, height: 24, borderRadius: '50%', background: '#eab308', cursor: 'pointer', border: pins.find(p=>p.id===selectedItem.id)?.type === 'verde' ? '3px solid white' : 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontWeight: 700, marginTop: 12 }}>TAMANHO</div>
+              <input 
+                type="range" min="12" max="64" 
+                value={pins.find(p=>p.id===selectedItem.id)?.size || 24} 
+                onChange={(e) => setPins(pins.map(p => p.id === selectedItem.id ? {...p, size: parseInt(e.target.value)} : p))} 
+                style={{ width: '100%', marginBottom: 16 }} 
+              />
+              <button 
+                onClick={() => { setPins(pins.filter(p => p.id !== selectedItem.id)); setSelectedItem(null); }}
+                style={{ width: '100%', padding: '10px 0', background: '#c62828', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+              >
+                Apagar alfinete
+              </button>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 12, lineHeight: 1.4 }}>
+                Arraste o alfinete para outro item. Botão direito também apaga.
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* BARRA CONTEXTUAL DE MULTISSELEÇÃO / TOUCH SELECTION (fora de .board-transform-layer para position: fixed funcionar no viewport) */}
+      {selectedIds.length > 0 && (
+        <div
+          className="selection-context-toolbar"
+          style={{
+            position: 'fixed',
+            bottom: isMobileDevice ? 'calc(env(safe-area-inset-bottom, 0px) + 64px)' : '64px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 'var(--z-hud, 1000)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'var(--surface, #11141b)',
+            border: '1px solid var(--border, #29313d)',
+            borderRadius: 'var(--radius-md, 8px)',
+            padding: '8px 12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(8px)',
+            maxWidth: '95vw',
+            overflowX: 'auto',
+          }}
+        >
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {selectedIds.length} {selectedIds.length === 1 ? 'PISTA' : 'PISTAS'}
+          </span>
+
+          {/* Status Rápido */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              type="button"
+              className="hud-btn icon-only control-sm"
+              style={{ minWidth: 32, minHeight: 32 }}
+              title="Confirmar Fato"
+              onClick={() => {
+                selectedIds.forEach(id => toggleCardStatus(id, 'verified', []));
+              }}
+            >
+              <Check size={14} color="#2ecc71" />
+            </button>
+            <button
+              type="button"
+              className="hud-btn icon-only control-sm"
+              style={{ minWidth: 32, minHeight: 32 }}
+              title="Marcar Teoria"
+              onClick={() => {
+                selectedIds.forEach(id => toggleCardStatus(id, 'theory', []));
+              }}
+            >
+              <CircleHelp size={14} color="#f9a825" />
+            </button>
+            <button
+              type="button"
+              className="hud-btn icon-only control-sm"
+              style={{ minWidth: 32, minHeight: 32 }}
+              title="Descartar / Falso"
+              onClick={() => {
+                selectedIds.forEach(id => toggleCardStatus(id, 'false', []));
+              }}
+            >
+              <X size={14} color="#e63946" />
+            </button>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+
+          {/* Ordem Z */}
+          <button
+            type="button"
+            className="hud-btn icon-only control-sm"
+            style={{ minWidth: 32, minHeight: 32 }}
+            title="Trazer para frente"
+            onClick={() => {
+              selectedIds.forEach(id => api.updateInvestigationCard(id, { z_index: 1000 }));
+              loadBoard();
+            }}
+          >
+            <ArrowUp size={14} />
+          </button>
+          <button
+            type="button"
+            className="hud-btn icon-only control-sm"
+            style={{ minWidth: 32, minHeight: 32 }}
+            title="Mandar para trás"
+            onClick={() => {
+              selectedIds.forEach(id => api.updateInvestigationCard(id, { z_index: 1 }));
+              loadBoard();
+            }}
+          >
+            <ArrowDown size={14} />
+          </button>
+
+          {/* Botão Editar (substitui atalho 'E') quando 1 pista selecionada */}
+          {canEdit && selectedIds.length === 1 && (
+            <button
+              type="button"
+              className="hud-btn control-sm"
+              style={{ minHeight: 32, padding: '0 8px', fontSize: 11 }}
+              title="Editar pista (E)"
+              onClick={() => {
+                const card = cards.find(c => c.id === selectedIds[0]);
+                if (card) handleEditCard(card);
+              }}
+            >
+              EDITAR
+            </button>
+          )}
+
+          {/* Botão Centralizar câmera na pista */}
+          <button
+            type="button"
+            className="hud-btn control-sm"
+            style={{ minHeight: 32, padding: '0 8px', fontSize: 11 }}
+            title="Centralizar nesta pista"
+            onClick={() => {
+              const targetId = selectedIds[0];
+              const center = getCardCenter(targetId);
+              if (center) panToPosition(center.x, center.y);
+            }}
+          >
+            <LocateFixed size={14} /> FOCAR
+          </button>
+
+          {/* Pular para nó ligado quando 1 pista com conexões estiver selecionada */}
+          {connectedNeighborsForSingle.slice(0, 2).map((neighbor) => (
+            <button
+              key={`jump-${neighbor.id}`}
+              type="button"
+              className="hud-btn control-sm"
+              style={{ minHeight: 32, padding: '0 8px', fontSize: 10, color: '#38bdf8' }}
+              title={`Pular para nó ligado: ${neighbor.title || 'Pista'}`}
+              onClick={() => panToCard(neighbor.id)}
+            >
+              <Navigation size={12} /> {String(neighbor.title || 'Nó').slice(0, 12)}
+            </button>
+          ))}
+
+          {/* Excluir (se GM) */}
+          {canEdit && (
+            <button
+              type="button"
+              className="hud-btn icon-only control-sm context-danger"
+              style={{ minWidth: 32, minHeight: 32, color: 'var(--institutional-red)' }}
+              title="Excluir selecionadas"
+              onClick={async () => {
+                if (window.confirm(`Excluir permanentemente ${selectedIds.length} pista(s)?`)) {
+                  for (const id of selectedIds) {
+                    try { await api.deleteInvestigationCard(id); } catch (e) {}
+                  }
+                  setSelectedIds([]);
+                  await loadBoard();
+                }
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+
+          {/* Desmarcar */}
+          <button
+            type="button"
+            className="hud-btn icon-only control-sm"
+            style={{ minWidth: 32, minHeight: 32 }}
+            title="Fechar seleção"
+            onClick={() => setSelectedIds([])}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* FloatingNudgePad para mover pistas selecionadas ou câmera no mobile */}
+      {selectedIds.length > 0 && isMobileDevice && (
+        <FloatingNudgePad
+          onNudge={(dx, dy) => {
+            setLocalPositions(prev => {
+              const next = { ...prev };
+              selectedIds.forEach(id => {
+                const cur = prev[id] || { x: 100, y: 100 };
+                next[id] = { x: cur.x + dx, y: cur.y + dy };
+                scheduleDebouncedSave(id);
+              });
+              return next;
+            });
+          }}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          step={20}
+        />
+      )}
+
+      {touchModeNotice && (
+        <div className="touch-mode-notice" role="status">{touchModeNotice}</div>
+      )}
 
           {/* --- HUD EXCLUSIVO PARA CELULAR --- */}
           {isMobileDevice && (
@@ -2610,25 +3971,137 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <button onClick={() => setConnectionMode(!connectionMode)} className={`fab-item ${connectionMode?'active':''}`}>
               <Link2 size={16} /> {connectionMode ? 'PARAR CONEXÃO' : 'CONECTAR'}
             </button>
-            <button onClick={() => setShowFinder(true)} className="fab-item">
+            <button onClick={() => { setShowFinder(true); setMobileMenuOpen(false); }} className="fab-item">
               <Search size={16} /> BUSCAR
             </button>
-            <button onClick={() => setIsUV(!isUV)} className={`fab-item ${isUV?'uv-active':''}`}>
-              <Flashlight size={16} /> LUZ UV
+            <button onClick={() => { setIsUV(!isUV); setMobileMenuOpen(false); }} className={`fab-item ${isUV?'uv-active':''}`}>
+              <Flashlight size={16} /> LUZ UV {isUV ? '(LIGADA)' : '(DESLIGADA)'}
             </button>
-            <button onClick={() => setOrigin({x:0, y:0})} className="fab-item">
-              <LocateFixed size={16} /> LOCALIZAR
+            {isUV && (
+              <button
+                onClick={() => {
+                  setUvFollowTouch(prev => !prev);
+                  showToast({ id: 'uv-touch', message: !uvFollowTouch ? 'UV: Seguir Toque ATIVADO' : 'UV: Seguir Toque DESATIVADO' });
+                  setMobileMenuOpen(false);
+                }}
+                className={`fab-item ${uvFollowTouch ? 'uv-active' : ''}`}
+              >
+                <Flashlight size={16} /> UV: SEGUIR TOQUE {uvFollowTouch ? '(ATIVO)' : '(INATIVO)'}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setMarqueeTouchMode(prev => !prev);
+                showToast({ id: 'marquee-touch', message: !marqueeTouchMode ? 'Seleção em Área: Arraste o dedo no fundo para selecionar' : 'Seleção em Área DESATIVADA' });
+                setMobileMenuOpen(false);
+              }}
+              className={`fab-item ${marqueeTouchMode ? 'active' : ''}`}
+            >
+              <LayoutGrid size={16} /> SELEÇÃO EM ÁREA (TOUCH) {marqueeTouchMode ? '(ATIVA)' : ''}
+            </button>
+            <button onClick={() => { setOrigin({x:0, y:0}); setMobileMenuOpen(false); }} className="fab-item">
+              <LocateFixed size={16} /> RESETAR CÂMERA (100%)
+            </button>
+            <button onClick={() => { setShowOrganizeMenu(true); setMobileMenuOpen(false); }} className="fab-item">
+              <LayoutPanelTop size={16} /> ORGANIZAR QUADRO...
+            </button>
+            <button onClick={() => { setDecoderOpen(true); setMobileMenuOpen(false); }} className="fab-item">
+              <Lock size={16} /> DECODIFICADOR
+            </button>
+            <button onClick={() => { setTerminalOpen(true); setMobileMenuOpen(false); }} className="fab-item">
+              <Terminal size={16} /> TERMINAL C.R.I.S.
+            </button>
+            <button onClick={() => { undo(); setMobileMenuOpen(false); }} disabled={undoStack.length === 0} className="fab-item">
+              <Undo2 size={16} /> DESFAZER
+            </button>
+            <button onClick={() => { redo(); setMobileMenuOpen(false); }} disabled={redoStack.length === 0} className="fab-item">
+              <Redo2 size={16} /> REFAZER
+            </button>
+            <button onClick={() => { togglePerformanceMode(); setMobileMenuOpen(false); }} className={`fab-item ${performanceMode ? 'active' : ''}`}>
+              <Zap size={16} /> MODO DESEMPENHO {performanceMode ? '(ATIVO)' : ''}
             </button>
             <h3>Zoom</h3>
-            {isMobileDevice ? (
-              <div style={{ padding: '8px 0', color: '#888' }}>Use dois dedos para aproximar/afastar (pinch)</div>
-            ) : (
-              <>
-                <button onClick={() => { zoomIn(); setMobileMenuOpen(false); }} className="fab-item"><ZoomIn size={16} /> ZOOM IN</button>
-                <button onClick={() => { zoomOut(); setMobileMenuOpen(false); }} className="fab-item"><ZoomOut size={16} /> ZOOM OUT</button>
-                <button onClick={() => resetZoom()} className="fab-item"><RotateCcw size={16} /> RESET ZOOM</button>
-              </>
-            )}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <button onClick={() => zoomOut()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><ZoomOut size={16} /> -</button>
+              <button onClick={() => resetZoom()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><RotateCcw size={16} /> 100%</button>
+              <button onClick={() => zoomIn()} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}><ZoomIn size={16} /> +</button>
+            </div>
+          </BottomSheet>
+
+          <TacticalMinimap
+            cards={cards}
+            localPositions={localPositions}
+            selectedIds={selectedIds}
+            origin={origin}
+            zoom={zoom}
+            viewportWidth={windowWidth}
+            viewportHeight={windowHeight}
+            isGameMaster={isGameMaster}
+            playerView={playerView}
+            showHiddenClues={showHiddenClues}
+            performanceMode={performanceMode}
+            isOpen={minimapOpen}
+            onToggleOpen={toggleMinimapOpen}
+            onNavigate={(worldX, worldY) => panToPosition(worldX, worldY)}
+            onZoomToFit={zoomToFit}
+          />
+
+          {/* BottomSheet de Organização */}
+          <BottomSheet isOpen={showOrganizeMenu} onClose={() => setShowOrganizeMenu(false)} title="Organizar Pistas">
+            <h3>Layout Automático</h3>
+            <button
+              onClick={() => {
+                handleAutoOrganize('timeline');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <CalendarDays size={16} /> Por Linha do Tempo (Data)
+            </button>
+            <button
+              onClick={() => {
+                handleAutoOrganize('element');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <LayoutGrid size={16} /> Por Elemento e Tipo
+            </button>
+            <button
+              onClick={() => {
+                handleAutoOrganize('veracity');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <Check size={16} /> Por Veracidade / Status
+            </button>
+            <button
+              onClick={() => {
+                handleAutoOrganize('grid');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <Grid size={16} /> Grade Uniforme
+            </button>
+            <button
+              onClick={() => {
+                handleAutoOrganize('unstack');
+                setShowOrganizeMenu(false);
+              }}
+              className="fab-item"
+            >
+              <Layers2 size={16} /> Desempilhar
+            </button>
+            <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
+              <button onClick={() => undo()} disabled={undoStack.length === 0} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}>
+                <Undo2 size={16} /> Desfazer
+              </button>
+              <button onClick={() => redo()} disabled={redoStack.length === 0} className="fab-item" style={{ flex: 1, justifyContent: 'center' }}>
+                <Redo2 size={16} /> Refazer
+              </button>
+            </div>
           </BottomSheet>
 
           <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
@@ -2751,8 +4224,226 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
             <button className="hud-btn icon-only" onClick={() => setDecoderOpen(false)} aria-label="Fechar decodificador"><X size={16} /></button>
           </div>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <UniversalDecoder />
+            <UniversalDecoder
+              initialInput={decoderInitialInput}
+              initialMode={decoderInitialMode}
+              investigationId={investigationId}
+            />
           </div>
+        </div>
+      )}
+      {codesPanelOpen && (() => {
+        const isGmMode = isGameMaster && !playerView;
+        const gmClueCodes: Array<{ key: string; cardId: string; cardTitle: string; kind: string; status: string; code: string }> = [];
+        if (isGmMode) {
+          for (const card of cards) {
+            const meta = parseCardMetadata(card?.metadata);
+            const title = card?.title || 'Pista sem título';
+            const status = card?.is_hidden ? 'Oculta' : card?.is_locked ? 'Bloqueada' : 'Aberta';
+
+            const lockPass = card?.lock_password || meta?.lock_pass || meta?.lock_password;
+            if (lockPass) {
+              gmClueCodes.push({
+                key: `${card.id}-lock`,
+                cardId: card.id,
+                cardTitle: title,
+                kind: 'Senha da Pista',
+                status,
+                code: String(lockPass),
+              });
+            }
+
+            if (card?.discovery_code) {
+              gmClueCodes.push({
+                key: `${card.id}-discovery`,
+                cardId: card.id,
+                cardTitle: title,
+                kind: 'Código de Descoberta',
+                status,
+                code: String(card.discovery_code),
+              });
+            }
+
+            const glitchReward = meta?.glitch_puzzle?.reward_code;
+            if (glitchReward) {
+              gmClueCodes.push({
+                key: `${card.id}-glitch`,
+                cardId: card.id,
+                cardTitle: title,
+                kind: 'Recompensa (Glitch)',
+                status,
+                code: String(glitchReward),
+              });
+            }
+
+            const megaCodes = meta?.mega_clue?.required_codes;
+            if (Array.isArray(megaCodes) && megaCodes.length > 0) {
+              gmClueCodes.push({
+                key: `${card.id}-mega`,
+                cardId: card.id,
+                cardTitle: title,
+                kind: 'Mega-Pista (Requeridos)',
+                status,
+                code: megaCodes.join(', '),
+              });
+            }
+          }
+        }
+
+        return (
+          <div className="qol-modal-backdrop" onClick={() => setCodesPanelOpen(false)}>
+            <div className="qol-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Códigos e Senhas">
+              <div className="qol-modal-header">
+                <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><KeyRound size={16} /> {isGmMode ? `Códigos e Senhas (${gmClueCodes.length})` : `Códigos Descobertos (${unlockedCodes.length})`}</h3>
+                <button type="button" className="hud-btn icon-only" onClick={() => setCodesPanelOpen(false)} aria-label="Fechar"><X size={16} /></button>
+              </div>
+              <div className="qol-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto' }}>
+                {isGmMode && (
+                  <div>
+                    <div className="qol-code-sub" style={{ marginBottom: 8, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Lock size={13} /> Pistas com Senha / Código (Mestre)
+                    </div>
+                    {gmClueCodes.length === 0 ? (
+                      <p className="qol-empty-msg">Nenhuma pista deste caso possui senha ou código configurado.</p>
+                    ) : (
+                      <div className="qol-codes-list">
+                        {gmClueCodes.map((entry) => (
+                          <div key={entry.key} className="qol-code-row">
+                            <div>
+                              <div className="qol-code-title">{entry.cardTitle}</div>
+                              <div className="qol-code-sub">
+                                {entry.kind} • {entry.status}
+                              </div>
+                            </div>
+                            <div className="qol-code-right">
+                              <code>{entry.code}</code>
+                              <button
+                                type="button"
+                                className="hud-btn"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(entry.code).catch(() => {});
+                                  showToast({ id: 'copy-code', message: `Código ${entry.code} copiado!` }, 2000);
+                                }}
+                              >
+                                Copiar
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  {isGmMode && (
+                    <div className="qol-code-sub" style={{ marginBottom: 8, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Unlock size={13} /> Desbloqueados pelos Jogadores ({unlockedCodes.length})
+                    </div>
+                  )}
+                  {unlockedCodes.length === 0 ? (
+                    <p className="qol-empty-msg">Nenhum código ou senha foi desbloqueado por jogadores nesta investigação ainda.</p>
+                  ) : (
+                    <div className="qol-codes-list">
+                      {unlockedCodes.map((entry) => (
+                        <div key={`${entry.cardId}-${entry.lockType}-${entry.code}`} className="qol-code-row">
+                          <div>
+                            <div className="qol-code-title">{entry.cardTitle}</div>
+                            <div className="qol-code-sub">
+                              {entry.lockType} • {new Date(entry.unlockedAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="qol-code-right">
+                            <code>{entry.code}</code>
+                            <button
+                              type="button"
+                              className="hud-btn"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(entry.code).catch(() => {});
+                                showToast({ id: 'copy-code', message: `Código ${entry.code} copiado!` }, 2000);
+                              }}
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+      {quickNoteOpen && canEdit && (
+        <div className="qol-modal-backdrop" onClick={() => setQuickNoteOpen(false)}>
+          <form className="qol-modal-card" onClick={(e) => e.stopPropagation()} onSubmit={handleCreateQuickNote} role="dialog" aria-modal="true" aria-label="Nota Rápida">
+            <div className="qol-modal-header">
+              <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><StickyNote size={16} /> Nota Rápida / Teoria</h3>
+              <button type="button" className="hud-btn icon-only" onClick={() => setQuickNoteOpen(false)} aria-label="Fechar"><X size={16} /></button>
+            </div>
+            <div className="qol-modal-body">
+              <label className="qol-field">
+                <span>Título curto</span>
+                <input
+                  type="text"
+                  value={quickNoteTitle}
+                  onChange={(e) => setQuickNoteTitle(e.target.value)}
+                  placeholder="Ex: Ligação entre Suspeito A e Galpão"
+                  autoFocus
+                />
+              </label>
+              <label className="qol-field">
+                <span>Texto / Observação</span>
+                <textarea
+                  rows={3}
+                  value={quickNoteText}
+                  onChange={(e) => setQuickNoteText(e.target.value)}
+                  placeholder="Escreva a nota ou hipótese..."
+                  required
+                />
+              </label>
+              <div className="qol-field-row">
+                <label className="qol-field">
+                  <span>Tag de Teoria</span>
+                  <select value={quickNoteTag} onChange={(e) => setQuickNoteTag(e.target.value)}>
+                    <option value="Teoria">Teoria</option>
+                    <option value="Pista">Pista</option>
+                    <option value="Urgente">Urgente</option>
+                    <option value="Conexão">Conexão</option>
+                  </select>
+                </label>
+                <div className="qol-field">
+                  <span>Cor</span>
+                  <div className="qol-color-swatches">
+                    {[
+                      { hex: '#fef08a', label: 'Amarelo' },
+                      { hex: '#bae6fd', label: 'Azul' },
+                      { hex: '#fecaca', label: 'Vermelho' },
+                      { hex: '#bbf7d0', label: 'Verde' },
+                    ].map((c) => (
+                      <button
+                        key={c.hex}
+                        type="button"
+                        className={`qol-color-swatch ${quickNoteColor === c.hex ? 'active' : ''}`}
+                        style={{ backgroundColor: c.hex }}
+                        onClick={() => setQuickNoteColor(c.hex)}
+                        title={c.label}
+                        aria-label={c.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="qol-modal-footer">
+              <button type="button" className="hud-btn" onClick={() => setQuickNoteOpen(false)}>Cancelar</button>
+              <button type="submit" className="hud-btn primary" disabled={quickNoteSaving}>
+                {quickNoteSaving ? 'Criando...' : 'Criar Nota'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
       {showLegacyModal && (
