@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Check, Copy, KeyRound, Search } from 'lucide-react';
+import { Check, Copy, Search } from 'lucide-react';
 import './HexViewer.css';
 
 interface Props {
   hiddenMessage?: string;
+  xorKey?: string;
   focused?: boolean;
   onSendToDecoder?: (text: string) => void;
 }
@@ -17,17 +18,32 @@ interface DumpRow {
 
 function deterministicByte(seed: number): number {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  const val = Math.floor((x - Math.floor(x)) * 256);
-  // Keep filler mostly non-printable or fragmented so real ASCII strings stand out on inspection
-  return val;
+  return Math.floor((x - Math.floor(x)) * 256);
 }
 
-export default function HexViewer({ hiddenMessage = '', onSendToDecoder }: Props) {
+function hashString(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+export default function HexViewer({ hiddenMessage = '', xorKey }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const { rows, fullHexText } = useMemo(() => {
-    const totalBytes = 512;
+  const { rows, fullHexText, matchedHexText } = useMemo(() => {
+    const encoder = new TextEncoder();
+    const rawEncoded = hiddenMessage ? encoder.encode(hiddenMessage) : new Uint8Array(0);
+    const keyBytes = xorKey ? encoder.encode(xorKey) : new Uint8Array(0);
+    const payload = new Uint8Array(rawEncoded.length);
+    for (let i = 0; i < rawEncoded.length; i++) {
+      payload[i] = keyBytes.length > 0 ? rawEncoded[i] ^ keyBytes[i % keyBytes.length] : rawEncoded[i];
+    }
+
+    const totalBytes = Math.max(512, Math.ceil((payload.length + 96) / 16) * 16);
     const bytes = new Uint8Array(totalBytes);
     // Realistic PNG-like header at 0x0000
     const header = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52];
@@ -35,18 +51,21 @@ export default function HexViewer({ hiddenMessage = '', onSendToDecoder }: Props
       bytes[i] = i < header.length ? header[i] : deterministicByte(i + hiddenMessage.length * 7);
     }
 
-    // Embed hiddenMessage bytes naturally inside the binary dump at offset 0x00F0
-    if (hiddenMessage) {
-      const encoded = new TextEncoder().encode(hiddenMessage);
-      const embedStart = 0x00f0;
-      for (let i = 0; i < encoded.length && embedStart + i < totalBytes; i++) {
-        bytes[embedStart + i] = encoded[i];
+    // Embed payload at a deterministic non-fixed offset derived from message + key
+    if (payload.length > 0) {
+      const minOffset = 0x0020;
+      const maxOffset = Math.max(minOffset, totalBytes - payload.length - 8);
+      const span = maxOffset - minOffset + 1;
+      const embedStart = minOffset + (hashString(`${hiddenMessage}:${xorKey || ''}`) % span);
+      for (let i = 0; i < payload.length && embedStart + i < totalBytes; i++) {
+        bytes[embedStart + i] = payload[i];
       }
     }
 
     const q = searchQuery.trim().toLowerCase();
     const outRows: DumpRow[] = [];
     const hexLines: string[] = [];
+    const matchedLines: string[] = [];
 
     for (let offset = 0; offset < totalBytes; offset += 16) {
       const slice = bytes.slice(offset, offset + 16);
@@ -56,22 +75,20 @@ export default function HexViewer({ hiddenMessage = '', onSendToDecoder }: Props
       const offsetStr = `0x${offset.toString(16).padStart(4, '0').toUpperCase()}`;
       const isMatch = Boolean(q && (ascii.toLowerCase().includes(q) || hexStr.toLowerCase().includes(q)));
       outRows.push({ offset: offsetStr, hexBytes, ascii, isMatch });
-      hexLines.push(`${offsetStr}  ${hexStr}  |${ascii}|`);
+      const line = `${offsetStr}  ${hexStr}  |${ascii}|`;
+      hexLines.push(line);
+      if (isMatch) matchedLines.push(hexStr);
     }
 
-    return { rows: outRows, fullHexText: hexLines.join('\n') };
-  }, [hiddenMessage, searchQuery]);
-
-  const matchedText = useMemo(() => {
-    const matches = rows.filter((r) => r.isMatch);
-    if (matches.length > 0) {
-      return matches.map((m) => m.ascii.replace(/\.+/g, ' ').trim()).join(' ');
-    }
-    return '';
-  }, [rows]);
+    return {
+      rows: outRows,
+      fullHexText: hexLines.join('\n'),
+      matchedHexText: matchedLines.join(' '),
+    };
+  }, [hiddenMessage, xorKey, searchQuery]);
 
   const handleCopy = async () => {
-    const textToCopy = matchedText || fullHexText;
+    const textToCopy = matchedHexText || fullHexText;
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -84,35 +101,23 @@ export default function HexViewer({ hiddenMessage = '', onSendToDecoder }: Props
       <div className="hex-header-bar">
         <div className="hex-title">INSPETOR BINÁRIO (HEX / ASCII)</div>
         <div className="hex-actions" style={{ gap: 6, flexWrap: 'wrap' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#05080d', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '2px 6px' }}>
-            <Search size={12} color="#00f3ff" />
+          <div className="hex-search-box">
+            <Search size={12} color="#94a3b8" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar ASCII ou Hex..."
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 11, outline: 'none', width: 130 }}
             />
           </div>
           <button
             type="button"
             className="hex-action-btn"
             onClick={handleCopy}
-            title="Copiar trecho encontrado ou dump completo"
+            title="Copiar bytes encontrados ou dump completo"
           >
-            {copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> {matchedText ? 'Copiar Match' : 'Copiar Dump'}</>}
+            {copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> {matchedHexText ? 'Copiar Hex' : 'Copiar Dump'}</>}
           </button>
-          {onSendToDecoder && (
-            <button
-              type="button"
-              className="hex-action-btn primary"
-              disabled={!matchedText}
-              onClick={() => matchedText && onSendToDecoder(matchedText)}
-              title={matchedText ? 'Enviar trecho encontrado para o Decodificador' : 'Busque um trecho ASCII/Hex primeiro'}
-            >
-              <KeyRound size={13} /> Enviar Match
-            </button>
-          )}
         </div>
       </div>
 

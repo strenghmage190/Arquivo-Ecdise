@@ -317,3 +317,136 @@
   font-size: 11px;
   cursor: pointer;
 }
+
+.decoder-hint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  background: rgb(148 163 184 / 8%);
+  border: 1px solid rgb(203 213 225 / 25%);
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.decoder-hint-btn {
+  background: rgb(203 213 225 / 14%);
+  color: #f1f5f9;
+  border: 1px solid rgb(203 213 225 / 35%);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.decoder-hint-btn:hover {
+  background: rgb(203 213 225 / 24%);
+}
+
+.decoder-bruteforce-btn {
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(203 213 225 / 25%);
+  color: #cbd5e1;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.decoder-bruteforce-btn.active {
+  background: rgb(203 213 225 / 18%);
+  border-color: #cbd5e1;
+  color: #f8fafc;
+}
+
+.decoder-analysis-panel {
+  margin-top: 12px;
+  background: rgb(0 0 0 / 45%);
+  border: 1px solid rgb(203 213 225 / 16%);
+  padding: 10px;
+}
+
+.decoder-analysis-panel .analysis-box.technical {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: rgb(0 0 0 / 55%);
+  border: 1px solid rgb(203 213 225 / 15%);
+  border-left: 3px solid #94a3b8;
+  color: #cbd5e1;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 12px;
+}
+
+.freq-table-container {
+  margin-top: 10px;
+  background: rgb(0 0 0 / 40%);
+  border: 1px solid rgb(203 213 225 / 14%);
+  padding: 10px;
+}
+
+.freq-table-title {
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.freq-table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.freq-table-card {
+  background: rgb(15 23 42 / 55%);
+  border: 1px solid rgb(203 213 225 / 14%);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.freq-char-badge {
+  font-family: "Share Tech Mono", monospace;
+  font-weight: bold;
+  font-size: 13px;
+  color: #f1f5f9;
+  text-align: center;
+  background: rgb(203 213 225 / 10%);
+  padding: 2px 0;
+}
+
+.freq-char-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+}
+
+.freq-pct {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.freq-count {
+  color: #64748b;
+}
+
+.freq-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: rgb(203 213 225 / 12%);
+  overflow: hidden;
+}
+
+.freq-bar-fill {
+  height: 100%;
+  background: #94a3b8;
+}

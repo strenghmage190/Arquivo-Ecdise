@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Archive, Check, Copy, ExternalLink, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Archive, Check, CheckCircle2, Copy, Eye, EyeOff, ExternalLink, Pencil, Pin, Plus, Radio, Trash2, X } from 'lucide-react';
 import { useCollaboration } from '../../contexts/CollaborationContext';
 import {
   CaseFinding,
   FINDING_CATEGORY_META,
   FindingCategory,
+  PIN_TAG_META,
 } from '../../types/collaboration';
 import { FindingCategoryIcon } from './CollaborationIcons';
 import './Collaboration.css';
@@ -17,7 +18,13 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
   const {
     isDrawerOpen,
     setDrawerOpen,
-    findings,
+    findings = [],
+    pins = [],
+    hideResolvedPins = false,
+    setHideResolvedPins,
+    resolvePin,
+    mobilePingMode = false,
+    setMobilePingMode,
     addFinding,
     editFinding,
     deleteFinding,
@@ -26,6 +33,7 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
     isGameMaster,
   } = useCollaboration();
 
+  const [drawerTab, setDrawerTab] = useState<'findings' | 'pins'>('findings');
   const [categoryFilter, setCategoryFilter] = useState<'all' | FindingCategory>('all');
   const [search, setSearch] = useState('');
   const [newCategory, setNewCategory] = useState<FindingCategory>('code');
@@ -50,6 +58,18 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
       );
     });
   }, [findings, categoryFilter, search]);
+
+  const visiblePins = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return pins.filter((p) => {
+      if (hideResolvedPins && p.is_resolved) return false;
+      if (!q) return true;
+      return (
+        p.note.toLowerCase().includes(q) ||
+        p.author_name.toLowerCase().includes(q)
+      );
+    });
+  }, [pins, hideResolvedPins, search]);
 
   if (!isDrawerOpen) return null;
 
@@ -100,17 +120,117 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
         <h3>
           <Archive size={16} /> Gaveta de Achados ({findings.length})
         </h3>
-        <button
-          type="button"
-          className="collab-close-btn"
-          onClick={() => setDrawerOpen(false)}
-          aria-label="Fechar Gaveta de Achados"
-        >
-          <X size={15} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {setMobilePingMode && (
+            <button
+              type="button"
+              className={`collab-mini-btn ${mobilePingMode ? 'active' : ''}`}
+              onClick={() => setMobilePingMode(!mobilePingMode)}
+              title="Ativar/desativar modo Ping Tático (toque no quadro)"
+              aria-pressed={mobilePingMode}
+              style={{
+                minHeight: 32,
+                touchAction: 'manipulation',
+                borderColor: mobilePingMode ? '#f59e0b' : undefined,
+                color: mobilePingMode ? '#fbbf24' : undefined,
+              }}
+            >
+              <Radio size={13} /> Ping
+            </button>
+          )}
+          <button
+            type="button"
+            className="collab-close-btn"
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Fechar Gaveta de Achados"
+          >
+            <X size={15} />
+          </button>
+        </div>
       </div>
 
-      <div className="collab-drawer-filters">
+      <div className="collab-drawer-filters" style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.12)' }}>
+        <button
+          type="button"
+          className={`collab-filter-chip ${drawerTab === 'findings' ? 'active' : ''}`}
+          onClick={() => setDrawerTab('findings')}
+        >
+          Achados ({findings.length})
+        </button>
+        <button
+          type="button"
+          className={`collab-filter-chip ${drawerTab === 'pins' ? 'active' : ''}`}
+          onClick={() => setDrawerTab('pins')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+        >
+          <Pin size={12} /> Marcadores ({pins.length})
+        </button>
+        {drawerTab === 'pins' && setHideResolvedPins && (
+          <button
+            type="button"
+            className={`collab-filter-chip ${hideResolvedPins ? 'active' : ''}`}
+            onClick={() => setHideResolvedPins(!hideResolvedPins)}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            title={hideResolvedPins ? 'Mostrar marcadores resolvidos' : 'Ocultar marcadores resolvidos'}
+          >
+            {hideResolvedPins ? <Eye size={12} /> : <EyeOff size={12} />}
+            {hideResolvedPins ? 'Mostrar resolvidos' : 'Ocultar resolvidos'}
+          </button>
+        )}
+      </div>
+
+      {drawerTab === 'pins' ? (
+        <div className="collab-drawer-list">
+          {visiblePins.length === 0 ? (
+            <p style={{ color: '#64748b', fontSize: '0.82rem', textAlign: 'center', marginTop: 20 }}>
+              {hideResolvedPins ? 'Nenhum marcador ativo pendente.' : 'Nenhum marcador registrado ainda.'}
+            </p>
+          ) : (
+            visiblePins.map((pin) => {
+              const tagMeta = PIN_TAG_META[pin.tag] || PIN_TAG_META.look_here;
+              const sourceTitle = pin.card_id ? cardTitlesById[pin.card_id] : null;
+              return (
+                <div key={pin.id} className="collab-finding-card" style={{ opacity: pin.is_resolved ? 0.65 : 1 }}>
+                  <div className="collab-finding-top">
+                    <span className="collab-finding-cat" style={{ color: tagMeta.color }}>
+                      {tagMeta.label}
+                    </span>
+                    <div className="collab-finding-actions">
+                      {resolvePin && (
+                        <button
+                          type="button"
+                          className="collab-mini-btn"
+                          onClick={() => resolvePin(pin.id, !pin.is_resolved)}
+                          title={pin.is_resolved ? 'Reabrir marcador' : 'Marcar como resolvido'}
+                        >
+                          <CheckCircle2 size={12} color={pin.is_resolved ? '#10b981' : '#94a3b8'} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="collab-finding-details" style={{ color: '#e2e8f0' }}>{pin.note}</div>
+                  <div className="collab-finding-meta">
+                    <span>Por {pin.author_name}</span>
+                    {pin.card_id && (
+                      <button
+                        type="button"
+                        className="collab-mini-btn"
+                        onClick={() =>
+                          requestAnchorJump(pin.card_id!, pin.tool_type, pin.anchor_data || {})
+                        }
+                      >
+                        <ExternalLink size={11} /> {sourceTitle || 'Abrir origem'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="collab-drawer-filters">
         <button
           type="button"
           className={`collab-filter-chip ${categoryFilter === 'all' ? 'active' : ''}`}
@@ -280,6 +400,8 @@ export default function FindingsDrawer({ cardTitlesById = {} }: FindingsDrawerPr
           })
         )}
       </div>
+        </>
+      )}
     </aside>
   );
 }

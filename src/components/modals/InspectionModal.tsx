@@ -17,7 +17,6 @@ import PhysicalDocumentTable from '../tools/PhysicalDocumentTable';
 import AcousticWorkbench from '../tools/AcousticWorkbench';
 import OrdoFieldManualModal from './OrdoFieldManualModal';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
-import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import { useCollaboration } from '../../contexts/CollaborationContext';
 import WaveSurfer from 'wavesurfer.js';
 import useEscapeClose from './useEscapeClose';
@@ -1951,13 +1950,12 @@ export default function InspectionModal({
                 );
               }
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <HackingTerminal
                     correctPassword={lockPass}
                     onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
                     hint={card.description_public}
                   />
-                  <TeamFindingsPopover />
                 </div>
               );
             })()}
@@ -2080,11 +2078,8 @@ export default function InspectionModal({
                         currentCard.metadata?.technical_note ||
                         ''
                       }
+                      xorKey={currentCard.metadata?.hex_xor_key}
                       focused={true}
-                      onSendToDecoder={(hexText) => {
-                        setDecoderPayloadOverride(hexText);
-                        setForensicMode('decoder');
-                      }}
                     />
                   </div>
                 </div>
