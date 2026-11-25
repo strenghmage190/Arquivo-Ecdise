@@ -80,6 +80,7 @@ import {
   unstackCards,
 } from '../../utils/layoutAlgorithms';
 import InspectionModal from '../modals/InspectionModal';
+import { ForensicDispatchProvider } from '../../contexts/ForensicDispatchContext';
 import DoomsdayClock from '../ui/DoomsdayClock';
 import SystemTerminal from '../tools/SystemTerminal';
 import UniversalDecoder from '../tools/UniversalDecoder';
@@ -3009,29 +3010,63 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       {/* Modais */}
       <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
       {inspectCard && (
-        <InspectionModal
-          isOpen={!!inspectCard}
-          card={inspectCard}
-          isGameMaster={isGameMaster}
-          playerView={viewerMode}
-          performanceMode={performanceMode}
-          initialForensicMode={inspectInitialForensicMode}
-          onSendToDecoder={(text, mode) => {
+        <ForensicDispatchProvider
+          onDispatchToDecoder={(text) => {
             setInspectCard(null);
             setDecoderInitialInput(text);
-            if (mode) setDecoderInitialMode(mode);
             setDecoderOpen(true);
           }}
-          onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
-          onEdit={() => {
-            // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
-            setEditingCard(inspectCard);
-            setInspectCard(null);
-            setShowLegacyModal(true);
+          onSaveSnippet={async (snippet) => {
+            try {
+              let uploadedUrl: string | null = snippet.imageUrl || null;
+              if (snippet.imageBlob) {
+                const file = new File([snippet.imageBlob], `recorte-${Date.now()}.png`, { type: 'image/png' });
+                uploadedUrl = await uploadInvestigationImage(file, investigationId);
+              }
+              const srcCard = cards.find((c: any) => c.id === snippet.sourceCardId);
+              await api.createCard({
+                investigation_id: investigationId,
+                title: snippet.title,
+                description_public: snippet.description || 'Recorte extraído na bancada forense.',
+                image_url: uploadedUrl,
+                x: typeof srcCard?.x === 'number' ? srcCard.x + 280 : 240,
+                y: typeof srcCard?.y === 'number' ? srcCard.y : 240,
+                tags: ['recorte-forense', 'recorte-jogador'],
+                metadata: {
+                  is_player_snippet: true,
+                  source_card_id: snippet.sourceCardId || null,
+                },
+              });
+              await loadBoard();
+            } catch (err) {
+              console.error('Erro ao salvar recorte no mural:', err);
+            }
           }}
-          externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
-          externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
-        />
+        >
+          <InspectionModal
+            isOpen={!!inspectCard}
+            card={inspectCard}
+            isGameMaster={isGameMaster}
+            playerView={viewerMode}
+            performanceMode={performanceMode}
+            initialForensicMode={inspectInitialForensicMode}
+            onSendToDecoder={(text, mode) => {
+              setInspectCard(null);
+              setDecoderInitialInput(text);
+              if (mode) setDecoderInitialMode(mode);
+              setDecoderOpen(true);
+            }}
+            onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
+            onEdit={() => {
+              // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
+              setEditingCard(inspectCard);
+              setInspectCard(null);
+              setShowLegacyModal(true);
+            }}
+            externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
+            externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
+          />
+        </ForensicDispatchProvider>
       )}
 
       {tapToPlaceMode && (

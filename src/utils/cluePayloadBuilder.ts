@@ -1002,6 +1002,13 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     audio_target_freq: audioTargetFreq,
   };
 
+  if (stateBag.physicalDocument || (params as any).physicalDocument || (typeof window !== 'undefined' && (window as any).__ecdiseDocStudioDraft)) {
+    metadata.physical_document = stateBag.physicalDocument || (params as any).physicalDocument || (window as any).__ecdiseDocStudioDraft;
+  }
+  if (stateBag.deviceExtraction || (params as any).deviceExtraction) {
+    metadata.device_extraction = stateBag.deviceExtraction || (params as any).deviceExtraction;
+  }
+
   if (cardStatus) {
     metadata.status = cardStatus;
   } else if (params.cardStatus === null || stateBag.cardStatus === null) {

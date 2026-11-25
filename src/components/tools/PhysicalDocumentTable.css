@@ -1,0 +1,241 @@
+.pdt-table {
+  background: #090e16;
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  border-radius: 10px;
+  padding: 12px;
+  color: #dbe7f3;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.pdt-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pdt-topbar h3 {
+  margin: 0;
+  font-size: 13px;
+  color: #00f3ff;
+}
+
+.pdt-topbar span {
+  font-size: 11px;
+  color: #7d96ad;
+}
+
+.pdt-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdt-top-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #dbe7f3;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.pdt-assembled-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+  font-size: 11px;
+}
+
+.pdt-main {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .pdt-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdt-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pdt-tools button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #c5d4e2;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.pdt-tools button.active {
+  border-color: #00f3ff;
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.14);
+}
+
+.pdt-tools button.active.uv {
+  border-color: #a855f7;
+  color: #e9d5ff;
+  background: rgba(168, 85, 247, 0.2);
+}
+
+.pdt-tools button.active.heat {
+  border-color: #f97316;
+  color: #fed7aa;
+  background: rgba(249, 115, 22, 0.2);
+}
+
+.pdt-lens-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10.5px;
+  color: #7d96ad;
+}
+
+.pdt-lens-group button.active.r {
+  border-color: #ef4444;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.pdt-lens-group button.active.g {
+  border-color: #22c55e;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.pdt-lens-group button.active.b {
+  border-color: #3b82f6;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.pdt-surface {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #05080d;
+  border-radius: 8px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.pdt-paper {
+  position: relative;
+  width: min(440px, 100%);
+  aspect-ratio: 4 / 5;
+  background: #efe7d6;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+  user-select: none;
+  touch-action: none;
+}
+
+.pdt-paper.side-back {
+  background: #e4dac4;
+}
+
+.pdt-paper.tool-lens_r {
+  background: #ffd9d9;
+}
+
+.pdt-paper.tool-lens_g {
+  background: #d9ffd9;
+}
+
+.pdt-paper.tool-lens_b {
+  background: #d9e6ff;
+}
+
+.pdt-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.pdt-layer {
+  position: absolute;
+  font-weight: 600;
+  text-align: center;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+.pdt-layer.ink-uv {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.9);
+}
+
+.pdt-frag-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  background: #1a222d;
+}
+
+.pdt-frag-strip {
+  position: relative;
+  overflow: hidden;
+  background: #efe7d6;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.18s ease;
+}
+
+.pdt-frag-strip.selected {
+  border-color: #00f3ff;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.55);
+  z-index: 2;
+}
+
+.pdt-frag-inner {
+  position: relative;
+  height: 100%;
+}
+
+.pdt-uv-beam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pdt-heat-cursor {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.55), transparent 70%);
+  pointer-events: none;
+}

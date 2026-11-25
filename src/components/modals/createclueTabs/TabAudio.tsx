@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
-import { Info, Music, Trash2, Radio, Mic, Square, Check } from 'lucide-react';
+import { Info, Music, Trash2, Radio, Mic, Square, Check, Sparkles } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
+import AudioStudioModal from '../AudioStudioModal';
 
 export default function TabAudio() {
   const { mediaState, setMediaState, setEditorState, registerUrl, revokeUrl } = useClueModal();
@@ -9,6 +10,7 @@ export default function TabAudio() {
   const hiddenAudioRef = useRef<HTMLInputElement>(null);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [showStudioModal, setShowStudioModal] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordTarget, setRecordTarget] = useState<'base' | 'hidden'>('base');
   const [micError, setMicError] = useState<string | null>(null);
@@ -218,6 +220,34 @@ export default function TabAudio() {
 
   return (
     <div className="ccm-tab-stack">
+      <div style={{ marginBottom: 4 }}>
+        <button
+          type="button"
+          className="ccm-btn ccm-btn-primary"
+          style={{ width: '100%', justifyContent: 'center', gap: 8, padding: '10px 14px' }}
+          onClick={() => setShowStudioModal(true)}
+        >
+          <Sparkles size={16} /> Abrir Estúdio Acústico 48 kHz (Zona Fantasma / Estéreo L−R / Ruído / LSB)
+        </button>
+      </div>
+
+      <AudioStudioModal
+        isOpen={showStudioModal}
+        onClose={() => setShowStudioModal(false)}
+        initialBaseAudio={mediaState.audioBase}
+        onSave={(file) => {
+          const url = URL.createObjectURL(file);
+          registerUrl(url);
+          revokeUrl(mediaState.audioBasePreview);
+          setMediaState((prev) => ({
+            ...prev,
+            audioBase: file,
+            audioBasePreview: url,
+            removedAudioBase: false,
+          }));
+        }}
+      />
+
       <section className={`ccm-recorder-box ${isRecording ? 'is-recording' : ''}`}>
         <div className="ccm-recorder-row">
           <div className="ccm-label-inline">

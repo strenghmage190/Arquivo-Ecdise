@@ -1,0 +1,230 @@
+.asm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(4, 8, 14, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.asm-dialog {
+  width: min(760px, 100%);
+  background: #0a1019;
+  border: 1px solid rgba(0, 243, 255, 0.35);
+  border-radius: 10px;
+  color: #dbe7f3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+.asm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  background: rgba(0, 243, 255, 0.06);
+}
+
+.asm-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #00f3ff;
+}
+
+.asm-title h2 {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.asm-title span {
+  font-size: 11px;
+  color: #7d96ad;
+}
+
+.asm-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #dbe7f3;
+  border-radius: 6px;
+  padding: 5px;
+  cursor: pointer;
+}
+
+.asm-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.asm-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.asm-mode-btn {
+  text-align: left;
+  padding: 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #c5d4e2;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asm-mode-btn strong {
+  font-size: 12px;
+  color: #fff;
+}
+
+.asm-mode-btn span {
+  font-size: 10.5px;
+  color: #8ba3b8;
+  font-family: system-ui, sans-serif;
+}
+
+.asm-mode-btn.active {
+  border-color: #00f3ff;
+  background: rgba(0, 243, 255, 0.12);
+}
+
+.asm-mode-btn.active strong {
+  color: #00f3ff;
+}
+
+.asm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.asm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.asm-field label {
+  font-size: 11px;
+  color: #8ba3b8;
+}
+
+.asm-field input[type='text'] {
+  background: #060a10;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.asm-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(0, 243, 255, 0.35);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #8bf7ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.asm-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.asm-sliders label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #9cb3c9;
+}
+
+.asm-sliders input {
+  accent-color: #00f3ff;
+}
+
+.asm-discretion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.asm-discretion.green {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.asm-discretion.yellow {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+}
+
+.asm-discretion.red {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.asm-footer {
+  padding: 12px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.asm-btn-synth,
+.asm-btn-sec,
+.asm-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.asm-btn-synth {
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid #a855f7;
+  color: #e9d5ff;
+  margin-right: auto;
+}
+
+.asm-btn-sec {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #dbe7f3;
+}
+
+.asm-btn-primary {
+  background: #00f3ff;
+  border: none;
+  color: #041019;
+  font-weight: 700;
+}

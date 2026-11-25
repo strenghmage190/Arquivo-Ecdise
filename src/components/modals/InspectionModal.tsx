@@ -13,6 +13,10 @@ import ShredderPuzzleModal from './ShredderPuzzleModal';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import NumericKeypad from '../tools/NumericKeypad';
 import AudioViewerModal from './AudioViewerModal';
+import PhysicalDocumentTable from '../tools/PhysicalDocumentTable';
+import AcousticWorkbench from '../tools/AcousticWorkbench';
+import OrdoFieldManualModal from './OrdoFieldManualModal';
+import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
 import WaveSurfer from 'wavesurfer.js';
 import useEscapeClose from './useEscapeClose';
 import './InspectionModal.css';
@@ -53,6 +57,7 @@ export default function InspectionModal({
   externalHiddenId,
 }: Props) {
   const { enabled: perfModeFromHook } = usePerformanceMode();
+  const { activeDispatch, clearDispatch, manualOpen, manualInitialTab, closeFieldManual } = useForensicDispatch();
   const effectivePerformanceMode = performanceModeProp ?? perfModeFromHook;
   const effectivePlayerView = playerView ?? !isGameMaster;
   const isCardLocked = (c: any) => {
@@ -1088,6 +1093,19 @@ export default function InspectionModal({
             isLocked={phoneIsLocked}
             password={phonePassword}
             passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+            deviceData={parsedMetadata?.device_extraction || null}
+            cardId={currentCard.id}
+          />
+        </div>
+      );
+    }
+
+    if (parsedMetadata?.physical_document) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'auto', padding: 12 }}>
+          <PhysicalDocumentTable
+            documentData={parsedMetadata.physical_document}
+            title={currentCard.title}
           />
         </div>
       );
@@ -2591,6 +2609,67 @@ export default function InspectionModal({
       {audioExpanderOpen && <AudioViewerModal isOpen={audioExpanderOpen} onClose={() => setAudioExpanderOpen(false)} audioSrc={expanderAudioSrc} title={currentCard?.title || 'REPRODUTOR DE ÁUDIO'} />}
 
       {shredderModalOpen && <ShredderPuzzleModal isOpen={shredderModalOpen} onClose={() => setShredderModalOpen(false)} imgSrc={unifiedMedia.imageUrl || currentCard.image_url} rows={parsedMetadata?.shred_rows || 1} cols={parsedMetadata?.shred_cols || 8} isGameMaster={isGameMaster} investigationId={currentCard.investigation_id} cardId={currentCard.id} evidenceTitle={currentCard?.title || 'DOCUMENTO TRITURADO'} onPuzzleSolved={() => setPuzzleSolved(true)} />}
+
+      {activeDispatch && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 11500,
+            background: 'rgba(4, 8, 14, 0.88)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={clearDispatch}
+        >
+          <div
+            style={{ width: 'min(920px, 100%)', maxHeight: '90vh', overflow: 'auto', position: 'relative' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={clearDispatch}
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                zIndex: 10,
+                background: 'rgba(0,0,0,0.65)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 6,
+                padding: '4px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              Fechar Perícia
+            </button>
+            {activeDispatch.target === 'acoustic_workbench' && activeDispatch.asset.url && (
+              <AcousticWorkbench
+                audioSrc={activeDispatch.asset.url}
+                title={activeDispatch.asset.sourceLabel}
+                cardId={activeDispatch.asset.sourceCardId}
+              />
+            )}
+            {activeDispatch.target === 'document_table' && activeDispatch.asset.url && (
+              <PhysicalDocumentTable
+                title={activeDispatch.asset.sourceLabel}
+                documentData={{
+                  version: 2,
+                  frontBaseUrl: activeDispatch.asset.url,
+                  layers: [],
+                  fragmentation: { mode: 'intact', cols: 1, rows: 1, allowRotation: false, allowFlip: false },
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <OrdoFieldManualModal isOpen={manualOpen} onClose={closeFieldManual} initialTab={manualInitialTab} />
     </>
   );
 }

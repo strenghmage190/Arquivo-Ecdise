@@ -5,9 +5,10 @@ interface NumericKeypadProps {
   code: string | number;
   onUnlock?: (unlockedCode?: string) => void;
   onInput?: (value: string) => void;
+  smudgeHints?: string[];
 }
 
-export default function NumericKeypad({ code, onUnlock, onInput }: NumericKeypadProps) {
+export default function NumericKeypad({ code, onUnlock, onInput, smudgeHints = [] }: NumericKeypadProps) {
   const [input, setInput] = useState<string>('');
   const [status, setStatus] = useState<'locked' | 'error' | 'success'>('locked');
 
@@ -56,7 +57,13 @@ export default function NumericKeypad({ code, onUnlock, onInput }: NumericKeypad
 
       <div className="keypad-grid">
         {[1,2,3,4,5,6,7,8,9].map(n => (
-          <button key={n} onClick={() => handlePress(String(n))} className="keypad-btn">{n}</button>
+          <button
+            key={n}
+            onClick={() => handlePress(String(n))}
+            className={`keypad-btn ${smudgeHints.includes(String(n)) ? 'smudge-hint' : ''}`}
+          >
+            {n}
+          </button>
         ))}
         <button className="keypad-btn alt" onClick={handleBackspace}>⌫</button>
         <button className="keypad-btn" onClick={() => handlePress('0')}>0</button>

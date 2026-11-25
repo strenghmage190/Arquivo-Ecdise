@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
+import AcousticWorkbench from '../tools/AcousticWorkbench';
 import ForensicTerminalModal from './ForensicTerminalModal';
 import ModalSurface from '../ui/ModalSurface';
 import './AudioViewerModal.css';
@@ -354,6 +355,11 @@ export default function AudioViewerModal({
           onClose={() => setShowTerminal(false)}
           audioUrl={audioSrc}
         />
+
+        {/* Bancada Acústica Unificada */}
+        <div style={{ marginBottom: 12 }}>
+          <AcousticWorkbench audioSrc={audioSrc} title={title} />
+        </div>
 
         {/* Espectrograma Principal */}
         <div className="audio-viewer-spectrogram" ref={spectrogramContainerRef}>

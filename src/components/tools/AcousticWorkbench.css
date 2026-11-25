@@ -1,0 +1,246 @@
+.aw-workbench {
+  background: #080d14;
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  border-radius: 10px;
+  padding: 14px;
+  color: #dbe7f3;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+.aw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.aw-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #00f3ff;
+}
+
+.aw-title-group h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.aw-title-group span {
+  font-size: 11px;
+  color: #7d96ad;
+}
+
+.aw-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aw-anomaly-led {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #7d96ad;
+}
+
+.aw-led-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a4b5c;
+}
+
+.aw-anomaly-led.alert {
+  border-color: rgba(255, 179, 0, 0.55);
+  color: #ffd166;
+  background: rgba(255, 179, 0, 0.1);
+}
+
+.aw-anomaly-led.alert .aw-led-dot {
+  background: #ffb703;
+  box-shadow: 0 0 8px #ffb703;
+}
+
+.aw-btn-ghost,
+.aw-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.aw-btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #c5d4e2;
+}
+
+.aw-btn-primary {
+  background: rgba(0, 243, 255, 0.16);
+  border: 1px solid #00f3ff;
+  color: #00f3ff;
+}
+
+.aw-spectrum-box {
+  position: relative;
+  background: #04070c;
+  border: 1px solid rgba(0, 243, 255, 0.22);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 220px;
+}
+
+.aw-canvas {
+  display: block;
+  width: 100%;
+  height: 240px;
+}
+
+.aw-freq-axis {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+  text-shadow: 0 1px 3px #000;
+}
+
+.aw-overlay-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 7, 12, 0.78);
+  font-size: 12px;
+  color: #8bf7ff;
+}
+
+.aw-overlay-msg.error {
+  color: #ff6b6b;
+}
+
+.aw-rack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.aw-rack-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aw-rack-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #00f3ff;
+  letter-spacing: 0.06em;
+}
+
+.aw-preset-row,
+.aw-channel-grid,
+.aw-scheme-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.aw-preset-row button,
+.aw-channel-grid button,
+.aw-scheme-row button {
+  padding: 5px 8px;
+  font-size: 11px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #b7c9db;
+  cursor: pointer;
+}
+
+.aw-preset-row button.active,
+.aw-channel-grid button.active,
+.aw-scheme-row button.active {
+  background: rgba(0, 243, 255, 0.18);
+  border-color: #00f3ff;
+  color: #00f3ff;
+}
+
+.aw-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: #9cb3c9;
+}
+
+.aw-slider-row input[type='range'] {
+  width: 100%;
+  accent-color: #00f3ff;
+}
+
+.aw-transport {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.aw-play-btn,
+.aw-rev-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.aw-play-btn {
+  background: #00f3ff;
+  color: #041019;
+  border: none;
+  font-weight: 700;
+}
+
+.aw-rev-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #c5d4e2;
+}
+
+.aw-rev-btn.active {
+  border-color: #ffb703;
+  color: #ffd166;
+  background: rgba(255, 183, 3, 0.12);
+}
