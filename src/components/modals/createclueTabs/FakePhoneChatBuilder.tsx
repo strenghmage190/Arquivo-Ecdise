@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   AlertTriangle,
   MessageSquare,
+  Smartphone,
   X,
   Paperclip,
   Plus,
@@ -192,12 +193,65 @@ export default function FakePhoneChatBuilder() {
 
   return (
     <div className="ccm-list-stack">
+      <div className="ccm-list-card" style={{ gap: 8 }}>
+        <button
+          type="button"
+          className="ccm-btn ccm-btn-primary ccm-btn-block"
+          onClick={() => setShowDeviceBuilder(true)}
+        >
+          <Smartphone size={15} /> Configurar Celular Completo (Apps, Conversas, Galeria, Notas, Lixeira)
+        </button>
+
+        {deviceExtraction && (
+          <div className="ccm-note" style={{ fontSize: 11 }}>
+            Celular configurado: {deviceExtraction.threads?.length || 0} conversa(s) |{' '}
+            {deviceExtraction.gallery?.length || 0} foto(s) |{' '}
+            {deviceExtraction.notes?.length || 0} nota(s) |{' '}
+            {deviceExtraction.voicemails?.length || 0} áudio(s) |{' '}
+            {deviceExtraction.trash?.length || 0} lixeira
+          </div>
+        )}
+      </div>
+
+      <DeviceBuilderModal
+        isOpen={showDeviceBuilder}
+        onClose={() => setShowDeviceBuilder(false)}
+        investigationId={investigationId}
+        initialDevice={deviceExtraction}
+        basePhoneState={{
+          hasKeypad: phoneState.hasKeypad,
+          lockType: phoneState.lockType,
+          password: phoneState.password,
+          contactName: phoneState.contactName,
+          chatList: phoneState.chatList,
+        }}
+        onSave={(device) => {
+          setDeviceExtraction(device);
+          const firstThread = device.threads?.[0];
+          if (firstThread) {
+            setPhoneState((s) => ({
+              ...s,
+              contactName: firstThread.contactName || s.contactName,
+              chatList: firstThread.messages.map((m) => ({
+                id: m.id,
+                sender: m.sender === 'me' ? 'me' : 'them',
+                type: m.type === 'image' ? 'image' : 'text',
+                text: m.isDeleted ? '[Mensagem apagada]' : m.text,
+                ...(m.mediaUrl && m.type === 'image' ? { image_url: m.mediaUrl } : {}),
+                ...(m.time ? { time: m.time } : {}),
+              })),
+            }));
+          }
+          toast.success('Celular completo salvo na pista!');
+        }}
+      />
+
       <button
         type="button"
         className={`ccm-btn ccm-btn-block ${showChatEditor ? 'ccm-btn-primary' : ''}`}
         onClick={() => setShowChatEditor(!showChatEditor)}
       >
-        <MessageSquare size={15} /> {showChatEditor ? 'Fechar Editor de Chat' : 'Configurar Chat Fake'}
+        <MessageSquare size={15} /> {showChatEditor ? 'Fechar Editor Rápido de Chat' : 'Editor Rápido de Chat + Preview'}
       </button>
 
       {showChatEditor && (
@@ -457,34 +511,8 @@ export default function FakePhoneChatBuilder() {
               />
             </div>
 
-            <button
-              type="button"
-              className="ccm-btn ccm-btn-sm ccm-btn-block"
-              style={{ marginTop: 6 }}
-              onClick={() => setShowDeviceBuilder(true)}
-            >
-              Configurar Apps do Celular (Conversas, Galeria, Notas, Lixeira)
-            </button>
-
-            <DeviceBuilderModal
-              isOpen={showDeviceBuilder}
-              onClose={() => setShowDeviceBuilder(false)}
-              investigationId={investigationId}
-              initialDevice={deviceExtraction}
-              basePhoneState={{
-                hasKeypad: phoneState.hasKeypad,
-                lockType: phoneState.lockType,
-                password: phoneState.password,
-                contactName: phoneState.contactName,
-                chatList: phoneState.chatList,
-              }}
-              onSave={(device) => {
-                setDeviceExtraction(device);
-                toast.success('Ecossistema completo do celular salvo na pista!');
-              }}
-            />
             <div className="ccm-note" style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Preview ({previewLocked ? 'Bloqueado' : 'Conversa'})
+              Preview ({previewLocked ? 'Bloqueado' : deviceExtraction ? 'Celular' : 'Conversa'})
             </div>
 
             <div className="ccm-list-card" style={{ width: '100%' }}>

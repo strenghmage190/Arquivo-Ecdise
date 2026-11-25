@@ -168,24 +168,26 @@ export default function DeviceBuilderModal({
   const handleUploadGalleryFile = async (file: File | null) => {
     if (!file) return;
     try {
-      const url = investigationId
-        ? await uploadInvestigationImage(file, investigationId)
-        : URL.createObjectURL(file);
+      const folderId = investigationId || 'device_gallery';
+      const url = await uploadInvestigationImage(file, folderId);
+      if (!url) throw new Error('URL vazia');
       setGalUrl(url);
+      toast.success('Foto enviada para o Storage.');
     } catch {
-      setGalUrl(URL.createObjectURL(file));
+      toast.error('Falha ao enviar foto para o Storage. Tente novamente.');
     }
   };
 
   const handleUploadVmFile = async (file: File | null) => {
     if (!file) return;
     try {
-      const url = investigationId
-        ? await uploadInvestigationFile(file, investigationId, 'voicemails')
-        : URL.createObjectURL(file);
+      const folderId = investigationId || 'device_voicemails';
+      const url = await uploadInvestigationFile(file, folderId, 'voicemails');
+      if (!url) throw new Error('URL vazia');
       setVmUrl(url);
+      toast.success('Áudio enviado para o Storage.');
     } catch {
-      setVmUrl(URL.createObjectURL(file));
+      toast.error('Falha ao enviar áudio para o Storage. Tente novamente.');
     }
   };
 
@@ -357,14 +359,18 @@ export default function DeviceBuilderModal({
                         const f = e.target.files?.[0];
                         if (!f) return;
                         try {
-                          const url = investigationId
-                            ? msgType === 'image'
-                              ? await uploadInvestigationImage(f, investigationId)
-                              : await uploadInvestigationFile(f, investigationId, 'chat_audio')
-                            : URL.createObjectURL(f);
+                          const folderId = investigationId || 'device_chat';
+                          const url =
+                            msgType === 'image'
+                              ? await uploadInvestigationImage(f, folderId)
+                              : await uploadInvestigationFile(f, folderId, 'chat_audio');
+                          if (!url) throw new Error('URL vazia');
                           setMsgMediaUrl(url);
+                          toast.success('Anexo enviado para o Storage.');
                         } catch {
-                          setMsgMediaUrl(URL.createObjectURL(f));
+                          toast.error('Falha ao enviar anexo para o Storage. Tente novamente.');
+                        } finally {
+                          e.target.value = '';
                         }
                       }}
                     />

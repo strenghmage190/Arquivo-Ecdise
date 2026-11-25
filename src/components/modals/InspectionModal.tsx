@@ -429,7 +429,7 @@ export default function InspectionModal({
   React.useEffect(() => {
     try {
       const unifiedMediaData = resolveUnifiedMedia(card, card?.metadata);
-      if (card?.metadata?.type === 'phone' || card?.metadata?.chat_data) setVisualMode('phone');
+      if (card?.metadata?.type === 'phone' || card?.metadata?.chat_data || card?.metadata?.device_extraction) setVisualMode('phone');
       else if (card?.video_url) setVisualMode('video');
       else if ((card?.audio_url || unifiedMediaData.audioUrl || (card?.metadata && (card.metadata.audio || card.metadata.audio_url))) && !card?.image_url) setVisualMode('audio');
       else setVisualMode('image');
@@ -1500,6 +1500,8 @@ export default function InspectionModal({
             isLocked={phoneIsLocked}
             password={phonePassword}
             passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+            deviceData={parsedMetadata?.device_extraction || null}
+            cardId={currentCard.id}
           />
         </div>
       );
@@ -2534,6 +2536,8 @@ export default function InspectionModal({
                   isLocked={phoneIsLocked}
                   password={phonePassword}
                   passwordType={parsedMetadata?.phone_lock_type || 'pin'}
+                  deviceData={parsedMetadata?.device_extraction || null}
+                  cardId={currentCard.id}
                   fullscreen={true}
                 />
               </div>
