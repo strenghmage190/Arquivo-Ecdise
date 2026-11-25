@@ -1,4 +1,4 @@
-import { Lock, FileText, AlertTriangle, Search, Thermometer, X } from 'lucide-react';
+import { Terminal, X } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useCollaboration } from '../../contexts/CollaborationContext';
@@ -167,7 +167,9 @@ export default function SystemTerminal({ isOpen, onClose, cards, onOpenCard, onT
     <div className="terminal-overlay" onClick={() => onClose && onClose()}>
       <div className="terminal-window" onClick={e => e.stopPropagation()}>
         <div className="terminal-header-bar">
-          <span>C.R.I.S. TERMINAL [TTY-1]</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Terminal size={14} /> C.R.I.S. TERMINAL [TTY-1]
+          </span>
           <button className="terminal-close-btn" onClick={() => onClose && onClose()} aria-label="Fechar"><X size={15} /></button>
         </div>
         <div className="terminal-output">

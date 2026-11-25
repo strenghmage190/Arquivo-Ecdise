@@ -69,6 +69,7 @@ import TabDisplayConfig from './createclueTabs/TabDisplayConfig';
 import TabSecurity from './createclueTabs/TabSecurity';
 import TabMetadata from './createclueTabs/TabMetadata';
 import QuickClueMode from './createclueTabs/QuickClueMode';
+import FakePhoneChatBuilder from './createclueTabs/FakePhoneChatBuilder';
 import PlayerViewSimulatorModal from './PlayerViewSimulatorModal';
 
 export type { ClueArchetype };
@@ -87,13 +88,11 @@ export interface CreateClueModalProps {
 }
 
 const ARCHETYPES: { id: ClueArchetype; label: string; icon: LucideIcon }[] = [
-  { id: 'quick', label: 'Pista Rápida', icon: Zap },
-  { id: 'forensic_doc', label: 'Doc Forense', icon: FileText },
-  { id: 'secret_audio', label: 'Áudio', icon: Music },
-  { id: 'puzzle_lock', label: 'Enigma / Senha', icon: KeyRound },
-  { id: 'fake_phone', label: 'Celular Falso', icon: Smartphone },
-  { id: 'mega_clue', label: 'Mega-Pista', icon: Sparkles },
-  { id: 'complete', label: 'Avançado (10 Abas)', icon: SlidersHorizontal },
+  { id: 'forensic_doc', label: 'Documento/Foto', icon: FileText },
+  { id: 'fake_phone', label: 'Celular Apreendido', icon: Smartphone },
+  { id: 'secret_audio', label: 'Interceptação/Áudio', icon: Music },
+  { id: 'puzzle_lock', label: 'Terminal/Cripto', icon: KeyRound },
+  { id: 'complete', label: 'Modo Completo', icon: SlidersHorizontal },
 ];
 
 const TABS: { id: string; label: string; icon: LucideIcon; group: 'content' | 'config' }[] = [
@@ -161,6 +160,7 @@ function CreateClueModalContent({
     phoneState,
     deviceExtraction,
     audioStudioMeta,
+    physicalDocument,
     personState,
     metadataState,
     insights,
@@ -169,6 +169,7 @@ function CreateClueModalContent({
   } = useClueModal();
 
   const [direction, setDirection] = useState(0);
+  const [activeArchetype, setActiveArchetype] = useState<ClueArchetype>(initialArchetype || 'complete');
   const [isSaving, setIsSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ label: string; pct: number } | null>(null);
   const [showPlayerSimulator, setShowPlayerSimulator] = useState(false);
@@ -195,6 +196,7 @@ function CreateClueModalContent({
         phoneState,
         deviceExtraction,
         audioStudioMeta,
+        physicalDocument,
         personState,
         metadataState,
         displayConfig,
@@ -345,8 +347,25 @@ function CreateClueModalContent({
         resetForm({ defaultHidden });
       }
       if (initialArchetype) {
+        setActiveArchetype(initialArchetype);
         applyArchetype(initialArchetype);
       } else {
+        const sourceCard = duplicateFromCard || existingCard;
+        const sourceMeta =
+          typeof sourceCard?.metadata === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(sourceCard.metadata);
+                } catch {
+                  return {};
+                }
+              })()
+            : sourceCard?.metadata || {};
+        const isPhoneCard = Boolean(
+          sourceMeta?.device_extraction ||
+            (Array.isArray(sourceCard?.chat_data) && sourceCard.chat_data.length > 0)
+        );
+        setActiveArchetype(isPhoneCard ? 'fake_phone' : 'complete');
         setCreatorMode('complete');
       }
       loadTemplates();
@@ -685,6 +704,7 @@ function CreateClueModalContent({
         phoneState,
         deviceExtraction,
         audioStudioMeta,
+        physicalDocument,
         personState,
         metadataState,
         fieldVisibilityConfig,
@@ -860,13 +880,13 @@ function CreateClueModalContent({
         </header>
 
         <div className="ccm-archetype-bar" role="toolbar" aria-label="Modo e predefinições">
-          <span className="ccm-archetype-label">PREDEFINIÇÃO</span>
+          <span className="ccm-archetype-label">ARQUÉTIPO</span>
           <div className="ccm-archetype-track">
             {ARCHETYPES.map((arch) => {
               const ArchIcon = arch.icon;
               const isModeActive =
-                (arch.id === 'quick' && creatorMode === 'quick') ||
-                (arch.id === 'complete' && creatorMode === 'complete');
+                activeArchetype === arch.id ||
+                (arch.id === 'complete' && creatorMode === 'complete' && activeArchetype === 'quick');
               return (
                 <button
                   key={arch.id}
@@ -874,6 +894,7 @@ function CreateClueModalContent({
                   className={`ccm-archetype-pill ${isModeActive ? 'is-active' : ''}`}
                   onClick={() => {
                     playClick();
+                    setActiveArchetype(arch.id);
                     applyArchetype(arch.id);
                   }}
                 >
@@ -883,6 +904,19 @@ function CreateClueModalContent({
               );
             })}
           </div>
+          <button
+            type="button"
+            className={`ccm-btn ccm-btn-sm ${showPlayerSimulator ? 'ccm-btn-primary' : ''}`}
+            onClick={() => {
+              playClick();
+              setShowPlayerSimulator((v) => !v);
+            }}
+            title="Visualizar como o jogador verá esta evidência"
+            style={{ marginLeft: 'auto', flexShrink: 0 }}
+          >
+            <Eye size={14} />
+            <span>Ver como Jogador</span>
+          </button>
         </div>
 
         {hasDraft && (
@@ -919,8 +953,8 @@ function CreateClueModalContent({
           </div>
         )}
 
-        <div className={`ccm-body ${creatorMode === 'quick' ? 'is-quick' : ''}`}>
-          {creatorMode === 'complete' && (
+        <div className={`ccm-body ${creatorMode === 'quick' || activeArchetype === 'fake_phone' ? 'is-quick' : ''}`}>
+          {creatorMode === 'complete' && activeArchetype !== 'fake_phone' && (
             <aside className="ccm-sidebar">
               <nav className="ccm-tabs-nav cc-tabs-nav" aria-label="Seções da evidência">
                 {(['content', 'config'] as const).map((groupKey) => {
@@ -972,6 +1006,34 @@ function CreateClueModalContent({
           <div className="ccm-content">
             {creatorMode === 'quick' ? (
               <QuickClueMode />
+            ) : activeArchetype === 'fake_phone' ? (
+              <div className="ccm-tab-stack">
+                <section className="ccm-section">
+                  <div className="ccm-grid-2">
+                    <div className="ccm-field">
+                      <label className="ccm-label">Título da Evidência *</label>
+                      <input
+                        type="text"
+                        className="ccm-input"
+                        value={coreState.title}
+                        onChange={(e) => setCoreState((s) => ({ ...s, title: e.target.value }))}
+                        placeholder="Ex: Celular Apreendido de Joui"
+                      />
+                    </div>
+                    <div className="ccm-field">
+                      <label className="ccm-label">Descrição Pública (Opcional)</label>
+                      <input
+                        type="text"
+                        className="ccm-input"
+                        value={coreState.descPublic}
+                        onChange={(e) => setCoreState((s) => ({ ...s, descPublic: e.target.value }))}
+                        placeholder="Contexto visível no tabuleiro..."
+                      />
+                    </div>
+                  </div>
+                </section>
+                <FakePhoneChatBuilder />
+              </div>
             ) : (
               <AnimatePresence custom={direction} mode="wait">
                 <motion.div

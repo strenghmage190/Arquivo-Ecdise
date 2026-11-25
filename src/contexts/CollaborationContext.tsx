@@ -24,6 +24,10 @@ export interface CollaborationContextValue {
   cardStatuses: Record<string, TeamCardStatus>;
   isDrawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
+  hideResolvedPins: boolean;
+  setHideResolvedPins: (hide: boolean) => void;
+  mobilePingMode: boolean;
+  setMobilePingMode: (active: boolean) => void;
   pendingAnchorJump: AnchorJumpRequest | null;
   requestAnchorJump: (cardId: string, toolType: PinToolType, anchorData: PinAnchorData) => void;
   clearAnchorJump: () => void;
@@ -67,6 +71,10 @@ const defaultContextValue: CollaborationContextValue = {
   cardStatuses: {},
   isDrawerOpen: false,
   setDrawerOpen: () => {},
+  hideResolvedPins: false,
+  setHideResolvedPins: () => {},
+  mobilePingMode: false,
+  setMobilePingMode: () => {},
   pendingAnchorJump: null,
   requestAnchorJump: () => {},
   clearAnchorJump: () => {},
@@ -102,6 +110,8 @@ export function CollaborationProvider({
   const [findings, setFindings] = useState<CaseFinding[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, TeamCardStatus>>({});
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [hideResolvedPins, setHideResolvedPins] = useState(false);
+  const [mobilePingMode, setMobilePingMode] = useState(false);
   const [pendingAnchorJump, setPendingAnchorJump] = useState<AnchorJumpRequest | null>(null);
 
   useEffect(() => {
@@ -338,6 +348,10 @@ export function CollaborationProvider({
         cardStatuses,
         isDrawerOpen,
         setDrawerOpen,
+        hideResolvedPins,
+        setHideResolvedPins,
+        mobilePingMode,
+        setMobilePingMode,
         pendingAnchorJump,
         requestAnchorJump,
         clearAnchorJump,

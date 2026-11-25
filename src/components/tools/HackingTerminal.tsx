@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import './HackingTerminal.css';
+import { ShieldAlert, Terminal } from 'lucide-react';
+import { useCollaboration } from '../../contexts/CollaborationContext';
+import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import { isExtendedPerformanceMode } from '../../utils/performance';
+import './HackingTerminal.css';
 
 interface Props {
   correctPassword?: string;
@@ -8,7 +11,15 @@ interface Props {
   hint?: string;
 }
 
+interface LogLine {
+  id: string;
+  text: string;
+  type: 'system' | 'warning' | 'user' | 'cris' | 'error' | 'success';
+}
+
 export default function HackingTerminal({ correctPassword, onUnlock, hint }: Props) {
+  const { investigationId } = useCollaboration();
+  const [logs, setLogs] = useState<LogLine[]>([]);
   const [input, setInput] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [bootComplete, setBootComplete] = useState(false);
@@ -17,144 +28,137 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
 
   useEffect(() => {
     return () => {
-      timers.current.forEach(t => clearTimeout(t));
+      timers.current.forEach((t) => clearTimeout(t));
     };
   }, []);
 
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  const appendLog = (text: string, type: LogLine['type'] = 'system') => {
+    setLogs((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, type },
+    ]);
+  };
+
   // Boot sequence on mount (fast, non-blocking)
   useEffect(() => {
-    const bootMessages = [
-      { delay: 100, text: '&gt; Verificando integridade do sistema C.R.I.S....', type: 'system' },
-      { delay: 350, text: '&gt; [OK] Autenticação necessária para bypass.', type: 'warning' },
+    const bootMessages: Array<{ delay: number; text: string; type: LogLine['type'] }> = [
+      { delay: 80, text: 'C.R.I.S. SHELL [AUTH_GATE v4.0.2] — VERIFICANDO INTEGRIDADE...', type: 'system' },
+      { delay: 260, text: '[LOCKED] CREDENCIAL DE ACESSO NECESSÁRIA PARA BYPASS.', type: 'warning' },
     ];
 
     bootMessages.forEach(({ delay, text, type }) => {
-      const timer = window.setTimeout(() => {
-        addLog(text, type);
-      }, delay);
+      const timer = window.setTimeout(() => appendLog(text, type), delay);
       timers.current.push(timer);
     });
 
     const finalTimer = window.setTimeout(() => {
       setBootComplete(true);
-    }, 500);
+    }, 380);
     timers.current.push(finalTimer);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function addLog(text: string, type = 'system'): HTMLDivElement | null {
-    if (!outputRef.current) return null;
-    const div = document.createElement('div');
-    div.className = `log-entry ${type}`;
-    div.innerHTML = text;
-    outputRef.current.appendChild(div);
-    outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    return div;
-  }
+  const typeResponse = (text: string, type: LogLine['type'] = 'cris') => {
+    const lineId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setLogs((prev) => [...prev, { id: lineId, text: '', type }]);
 
-  function typeWriter(text: string) {
-    const el = document.createElement('div');
-    el.className = 'log-entry archivist';
-    if (!outputRef.current) return;
-    outputRef.current.appendChild(el);
     let i = 0;
-    const speed = isExtendedPerformanceMode() ? 5 : 22; // Faster typing in performance mode
-    function type() {
+    const speed = isExtendedPerformanceMode() ? 4 : 16;
+
+    const step = () => {
+      i += 1;
+      setLogs((prev) =>
+        prev.map((entry) => (entry.id === lineId ? { ...entry, text: text.slice(0, i) } : entry))
+      );
       if (i < text.length) {
-        el.innerHTML += text.charAt(i);
-        i++;
-        outputRef.current!.scrollTop = outputRef.current!.scrollHeight;
-        const t = window.setTimeout(type, speed);
+        const t = window.setTimeout(step, speed);
         timers.current.push(t);
       }
-    }
-    type();
-  }
+    };
 
-  function processResponse(query: string) {
-    addLog('&gt; Analisando parâmetros de busca...', 'system');
+    const startTimer = window.setTimeout(step, speed);
+    timers.current.push(startTimer);
+  };
+
+  const processResponse = (query: string) => {
     const q = query.trim().toLowerCase();
     const target = (correctPassword || '').trim().toLowerCase();
-    let responseText = '';
-    if (q === 'ajuda' || q === 'help') {
-      responseText = 'Comandos: ajuda | status | dica | clear — ou digite a credencial de acesso.';
-    } else if (q === 'dica') {
-      responseText = hint ? `Dica do Sistema: ${hint}` : `Credencial esperada possui ${target.length || '?'} caracteres.`;
-    } else if (q === 'status') {
-      responseText = `Tentativas registradas: ${attempts + 1}. Terminal aguardando credencial válida.`;
-    } else if (target && q === target) {
-      responseText = 'Chave válida. Concedendo acesso...';
-    } else if (target && q.length === target.length) {
-      responseText = `Acesso negado. Comprimento compatível (${target.length} chars), mas assinatura incorreta.`;
-    } else {
-      responseText = 'Acesso negado. Use "dica" se precisar de orientação.';
+
+    if (q === 'clear' || q === 'cls') {
+      setLogs([]);
+      return;
     }
 
-    const isGlitch = Math.random() < 0.15;
-    if (isGlitch) {
-      const t1 = window.setTimeout(() => {
-        const glitchMsg = 'NÃO... PARE... A DOR...';
-        const el = addLog(glitchMsg, 'glitch');
-        const t2 = window.setTimeout(() => {
-          if (el) {
-            el.className = 'log-entry system';
-            el.innerText = '> Erro de sintaxe corrigido. Continuando...';
-          }
-          const t3 = window.setTimeout(() => typeWriter(responseText), 800);
-          timers.current.push(t3);
-        }, 1000);
-        timers.current.push(t2);
-      }, 500);
-      timers.current.push(t1);
+    appendLog('> Analisando parâmetros de autenticação...', 'system');
+
+    let responseText = '';
+    let responseType: LogLine['type'] = 'cris';
+
+    if (q === 'ajuda' || q === 'help') {
+      responseText = 'Comandos: ajuda | status | dica | clear — ou informe a credencial de acesso.';
+    } else if (q === 'dica') {
+      responseText = hint
+        ? `Dica do Sistema: ${hint}`
+        : 'Nenhuma dica pública registrada. Consulte as evidências ou os achados da equipe.';
+    } else if (q === 'status') {
+      responseText = `Tentativas registradas: ${attempts + 1}. Terminal C.R.I.S. aguardando credencial válida.`;
+    } else if (target && q === target) {
+      responseText = '[OK] Credencial validada. Concedendo acesso...';
+      responseType = 'success';
     } else {
-      const t = window.setTimeout(() => typeWriter(responseText), 500);
-      timers.current.push(t);
+      responseText = '[DENIED] Acesso negado. Credencial inválida.';
+      responseType = 'error';
     }
-  }
+
+    const t = window.setTimeout(() => typeResponse(responseText, responseType), 250);
+    timers.current.push(t);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = input.trim();
-    if (!query) return;
-    addLog(query, 'user');
+    if (!query || !bootComplete) return;
+    appendLog(`auth@ordo:~# ${query}`, 'user');
     setInput('');
-    setAttempts(a => a + 1);
+    setAttempts((a) => a + 1);
 
     const t = window.setTimeout(() => {
       processResponse(query);
-      // if correct, unlock after short delay
-      if (query.toLowerCase() === (correctPassword || '').toLowerCase()) {
-        const t2 = window.setTimeout(onUnlock, 1400);
+      if (correctPassword && query.toLowerCase() === correctPassword.trim().toLowerCase()) {
+        const t2 = window.setTimeout(onUnlock, 1100);
         timers.current.push(t2);
       }
-    }, 600);
+    }, 200);
     timers.current.push(t);
   };
 
   const quickCommands = ['ajuda', 'status', 'dica', 'clear'];
 
   return (
-    <div className="nexus-container">
-      <div className="server-grid-bg" />
-
-      <div className="archivist-avatar">
-        <div className="waveform">
-          <div className="bar" />
-          <div className="bar" />
-          <div className="bar" />
-          <div className="bar" />
-          <div className="bar" />
-        </div>
-        <span className="status-text">NEXUS_CORE // ONLINE</span>
-      </div>
-
-      <div className="glass-console">
-        <div className="console-output" ref={outputRef} id="nexus-output">
-          {/* Boot messages will be added dynamically */}
+    <div className="cris-auth-shell">
+      <div className="cris-auth-window">
+        <div className="cris-auth-header">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Terminal size={14} /> C.R.I.S. TERMINAL [TTY-AUTH]
+          </span>
+          <span className="cris-auth-badge">
+            <ShieldAlert size={12} /> LOCKED
+          </span>
         </div>
 
-        {/* Chips de atalhos rápidos posicionados acima do input / teclado */}
+        <div className="cris-auth-output" ref={outputRef} id="nexus-output">
+          {logs.map((entry) => (
+            <div key={entry.id} className={`cris-log-entry ${entry.type}`}>
+              {entry.text}
+            </div>
+          ))}
+        </div>
+
         {bootComplete && (
           <div className="terminal-quick-chips">
             {quickCommands.map((cmd) => (
@@ -162,28 +166,42 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
                 key={cmd}
                 type="button"
                 className="terminal-chip"
-                onClick={() => setInput(cmd)}
+                onClick={() => {
+                  if (cmd === 'clear') {
+                    setLogs([]);
+                  } else {
+                    setInput(cmd);
+                  }
+                }}
               >
                 {cmd}
               </button>
             ))}
+            {(investigationId !== undefined) && (
+              <TeamFindingsPopover
+                onSelectValue={(val) => setInput(val)}
+              />
+            )}
           </div>
         )}
 
-        <form className="console-input-wrapper" onSubmit={handleSubmit} style={{ opacity: bootComplete ? 1 : 0.3, pointerEvents: bootComplete ? 'auto' : 'none' }}>
-          <span className="input-prefix">QUERY_INPUT_&gt;</span>
+        <form
+          className="cris-auth-input-row"
+          onSubmit={handleSubmit}
+          style={{ opacity: bootComplete ? 1 : 0.4, pointerEvents: bootComplete ? 'auto' : 'none' }}
+        >
+          <span className="cris-input-prefix">auth@ordo:~#</span>
           <input
             id="nexus-input"
             autoComplete="off"
             value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder={bootComplete ? "Digite a senha de bypass..." : "Aguardando boot..."}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={bootComplete ? 'Digite a credencial de acesso...' : 'Inicializando shell...'}
             disabled={!bootComplete}
           />
           <button type="submit" className="terminal-submit-btn" disabled={!bootComplete || !input.trim()}>
-            ENVIAR
+            OK
           </button>
-          <div className="scanline" />
         </form>
       </div>
     </div>

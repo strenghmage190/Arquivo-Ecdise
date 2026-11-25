@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { KeyRound, Sparkles, BookOpen } from 'lucide-react';
+import { BarChart3, BookOpen, KeyRound, Sparkles } from 'lucide-react';
 import CipherLib from '../../utils/ciphers';
 import { hexToText, xorDecodeHex, enigmaDecodeHex } from '../../utils/hexEncoders';
 import {
@@ -46,6 +46,90 @@ function detectFormatHint(raw: string): { mode: string; label: string; reason: s
   return null;
 }
 
+interface FreqItem {
+  char: string;
+  count: number;
+  pct: number;
+}
+
+function analyzePatternData(raw: string): { facts: string[]; freqData: FreqItem[] } {
+  const clean = (raw || '').trim();
+  if (!clean) {
+    return { facts: ['// AGUARDANDO DADOS...'], freqData: [] };
+  }
+
+  const facts: string[] = [];
+  const hasLetters = /[A-Za-z]/.test(clean);
+  const hasNumbers = /[0-9]/.test(clean);
+  const hasSpecial = /[^A-Za-z0-9\s]/.test(clean);
+  const isHexRange = /^[0-9A-Fa-f\s]+$/.test(clean);
+  const isBinaryRange = /^[01\s]+$/.test(clean);
+
+  if (isBinaryRange) {
+    facts.push('• ALFABETO: Binário estrito (2 estados).');
+  } else if (isHexRange && hasNumbers) {
+    facts.push('• ALFABETO: Hexadecimal (0-9, A-F).');
+  } else if (hasLetters && !hasNumbers && !hasSpecial) {
+    facts.push('• ALFABETO: Apenas alfabético (A-Z).');
+  } else if (hasLetters && hasNumbers) {
+    facts.push('• ALFABETO: Alfanumérico misto.');
+  } else if (!hasLetters && !hasNumbers) {
+    facts.push('• ALFABETO: Apenas símbolos/pontuação.');
+  } else {
+    facts.push('• ALFABETO: Misto / não categórico.');
+  }
+
+  const noSpaces = clean.replace(/\s+/g, '');
+  facts.push(`• COMPRIMENTO: ${noSpaces.length} caracteres (sem espaços).`);
+  facts.push(`• BLOCO COM ESPAÇOS: ${clean.split(/\s+/).length} tokens separados por espaços.`);
+
+  if (clean.endsWith('=')) {
+    facts.push('• ESTRUTURA: Padding terminal "=" detectado (comum em Base64).');
+  }
+
+  const dotDashCount = (clean.match(/[.-]/g) || []).length;
+  const nonSpaceCount = noSpaces.length || 1;
+  if (dotDashCount > nonSpaceCount * 0.5) {
+    facts.push('• ESTRUTURA: Alta densidade de pontos/traços — formato compatível com Morse.');
+  }
+
+  const punctCount = (clean.match(/[^A-Za-z0-9\s]/g) || []).length;
+  if (punctCount > noSpaces.length * 0.3) {
+    facts.push('• ESTRUTURA: Alta presença de símbolos/pontuação.');
+  }
+
+  const lettersOnly = (clean.match(/[A-Za-z]/g) || []).join('');
+  if (lettersOnly) {
+    const upper = (lettersOnly.match(/[A-Z]/g) || []).length;
+    const lower = (lettersOnly.match(/[a-z]/g) || []).length;
+    facts.push(`• CASO: ${upper} maiúsculas / ${lower} minúsculas (na porção alfabética).`);
+    const uniqueLetters = new Set(lettersOnly.toUpperCase().split('')).size;
+    facts.push(`• VARIABILIDADE: ${uniqueLetters} letras distintas (alfabeto aparente).`);
+  }
+
+  const freqMap: Record<string, number> = {};
+  for (const ch of noSpaces) {
+    freqMap[ch] = (freqMap[ch] || 0) + 1;
+  }
+  const freqSorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const totalChars = Math.max(1, noSpaces.length);
+  const freqData: FreqItem[] = freqSorted.map(([ch, count]) => ({
+    char: ch,
+    count,
+    pct: Math.round((count / totalChars) * 100),
+  }));
+
+  if (freqSorted.length) {
+    facts.push('• FREQUÊNCIA (top): ' + freqSorted.map(([c, n]) => `${c}:${n}`).join(', '));
+  }
+
+  const uniq = Object.keys(freqMap).length;
+  const entropyEst = Math.round((uniq / Math.max(1, noSpaces.length)) * 100) / 100;
+  facts.push(`• ENTROPIA ESTIMADA: ${entropyEst} (0-baixa .. 1-alta).`);
+
+  return { facts, freqData };
+}
+
 export default function UniversalDecoder({
   initialInput,
   initialMode,
@@ -61,6 +145,7 @@ export default function UniversalDecoder({
 
   const [hexMethod, setHexMethod] = useState<'auto' | 'utf8hex' | 'xor' | 'enigma'>('auto');
   const [hexKey, setHexKey] = useState('');
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [showCodesDrawer, setShowCodesDrawer] = useState(false);
   const [unlockedCodes, setUnlockedCodes] = useState<UnlockedCodeEntry[]>(() =>
     investigationId ? getUnlockedCodes(investigationId) : []
@@ -86,6 +171,10 @@ export default function UniversalDecoder({
   }, [investigationId]);
 
   const formatHint = useMemo(() => detectFormatHint(input), [input]);
+  const patternAnalysis = useMemo(
+    () => (showAnalysis ? analyzePatternData(input) : { facts: [], freqData: [] }),
+    [showAnalysis, input]
+  );
 
   const bruteForceRows = useMemo(() => {
     if (mode !== 'caesar' || !showBruteForce || !input.trim()) return [];
@@ -129,6 +218,14 @@ export default function UniversalDecoder({
         <button onClick={() => setMode('hex')} className={mode === 'hex' ? 'active' : ''}>HEX</button>
         <button onClick={() => setMode('base64')} className={mode === 'base64' ? 'active' : ''}>BASE64</button>
         <button onClick={() => setMode('enigma')} className={`special ${mode === 'enigma' ? 'active' : ''}`}>ENIGMA M3</button>
+        <button
+          type="button"
+          className={`decoder-codes-toggle ${showAnalysis ? 'active' : ''}`}
+          onClick={() => setShowAnalysis((v) => !v)}
+          title="Análise estatística e frequência de caracteres"
+        >
+          <BarChart3 size={14} /> Frequência
+        </button>
         <button
           type="button"
           className="decoder-codes-toggle"
@@ -203,38 +300,15 @@ export default function UniversalDecoder({
             />
 
             {formatHint && formatHint.mode !== mode && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  padding: '6px 10px',
-                  marginTop: 6,
-                  borderRadius: 6,
-                  background: 'rgba(0, 243, 255, 0.08)',
-                  border: '1px solid rgba(0, 243, 255, 0.3)',
-                  fontSize: 11.5,
-                  color: '#8bf7ff',
-                }}
-              >
+              <div className="decoder-hint-banner">
                 <span>
                   <Sparkles size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />
                   Análise C.R.I.S.: {formatHint.reason}
                 </span>
                 <button
                   type="button"
+                  className="decoder-hint-btn"
                   onClick={() => setMode(formatHint.mode)}
-                  style={{
-                    background: '#00f3ff',
-                    color: '#041019',
-                    border: 'none',
-                    borderRadius: 4,
-                    padding: '3px 8px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
                 >
                   Testar {formatHint.label}
                 </button>
@@ -247,16 +321,8 @@ export default function UniversalDecoder({
                 <input type="number" value={param as any} onChange={(e) => setParam(e.target.value)} />
                 <button
                   type="button"
+                  className={`decoder-bruteforce-btn ${showBruteForce ? 'active' : ''}`}
                   onClick={() => setShowBruteForce((v) => !v)}
-                  style={{
-                    background: showBruteForce ? 'rgba(0, 243, 255, 0.2)' : 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(0, 243, 255, 0.35)',
-                    color: '#00f3ff',
-                    borderRadius: 5,
-                    padding: '5px 10px',
-                    fontSize: 11.5,
-                    cursor: 'pointer',
-                  }}
                 >
                   {showBruteForce ? 'Ocultar Brute-Force (1–25)' : 'Testar Todos (ROT 1–25)'}
                 </button>
@@ -307,6 +373,34 @@ export default function UniversalDecoder({
               </div>
             ) : (
               <div className="output-screen code-font">{result}</div>
+            )}
+
+            {showAnalysis && (
+              <div className="decoder-analysis-panel">
+                <div className="freq-table-title">RELATÓRIO ESTATÍSTICO & FREQUÊNCIA</div>
+                <div className="analysis-box technical">
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{patternAnalysis.facts.join('\n')}</pre>
+                </div>
+                {patternAnalysis.freqData.length > 0 && (
+                  <div className="freq-table-container">
+                    <div className="freq-table-title">DISTRIBUIÇÃO DE FREQUÊNCIAS</div>
+                    <div className="freq-table-grid">
+                      {patternAnalysis.freqData.map((item) => (
+                        <div key={item.char} className="freq-table-card">
+                          <div className="freq-char-badge">{item.char === ' ' ? 'SPACE' : item.char}</div>
+                          <div className="freq-char-stats">
+                            <span className="freq-pct">{item.pct}%</span>
+                            <span className="freq-count">({item.count}x)</span>
+                          </div>
+                          <div className="freq-bar-bg">
+                            <div className="freq-bar-fill" style={{ width: `${Math.min(100, item.pct * 2.5)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

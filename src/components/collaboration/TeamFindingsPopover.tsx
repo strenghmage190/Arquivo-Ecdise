@@ -57,9 +57,12 @@ export default function TeamFindingsPopover({
             <button
               type="button"
               className="collab-mini-btn"
+              style={{ minHeight: 36, touchAction: 'manipulation' }}
               onClick={() => setShowAll((s) => !s)}
             >
-              {showAll ? 'Só Códigos' : 'Ver Todos'}
+              {showAll
+                ? `Só ${FINDING_CATEGORY_META[preferredCategory]?.label.split(' ')[0] || 'Filtro'}`
+                : 'Ver Todos'}
             </button>
           </div>
 
