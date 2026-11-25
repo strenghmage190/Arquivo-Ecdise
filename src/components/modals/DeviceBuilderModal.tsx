@@ -27,6 +27,7 @@ import {
 import { encryptNoteBody } from '../../utils/webCryptoLock';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
 import { toast } from 'sonner';
+import PatternLock from '../tools/PatternLock';
 import './DeviceBuilderModal.css';
 
 export interface BasePhoneStateInput {
@@ -410,7 +411,7 @@ export function DeviceBuilderPanel({
             </label>
 
             {lockEnabled && (
-              <div className="dbm-grid">
+              <div className="dbm-stack">
                 <label className="dbm-field">
                   <span>Tipo de Bloqueio</span>
                   <select
@@ -418,37 +419,82 @@ export function DeviceBuilderPanel({
                     onChange={(e) => {
                       const val = e.target.value as 'pin' | 'pattern';
                       setLockType(val);
-                      emitChange({ lockType: val });
+                      if (val === 'pattern') {
+                        const filtered = smudgeHints.filter((d) => d !== '0');
+                        setSmudgeHints(filtered);
+                        emitChange({ lockType: val, smudgeHints: filtered });
+                      } else {
+                        emitChange({ lockType: val });
+                      }
                     }}
                   >
                     <option value="pin">PIN Numérico</option>
                     <option value="pattern">Padrão (3x3)</option>
                   </select>
                 </label>
-                <label className="dbm-field">
-                  <span>{lockType === 'pin' ? 'PIN (ex: 1994)' : 'Sequência (ex: 1-2-3-6-9)'}</span>
-                  <input
-                    type="text"
-                    value={lockCode}
-                    maxLength={lockType === 'pin' ? 8 : undefined}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setLockCode(val);
-                      emitChange({ lockCode: val });
-                    }}
-                    placeholder={lockType === 'pin' ? '1234' : '1-2-3-6-9'}
-                  />
-                </label>
+
+                {lockType === 'pin' ? (
+                  <label className="dbm-field">
+                    <span>PIN (ex: 1994)</span>
+                    <input
+                      type="text"
+                      value={lockCode}
+                      maxLength={8}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLockCode(val);
+                        emitChange({ lockCode: val });
+                      }}
+                      placeholder="1234"
+                    />
+                  </label>
+                ) : (
+                  <div className="dbm-field">
+                    <span>Desenhar Padrão (3x3)</span>
+                    <div className="dbm-pattern-wrap">
+                      <PatternLock
+                        code={lockCode || null}
+                        allowEdit={true}
+                        onInput={(val) => {
+                          const s = String(val || '');
+                          setLockCode(s);
+                          emitChange({ lockCode: s });
+                        }}
+                      />
+                      <div className="dbm-pattern-meta">
+                        <span className="dbm-pattern-readout">
+                          Sequência: {lockCode || 'nenhuma'}
+                        </span>
+                        {lockCode && (
+                          <button
+                            type="button"
+                            className="ccm-btn ccm-btn-sm"
+                            onClick={() => {
+                              setLockCode('');
+                              emitChange({ lockCode: '' });
+                            }}
+                          >
+                            Limpar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             <div className="dbm-field">
               <span>Marcas de Gordura / Dedo nas Teclas (Dica Visual)</span>
-              <div className="dbm-digit-grid">
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((d) => (
+              <div className={`dbm-digit-grid ${lockType === 'pattern' ? 'is-pattern' : 'is-pin'}`}>
+                {(lockType === 'pattern'
+                  ? ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+                  : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+                ).map((d) => (
                   <button
                     key={d}
                     type="button"
+                    data-digit={d}
                     className={smudgeHints.includes(d) ? 'active' : ''}
                     onClick={() => toggleSmudge(d)}
                   >

@@ -184,6 +184,70 @@
   gap: 8px;
   font-size: 12px;
   color: var(--ccm-text, #dbe7f3);
+  cursor: pointer;
+}
+
+.dbm-check input[type="checkbox"] {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--ccm-accent, #00f3ff);
+  cursor: pointer;
+}
+
+.dbm-digit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  gap: 6px;
+}
+
+.dbm-digit-grid.is-pin button[data-digit="0"] {
+  grid-column: 2;
+}
+
+.dbm-digit-grid button {
+  width: 38px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--ccm-border, rgba(255, 255, 255, 0.14));
+  background: var(--ccm-surface-inset, rgba(255, 255, 255, 0.04));
+  color: var(--ccm-text, #dbe7f3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dbm-digit-grid button.active {
+  border-color: var(--ccm-accent-border, rgba(0, 243, 255, 0.6));
+  background: var(--ccm-accent-dim, rgba(0, 243, 255, 0.16));
+  color: var(--ccm-accent, #00f3ff);
+}
+
+.dbm-pattern-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--ccm-surface-inset, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--ccm-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.dbm-pattern-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.dbm-pattern-readout {
+  font-size: 11px;
+  color: var(--ccm-text-muted, #9cb3c9);
+  font-family: var(--font-mono, monospace);
 }
 
 .dbm-add-btn {

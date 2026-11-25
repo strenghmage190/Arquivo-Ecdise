@@ -100,13 +100,11 @@ export default function FakePhoneChatBuilder() {
           <PhoneViewer
             chatData={phoneState.chatList}
             contactName={phoneState.contactName}
-            isLocked={previewLocked || Boolean(deviceExtraction?.lockScreen?.enabled)}
+            isLocked={previewLocked}
             password={
               previewLocked
                 ? deviceExtraction?.lockScreen?.code || phoneState.password || '0000'
-                : deviceExtraction?.lockScreen?.enabled
-                  ? deviceExtraction.lockScreen.code
-                  : undefined
+                : undefined
             }
             passwordType={deviceExtraction?.lockScreen?.type || phoneState.lockType}
             deviceData={deviceExtraction}

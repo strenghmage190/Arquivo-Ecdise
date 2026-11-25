@@ -904,19 +904,6 @@ function CreateClueModalContent({
               );
             })}
           </div>
-          <button
-            type="button"
-            className={`ccm-btn ccm-btn-sm ${showPlayerSimulator ? 'ccm-btn-primary' : ''}`}
-            onClick={() => {
-              playClick();
-              setShowPlayerSimulator((v) => !v);
-            }}
-            title="Visualizar como o jogador verá esta evidência"
-            style={{ marginLeft: 'auto', flexShrink: 0 }}
-          >
-            <Eye size={14} />
-            <span>Ver como Jogador</span>
-          </button>
         </div>
 
         {hasDraft && (
@@ -953,8 +940,8 @@ function CreateClueModalContent({
           </div>
         )}
 
-        <div className={`ccm-body ${creatorMode === 'quick' || activeArchetype === 'fake_phone' ? 'is-quick' : ''}`}>
-          {creatorMode === 'complete' && activeArchetype !== 'fake_phone' && (
+        <div className={`ccm-body ${creatorMode === 'quick' ? 'is-quick' : ''}`}>
+          {creatorMode === 'complete' && (
             <aside className="ccm-sidebar">
               <nav className="ccm-tabs-nav cc-tabs-nav" aria-label="Seções da evidência">
                 {(['content', 'config'] as const).map((groupKey) => {
@@ -1006,34 +993,6 @@ function CreateClueModalContent({
           <div className="ccm-content">
             {creatorMode === 'quick' ? (
               <QuickClueMode />
-            ) : activeArchetype === 'fake_phone' ? (
-              <div className="ccm-tab-stack">
-                <section className="ccm-section">
-                  <div className="ccm-grid-2">
-                    <div className="ccm-field">
-                      <label className="ccm-label">Título da Evidência *</label>
-                      <input
-                        type="text"
-                        className="ccm-input"
-                        value={coreState.title}
-                        onChange={(e) => setCoreState((s) => ({ ...s, title: e.target.value }))}
-                        placeholder="Ex: Celular Apreendido de Joui"
-                      />
-                    </div>
-                    <div className="ccm-field">
-                      <label className="ccm-label">Descrição Pública (Opcional)</label>
-                      <input
-                        type="text"
-                        className="ccm-input"
-                        value={coreState.descPublic}
-                        onChange={(e) => setCoreState((s) => ({ ...s, descPublic: e.target.value }))}
-                        placeholder="Contexto visível no tabuleiro..."
-                      />
-                    </div>
-                  </div>
-                </section>
-                <FakePhoneChatBuilder />
-              </div>
             ) : (
               <AnimatePresence custom={direction} mode="wait">
                 <motion.div
