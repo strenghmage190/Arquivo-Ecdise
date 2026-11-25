@@ -19,8 +19,6 @@ import { Tooltip } from 'react-tooltip';
 import { toast } from 'sonner';
 import { validateImageFile } from '../../../utils/fileValidators';
 import { validateFile } from '../../../utils/storage';
-import DocumentStudioEditor from '../../tools/DocumentStudioEditor';
-import { PhysicalDocumentMetadata } from '../../../types/forensicPillars';
 
 type AlignLayerKey = 'uv' | 'thermal' | 'forensic' | 'filter';
 
@@ -43,14 +41,6 @@ export default function TabVisual() {
   const uvPngInputRef = useRef<HTMLInputElement>(null);
   const filterPngInputRef = useRef<HTMLInputElement>(null);
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
-  const [showDocStudio, setShowDocStudio] = useState(false);
-  const [docStudioMeta, setDocStudioMeta] = useState<PhysicalDocumentMetadata | null>(() => {
-    try {
-      return (window as any).__ecdiseDocStudioDraft || null;
-    } catch {
-      return null;
-    }
-  });
 
   // Simple visual alignment overlay state
   const [alignLayer, setAlignLayer] = useState<AlignLayerKey>('uv');
@@ -319,29 +309,6 @@ export default function TabVisual() {
 
   return (
     <div className="ccm-tab-stack">
-      <div style={{ marginBottom: 4 }}>
-        <button
-          type="button"
-          className="ccm-btn ccm-btn-primary"
-          style={{ width: '100%', justifyContent: 'center', gap: 8, padding: '10px 14px' }}
-          onClick={() => setShowDocStudio(true)}
-        >
-          <Sparkles size={16} /> Abrir Estúdio de Documento Físico (Frente/Verso + UV/Térmica/RGB + Pincel + Rasgar)
-        </button>
-      </div>
-
-      <DocumentStudioEditor
-        isOpen={showDocStudio}
-        onClose={() => setShowDocStudio(false)}
-        initialDoc={docStudioMeta}
-        frontBaseUrl={mediaState.previewUrl}
-        onSave={(doc) => {
-          setDocStudioMeta(doc);
-          (window as any).__ecdiseDocStudioDraft = doc;
-          toast.success('Documento Físico configurado na pista!');
-        }}
-      />
-
       {/* IMAGEM BASE */}
       <section className="ccm-section">
         <div className="ccm-section-head">
@@ -602,11 +569,6 @@ export default function TabVisual() {
         </button>
       </div>
 
-      <details className="ccm-section" style={{ padding: '10px 14px' }}>
-        <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>
-          OPÇÕES INDIVIDUAIS / LEGADAS (UV, TÉRMICA, RGB E FILTROS SEPARADOS)
-        </summary>
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* CAMADA UV */}
       <section className="ccm-section">
         <div className="ccm-section-head">
@@ -930,8 +892,6 @@ export default function TabVisual() {
           )}
         </div>
       </section>
-        </div>
-      </details>
     </div>
   );
 }

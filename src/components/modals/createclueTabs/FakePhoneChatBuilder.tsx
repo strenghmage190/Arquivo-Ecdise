@@ -460,11 +460,11 @@ export default function FakePhoneChatBuilder() {
 
             <button
               type="button"
-              className="ccm-btn ccm-btn-primary ccm-btn-block"
+              className="ccm-btn ccm-btn-sm ccm-btn-block"
               style={{ marginTop: 6 }}
               onClick={() => setShowDeviceBuilder(true)}
             >
-              Configurar Aparelho Completo (Galeria EXIF, Notas AES-GCM, Caixa Postal &amp; Lixeira)
+              Configurar Apps do Celular (Galeria, Notas, Lixeira)
             </button>
 
             <DeviceBuilderModal

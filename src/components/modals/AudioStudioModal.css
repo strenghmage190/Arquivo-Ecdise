@@ -1,8 +1,8 @@
 .asm-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 12000;
-  background: rgba(4, 8, 14, 0.85);
+  z-index: 35000;
+  background: rgba(5, 7, 11, 0.86);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -12,10 +12,10 @@
 
 .asm-dialog {
   width: min(760px, 100%);
-  background: #0a1019;
-  border: 1px solid rgba(0, 243, 255, 0.35);
+  background: var(--ccm-surface, #0d1117);
+  border: 1px solid var(--ccm-border, rgba(255, 255, 255, 0.14));
   border-radius: 10px;
-  color: #dbe7f3;
+  color: var(--ccm-text, #e2e8f0);
   display: flex;
   flex-direction: column;
   overflow: hidden;

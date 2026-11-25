@@ -170,35 +170,24 @@ export default function AcousticWorkbench({
     return out;
   }, [leftSamples, rightSamples, channelRoute, isReversed]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !activeSamples || activeSamples.length === 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const nyquist = sampleRate / 2;
-    const clampedMin = Math.max(0, Math.min(nyquist - 500, bandMinHz));
-    const clampedMax = Math.max(clampedMin + 500, Math.min(nyquist, bandMaxHz));
-
+  // Precompute FFT magnitude matrix once per audio/channel change (cached for instant slider repaint)
+  const fftCache = useMemo(() => {
+    if (!activeSamples || activeSamples.length === 0) return null;
+    const cols = 760;
+    const bins = FFT_SIZE / 2;
     const numFrames = Math.max(1, Math.floor((activeSamples.length - FFT_SIZE) / HOP_SIZE));
-    const imgData = ctx.createImageData(width, height);
-    const pixels = imgData.data;
+    const magnitudes = new Float32Array(cols * bins);
 
     const hann = new Float32Array(FFT_SIZE);
     for (let i = 0; i < FFT_SIZE; i++) {
       hann[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)));
     }
 
-    const binMin = Math.floor((clampedMin / nyquist) * (FFT_SIZE / 2));
-    const binMax = Math.max(binMin + 1, Math.floor((clampedMax / nyquist) * (FFT_SIZE / 2)));
-
     const re = new Float32Array(FFT_SIZE);
     const im = new Float32Array(FFT_SIZE);
 
-    for (let x = 0; x < width; x++) {
-      const frameIdx = Math.min(numFrames - 1, Math.floor((x / width) * numFrames));
+    for (let x = 0; x < cols; x++) {
+      const frameIdx = Math.min(numFrames - 1, Math.floor((x / cols) * numFrames));
       const start = frameIdx * HOP_SIZE;
 
       for (let i = 0; i < FFT_SIZE; i++) {
@@ -243,29 +232,65 @@ export default function AcousticWorkbench({
         }
       }
 
-      for (let y = 0; y < height; y++) {
-        const yNorm = 1 - y / Math.max(1, height - 1);
-        const bin = Math.min(
-          FFT_SIZE / 2 - 1,
-          Math.floor(binMin + yNorm * (binMax - binMin))
-        );
-        const binFreq = (bin / (FFT_SIZE / 2)) * nyquist;
-        const inBand = binFreq >= hpFreq && binFreq <= lpFreq;
-        const mag = Math.sqrt(re[bin] * re[bin] + im[bin] * im[bin]) / (FFT_SIZE / 2);
-        const filteredMag = inBand ? mag : mag * 0.04;
-        const db = 20 * Math.log10(Math.max(1e-6, filteredMag));
-        const normalized = Math.max(0, Math.min(255, ((db + contrastDb) / contrastDb) * 255));
-        const [r, g, b] = colorMap(normalized, colorScheme);
-        const pIdx = (y * width + x) * 4;
-        pixels[pIdx] = r;
-        pixels[pIdx + 1] = g;
-        pixels[pIdx + 2] = b;
-        pixels[pIdx + 3] = 255;
+      const colOffset = x * bins;
+      for (let b = 0; b < bins; b++) {
+        magnitudes[colOffset + b] = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / bins;
       }
     }
 
-    ctx.putImageData(imgData, 0, 0);
-  }, [activeSamples, sampleRate, bandMinHz, bandMaxHz, contrastDb, colorScheme, hpFreq, lpFreq]);
+    return { cols, bins, magnitudes };
+  }, [activeSamples]);
+
+  // Fast rAF-scheduled repaint when sliders change (zero FFT recomputation)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !fftCache) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rafId = window.requestAnimationFrame(() => {
+      const width = canvas.width;
+      const height = canvas.height;
+      const nyquist = sampleRate / 2;
+      const clampedMin = Math.max(0, Math.min(nyquist - 500, bandMinHz));
+      const clampedMax = Math.max(clampedMin + 500, Math.min(nyquist, bandMaxHz));
+
+      const binMin = Math.floor((clampedMin / nyquist) * fftCache.bins);
+      const binMax = Math.max(binMin + 1, Math.floor((clampedMax / nyquist) * fftCache.bins));
+
+      const imgData = ctx.createImageData(width, height);
+      const pixels = imgData.data;
+
+      for (let x = 0; x < width; x++) {
+        const srcCol = Math.min(fftCache.cols - 1, Math.floor((x / width) * fftCache.cols));
+        const colOffset = srcCol * fftCache.bins;
+
+        for (let y = 0; y < height; y++) {
+          const yNorm = 1 - y / Math.max(1, height - 1);
+          const bin = Math.min(
+            fftCache.bins - 1,
+            Math.floor(binMin + yNorm * (binMax - binMin))
+          );
+          const binFreq = (bin / fftCache.bins) * nyquist;
+          const inBand = binFreq >= hpFreq && binFreq <= lpFreq;
+          const mag = fftCache.magnitudes[colOffset + bin];
+          const filteredMag = inBand ? mag : mag * 0.04;
+          const db = 20 * Math.log10(Math.max(1e-6, filteredMag));
+          const normalized = Math.max(0, Math.min(255, ((db + contrastDb) / contrastDb) * 255));
+          const [r, g, b] = colorMap(normalized, colorScheme);
+          const pIdx = (y * width + x) * 4;
+          pixels[pIdx] = r;
+          pixels[pIdx + 1] = g;
+          pixels[pIdx + 2] = b;
+          pixels[pIdx + 3] = 255;
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [fftCache, sampleRate, bandMinHz, bandMaxHz, contrastDb, colorScheme, hpFreq, lpFreq]);
 
   const stopPlayback = useCallback(() => {
     try {

@@ -220,14 +220,17 @@ export default function TabAudio() {
 
   return (
     <div className="ccm-tab-stack">
-      <div style={{ marginBottom: 4 }}>
+      <div className="ccm-section" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <span className="ccm-note" style={{ fontSize: 12 }}>
+          Estúdio Acústico 48 kHz (Zona Fantasma, Estéreo L−R, Ruído &amp; LSB)
+        </span>
         <button
           type="button"
-          className="ccm-btn ccm-btn-primary"
-          style={{ width: '100%', justifyContent: 'center', gap: 8, padding: '10px 14px' }}
+          className="ccm-btn"
+          style={{ gap: 6 }}
           onClick={() => setShowStudioModal(true)}
         >
-          <Sparkles size={16} /> Abrir Estúdio Acústico 48 kHz (Zona Fantasma / Estéreo L−R / Ruído / LSB)
+          <Sparkles size={14} /> Abrir Estúdio Acústico
         </button>
       </div>
 
