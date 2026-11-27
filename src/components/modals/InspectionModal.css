@@ -1032,11 +1032,11 @@
   height: 100%;
 }
 
-/* Force all MysteryImage layers to occupy the same fullscreen bounds.
-   A camada de revelação do tratamento é a exceção: ela precisa manter o
-   recorte/posição configurado pelo mestre. */
+/* Fullscreen: todos os filhos do uv-container ocupam o mesmo box da base.
+   A camada de tratamento usa inset:0/100% e é escalada junto no mesmo
+   container de zoom, então também pode ser forçada com segurança. */
 .fullscreen-stage .uv-container,
-.fullscreen-stage .uv-container > div:not(.filter-reveal-layer),
+.fullscreen-stage .uv-container > div,
 .fullscreen-stage .uv-container img.bg-blur,
 .fullscreen-stage .uv-container canvas.forensic-canvas,
 .fullscreen-stage .uv-container .main-evidence {
@@ -1047,16 +1047,14 @@
   object-fit: contain !important;
 }
 
-/* layering order: background blur (behind), base image, overlay canvas */
 .fullscreen-stage .uv-container img.bg-blur { z-index: 2; }
-.fullscreen-stage .uv-container > div:not(.filter-reveal-layer) { z-index: 5; }
+.fullscreen-stage .uv-container > div:not(.filter-reveal-layer):not(.uv-flashlight-layer):not(.static-noise):not(.uv-lens-flare) { z-index: 5; }
 .fullscreen-stage .uv-container .main-evidence { z-index: 10; }
 .fullscreen-stage .uv-container canvas.forensic-canvas { z-index: 30; }
 
-/* Camada de tratamento: sempre acima da imagem base e sem bloquear cliques */
 .filter-reveal-layer {
   pointer-events: none;
-  z-index: 30;
+  z-index: 30 !important;
 }
 
 /* -----------------------------
@@ -1819,6 +1817,48 @@ input[type="number"].filter-number {
   letter-spacing: 1px;
   text-transform: uppercase;
   text-shadow: 0 0 8px rgb(203 213 225 / 40%);
+}
+
+.filters-overlay-head {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: #cbd5e1;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.filter-reveal-signal {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  background: rgba(0, 243, 255, 0.08);
+  color: #9ffcff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-align: center;
+  box-shadow: 0 0 14px rgba(0, 243, 255, 0.12);
+}
+
+.filters-overlay-panel.reveal-active {
+  border-color: rgba(0, 243, 255, 0.45);
+  box-shadow:
+    0 20px 60px rgb(0 0 0 / 90%),
+    0 0 40px rgb(0 243 255 / 16%);
+}
+
+.filters-overlay-panel.reveal-locked {
+  border-color: rgba(102, 255, 153, 0.55);
+  box-shadow:
+    0 20px 60px rgb(0 0 0 / 90%),
+    0 0 44px rgb(102 255 153 / 18%);
+}
+
+.filters-overlay-panel.reveal-locked .filter-reveal-signal {
+  border-color: rgba(102, 255, 153, 0.35);
+  background: rgba(102, 255, 153, 0.1);
+  color: #baffcc;
+  box-shadow: 0 0 16px rgba(102, 255, 153, 0.14);
 }
 
 /* GM note styling */

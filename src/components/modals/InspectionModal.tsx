@@ -35,6 +35,7 @@ import { verifyClueSolution, triggerGmOverride } from '../../api/clueSecurity';
 import {
   DEFAULT_IMAGE_FILTERS,
   IMAGE_FILTER_LIMITS,
+  IMAGE_FILTER_REVEAL_TOLERANCE,
   clampImageFilterValue,
   normalizeImageFilterValues,
 } from '../../config/imageFilter';
@@ -846,18 +847,8 @@ export default function InspectionModal({
     return normalizeImageFilterValues(parsed);
   }, [parsedMetadata]);
 
-  const filterLayerTransform = React.useMemo(() => {
-    const raw = parsedMetadata?.image_filter_layer_transform;
-    if (!raw) return null;
-    if (typeof raw === 'string') {
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return null;
-      }
-    }
-    return typeof raw === 'object' ? raw : null;
-  }, [parsedMetadata]);
+  // Camada de tratamento é sempre folha inteira (100%), alinhada 1:1 à base.
+  // `image_filter_layer_transform` legado é ignorado intencionalmente.
 
   // Mega-clue metadata (compat: mega_clue or megaClue)
   const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
@@ -1909,7 +1900,6 @@ export default function InspectionModal({
                       baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                       hiddenSrc={currentCard.image_uv_url}
                       filterLayerSrc={filterLayerSrc}
-                      filterLayerTransform={filterLayerTransform}
                       filters={{ brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation }}
                       revealSettings={fullscreenOnlyTreatment ? null : (filterRevealSettings || reveal)}
                       isUVMode={localUV}
@@ -3056,32 +3046,50 @@ export default function InspectionModal({
               )}
               {renderVisualContent()}
 
-              {showFilters && (
-                <div className="filters-overlay-panel">
-                  <div className="filter-row">
-                    <label>BRILHO {filters.brightness}%</label>
-                    <div className="filter-controls">
-                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
-                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
+              {showFilters && (() => {
+                const revealTarget = filterRevealSettings;
+                const revealMaxDiff = revealTarget
+                  ? Math.max(
+                    Math.abs(filters.brightness - revealTarget.brightness),
+                    Math.abs(filters.contrast - revealTarget.contrast),
+                    Math.abs(filters.saturation - revealTarget.saturate)
+                  )
+                  : null;
+                const revealActive = revealMaxDiff !== null && revealMaxDiff < IMAGE_FILTER_REVEAL_TOLERANCE;
+                const revealLocked = revealMaxDiff !== null && revealMaxDiff <= 4;
+                return (
+                  <div className={`filters-overlay-panel ${revealActive ? 'reveal-active' : ''} ${revealLocked ? 'reveal-locked' : ''}`}>
+                    <div className="filters-overlay-head">TRATAMENTO DE IMAGEM</div>
+                    {revealActive && (
+                      <div className="filter-reveal-signal" aria-live="polite">
+                        {revealLocked ? 'SINAL ESTÁVEL • CAMADA REVELADA' : 'SINAL DETECTADO • AJUSTE FINO'}
+                      </div>
+                    )}
+                    <div className="filter-row">
+                      <label>BRILHO {filters.brightness}%</label>
+                      <div className="filter-controls">
+                        <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
+                        <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="filter-row">
-                    <label>CONTRASTE {filters.contrast}%</label>
-                    <div className="filter-controls">
-                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
-                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
+                    <div className="filter-row">
+                      <label>CONTRASTE {filters.contrast}%</label>
+                      <div className="filter-controls">
+                        <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
+                        <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="filter-row">
-                    <label>SATURAÇÃO {filters.saturation}%</label>
-                    <div className="filter-controls">
-                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
-                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
+                    <div className="filter-row">
+                      <label>SATURAÇÃO {filters.saturation}%</label>
+                      <div className="filter-controls">
+                        <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
+                        <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
+                      </div>
                     </div>
+                    <button className="btn-reset-filters" onClick={() => { setFilters({ brightness: DEFAULT_IMAGE_FILTERS.brightness, contrast: DEFAULT_IMAGE_FILTERS.contrast, saturation: DEFAULT_IMAGE_FILTERS.saturate }); }}>RESET</button>
                   </div>
-                  <button className="btn-reset-filters" onClick={() => { setFilters({ brightness: DEFAULT_IMAGE_FILTERS.brightness, contrast: DEFAULT_IMAGE_FILTERS.contrast, saturation: DEFAULT_IMAGE_FILTERS.saturate }); }}>RESET</button>
-                </div>
-              )}
+                );
+              })()}
 
               {renderForensicHudOverlays()}
 
@@ -3458,7 +3466,6 @@ export default function InspectionModal({
                     baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                     hiddenSrc={currentCard.image_uv_url}
                     filterLayerSrc={filterLayerSrc}
-                    filterLayerTransform={filterLayerTransform}
                     filters={{ brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation }}
                     revealSettings={fullscreenOnlyTreatment ? null : filterRevealSettings}
                     isUVMode={localUV}

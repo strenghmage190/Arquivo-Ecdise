@@ -722,7 +722,7 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
       brightness: clampImageFilterValue('brightness', m.image_filter_reveal?.brightness ?? 100),
       contrast: clampImageFilterValue('contrast', m.image_filter_reveal?.contrast ?? 100),
       saturate: clampImageFilterValue('saturate', m.image_filter_reveal?.saturate ?? 100),
-      transform: m.image_filter_layer_transform || null,
+      transform: null,
     },
     thermalConfig: {
       enabled: Boolean(m.thermal || thermalUrl),
@@ -1120,20 +1120,11 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
 
   if (filterUrl) {
     metadata.image_filter_layer = filterUrl;
-    metadata.image_filter_layer_transform =
-      filter.transform ||
-      existingMeta.image_filter_layer_transform || {
-        left: 25,
-        top: 25,
-        width: 50,
-        height: 50,
-      };
-  } else if (filter.transform) {
-    metadata.image_filter_layer_transform = filter.transform;
   } else if (media.removedFilter) {
     delete metadata.image_filter_layer;
-    delete metadata.image_filter_layer_transform;
   }
+  // Camada de tratamento é sempre 100% alinhada à base; transform legado é ignorado.
+  delete metadata.image_filter_layer_transform;
 
   // Shredder & Cipher inside metadata (NEVER as stray top-level columns)
   if (cipher.isShredded) {

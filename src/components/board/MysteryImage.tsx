@@ -27,12 +27,6 @@ interface Props {
     contrast?: number;
     saturate?: number;
   } | null;
-  filterLayerTransform?: {
-    left?: number;
-    top?: number;
-    width?: number;
-    height?: number;
-  } | null;
   isUVMode: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -52,7 +46,6 @@ export function MysteryImage({
   ambientBlur = false,
   filters = { ...DEFAULT_IMAGE_FILTERS },
   revealSettings = null,
-  filterLayerTransform = null,
   className = '',
   style = {},
   fit = 'cover',
@@ -178,9 +171,9 @@ export function MysteryImage({
   }, [isUVMode, baseFilter, fit, baseSrc, isForensicActive]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
-  // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas
-  // quando o jogador se aproximar. Usamos a maior diferença entre os canais
-  // (em vez da soma) para que a tolerância seja previsível e igual para todos.
+  let revealProximity = 0; // 0..1, usado para feedback visual sutil
+  // Faixa de "ponto ideal": opacidade 100% sem precisar acertar no pixel exato.
+  const SWEET_SPOT = 4;
   if (revealSettings !== null && typeof revealSettings === 'object') {
     const rb = revealSettings.brightness ?? DEFAULT_IMAGE_FILTERS.brightness;
     const rc = revealSettings.contrast ?? DEFAULT_IMAGE_FILTERS.contrast;
@@ -190,10 +183,15 @@ export function MysteryImage({
       Math.abs(filters.contrast - rc),
       Math.abs(filters.saturate - rs)
     );
-    if (maxDiff < IMAGE_FILTER_REVEAL_TOLERANCE) {
-      const raw = 1 - maxDiff / IMAGE_FILTER_REVEAL_TOLERANCE;
-      // smoothstep: no alvo exato fica 100% opaco, e some suavemente ao errar
+    if (maxDiff <= SWEET_SPOT) {
+      hiddenLayerOpacity = 1;
+      revealProximity = 1;
+    } else if (maxDiff < IMAGE_FILTER_REVEAL_TOLERANCE) {
+      const t = (maxDiff - SWEET_SPOT) / (IMAGE_FILTER_REVEAL_TOLERANCE - SWEET_SPOT);
+      const raw = 1 - t;
+      // smoothstep: transição suave até sumir fora da faixa
       hiddenLayerOpacity = raw * raw * (3 - 2 * raw);
+      revealProximity = hiddenLayerOpacity;
     }
   } else {
     // Modo legado: revela proporcionalmente à distorção a partir de 100
@@ -203,50 +201,39 @@ export function MysteryImage({
       Math.abs(filters.saturate - DEFAULT_IMAGE_FILTERS.saturate)
     );
     hiddenLayerOpacity = Math.min(1, distortionLevel / 40);
+    revealProximity = hiddenLayerOpacity;
   }
   hiddenLayerOpacity = Math.min(1, Math.max(0, hiddenLayerOpacity));
 
-  // A camada de filtro é exportada no mesmo enquadramento da imagem base.
-  // Quando o GM define posição/tamanho, respeitamos esse recorte para que o
-  // resultado na investigação seja idêntico ao preview de criação.
-  const overlayRect = useMemo(() => {
-    const t = filterLayerTransform;
-    if (!t) return null;
-    const toNumber = (value: unknown) =>
-      typeof value === 'number' ? value : Number(value);
-    const left = toNumber(t.left);
-    const top = toNumber(t.top);
-    const width = toNumber(t.width);
-    const height = toNumber(t.height);
-    if (![left, top, width, height].every((value) => Number.isFinite(value))) {
-      return null;
-    }
-    const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
-    return {
-      left: `${clampPercent(left)}%`,
-      top: `${clampPercent(top)}%`,
-      width: `${Math.min(100, Math.max(1, width))}%`,
-      height: `${Math.min(100, Math.max(1, height))}%`,
-    };
-  }, [filterLayerTransform]);
+  // Feedback sutil para UI externa (painel de tratamento).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.setProperty('--reveal-proximity', String(revealProximity));
+    if (revealProximity > 0) el.dataset.revealActive = revealProximity >= 0.999 ? 'full' : 'partial';
+    else delete el.dataset.revealActive;
+  }, [revealProximity]);
 
-  // Precompute overlayStyle with useMemo so hooks are not called conditionally during render
+  // Camada de tratamento: folha inteira, 1:1 com a base.
+  // Usa o mesmo box e object-fit da base para nunca desalinhar no zoom/pan.
   const overlayStyle: React.CSSProperties = useMemo<React.CSSProperties>(() => ({
-    backgroundSize: overlayRect ? 'contain' : fit,
+    backgroundSize: fit,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
-    transition: 'opacity 0.12s linear',
+    transition: 'opacity 0.16s linear',
     position: 'absolute',
-    ...(overlayRect || { inset: 0 }),
+    inset: 0,
+    width: '100%',
+    height: '100%',
     zIndex: 30,
     pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
     backgroundImage: filterImage,
-    // Sem amplificação: a camada já contém as cores autorais do segredo.
-    // Filtros extras (brightness/contrast altos) estouravam a imagem.
     mixBlendMode: 'normal' as any,
     opacity: hiddenLayerOpacity,
+    // Sem filtro na camada revelada: o tratamento fica só na base,
+    // evitando "lavar" os textos/detalhes escondidos.
     filter: 'none',
-  }), [fit, hiddenLayerOpacity, filterImage, overlayRect]);
+  }), [fit, hiddenLayerOpacity, filterImage]);
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -556,17 +543,15 @@ export function MysteryImage({
       style={{
         ...style,
         cursor: isUVMode ? 'none' : (hasSecret ? 'pointer' : 'default'),
-        // Fundo preto no forense para contraste correto
         backgroundColor: isForensicActive ? '#000' : 'transparent',
-        // Evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
         touchAction: 'none' as React.CSSProperties['touchAction'],
         isolation: 'isolate' as React.CSSProperties['isolation'],
         userSelect: 'none' as React.CSSProperties['userSelect'],
         WebkitUserSelect: 'none' as any,
-        // expose CSS vars for radius and pointer to enable CSS-only masks
         ['--uv-radius' as any]: `${RADIUS}px`,
         ['--mouse-x' as any]: `${xy.x}px`,
-        ['--mouse-y' as any]: `${xy.y}px`
+        ['--mouse-y' as any]: `${xy.y}px`,
+        ['--reveal-proximity' as any]: revealProximity,
       }}
     >
       {/* MUDANÇA 2: Esconder camadas normais se forense estiver ativo */}
