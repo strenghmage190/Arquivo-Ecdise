@@ -2,6 +2,10 @@ import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react'
 import { CircleDot } from 'lucide-react';
 import './MysteryEffects.css';
 import useThrottledMouse from '../../hooks/useThrottledMouse';
+import {
+  DEFAULT_IMAGE_FILTERS,
+  IMAGE_FILTER_REVEAL_TOLERANCE,
+} from '../../config/imageFilter';
 
 interface GlobalMouse {
   clientX: number;
@@ -23,6 +27,12 @@ interface Props {
     contrast?: number;
     saturate?: number;
   } | null;
+  filterLayerTransform?: {
+    left?: number;
+    top?: number;
+    width?: number;
+    height?: number;
+  } | null;
   isUVMode: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -40,8 +50,9 @@ export function MysteryImage({
   filterLayerSrc,
   isUVMode,
   ambientBlur = false,
-  filters = { brightness: 100, contrast: 100, saturate: 100 },
+  filters = { ...DEFAULT_IMAGE_FILTERS },
   revealSettings = null,
+  filterLayerTransform = null,
   className = '',
   style = {},
   fit = 'cover',
@@ -167,44 +178,75 @@ export function MysteryImage({
   }, [isUVMode, baseFilter, fit, baseSrc, isForensicActive]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
-  // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas quando o jogador se aproximar
+  // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas
+  // quando o jogador se aproximar. Usamos a maior diferença entre os canais
+  // (em vez da soma) para que a tolerância seja previsível e igual para todos.
   if (revealSettings !== null && typeof revealSettings === 'object') {
-    const rb = revealSettings.brightness ?? 100;
-    const rc = revealSettings.contrast ?? 100;
-    const rs = revealSettings.saturate ?? 100;
-    const dist = Math.abs(filters.brightness - rb) + Math.abs(filters.contrast - rc) + Math.abs(filters.saturate - rs);
-    // Se estiver dentro de um raio maior, a camada começa a aparecer — usamos easing
-    const THRESH = 60; // aumentar alcance para facilitar o aparecimento
-    if (dist < THRESH) {
-      const raw = 1 - (dist / THRESH);
-      // aplicar easing para deixar o centro (dist baixa) bem mais opaco
-      hiddenLayerOpacity = Math.pow(Math.max(0, raw), 0.5);
-    } else {
-      hiddenLayerOpacity = 0;
+    const rb = revealSettings.brightness ?? DEFAULT_IMAGE_FILTERS.brightness;
+    const rc = revealSettings.contrast ?? DEFAULT_IMAGE_FILTERS.contrast;
+    const rs = revealSettings.saturate ?? DEFAULT_IMAGE_FILTERS.saturate;
+    const maxDiff = Math.max(
+      Math.abs(filters.brightness - rb),
+      Math.abs(filters.contrast - rc),
+      Math.abs(filters.saturate - rs)
+    );
+    if (maxDiff < IMAGE_FILTER_REVEAL_TOLERANCE) {
+      const raw = 1 - maxDiff / IMAGE_FILTER_REVEAL_TOLERANCE;
+      // smoothstep: no alvo exato fica 100% opaco, e some suavemente ao errar
+      hiddenLayerOpacity = raw * raw * (3 - 2 * raw);
     }
   } else {
     // Modo legado: revela proporcionalmente à distorção a partir de 100
-    const distortionLevel = Math.abs(filters.brightness - 100) + Math.abs(filters.contrast - 100) + Math.abs(filters.saturate - 100);
-    hiddenLayerOpacity = Math.min(1, distortionLevel / 40); // aumentar sensibilidade no modo legado
+    const distortionLevel = Math.max(
+      Math.abs(filters.brightness - DEFAULT_IMAGE_FILTERS.brightness),
+      Math.abs(filters.contrast - DEFAULT_IMAGE_FILTERS.contrast),
+      Math.abs(filters.saturate - DEFAULT_IMAGE_FILTERS.saturate)
+    );
+    hiddenLayerOpacity = Math.min(1, distortionLevel / 40);
   }
+  hiddenLayerOpacity = Math.min(1, Math.max(0, hiddenLayerOpacity));
+
+  // A camada de filtro é exportada no mesmo enquadramento da imagem base.
+  // Quando o GM define posição/tamanho, respeitamos esse recorte para que o
+  // resultado na investigação seja idêntico ao preview de criação.
+  const overlayRect = useMemo(() => {
+    const t = filterLayerTransform;
+    if (!t) return null;
+    const toNumber = (value: unknown) =>
+      typeof value === 'number' ? value : Number(value);
+    const left = toNumber(t.left);
+    const top = toNumber(t.top);
+    const width = toNumber(t.width);
+    const height = toNumber(t.height);
+    if (![left, top, width, height].every((value) => Number.isFinite(value))) {
+      return null;
+    }
+    const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+    return {
+      left: `${clampPercent(left)}%`,
+      top: `${clampPercent(top)}%`,
+      width: `${Math.min(100, Math.max(1, width))}%`,
+      height: `${Math.min(100, Math.max(1, height))}%`,
+    };
+  }, [filterLayerTransform]);
 
   // Precompute overlayStyle with useMemo so hooks are not called conditionally during render
   const overlayStyle: React.CSSProperties = useMemo<React.CSSProperties>(() => ({
-    backgroundSize: fit,
+    backgroundSize: overlayRect ? 'contain' : fit,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
     transition: 'opacity 0.12s linear',
     position: 'absolute',
-    inset: 0,
+    ...(overlayRect || { inset: 0 }),
     zIndex: 30,
     pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
     backgroundImage: filterImage,
-    // render the overlay normally (avoid 'screen' making it faint)
+    // Sem amplificação: a camada já contém as cores autorais do segredo.
+    // Filtros extras (brightness/contrast altos) estouravam a imagem.
     mixBlendMode: 'normal' as any,
-    opacity: Math.min(1, hiddenLayerOpacity * 3.0),
-    // increase contrast/saturation to make secret content pop
-    filter: 'brightness(2.0) contrast(2.2) saturate(2.0)'
-  }), [fit, hiddenLayerOpacity, filterLayerSrc, filterImage, hiddenImage]);
+    opacity: hiddenLayerOpacity,
+    filter: 'none',
+  }), [fit, hiddenLayerOpacity, filterImage, overlayRect]);
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -540,7 +582,7 @@ export function MysteryImage({
 
           {/* 2. CAMADA DO PUZZLE DE TRATAMENTO (só filterLayerSrc, não hiddenSrc) */}
           {filterLayerSrc && !isUVMode && (
-            <div style={overlayStyle} />
+            <div className="filter-reveal-layer" style={overlayStyle} />
           )}
 
           {isUVMode && hasSecret && (

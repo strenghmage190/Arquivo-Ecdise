@@ -32,6 +32,12 @@ import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
 import { verifyClueSolution, triggerGmOverride } from '../../api/clueSecurity';
+import {
+  DEFAULT_IMAGE_FILTERS,
+  IMAGE_FILTER_LIMITS,
+  clampImageFilterValue,
+  normalizeImageFilterValues,
+} from '../../config/imageFilter';
 
 const GlitchPuzzleSolverLazy = React.lazy(() => import('../tools/GlitchPuzzleSolver'));
 
@@ -104,7 +110,15 @@ export default function InspectionModal({
   const [showGlitchSolver, setShowGlitchSolver] = useState(false);
   // audio handled as a visual mode tab now
   const [localThermal, setLocalThermal] = useState(false);
-  const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturation: 100 });
+  const [filters, setFilters] = useState<{
+    brightness: number;
+    contrast: number;
+    saturation: number;
+  }>({
+    brightness: DEFAULT_IMAGE_FILTERS.brightness,
+    contrast: DEFAULT_IMAGE_FILTERS.contrast,
+    saturation: DEFAULT_IMAGE_FILTERS.saturate,
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [forensicMode, setForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>(initialForensicMode || 'none');
   const [decoderPayloadOverride, setDecoderPayloadOverride] = useState<string | undefined>(undefined);
@@ -805,6 +819,46 @@ export default function InspectionModal({
   const unifiedMedia = React.useMemo(() => {
     return resolveUnifiedMedia(currentCard, parsedMetadata);
   }, [currentCard, parsedMetadata]);
+
+  // Camada de tratamento: aceita tanto a coluna top-level quanto o metadata
+  // legado (image_filter_layer / unified_media.filter_layer_url).
+  const filterLayerSrc = React.useMemo(() => {
+    return (
+      currentCard?.image_filter_layer ||
+      parsedMetadata?.image_filter_layer ||
+      parsedMetadata?.unified_media?.filter_layer_url ||
+      null
+    );
+  }, [currentCard?.image_filter_layer, parsedMetadata]);
+
+  const filterRevealSettings = React.useMemo(() => {
+    const raw = parsedMetadata?.image_filter_reveal;
+    if (!raw) return null;
+    let parsed: any = raw;
+    if (typeof raw === 'string') {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    if (!parsed || typeof parsed !== 'object') return null;
+    return normalizeImageFilterValues(parsed);
+  }, [parsedMetadata]);
+
+  const filterLayerTransform = React.useMemo(() => {
+    const raw = parsedMetadata?.image_filter_layer_transform;
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    return typeof raw === 'object' ? raw : null;
+  }, [parsedMetadata]);
+
   // Mega-clue metadata (compat: mega_clue or megaClue)
   const megaClueMeta = parsedMetadata?.mega_clue || parsedMetadata?.megaClue || null;
 
@@ -1854,9 +1908,10 @@ export default function InspectionModal({
                     <MysteryImage
                       baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                       hiddenSrc={currentCard.image_uv_url}
-                      filterLayerSrc={currentCard.image_filter_layer}
-                      filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                      revealSettings={fullscreenOnlyTreatment ? null : reveal}
+                      filterLayerSrc={filterLayerSrc}
+                      filterLayerTransform={filterLayerTransform}
+                      filters={{ brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation }}
+                      revealSettings={fullscreenOnlyTreatment ? null : (filterRevealSettings || reveal)}
                       isUVMode={localUV}
                       fit="contain"
                       className="large-evidence-img"
@@ -3006,25 +3061,25 @@ export default function InspectionModal({
                   <div className="filter-row">
                     <label>BRILHO {filters.brightness}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="300" value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} />
-                      <input className="filter-number" type="number" min="0" max="300" value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} />
+                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
+                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} />
                     </div>
                   </div>
                   <div className="filter-row">
                     <label>CONTRASTE {filters.contrast}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="300" value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} />
-                      <input className="filter-number" type="number" min="0" max="300" value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} />
+                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
+                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} />
                     </div>
                   </div>
                   <div className="filter-row">
                     <label>SATURAÇÃO {filters.saturation}%</label>
                     <div className="filter-controls">
-                      <input className="filter-range" type="range" min="0" max="200" value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} />
-                      <input className="filter-number" type="number" min="0" max="200" value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} />
+                      <input className="filter-range" type="range" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
+                      <input className="filter-number" type="number" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} />
                     </div>
                   </div>
-                  <button className="btn-reset-filters" onClick={() => { setFilters({ brightness: 100, contrast: 100, saturation: 100 }); }}>RESET</button>
+                  <button className="btn-reset-filters" onClick={() => { setFilters({ brightness: DEFAULT_IMAGE_FILTERS.brightness, contrast: DEFAULT_IMAGE_FILTERS.contrast, saturation: DEFAULT_IMAGE_FILTERS.saturate }); }}>RESET</button>
                 </div>
               )}
 
@@ -3402,11 +3457,10 @@ export default function InspectionModal({
                   <MysteryImage
                     baseSrc={unifiedMedia.imageUrl || currentCard.image_url}
                     hiddenSrc={currentCard.image_uv_url}
-                    filterLayerSrc={currentCard.image_filter_layer}
-                    filters={showFilters ? { brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation } : { brightness: 100, contrast: 100, saturate: 100 }}
-                    revealSettings={fullscreenOnlyTreatment ? null : (() => {
-                      try { return currentCard.metadata?.image_filter_reveal; } catch { return null; }
-                    })()}
+                    filterLayerSrc={filterLayerSrc}
+                    filterLayerTransform={filterLayerTransform}
+                    filters={{ brightness: filters.brightness, contrast: filters.contrast, saturate: filters.saturation }}
+                    revealSettings={fullscreenOnlyTreatment ? null : filterRevealSettings}
                     isUVMode={localUV}
                     fit="contain"
                     className="large-evidence-img"
@@ -3461,17 +3515,17 @@ export default function InspectionModal({
               <div className="hud-sliders">
                 <div className="hud-slider-group">
                   <span>BRI</span>
-                  <input type="range" min={0} max={300} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={IMAGE_FILTER_LIMITS.brightness.min} max={IMAGE_FILTER_LIMITS.brightness.max} value={filters.brightness} onChange={e => setFilters(prev => ({ ...prev, brightness: clampImageFilterValue('brightness', Number(e.target.value)) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>CON</span>
-                  <input type="range" min={0} max={300} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={IMAGE_FILTER_LIMITS.contrast.min} max={IMAGE_FILTER_LIMITS.contrast.max} value={filters.contrast} onChange={e => setFilters(prev => ({ ...prev, contrast: clampImageFilterValue('contrast', Number(e.target.value)) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
                 <div className="hud-slider-group">
                   <span>SAT</span>
-                  <input type="range" min={0} max={300} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: Number(e.target.value) }))} onTouchStart={e => e.stopPropagation()} />
+                  <input type="range" min={IMAGE_FILTER_LIMITS.saturate.min} max={IMAGE_FILTER_LIMITS.saturate.max} value={filters.saturation} onChange={e => setFilters(prev => ({ ...prev, saturation: clampImageFilterValue('saturate', Number(e.target.value)) }))} onTouchStart={e => e.stopPropagation()} />
                 </div>
-                <button className="btn-hud" style={{ fontSize: 10, padding: '4px 8px' }} onClick={() => { setFilters({ brightness: 100, contrast: 100, saturation: 100 }); }}>RESET</button>
+                <button className="btn-hud" style={{ fontSize: 10, padding: '4px 8px' }} onClick={() => { setFilters({ brightness: DEFAULT_IMAGE_FILTERS.brightness, contrast: DEFAULT_IMAGE_FILTERS.contrast, saturation: DEFAULT_IMAGE_FILTERS.saturate }); }}>RESET</button>
               </div>
             </div>
           )}

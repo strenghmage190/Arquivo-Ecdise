@@ -466,6 +466,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ccm-overlay .ccm-slider-value-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.ccm-overlay .ccm-input-number {
+  width: 64px;
+  min-width: 0;
+  padding: 4px 6px;
+  text-align: right;
+  font-family: var(--ccm-mono);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.ccm-overlay .ccm-input-number::-webkit-outer-spin-button,
+.ccm-overlay .ccm-input-number::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.ccm-overlay .ccm-slider-unit {
+  color: var(--ccm-text-dim, var(--ccm-text-muted, #94a3b8));
+  font-family: var(--ccm-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .ccm-overlay .ccm-range {
   width: 100%;
   accent-color: var(--ccm-accent);

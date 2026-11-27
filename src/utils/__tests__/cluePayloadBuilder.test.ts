@@ -675,4 +675,25 @@ describe('cluePayloadBuilder (buildClueDbPayload & serializePublicClueCard)', ()
       expect(publicCard.metadata?.phone_password).toBeUndefined();
     });
   });
+
+  describe('Alvos do puzzle de tratamento', () => {
+    it('limita brilho/contraste/saturação ao intervalo 0-300 usado na investigação', () => {
+      const payload = buildClueDbPayload(
+        makeBaseParams({
+          filterConfig: {
+            brightness: 500,
+            contrast: -20,
+            saturate: 300,
+            transform: null,
+          },
+        })
+      );
+
+      expect(payload.metadata?.image_filter_reveal).toEqual({
+        brightness: 300,
+        contrast: 0,
+        saturate: 300,
+      });
+    });
+  });
 });
