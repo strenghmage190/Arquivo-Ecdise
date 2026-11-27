@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './BootScreen.css';
 
 import BOOT_ART from '../../../assets/ordem/Simbolo da Ordem.png';
@@ -6,6 +6,19 @@ import BOOT_ART from '../../../assets/ordem/Simbolo da Ordem.png';
 export default function BootScreen({ onComplete }: { onComplete: () => void }) {
   const [lines, setLines] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const completedRef = useRef(false);
+
+  const finishBoot = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    try {
+      window.sessionStorage.setItem('cris_boot_seen', '1');
+    } catch {
+      // ignore storage errors
+    }
+    setLoading(false);
+    onComplete();
+  }, [onComplete]);
 
   const bootLog = useMemo(
     () => [
@@ -29,7 +42,7 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
     let delay = 0;
 
     bootLog.forEach((line) => {
-      delay += Math.random() * 500 + 220;
+      delay += Math.random() * 100 + 80;
       const id = window.setTimeout(() => {
         setLines((prev) => [...prev, line]);
       }, delay);
@@ -38,15 +51,23 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
 
     const finishId = window.setTimeout(() => {
       setLoading(false);
-      const doneId = window.setTimeout(() => onComplete(), 520);
+      const doneId = window.setTimeout(() => finishBoot(), 250);
       timeouts.push(doneId);
-    }, delay + 900);
+    }, delay + 250);
     timeouts.push(finishId);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        finishBoot();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
 
     return () => {
       timeouts.forEach((t) => clearTimeout(t));
+      window.removeEventListener('keydown', onKeyDown);
     };
-  }, [bootLog, onComplete]);
+  }, [bootLog, finishBoot]);
 
   return (
     <div
@@ -164,6 +185,14 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
           >
             <div className="loading-bar" style={{ width: `${progress * 100}%` }}></div>
           </div>
+          <button
+            type="button"
+            className="boot-skip-btn"
+            onClick={finishBoot}
+            aria-label="Pular inicialização"
+          >
+            PULAR [ESC]
+          </button>
         </div>
       </div>
     </div>

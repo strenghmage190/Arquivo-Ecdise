@@ -1,244 +1,190 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
-
-:root {
-  --nexus-blue: #cbd5e1;
-  --nexus-dark: #0b0c10;
-}
+/* ==========================================================================
+   UniversalDecoder.css — C.R.I.S. Cryptographic & Forensic Decoder Station
+   ========================================================================== */
 
 .decoder-station {
-  background: rgb(5 8 10 / 85%);
-  border: 1px solid rgb(203 213 225 / 20%);
-  border-radius: 0;
-  /* constrain height so modal doesn't push page scroll — modal itself scrolls */
-  max-height: 80vh;
+  background: #070a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  max-height: 82vh;
   overflow: auto;
-  font-family: "Share Tech Mono", monospace;
-  box-shadow: 0 0 20px rgb(203 213 225 / 8%);
-}
-
-/* --- CORREÇÃO MOBILE FORÇADA --- */
-@media (max-width: 768px) {
-  .decoder-station {
-    /* When embedded inside the wrapper, keep static positioning so wrapper header remains clickable */
-    position: static !important;
-    
-    /* Tamanho Fluido */
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 80vh !important; /* Altura máxima segura */
-
-    margin: 0 !important;
-    
-    /* Rolagem do corpo */
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-  }
-
-  /* ABAS DESLIZANTES (Scroll Horizontal) */
-  .decoder-tabs {
-    display: flex !important;
-    flex-wrap: nowrap !important; /* PROIBIDO quebrar linha */
-    overflow-x: auto !important; /* PERMITIR rolagem */
-    width: 100% !important;
-    flex-shrink: 0 !important;
-    
-    /* Suavidade no iOS */
-    -webkit-overflow-scrolling: touch;
-    
-    /* Visual */
-    border-bottom: 1px solid rgb(203 213 225 / 0.2);
-    height: 50px !important; /* Altura fixa para área de toque */
-  }
-
-  /* Botões das abas */
-  .decoder-tabs button {
-    flex: 0 0 auto !important; /* Não deixa o botão encolher */
-    padding: 0 20px !important;
-    font-size: 13px !important;
-    height: var(--control-h-md, 40px) !important;
-    min-height: var(--control-h-md, 40px) !important;
-    white-space: nowrap !important; /* Texto não quebra */
-  }
-
-  /* Corpo do conteúdo */
-  .decoder-body {
-    flex: 1 !important;
-    overflow-y: auto !important; /* Scroll vertical no conteúdo */
-    padding: 16px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Ajustes dos inputs */
-  .decoder-input {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    font-size: 14px !important; /* Letra maior para ler melhor */
-  }
-}
-
-/* Esconde a barra de rolagem das abas para ficar mais limpo */
-.decoder-tabs::-webkit-scrollbar {
-  display: none;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) rgba(5, 8, 12, 0.4);
 }
 
 .decoder-tabs {
   display: flex;
-  background: rgb(0 0 0 / 30%);
+  background: #0b1016;
   overflow-x: auto;
-  border-bottom: 1px solid rgb(203 213 225 / 15%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) transparent;
+}
+
+.decoder-tabs::-webkit-scrollbar {
+  height: 5px;
+}
+
+.decoder-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.decoder-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
 }
 
 .decoder-tabs button {
-  padding: 8px 16px;
+  padding: 10px 14px;
   min-height: var(--control-h-md, 40px);
   border: none;
   background: transparent;
-  color: rgb(203 213 225 / 60%);
-  font-weight: bold;
-  border-right: 1px solid rgb(203 213 225 / 10%);
+  color: #a1a1aa;
+  font-family: inherit;
+  font-weight: 700;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   text-transform: uppercase;
   font-size: 11px;
-  letter-spacing: 1px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.decoder-tabs button:hover {
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .decoder-tabs button.active {
-  background: rgb(203 213 225 / 8%);
-  color: #cbd5e1;
-  border-bottom: 2px solid #cbd5e1;
+  background: rgba(20, 184, 166, 0.12);
+  color: #5eead4;
+  border-bottom: 2px solid #2dd4bf;
 }
 
 .decoder-tabs button.special {
-  color: rgb(203 213 225 / 50%);
+  color: #71717a;
 }
 
 .decoder-tabs button.special.active {
-  color: #cbd5e1;
-  border-bottom-color: #cbd5e1;
+  color: #67e8f9;
+  border-bottom-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.1);
 }
 
 .decoder-body {
-  padding: 20px;
-  /* let the outer `.decoder-station` handle scrolling to avoid double scrollbars */
+  padding: 18px;
   max-height: none;
   overflow: visible;
-  -webkit-overflow-scrolling: auto;
-  padding-right: 6px;
 }
 
 .decoder-input {
   width: 100%;
-  height: 80px;
-  background: rgb(0 0 0 / 40%);
-  border: 1px dashed rgb(203 213 225 / 20%);
-  color: #f1f5f9;
+  height: 88px;
+  background: #05080c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
   padding: 12px;
-  font-family: "Share Tech Mono", monospace;
-  margin-bottom: 10px;
-  border-radius: 0;
-  transition: all 0.2s;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 13px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .decoder-input:focus {
   outline: none;
-  border-color: rgb(203 213 225 / 40%);
-  box-shadow: 0 0 10px rgb(203 213 225 / 12%);
+  border-color: rgba(45, 212, 191, 0.55);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.14);
 }
 
 .output-screen {
-  background: rgb(0 0 0 / 50%);
-  border: 1px solid rgb(203 213 225 / 15%);
-  padding: 15px;
-  color: #cbd5e1;
+  background: #05080c;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  padding: 14px;
+  color: #99f6e4;
   white-space: pre-wrap;
-  min-height: 100px;
+  min-height: 110px;
   max-height: 300px;
   overflow-y: auto;
-  border-radius: 0;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  scrollbar-color: rgba(45, 212, 191, 0.35) rgba(5, 8, 12, 0.5);
+  scrollbar-width: thin;
+}
+
+.output-screen::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.output-screen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.output-screen::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 191, 0.3);
+  border-radius: 999px;
 }
 
 .decoder-params {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  margin-bottom: 10px;
-  color: rgb(203 213 225 / 60%);
+  margin-bottom: 12px;
+  color: #a1a1aa;
   font-size: 12px;
 }
 
 .decoder-params input {
-  background: rgb(0 0 0 / 40%);
-  border: 1px solid rgb(203 213 225 / 20%);
-  color: #f1f5f9;
+  background: #05080c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
   padding: 6px 10px;
-  width: 100px;
-  border-radius: 0;
+  height: 34px;
+  width: 110px;
+  border-radius: 8px;
   font-family: inherit;
-  transition: all 0.2s;
+  font-size: 12.5px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .decoder-params input:focus {
   outline: none;
-  border-color: rgb(203 213 225 / 40%);
-  box-shadow: 0 0 8px rgb(203 213 225 / 10%);
+  border-color: rgba(45, 212, 191, 0.55);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.14);
 }
 
-/* Custom scrollbars (WebKit + Firefox) */
-.output-screen {
-  scrollbar-color: var(--nexus-blue) rgba(0,0,0,0.25);
-  scrollbar-width: thin;
-}
-.output-screen::-webkit-scrollbar{
-  width:12px;
-  height:12px;
-}
-.output-screen::-webkit-scrollbar-track{
-  background: rgba(255,255,255,0.02);
-  border-radius:0;
-}
-.output-screen::-webkit-scrollbar-thumb{
-  background: linear-gradient(180deg, var(--nexus-blue), #94a3b8);
-  border-radius:0;
-  border:2px solid rgba(0,0,0,0.25);
-}
-.output-screen::-webkit-scrollbar-thumb:hover{
-  filter:brightness(0.95);
+.decoder-station ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.decoder-tabs{
-  scrollbar-color: var(--nexus-blue) transparent;
+.decoder-station ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
-.decoder-tabs::-webkit-scrollbar{ height:8px; }
-.decoder-tabs::-webkit-scrollbar-track{ background:transparent; }
-.decoder-tabs::-webkit-scrollbar-thumb{ background: linear-gradient(90deg,var(--nexus-blue), #64748b); border-radius:0; }
-
-/* ensure any other scrollable panels inside decoder-station follow the same style */
-.decoder-station ::-webkit-scrollbar{ width:10px; height:10px; }
-.decoder-station ::-webkit-scrollbar-thumb{ background: linear-gradient(180deg,var(--nexus-blue), #94a3b8); border-radius:0; }
-.decoder-station{ scrollbar-width:thin; scrollbar-color: var(--nexus-blue) rgba(0,0,0,0.15); }
-
 
 .decoder-codes-toggle {
-  margin-left: auto !important;
+  margin-left: auto;
   color: #fbbf24 !important;
-  border-left: 1px solid rgb(203 213 225 / 15%) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .decoder-codes-toggle.active {
-  background: rgb(251 191 36 / 12%) !important;
+  background: rgba(245, 158, 11, 0.14) !important;
   border-bottom-color: #fbbf24 !important;
 }
 
 .decoder-codes-drawer {
-  background: rgba(15, 23, 42, 0.95);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.25);
-  padding: 10px 14px;
+  background: #0b1016;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 12px 16px;
 }
 
 .decoder-codes-header {
@@ -249,13 +195,15 @@
   font-weight: 700;
   color: #fbbf24;
   margin-bottom: 8px;
+  letter-spacing: 0.06em;
 }
 
 .decoder-codes-close {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
   color: #cbd5e1;
-  padding: 2px 8px;
+  padding: 3px 9px;
   font-size: 11px;
   cursor: pointer;
 }
@@ -278,9 +226,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
 }
 
 .decoder-code-meta {
@@ -303,17 +252,19 @@
 }
 
 .decoder-code-actions code {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
   padding: 2px 6px;
+  border-radius: 4px;
   font-size: 12px;
 }
 
 .decoder-code-actions button {
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: #e0f2fe;
-  padding: 3px 8px;
+  background: rgba(20, 184, 166, 0.16);
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  border-radius: 6px;
+  color: #99f6e4;
+  padding: 4px 9px;
   font-size: 11px;
   cursor: pointer;
 }
@@ -323,20 +274,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   margin-top: 6px;
-  margin-bottom: 8px;
-  background: rgb(148 163 184 / 8%);
-  border: 1px solid rgb(203 213 225 / 25%);
+  margin-bottom: 10px;
+  background: rgba(20, 184, 166, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 8px;
   font-size: 11.5px;
   color: #cbd5e1;
 }
 
 .decoder-hint-btn {
-  background: rgb(203 213 225 / 14%);
-  color: #f1f5f9;
-  border: 1px solid rgb(203 213 225 / 35%);
-  padding: 4px 10px;
+  background: rgba(20, 184, 166, 0.16);
+  color: #99f6e4;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  border-radius: 6px;
+  padding: 5px 10px;
   font-size: 11px;
   font-weight: 700;
   font-family: inherit;
@@ -344,81 +297,87 @@
 }
 
 .decoder-hint-btn:hover {
-  background: rgb(203 213 225 / 24%);
+  background: rgba(20, 184, 166, 0.28);
 }
 
 .decoder-bruteforce-btn {
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(203 213 225 / 25%);
-  color: #cbd5e1;
-  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #d4d4d8;
+  padding: 6px 11px;
   font-size: 11.5px;
   font-family: inherit;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .decoder-bruteforce-btn.active {
-  background: rgb(203 213 225 / 18%);
-  border-color: #cbd5e1;
-  color: #f8fafc;
+  background: rgba(20, 184, 166, 0.18);
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #5eead4;
 }
 
 .decoder-analysis-panel {
   margin-top: 12px;
-  background: rgb(0 0 0 / 45%);
-  border: 1px solid rgb(203 213 225 / 16%);
-  padding: 10px;
+  background: #0b1016;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
 }
 
 .decoder-analysis-panel .analysis-box.technical {
   margin-top: 6px;
-  padding: 8px 10px;
-  background: rgb(0 0 0 / 55%);
-  border: 1px solid rgb(203 213 225 / 15%);
-  border-left: 3px solid #94a3b8;
+  padding: 10px 12px;
+  background: #05080c;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 8px;
   color: #cbd5e1;
-  font-family: "Share Tech Mono", monospace;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
   font-size: 12px;
 }
 
 .freq-table-container {
   margin-top: 10px;
-  background: rgb(0 0 0 / 40%);
-  border: 1px solid rgb(203 213 225 / 14%);
-  padding: 10px;
+  background: #0b1016;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
 }
 
 .freq-table-title {
   font-size: 11px;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
   font-weight: 700;
-  color: #94a3b8;
-  margin-bottom: 8px;
+  color: #5eead4;
+  margin-bottom: 10px;
   text-transform: uppercase;
 }
 
 .freq-table-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   gap: 8px;
 }
 
 .freq-table-card {
-  background: rgb(15 23 42 / 55%);
-  border: 1px solid rgb(203 213 225 / 14%);
-  padding: 6px;
+  background: #05080c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 7px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .freq-char-badge {
-  font-family: "Share Tech Mono", monospace;
-  font-weight: bold;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-weight: 700;
   font-size: 13px;
-  color: #f1f5f9;
+  color: #f4f4f5;
   text-align: center;
-  background: rgb(203 213 225 / 10%);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
   padding: 2px 0;
 }
 
@@ -432,21 +391,68 @@
 
 .freq-pct {
   font-weight: 600;
-  color: #f1f5f9;
+  color: #5eead4;
 }
 
 .freq-count {
-  color: #64748b;
+  color: #71717a;
 }
 
 .freq-bar-bg {
   width: 100%;
   height: 4px;
-  background: rgb(203 213 225 / 12%);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .freq-bar-fill {
   height: 100%;
-  background: #94a3b8;
+  background: #2dd4bf;
+  border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+  .decoder-station {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 82vh !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+  }
+
+  .decoder-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    height: 48px !important;
+  }
+
+  .decoder-tabs button {
+    flex: 0 0 auto !important;
+    padding: 0 16px !important;
+    font-size: 12px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    white-space: nowrap !important;
+  }
+
+  .decoder-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 14px !important;
+    width: 100% !important;
+  }
+
+  .decoder-input {
+    width: 100% !important;
+    font-size: 14px !important;
+  }
 }

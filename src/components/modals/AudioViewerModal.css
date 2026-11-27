@@ -1,369 +1,573 @@
-/* ============================================================
-   AUDIO VIEWER MODAL - Terminal de Análise de Áudio Classificado
-   ============================================================ */
-
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
-
-:root {
-  --nexus-blue: #cbd5e1;
-  --nexus-blue-glow: rgb(203 213 225 / 24%);
-  --nexus-green: #22c55e;
-  --nexus-dark: #0b0c10;
-}
+/* ==========================================================================
+   AudioViewerModal.css — C.R.I.S. Forensic Expanded Audio & Spectrogram Modal
+   ========================================================================== */
 
 .audio-viewer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(11 12 16 / 90%);
+  background: rgba(3, 6, 10, 0.88);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-modals, 2000);
-  padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
-  backdrop-filter: blur(4px);
-  overscroll-behavior: contain;
+  z-index: var(--z-modal-nested, 25000);
+  padding: 20px;
 }
 
 .audio-viewer-modal {
-  background: var(--surface, #11141b);
-  width: min(94vw, 1100px);
-  max-width: 1100px;
-  max-height: 90dvh;
-  border: 1px solid var(--border, rgb(203 213 225 / 20%));
-  border-radius: var(--radius-md, 8px);
+  position: relative;
+  width: min(96vw, 1340px);
+  max-height: 92vh;
+  background: #070a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(45, 212, 191, 0.08);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  box-shadow:
-    0 20px 60px rgb(0 0 0 / 70%),
-    0 0 30px rgb(203 213 225 / 15%);
-  font-family: var(--font-system, monospace);
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* Header */
+.audio-viewer-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.audio-viewer-modal::-webkit-scrollbar-track {
+  background: rgba(5, 8, 12, 0.6);
+}
+
+.audio-viewer-modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+/* --- Header --- */
 .audio-viewer-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
-  border-bottom: 2px solid rgb(203 213 225 / 30%);
-  background: rgb(203 213 225 / 5%);
+  gap: 12px;
+  padding: 14px 20px;
+  background: rgba(11, 16, 22, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.avm-badge {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  color: #5eead4;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }
 
 .audio-viewer-title {
-  color: var(--nexus-blue);
-  font-weight: bold;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  text-shadow: 0 0 10px rgb(203 213 225 / 30%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 13px;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: 0.04em;
+}
+
+.audio-viewer-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-viewer-title .inline-icon {
+  color: #2dd4bf;
+  flex-shrink: 0;
 }
 
 .audio-viewer-close {
-  width: var(--control-h-md, 40px);
-  height: var(--control-h-md, 40px);
-  min-width: var(--control-h-md, 40px);
-  min-height: var(--control-h-md, 40px);
-  background: transparent;
-  border: 1px solid var(--institutional-red, #e63946);
-  color: var(--institutional-red, #e63946);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  border-radius: var(--radius-sm, 4px);
-  touch-action: manipulation;
-}
-
-@media (pointer: coarse) {
-  .audio-viewer-close {
-    width: var(--control-h-md-mobile, 44px);
-    height: var(--control-h-md-mobile, 44px);
-    min-width: var(--control-h-md-mobile, 44px);
-    min-height: var(--control-h-md-mobile, 44px);
-  }
-}
-
-.audio-viewer-close:hover {
-  background: rgb(230 57 70 / 15%);
-  border-color: #e63946;
-  box-shadow: 0 0 15px rgb(230 57 70 / 40%);
-}
-
-/* Waveform */
-.audio-viewer-waveform {
-  background: rgb(0 0 0 / 60%);
-  padding: 12px;
-  margin: 12px 20px;
-  border: 1px solid rgb(203 213 225 / 15%);
   flex-shrink: 0;
-  border-radius: 0;
-  box-shadow: inset 0 0 15px rgb(203 213 225 / 5%);
-}
-
-#audio-viewer-wave {
-  height: 100%;
-  width: 100%;
-}
-
-/* Controles */
-.audio-viewer-controls {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 14px 20px;
-  background: rgb(203 213 225 / 4%);
-  flex-shrink: 0;
-  border-top: 1px solid rgb(203 213 225 / 10%);
-}
-
-.audio-viewer-play-btn {
-  background: transparent;
-  color: var(--nexus-green, #22c55e);
-  border: 1px solid var(--nexus-green, #22c55e);
-  padding: 0 var(--space-4, 16px);
-  min-height: var(--control-h-md, 40px);
-  height: var(--control-h-md, 40px);
-  min-width: 44px;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: var(--radius-sm, 4px);
-  transition: all 0.2s ease;
-  font-family: inherit;
-  text-transform: uppercase;
-  font-size: var(--font-size-xs, 12px);
-  letter-spacing: 1px;
-  touch-action: manipulation;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #a1a1aa;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-@media (pointer: coarse) {
-  .audio-viewer-play-btn {
-    min-height: var(--control-h-md-mobile, 44px);
-    height: var(--control-h-md-mobile, 44px);
-  }
+.audio-viewer-close:hover {
+  background: rgba(244, 63, 94, 0.14);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+
+/* --- Waveform Oscilloscope --- */
+.audio-viewer-waveform {
+  position: relative;
+  margin: 16px 20px 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #05080c;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  min-height: 110px;
+}
+
+.avm-scope-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(to right, rgba(45, 212, 191, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(45, 212, 191, 0.25) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.avm-scope-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  pointer-events: none;
+  background: rgba(45, 212, 191, 0.18);
+}
+
+#audio-viewer-wave {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 82px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) transparent;
+}
+
+#audio-viewer-wave::-webkit-scrollbar {
+  height: 6px;
+}
+
+#audio-viewer-wave::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+#audio-viewer-wave::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 191, 0.35);
+  border-radius: 999px;
+}
+
+/* --- Transport Bar --- */
+.audio-viewer-controls {
+  margin: 0 20px 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(11, 16, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.avm-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.audio-viewer-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  background: rgba(20, 184, 166, 0.16);
+  color: #99f6e4;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .audio-viewer-play-btn:hover {
-  background: var(--nexus-green);
-  color: #000;
-  box-shadow: 0 0 15px rgb(34 197 94 / 40%);
+  background: rgba(20, 184, 166, 0.28);
+  border-color: rgba(45, 212, 191, 0.65);
+  color: #ccfbf1;
 }
 
-.audio-viewer-play-btn:active {
-  transform: none;
+.audio-viewer-play-btn.is-playing {
+  background: rgba(34, 211, 238, 0.18);
+  border-color: rgba(34, 211, 238, 0.5);
+  color: #a5f3fc;
+}
+
+.avm-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.avm-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #71717a;
+}
+
+.avm-status-pill.is-playing {
+  color: #5eead4;
+  border-color: rgba(45, 212, 191, 0.3);
+  background: rgba(20, 184, 166, 0.1);
+}
+
+.avm-status-pill.is-playing .avm-status-dot {
+  background: #2dd4bf;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.8);
 }
 
 .audio-viewer-time {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-family: "Share Tech Mono", monospace;
-  color: var(--nexus-blue);
-  font-weight: bold;
-  font-size: 1.1rem;
-  letter-spacing: 2px;
+  gap: 6px;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: #a1a1aa;
+}
+
+.time-current {
+  color: #5eead4;
+  font-weight: 700;
 }
 
 .time-separator {
-  opacity: 0.6;
-  animation: blink 1.5s infinite;
+  color: #52525b;
 }
 
-@keyframes blink {
-  0%,
-  49% {
-    opacity: 0.6;
-  }
-
-  50%,
-  100% {
-    opacity: 0.3;
-  }
+.time-total {
+  color: #a1a1aa;
 }
 
-/* Controles de Espectrograma */
-.audio-viewer-spectrum-controls {
+/* --- Analysis Mode Tabs (Prevents Dual Stacked Spectrograms) --- */
+.avm-view-tabs {
+  margin: 0 20px 12px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(11, 16, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 10px 14px;
-  background: rgb(203 213 225 / 5%);
-  border-top: 1px solid rgb(203 213 225 / 15%);
-  border-bottom: 1px solid rgb(203 213 225 / 15%);
   align-items: center;
-  flex-shrink: 0;
-  overflow: auto hidden;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.spectrum-analysis-group {
+.avm-view-tabs-left {
   display: flex;
-  gap: 10px;
-  border-left: 2px solid rgb(203 213 225 / 20%);
-  padding-left: 14px;
-  margin-left: 14px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.avm-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a1a1aa;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avm-tab-btn:hover {
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.avm-tab-btn.active {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #5eead4;
+}
+
+/* --- Spectrum Controls Panel --- */
+.audio-viewer-spectrum-controls {
+  margin: 0 20px 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(11, 16, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avm-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px 12px;
+  align-items: stretch;
 }
 
 .spectrum-control-group {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: space-between;
   gap: 8px;
-  color: rgb(203 213 225 / 70%);
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.avm-control-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
 .spectrum-control-group label {
-  color: rgb(203 213 225 / 80%);
-  white-space: nowrap;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d4d4d8;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 11px;
   font-weight: 600;
-  min-width: 72px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
-.spectrum-control-group input[type="range"] {
-  accent-color: var(--nexus-blue);
-  width: 110px;
-  height: 5px;
-  cursor: pointer;
+.spectrum-control-group label .inline-icon {
+  color: #2dd4bf;
+  flex-shrink: 0;
 }
 
 .control-value {
-  color: var(--nexus-blue);
-  min-width: 58px;
-  font-weight: bold;
-  font-family: "Courier New", monospace;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
-  background: rgb(203 213 225 / 8%);
-  padding: 2px 6px;
-  border-radius: 3px;
+  font-weight: 700;
+  color: #5eead4;
+  flex-shrink: 0;
 }
 
-.spectrum-action-btn {
-  background: rgb(203 213 225 / 8%);
-  color: var(--nexus-blue);
-  border: 1px solid rgb(203 213 225 / 30%);
-  padding: 7px 14px;
+/* Complete reset overriding src/index.css base input borders/padding/height */
+.spectrum-control-group input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
   cursor: pointer;
-  font-size: 11px;
-  border-radius: 5px;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.spectrum-action-btn:hover {
-  border-color: var(--nexus-blue);
-  box-shadow: 0 0 10px rgb(203 213 225 / 20%);
+.spectrum-control-group input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.spectrum-control-group input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 999px;
+  background: #2dd4bf;
+  border: 2px solid #05080c;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.55);
+  cursor: pointer;
+}
+
+.spectrum-control-group input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.spectrum-control-group input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #2dd4bf;
+  border: 2px solid #05080c;
+  cursor: pointer;
 }
 
 .spectrum-color-row {
-  display: flex;
-  gap: 8px;
-  padding: 2px 4px;
-  background: rgb(203 213 225 / 4%);
-  border-radius: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
 }
 
-/* Botões de Cor do Espectrograma */
 .spectrum-color-btn {
-  width: 36px;
-  height: 36px;
-  padding: 3px;
-  border: 2px solid rgb(203 213 225 / 30%);
-  background: rgb(0 0 0 / 50%);
-  color: #aaa;
-  font-size: 18px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: all 0.2s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a1a1aa;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .spectrum-color-btn:hover {
-  border-color: rgb(203 213 225 / 60%);
-  background: rgb(203 213 225 / 10%);
-  transform: none;
-  box-shadow: 0 0 12px rgb(203 213 225 / 30%);
-}
-
-.spectrum-color-btn.active {
-  transform: none;
-  border-color: rgb(203 213 225 / 80%);
-  box-shadow: 0 0 15px rgb(203 213 225 / 50%);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f4f4f5;
 }
 
 .spectrum-color-btn.active.hot {
-  border-color: #ff4500;
-  box-shadow: 0 0 15px rgb(255 69 0 / 50%);
-  color: #f60;
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(251, 146, 60, 0.55);
+  color: #fdba74;
 }
 
 .spectrum-color-btn.active.cyan {
-  border-color: #cbd5e1;
-  box-shadow: 0 0 15px rgb(203 213 225 / 50%);
-  color: #cbd5e1;
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.55);
+  color: #67e8f9;
 }
 
 .spectrum-color-btn.active.magma {
-  border-color: #f0f;
-  box-shadow: 0 0 15px rgb(255 0 255 / 50%);
-  color: #f0f;
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(192, 132, 252, 0.55);
+  color: #d8b4fe;
 }
 
-/* Espectrograma Principal */
+.spectrum-analysis-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spectrum-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d4d4d8;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spectrum-action-btn:hover {
+  background: rgba(20, 184, 166, 0.14);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #99f6e4;
+}
+
+.spectrum-action-btn.spectrum-action-btn--primary {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: rgba(34, 211, 238, 0.35);
+  color: #a5f3fc;
+}
+
+.spectrum-action-btn.spectrum-action-btn--primary:hover {
+  background: rgba(34, 211, 238, 0.22);
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+.spectrum-action-btn.active {
+  background: rgba(20, 184, 166, 0.22);
+  border-color: rgba(45, 212, 191, 0.6);
+  color: #5eead4;
+}
+
+/* --- Workbench & Spectrogram Containers --- */
+.avm-workbench-wrap {
+  margin: 0 20px 20px;
+}
+
 .audio-viewer-spectrogram {
-  flex: 1;
-  overflow: auto;
-  padding: 14px 20px 20px;
-  background: linear-gradient(180deg, rgb(0 0 0 / 40%), rgb(11 12 16 / 60%));
-  position: relative;
+  margin: 0 20px 20px;
+  width: calc(100% - 40px);
+  min-height: 220px;
 }
 
-.audio-viewer-spectrogram::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgb(203 213 225 / 0%) 50%, rgb(203 213 225 / 2%) 50%);
-  background-size: 100% 3px;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.3;
-}
-
-/* ============================================================
-   Responsivo
-   ============================================================ */
-
-@media (width <= 1024px) {
-  .audio-viewer-modal {
-    width: 98vw;
-    height: 98vh;
-    max-height: 100vh;
-  }
-
-  .audio-viewer-title {
-    font-size: 16px;
-  }
-
-  .audio-viewer-header {
-    padding: 14px 18px;
-  }
-}
-
-@media (width <= 768px) {
+@media (max-width: 768px) {
   .audio-viewer-backdrop {
     padding: 0;
   }
@@ -371,65 +575,79 @@
   .audio-viewer-modal {
     width: 100vw;
     height: 100dvh;
-    max-width: 100vw;
     max-height: 100dvh;
     border-radius: 0;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 16px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    border: none;
+  }
+
+  .audio-viewer-header {
+    padding: 12px 14px;
+  }
+
+  .avm-badge {
+    display: none;
   }
 
   .audio-viewer-waveform {
-    height: 80px;
+    margin: 12px 14px 10px;
+    padding: 10px 12px;
+  }
+
+  .audio-viewer-controls {
+    margin: 0 14px 10px;
+    padding: 10px 12px;
   }
 
   .audio-viewer-play-btn {
-    padding: 0 var(--space-3, 12px);
-    font-size: 12px;
+    min-height: 40px;
   }
 
-  .audio-viewer-time {
-    font-size: 12px;
+  .avm-view-tabs {
+    margin: 0 14px 10px;
+    padding: 8px;
   }
 
-  .audio-viewer-title {
-    font-size: 14px;
-  }
-}
-
-/* ============================================================
-   Animações
-   ============================================================ */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .avm-view-tabs-left {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
+  .avm-tab-btn {
+    justify-content: center;
+    padding: 8px;
+    font-size: 10px;
   }
 
-  to {
-    transform: scale(1);
-    opacity: 1;
+  .audio-viewer-spectrum-controls {
+    margin: 0 14px 12px;
+    padding: 12px;
   }
-}
 
-/* Interação do minimapa (waveform) */
-.audio-viewer-waveform {
-  cursor: pointer;
-  border: 2px solid rgb(34 197 94 / 30%);
-}
+  .avm-controls-grid {
+    grid-template-columns: 1fr;
+  }
 
-.audio-viewer-waveform:hover {
-  border-color: var(--nexus-green);
+  .spectrum-control-group input[type='range'] {
+    height: 28px;
+  }
+
+  .spectrum-analysis-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .spectrum-action-btn {
+    min-height: 40px;
+    width: 100%;
+  }
+
+  .avm-workbench-wrap {
+    margin: 0 14px 16px;
+  }
+
+  .audio-viewer-spectrogram {
+    margin: 0 14px 16px;
+    width: calc(100% - 28px);
+  }
 }

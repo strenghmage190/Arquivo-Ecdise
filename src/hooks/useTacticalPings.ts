@@ -3,6 +3,30 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 import { TacticalPingEvent } from '../types/collaboration';
 
+function playRadarPingBeep() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(980, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1420, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+    osc.onended = () => {
+      try { ctx.close(); } catch {}
+    };
+  } catch {
+    // No-op if AudioContext is unavailable or blocked by browser autoplay policy
+  }
+}
+
 export function useTacticalPings(
   investigationId: string,
   userId?: string,
@@ -12,6 +36,7 @@ export function useTacticalPings(
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const pushPing = useCallback((ping: TacticalPingEvent) => {
+    playRadarPingBeep();
     setTacticalPings((prev) => [...prev, ping]);
     window.setTimeout(() => {
       setTacticalPings((prev) => prev.filter((p) => p.id !== ping.id));

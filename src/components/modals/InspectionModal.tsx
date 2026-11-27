@@ -1,4 +1,4 @@
-import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown, ArrowLeft, FolderOpen, Microscope, Keyboard, Languages, FileText, Video, MessageSquare, SlidersHorizontal, Flashlight, Puzzle, Pencil, Clock, CheckCircle2, XCircle, KeyRound, Smartphone, Play, Pause, Layers } from 'lucide-react';
+import { Search, Gamepad2, Music, X, Lock, User, Camera, Thermometer, Volume2, VolumeX, Maximize2, ShieldCheck, Eye, EyeOff, ArrowUp, ArrowDown, ArrowLeft, FolderOpen, Microscope, Keyboard, Languages, FileText, Video, MessageSquare, SlidersHorizontal, Flashlight, Puzzle, Pencil, Clock, CheckCircle2, XCircle, KeyRound, Smartphone, Play, Pause, Layers, Pin, PanelRightClose, PanelRightOpen, Repeat, RotateCcw, RotateCw, Download, Activity } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import MysteryImage from '../board/MysteryImage';
@@ -12,10 +12,13 @@ import ShredderPuzzle from '../tools/ShredderPuzzle';
 import ShredderPuzzleModal from './ShredderPuzzleModal';
 import UniversalDecoder from '../tools/UniversalDecoder';
 import NumericKeypad from '../tools/NumericKeypad';
+import PatternLock from '../tools/PatternLock';
 import AudioViewerModal from './AudioViewerModal';
 import PhysicalDocumentTable from '../tools/PhysicalDocumentTable';
 import AcousticWorkbench from '../tools/AcousticWorkbench';
 import OrdoFieldManualModal from './OrdoFieldManualModal';
+import PinListBar from '../collaboration/PinListBar';
+import { CasePin, PhonePinAnchor } from '../../types/collaboration';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
 import { useCollaboration } from '../../contexts/CollaborationContext';
 import WaveSurfer from 'wavesurfer.js';
@@ -24,9 +27,11 @@ import './InspectionModal.css';
 import { markPerfKeep } from '../../utils/performance';
 import usePerformanceMode from '../../utils/usePerformanceMode';
 import { markCardSeen, recordUnlockedCode } from '../../utils/playerTracking';
+import { unlockAudio } from '../../utils/audio';
 import { supabase } from '../../supabaseClient';
 import { uploadInvestigationFile } from '../../utils/storage';
 import { updateInvestigationCard } from '../../api/investigations';
+import { verifyClueSolution, triggerGmOverride } from '../../api/clueSecurity';
 
 const GlitchPuzzleSolverLazy = React.lazy(() => import('../tools/GlitchPuzzleSolver'));
 
@@ -59,6 +64,7 @@ export default function InspectionModal({
 }: Props) {
   const { enabled: perfModeFromHook } = usePerformanceMode();
   const { activeDispatch, clearDispatch, manualOpen, manualInitialTab, closeFieldManual } = useForensicDispatch();
+  const { investigationId: collabInvestigationId, pinsByCardId, requestAnchorJump } = useCollaboration();
   const effectivePerformanceMode = performanceModeProp ?? perfModeFromHook;
   const effectivePlayerView = playerView ?? !isGameMaster;
   const isCardLocked = (c: any) => {
@@ -92,6 +98,7 @@ export default function InspectionModal({
   }, [card, isGameMaster]);
 
   const [localUV, setLocalUV] = useState(false);
+  const [uvLensLocked, setUvLensLocked] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [fullscreenOnlyTreatment, setFullscreenOnlyTreatment] = useState(false);
   const [showGlitchSolver, setShowGlitchSolver] = useState(false);
@@ -174,23 +181,33 @@ export default function InspectionModal({
   };
 
   const handleEvidencePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (uvLensLocked) {
+      e.currentTarget.style.setProperty('--uv-radius', '1200px');
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Mobile-safe: offset beam above finger so the player's thumb doesn't cover the clue
+    const touchOffsetY = e.pointerType === 'touch' ? -68 : 0;
+    const y = Math.max(24, e.clientY - rect.top + touchOffsetY);
     e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
-    e.currentTarget.style.setProperty('--uv-radius', '140px');
+    e.currentTarget.style.setProperty('--uv-radius', '145px');
   };
 
   const handleEvidenceTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (uvLensLocked) {
+      e.currentTarget.style.setProperty('--uv-radius', '1200px');
+      return;
+    }
     if (e.touches.length >= 1) {
       const t = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = t.clientX - rect.left;
-      const y = t.clientY - rect.top;
+      const y = Math.max(24, t.clientY - rect.top - 68);
       e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
       e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
-      e.currentTarget.style.setProperty('--uv-radius', '140px');
+      e.currentTarget.style.setProperty('--uv-radius', '145px');
     }
   };
 
@@ -262,8 +279,18 @@ export default function InspectionModal({
     } catch { }
     return () => cleans.forEach((c) => { try { c(); } catch { } });
   }, []);
-  const [showPhoneDetails, setShowPhoneDetails] = useState(false);
+  const [phoneSidebarOpen, setPhoneSidebarOpen] = useState(true);
+  const [mobilePhoneDrawerOpen, setMobilePhoneDrawerOpen] = useState(false);
+  const [phoneForensicTab, setPhoneForensicTab] = useState<'markers' | 'metadata'>(
+    collabInvestigationId ? 'markers' : 'metadata'
+  );
+  const [showPhonePins, setShowPhonePins] = useState(true);
   const [serverCard, setServerCard] = useState<any | null>(null);
+
+  useEffect(() => {
+    setMobilePhoneDrawerOpen(false);
+    setPhoneForensicTab(collabInvestigationId ? 'markers' : 'metadata');
+  }, [card?.id, collabInvestigationId]);
   const [showMoreTools, setShowMoreTools] = useState(false);
   const moreToolsBtnRef = useRef<HTMLButtonElement | null>(null);
   const [moreToolsPos, setMoreToolsPos] = useState<{ left: number; top: number; width: number } | null>(null);
@@ -320,8 +347,38 @@ export default function InspectionModal({
   const [audioIsPlaying, setAudioIsPlaying] = useState(false);
   const [audioPosition, setAudioPosition] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(1);
+  const [audioPlaybackRate, setAudioPlaybackRate] = useState<0.5 | 1 | 1.5>(1);
+  const [audioLoop, setAudioLoop] = useState(false);
+  const audioLoopRef = useRef(false);
+  const [waveformZoomLevel, setWaveformZoomLevel] = useState(1);
   const waveformRef = useRef<HTMLDivElement | null>(null);
   const waveSurferRef = useRef<any | null>(null);
+
+  useEffect(() => {
+    audioLoopRef.current = audioLoop;
+    if (audioElementRef.current) {
+      audioElementRef.current.loop = audioLoop;
+    }
+  }, [audioLoop]);
+
+  useEffect(() => {
+    if (waveSurferRef.current) {
+      try { waveSurferRef.current.setPlaybackRate(audioPlaybackRate); } catch { }
+    }
+    if (audioElementRef.current) {
+      audioElementRef.current.playbackRate = audioPlaybackRate;
+    }
+  }, [audioPlaybackRate]);
+
+  useEffect(() => {
+    if (waveSurferRef.current) {
+      try { waveSurferRef.current.setVolume(audioVolume); } catch { }
+    }
+    if (audioElementRef.current) {
+      audioElementRef.current.volume = audioVolume;
+    }
+  }, [audioVolume]);
 
   const resolveUnifiedMedia = (cardObj: any, metadataObj: any) => {
     const unified = metadataObj?.unified_media || {};
@@ -391,6 +448,81 @@ export default function InspectionModal({
         alert('Solução aplicada localmente, mas falha ao salvar no servidor. Tente novamente ou verifique a conexão.');
       }
     })();
+  };
+
+  const [gmOverrideBusy, setGmOverrideBusy] = useState(false);
+  const [gmOverrideStatus, setGmOverrideStatus] = useState<string | null>(null);
+
+  const handleVerifyLockedCard = async (attempt: string): Promise<boolean> => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id) return false;
+    const res = await verifyClueSolution(
+      String(cardObj.id),
+      attempt,
+      'Agente',
+      cardObj?.lock_password || null
+    );
+    if (res.unlocked) {
+      setIsUnlocked(true);
+      if (isMounted.current) {
+        setServerCard((prev: any) => ({
+          ...(prev || cardObj),
+          is_locked: false,
+          lock_password: null,
+        }));
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const handleGmSkillOverride = async (mode: 'assist_hint' | 'override_unlock') => {
+    const cardObj = serverCard || card;
+    if (!cardObj?.id || gmOverrideBusy) return;
+    setGmOverrideBusy(true);
+    setGmOverrideStatus(null);
+    try {
+      const res = await triggerGmOverride(String(cardObj.id), mode);
+      if (res.ok) {
+        if (mode === 'override_unlock') {
+          setIsUnlocked(true);
+          if (isMounted.current) {
+            setServerCard((prev: any) => ({
+              ...(prev || cardObj),
+              is_locked: false,
+              lock_password: null,
+            }));
+            setGmOverrideStatus(
+              res.unlocked_reward_ids && res.unlocked_reward_ids.length > 0
+                ? `Override aplicado! ${res.unlocked_reward_ids.length} recompensa(s) revelada(s).`
+                : 'Override aplicado! Pista destravada ao vivo.'
+            );
+          }
+        } else {
+          if (isMounted.current) {
+            setServerCard((prev: any) => ({
+              ...(prev || cardObj),
+              metadata: {
+                ...((prev || cardObj)?.metadata || {}),
+                cris_assist_revealed: true,
+                cris_assist_hint: res.hint,
+              },
+            }));
+            setGmOverrideStatus('Calibração Assistida da C.R.I.S. enviada aos agentes.');
+          }
+        }
+      } else {
+        // Fallback if Phase 5 SQL migration isn't applied yet
+        if (mode === 'override_unlock') {
+          await persistUnlockForCard('', 'terminal');
+          if (isMounted.current) setGmOverrideStatus('Override local aplicado (pista destravada).');
+        } else if (isMounted.current) {
+          setGmOverrideStatus('Aplique a migração SQL Fase 5 para usar Calibração Assistida.');
+        }
+      }
+    } finally {
+      if (isMounted.current) setGmOverrideBusy(false);
+    }
   };
 
   // Persist unlock to server so the card remains unlocked permanently
@@ -645,6 +777,16 @@ export default function InspectionModal({
     return () => { document.body.classList.remove('inspection-modal-open'); };
   }, [isOpen]);
 
+  const activeCardForPins = serverCard || card;
+  const phonePins = React.useMemo(() => {
+    if (!activeCardForPins?.id) return [];
+    return (pinsByCardId[activeCardForPins.id] || []).filter((p) => p.tool_type === 'phone');
+  }, [pinsByCardId, activeCardForPins?.id]);
+  const activePhonePinsCount = React.useMemo(
+    () => phonePins.filter((p) => !p.is_resolved).length,
+    [phonePins]
+  );
+
   if (!isOpen || !(card || serverCard)) return null;
 
   const currentCard = serverCard || card;
@@ -702,6 +844,7 @@ export default function InspectionModal({
     setAudioIsPlaying(false);
     setAudioPosition(0);
     setAudioDuration(0);
+    setWaveformZoomLevel(1);
     el.src = audioSources.src;
     el.load();
   }, [audioSources.src]);
@@ -735,12 +878,14 @@ export default function InspectionModal({
 
     const ws = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: 'rgba(0, 243, 255, 0.4)',
-      progressColor: '#00f3ff',
-      cursorColor: '#ff0066',
-      height: 64,
-      responsive: true,
+      waveColor: 'rgba(45, 212, 191, 0.36)',
+      progressColor: '#2dd4bf',
+      cursorColor: '#f43f5e',
+      cursorWidth: 2,
+      height: 88,
       normalize: true,
+      interact: true,
+      dragToSeek: true,
     });
 
     waveSurferRef.current = ws;
@@ -749,15 +894,38 @@ export default function InspectionModal({
     ws.on('ready', () => {
       const dur = ws.getDuration() || 0;
       setAudioDuration(dur);
+      try {
+        ws.setPlaybackRate(audioPlaybackRate);
+        ws.setVolume(audioVolume);
+        ws.setMuted(audioIsMuted);
+      } catch { }
     });
 
+    ws.on('timeupdate', (time: number) => {
+      setAudioPosition(time || 0);
+    });
 
+    ws.on('seeking', (time: number) => {
+      setAudioPosition(time || 0);
+    });
 
-    ws.on('play', () => setAudioIsPlaying(true));
-    ws.on('pause', () => setAudioIsPlaying(false));
+    ws.on('play', () => {
+      setAudioIsPlaying(true);
+      window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard?.id, playing: true } }));
+    });
+    ws.on('pause', () => {
+      setAudioIsPlaying(false);
+      window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard?.id, playing: false } }));
+    });
     ws.on('finish', () => {
+      if (audioLoopRef.current) {
+        ws.setTime(0);
+        ws.play().catch(() => setAudioIsPlaying(false));
+        return;
+      }
       setAudioIsPlaying(false);
       setAudioPosition(0);
+      window.dispatchEvent(new CustomEvent('ordo:card-audio-state', { detail: { cardId: currentCard?.id, playing: false } }));
     });
 
     return () => {
@@ -768,12 +936,14 @@ export default function InspectionModal({
 
   // Waveform zoom controls
   const setWaveformZoom = (target: number, originPercent = 50) => {
+    const clamped = Math.max(1, Math.min(3, Number(target.toFixed(1))));
+    setWaveformZoomLevel(clamped);
     const container = waveformRef.current;
     if (!container) return;
     container.style.transformOrigin = `${originPercent}% 50%`;
     container.style.transition = 'transform 220ms ease';
-    container.style.transform = `scale(${target})`;
-    container.dataset.waveformZoom = String(target);
+    container.style.transform = `scale(${clamped})`;
+    container.dataset.waveformZoom = String(clamped);
   };
 
   const handleWaveformDblClick = (e: React.MouseEvent) => {
@@ -790,21 +960,31 @@ export default function InspectionModal({
 
   const handleWaveformZoomIn = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || '1');
+    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || String(waveformZoomLevel) || '1');
     setWaveformZoom(Math.min(3, current + 0.2));
   };
 
   const handleWaveformZoomOut = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || '1');
+    const current = parseFloat(waveformRef.current?.dataset.waveformZoom || String(waveformZoomLevel) || '1');
     setWaveformZoom(Math.max(1, current - 0.2));
   };
 
 
   // Lógica de Zoom Otimizada (Sincroniza UV e Filtros)
   React.useEffect(() => {
+    const cleanupResidualControls = () => {
+      try {
+        fileRef.current?.querySelectorAll('.image-controls').forEach((el) => el.remove());
+        document.querySelectorAll('.fullscreen-stage .image-controls').forEach((el) => el.remove());
+      } catch { }
+    };
+
     // Só roda se for modo imagem ou vídeo (se quiser zoom em vídeo)
-    if (visualMode !== 'image' && visualMode !== 'video') return;
+    if (visualMode !== 'image' && visualMode !== 'video') {
+      cleanupResidualControls();
+      return;
+    }
 
     // Procura o elemento correto dependendo se estamos no Fullscreen ou no Modal normal
     const context = fullscreenOpen ? document.body : fileRef.current;
@@ -1057,6 +1237,11 @@ export default function InspectionModal({
       container.removeEventListener('dblclick', onDblClickWrapper);
       container.removeEventListener('touchstart', onTouchStartDouble);
 
+      // Remove injected zoom controls so they never leak into PhoneViewer or other tabs
+      try {
+        container.querySelectorAll('.image-controls').forEach((el) => el.remove());
+      } catch (err) { }
+
       // Cleanup transform and reset will-change so browser may re-render in full quality
       try { transformTarget.style.willChange = 'auto'; } catch (err) { }
       transformTarget.style.transform = '';
@@ -1066,6 +1251,37 @@ export default function InspectionModal({
       transformTarget.style.height = '100%';
     };
   }, [visualMode, fullscreenOpen, currentCard, localUV, localThermal, forensicChannel, effectivePerformanceMode]);
+
+  const handleOpenAudioExpander = () => {
+    if (audioExpanderLockRef.current) {
+      console.warn('[InspectionModal] Clique bloqueado - já em processamento');
+      return;
+    }
+
+    audioExpanderLockRef.current = true;
+    const meta = parsedMetadata;
+    const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
+    console.log('[InspectionModal] Audio expand - audioSrc:', audioSrc);
+
+    if (audioSrc) {
+      if (waveSurferRef.current && audioIsPlaying) {
+        try { waveSurferRef.current.pause(); } catch { }
+      }
+      if (audioElementRef.current && !audioElementRef.current.paused) {
+        try { audioElementRef.current.pause(); } catch { }
+      }
+      setExpanderAudioSrc(String(audioSrc));
+
+      setTimeout(() => {
+        if (isMounted.current) setAudioExpanderOpen(true);
+        console.log('[InspectionModal] Audio modal opened');
+        audioExpanderLockRef.current = false;
+      }, 50);
+    } else {
+      console.warn('[InspectionModal] No audio source found');
+      audioExpanderLockRef.current = false;
+    }
+  };
 
   // Renderizador inteligente da Área Visual
   const renderVisualContent = () => {
@@ -1087,17 +1303,18 @@ export default function InspectionModal({
 
     if (visualMode === 'phone') {
       return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
-          <PhoneViewer
-            chatData={headerChatList}
-            contactName={currentCard.title}
-            isLocked={phoneIsLocked}
-            password={phonePassword}
-            passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
-            deviceData={parsedMetadata?.device_extraction || null}
-            cardId={currentCard.id}
-          />
-        </div>
+        <PhoneViewer
+          chatData={headerChatList}
+          contactName={currentCard.title}
+          isLocked={phoneIsLocked}
+          password={phonePassword}
+          passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+          deviceData={parsedMetadata?.device_extraction || null}
+          cardId={currentCard.id}
+          hideInlinePinList={true}
+          showPins={showPhonePins}
+          onToggleShowPins={() => setShowPhonePins((s) => !s)}
+        />
       );
     }
 
@@ -1255,12 +1472,16 @@ export default function InspectionModal({
       );
     }
 
-    // audio visual mode (HUD compacto)
+    // audio visual mode (Console Acústico C.R.I.S.)
     if (visualMode === 'audio') {
       const audioSrc = audioSources.src;
 
       if (!audioSrc) {
-        return (<div style={{ color: '#ccc', padding: 20 }}>Nenhum arquivo de áudio encontrado para esta evidência.</div>);
+        return (
+          <div className="im-audio-empty">
+            Nenhum arquivo de áudio encontrado para esta evidência.
+          </div>
+        );
       }
 
       const formatTime = (seconds: number) => {
@@ -1271,6 +1492,7 @@ export default function InspectionModal({
       };
 
       const handleTogglePlay = () => {
+        void unlockAudio();
         if (waveSurferRef.current) {
           waveSurferRef.current.playPause();
           return;
@@ -1289,6 +1511,7 @@ export default function InspectionModal({
         if (waveSurferRef.current && (audioDuration || 0) > 0) {
           const ratio = Math.min(Math.max(value / (audioDuration || 1), 0), 1);
           waveSurferRef.current.seekTo(ratio);
+          setAudioPosition(value);
           return;
         }
         const el = audioElementRef.current;
@@ -1297,8 +1520,47 @@ export default function InspectionModal({
         setAudioPosition(value);
       };
 
+      const handleSkip = (deltaSeconds: number) => {
+        const dur = audioDuration || waveSurferRef.current?.getDuration?.() || audioElementRef.current?.duration || 0;
+        const curr = waveSurferRef.current
+          ? (waveSurferRef.current.getCurrentTime?.() ?? audioPosition)
+          : (audioElementRef.current?.currentTime ?? audioPosition);
+        const next = Math.max(0, Math.min(dur || 0, curr + deltaSeconds));
+        if (waveSurferRef.current) {
+          waveSurferRef.current.setTime(next);
+          setAudioPosition(next);
+          return;
+        }
+        const el = audioElementRef.current;
+        if (!el) return;
+        el.currentTime = next;
+        setAudioPosition(next);
+      };
+
+      const handleVolumeChange = (nextVol: number) => {
+        const clamped = Math.max(0, Math.min(1, nextVol));
+        setAudioVolume(clamped);
+        if (clamped > 0 && audioIsMuted) {
+          setAudioIsMuted(false);
+          if (audioElementRef.current) audioElementRef.current.muted = false;
+          if (waveSurferRef.current) waveSurferRef.current.setMuted(false);
+        }
+      };
+
+      const rawFileName = (() => {
+        try {
+          const clean = String(audioSrc).split('?')[0];
+          const seg = clean.split('/').pop();
+          return seg ? decodeURIComponent(seg) : 'AUDIO_EVIDENCE.wav';
+        } catch {
+          return 'AUDIO_EVIDENCE.wav';
+        }
+      })();
+      const displayAudioName = currentCard?.title || rawFileName;
+      const progressPercent = audioDuration > 0 ? Math.min(100, Math.max(0, (audioPosition / audioDuration) * 100)) : 0;
+
       return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: 12, background: '#000', padding: '16px 18px', boxSizing: 'border-box' }}>
+        <div className="im-audio-deck">
           <audio
             ref={audioElementRef}
             src={audioSrc || undefined}
@@ -1314,58 +1576,195 @@ export default function InspectionModal({
             onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 0)}
           />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ color: '#ccc', fontSize: 13 }}>Reprodutor básico. Use EXPANDIR para análise avançada.</div>
-            <a href={audioSrc} target="_blank" rel="noreferrer" style={{ color: '#00f3ff', fontSize: 12 }}>baixar</a>
-          </div>
+          {/* Topo do Deck: Barra de Telemetria */}
+          <div className="im-audio-telemetry">
+            <div className="im-audio-telemetry-left">
+              <span className={`im-audio-status-pill ${audioIsPlaying ? 'playing' : ''}`}>
+                <span className={`im-audio-led ${audioIsPlaying ? 'im-audio-led--playing' : ''}`} aria-hidden="true" />
+                {audioIsPlaying ? 'REPRODUZINDO' : 'STANDBY'}
+              </span>
+              <span className="im-audio-filename" title={displayAudioName}>
+                {displayAudioName}
+              </span>
+              <a
+                href={audioSrc}
+                target="_blank"
+                rel="noreferrer"
+                className="im-audio-download"
+                title="Baixar arquivo de áudio"
+              >
+                <Download size={12} />
+                <span>baixar</span>
+              </a>
+            </div>
 
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: '100%', minHeight: 70 }} ref={waveformRef} onDoubleClick={handleWaveformDblClick} className="waveform-zoomable" />
-            <div className="waveform-controls" style={{ position: 'absolute', top: 0, right: 0 }}>
-              <button type="button" aria-label="Zoom in" className="zoom-btn" onClick={handleWaveformZoomIn}>+</button>
-              <button type="button" aria-label="Zoom out" className="zoom-btn" onClick={handleWaveformZoomOut}>−</button>
+            <div className="im-audio-zoom-toolbar" aria-label="Zoom da forma de onda">
+              <button
+                type="button"
+                aria-label="Zoom out"
+                className="im-audio-zoom-btn"
+                onClick={handleWaveformZoomOut}
+                disabled={waveformZoomLevel <= 1}
+                title="Reduzir zoom da onda"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="im-audio-zoom-readout"
+                onClick={() => setWaveformZoom(1, 50)}
+                title="Redefinir zoom para 1x"
+              >
+                {waveformZoomLevel.toFixed(1).replace(/\.0$/, '')}x
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom in"
+                className="im-audio-zoom-btn"
+                onClick={handleWaveformZoomIn}
+                disabled={waveformZoomLevel >= 3}
+                title="Aumentar zoom da onda"
+              >
+                +
+              </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,243,255,0.15)', padding: '10px 12px', borderRadius: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={handleTogglePlay}
-              className="btn-tool-tab"
-              style={{ minWidth: 110, minHeight: 44, touchAction: 'manipulation' }}
-            >
-              {audioIsPlaying ? <><Pause size={14} /> Pausar</> : <><Play size={14} /> Reproduzir</>}
-            </button>
-
-            <button
-              onClick={handleToggleAudioMute}
-              className={`btn-tool-tab ${audioIsMuted ? 'active-red' : ''}`}
-              style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
-              title={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
-              aria-label={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
-            >
-              {audioIsMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-            </button>
-
-            <input
-              type="range"
-              min={0}
-              max={audioDuration || 0}
-              step={0.1}
-              value={Math.min(audioPosition, audioDuration || 0)}
-              onChange={(e) => handleSeek(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#00f3ff', minHeight: 44, touchAction: 'pan-y' }}
-              aria-label="Linha do tempo do áudio"
+          {/* Visor da Waveform (Osciloscópio) */}
+          <div className="im-audio-scope">
+            <div className="im-audio-scope-grid" aria-hidden="true" />
+            <div className="im-audio-scope-axis" aria-hidden="true" />
+            <div
+              ref={waveformRef}
+              onDoubleClick={handleWaveformDblClick}
+              className="waveform-zoomable im-audio-waveform"
             />
+          </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#00f3ff', fontFamily: 'Share Tech Mono, monospace', fontSize: 13, minWidth: 80, justifyContent: 'flex-end' }}>
-              <span>{formatTime(audioPosition)}</span>
-              <span style={{ opacity: 0.6 }}>/</span>
-              <span>{formatTime(audioDuration)}</span>
+          {/* Barra de Transporte Customizada */}
+          <div className="im-audio-transport">
+            <div className="im-audio-progress-wrap">
+              <div className="im-audio-progress-track">
+                <div className="im-audio-progress-fill" style={{ width: `${progressPercent}%` }} />
+                <div className="im-audio-progress-thumb" style={{ left: `${progressPercent}%` }} />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={audioDuration || 0}
+                step={0.05}
+                value={Math.min(audioPosition, audioDuration || 0)}
+                onChange={(e) => handleSeek(Number(e.target.value))}
+                className="im-audio-range-input"
+                aria-label="Linha do tempo do áudio"
+              />
+            </div>
+
+            <div className="im-audio-controls-row">
+              <div className="im-audio-controls-left">
+                <button
+                  type="button"
+                  onClick={handleTogglePlay}
+                  className={`im-audio-play-btn ${audioIsPlaying ? 'playing' : ''}`}
+                >
+                  {audioIsPlaying ? <><Pause size={15} /> Pausar</> : <><Play size={15} /> Reproduzir</>}
+                </button>
+
+                <div className="im-audio-step-group">
+                  <button
+                    type="button"
+                    onClick={() => handleSkip(-5)}
+                    className="im-audio-step-btn"
+                    title="Voltar 5 segundos"
+                    aria-label="Voltar 5 segundos"
+                  >
+                    <RotateCcw size={13} />
+                    <span>5s</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSkip(5)}
+                    className="im-audio-step-btn"
+                    title="Avançar 5 segundos"
+                    aria-label="Avançar 5 segundos"
+                  >
+                    <span>5s</span>
+                    <RotateCw size={13} />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAudioLoop((prev) => !prev)}
+                  className={`im-audio-icon-btn ${audioLoop ? 'active' : ''}`}
+                  title={audioLoop ? 'Desativar repetição em loop' : 'Ativar repetição em loop'}
+                  aria-label="Alternar repetição em loop"
+                  aria-pressed={audioLoop}
+                >
+                  <Repeat size={14} />
+                </button>
+
+                <div className="im-audio-speed-group" role="group" aria-label="Velocidade de reprodução">
+                  {([0.5, 1, 1.5] as const).map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => setAudioPlaybackRate(rate)}
+                      className={`im-audio-speed-btn ${audioPlaybackRate === rate ? 'active' : ''}`}
+                      title={`Velocidade ${rate}x`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="im-audio-controls-right">
+                <div className="im-audio-volume-wrap">
+                  <button
+                    type="button"
+                    onClick={handleToggleAudioMute}
+                    className={`im-audio-icon-btn ${audioIsMuted ? 'muted' : ''}`}
+                    title={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+                    aria-label={audioIsMuted ? 'Desmutar som' : 'Mutar som'}
+                  >
+                    {audioIsMuted || audioVolume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={audioIsMuted ? 0 : audioVolume}
+                    onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                    className="im-audio-volume-slider"
+                    aria-label="Volume do áudio"
+                  />
+                </div>
+
+                <div className="im-audio-timecode" aria-label="Tempo do áudio">
+                  <span>{formatTime(audioPosition)}</span>
+                  <span className="im-audio-timecode-sep">/</span>
+                  <span>{formatTime(audioDuration)}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ color: '#777', fontSize: '11px' }}>
-            Dica: clique em <span role="img" aria-label="musical note"><Music className="lucide-icon inline-icon" size={16} /></span> EXPANDIR para usar espectrograma e controles completos.
+          {/* Rodapé do Deck */}
+          <div className="im-audio-footer">
+            <span className="im-audio-engine-tag">
+              <Activity size={13} />
+              MÓDULO DE ESCUTA RÁPIDA • C.R.I.S. AUDIO ENGINE
+            </span>
+            <button
+              type="button"
+              onClick={handleOpenAudioExpander}
+              className="im-audio-cta-btn"
+            >
+              <Music size={14} />
+              Abrir Console Avançado &amp; Espectrograma
+            </button>
           </div>
         </div>
       );
@@ -1492,17 +1891,18 @@ export default function InspectionModal({
     // Fallback: if no image but have chat, show phone
     if (headerChatList && headerChatList.length > 0) {
       return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1f' }}>
-          <PhoneViewer
-            chatData={headerChatList}
-            contactName={currentCard.title}
-            isLocked={phoneIsLocked}
-            password={phonePassword}
-            passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
-            deviceData={parsedMetadata?.device_extraction || null}
-            cardId={currentCard.id}
-          />
-        </div>
+        <PhoneViewer
+          chatData={headerChatList}
+          contactName={currentCard.title}
+          isLocked={phoneIsLocked}
+          password={phonePassword}
+          passwordType={parsedMetadata?.phone_lock_type || (typeof phonePassword === 'string' && phonePassword.includes('-') ? 'pattern' : 'pin')}
+          deviceData={parsedMetadata?.device_extraction || null}
+          cardId={currentCard.id}
+          hideInlinePinList={true}
+          showPins={showPhonePins}
+          onToggleShowPins={() => setShowPhonePins((s) => !s)}
+        />
       );
     }
 
@@ -1674,6 +2074,428 @@ export default function InspectionModal({
   const hasChat = !!headerChatList?.length;
   const mediaCount = [hasImage, hasVideo, hasAudio, hasChat].filter(Boolean).length;
 
+  const renderPhoneAnchorSummary = (pin: CasePin) => {
+    const a = pin.anchor_data as PhonePinAnchor;
+    const appNames: Record<string, string> = {
+      messages: 'Msg',
+      gallery: 'Foto',
+      notes: 'Nota',
+      voicemails: 'Áudio',
+      trash: 'Lixeira',
+    };
+    return a.label ? `[${appNames[a.app] || a.app}] ${a.label}` : `[${appNames[a.app] || a.app}]`;
+  };
+
+  const renderForensicHudOverlays = () => (
+    <>
+      {forensicMode === 'channel' && (
+        <div className="tools-hud-panel">
+          <div className="hud-title">ISOLAMENTO DE ESPECTRO</div>
+          <div className="forensic-controls">
+            <button
+              className={`btn-channel ${forensicChannel === 'all' ? 'active' : ''}`}
+              onClick={() => setForensicChannel('all')}
+            >RGB</button>
+            <button
+              className={`btn-channel red ${forensicChannel === 'r' ? 'active' : ''}`}
+              onClick={() => setForensicChannel('r')}
+            >RED</button>
+            <button
+              className={`btn-channel green ${forensicChannel === 'g' ? 'active' : ''}`}
+              onClick={() => setForensicChannel('g')}
+            >GRN</button>
+            <button
+              className={`btn-channel blue ${forensicChannel === 'b' ? 'active' : ''}`}
+              onClick={() => setForensicChannel('b')}
+            >BLU</button>
+          </div>
+          <p style={{ fontSize: 9, color: '#666', marginTop: 10 }}>
+            Análise espectral isolada. Útil para encontrar escritas ocultas em cores específicas.
+          </p>
+        </div>
+      )}
+
+      {forensicMode === 'decoder' && (
+        <div className="tools-hud-panel">
+          <div className="hud-title">ESTAÇÃO DE DECIFRAGEM</div>
+          <div style={{ width: '100%' }}>
+            <UniversalDecoder
+              initialInput={
+                decoderPayloadOverride !== undefined
+                  ? decoderPayloadOverride
+                  : (currentCard.metadata?.cipher_text || currentCard.description_public || '')
+              }
+              investigationId={currentCard?.investigation_id ? String(currentCard.investigation_id) : undefined}
+            />
+          </div>
+        </div>
+      )}
+
+      {forensicMode === 'lens' && (
+        <div className="tools-hud-panel">
+          <div className="hud-title"><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</div>
+          <div style={{ width: '100%' }}>
+            <DecipherLens realText={currentCard.metadata?.real_text} cipherText={currentCard.metadata?.cipher_text} />
+          </div>
+        </div>
+      )}
+
+      {forensicMode === 'hex' && (
+        <div className="tools-hud-panel">
+          <div className="hud-title"><Keyboard className="lucide-icon inline-icon" size={15} /> INSPETOR HEXADECIMAL</div>
+          <div style={{ width: '100%' }}>
+            <HexViewer
+              hiddenMessage={
+                currentCard.metadata?.hex_code ||
+                currentCard.metadata?.hex_hidden_message ||
+                currentCard.metadata?.technical_note ||
+                ''
+              }
+              xorKey={currentCard.metadata?.hex_xor_key}
+              focused={true}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderPhoneForensicPanelContent = () => {
+    const fieldValues = card.metadata?.field_values || {};
+    const fieldValueEntries = Object.entries(fieldValues).filter(([, val]) => Boolean(val) || val === 0);
+    const extraMetaEntries = Object.entries(card.metadata || {}).filter(([key, val]) => {
+      if (['excalidraw_data', 'chat_data', 'device_extraction', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter', 'phone_password', 'phone_locked', 'phone_lock_type', 'field_values'].includes(key)) return false;
+      return Boolean(val) || val === 0;
+    });
+
+    const labelMap: Record<string, string> = {
+      date_created: 'Data',
+      gps_coords: 'Localização',
+      device_owner: 'Proprietário',
+      camera_model: 'Câmera',
+      technical_note: 'Nota Técnica',
+      chat_contact_name: 'Contato',
+      stamp: 'Carimbo',
+      external_link: 'Link Externo',
+    };
+
+    return (
+      <div className="im-phone-panel-body">
+        <div className="im-phone-tabs">
+          <button
+            type="button"
+            onClick={() => setPhoneForensicTab('markers')}
+            className={`phone-compact-btn im-phone-tab ${
+              phoneForensicTab === 'markers' ? 'im-phone-tab--active' : ''
+            }`}
+          >
+            <Pin size={13} style={phoneForensicTab === 'markers' ? { color: '#fbbf24' } : undefined} />
+            <span>Marcadores</span>
+            {activePhonePinsCount > 0 && (
+              <span className="im-phone-badge">
+                {activePhonePinsCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhoneForensicTab('metadata')}
+            className={`phone-compact-btn im-phone-tab ${
+              phoneForensicTab === 'metadata' ? 'im-phone-tab--active' : ''
+            }`}
+          >
+            <FileText size={13} />
+            <span>Metadados</span>
+          </button>
+        </div>
+
+        <div className="im-phone-scroll-area phone-scroll">
+          {phoneForensicTab === 'markers' ? (
+            currentCard.id && collabInvestigationId ? (
+              <PinListBar
+                variant="sidebar"
+                pins={phonePins}
+                showPins={showPhonePins}
+                onToggleShowPins={() => setShowPhonePins((s) => !s)}
+                onSelectPin={(pin: CasePin) => {
+                  requestAnchorJump(currentCard.id, 'phone', pin.anchor_data);
+                  setMobilePhoneDrawerOpen(false);
+                }}
+                renderAnchorSummary={renderPhoneAnchorSummary}
+              />
+            ) : (
+              <div className="im-phone-empty-box">
+                Os marcadores colaborativos da equipe ficam disponíveis quando a evidência está vinculada a uma investigação ativa.
+              </div>
+            )
+          ) : (
+            <div className="im-phone-meta-stack">
+              <div>
+                <h2 className="im-phone-meta-title">
+                  {card.title}
+                </h2>
+
+                {isGameMaster && (
+                  <div className="gm-mode-toggle" style={{ marginBottom: 12 }}>
+                    <button
+                      type="button"
+                      className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                      onClick={() => setGmActiveTab('public')}
+                    >
+                      <Eye size={14} /> PÚBLICO
+                    </button>
+                    <button
+                      type="button"
+                      className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                      onClick={() => setGmActiveTab('hidden')}
+                    >
+                      <Lock size={14} /> OCULTO
+                    </button>
+                  </div>
+                )}
+
+                {(!isGameMaster || gmActiveTab === 'public') ? (
+                  <div className="im-phone-meta-card">
+                    <span className="im-phone-meta-label">
+                      Descrição
+                    </span>
+                    <p className="im-phone-meta-text">
+                      {card.description_public || 'Nenhuma descrição fornecida.'}
+                    </p>
+                  </div>
+                ) : (
+                  isGameMaster && gmActiveTab === 'hidden' && (
+                    <div className="gm-hidden-section">
+                      <span className="desc-title" style={{ color: '#c6a45f' }}>
+                        <Lock className="lucide-icon inline-icon" size={14} /> NOTAS DO MESTRE:
+                      </span>
+                      <div className="gm-note" style={{ marginTop: 6 }}>
+                        {card.description_hidden || 'Nenhuma descrição oculta registrada.'}
+                      </div>
+                      {card.lock_password && (
+                        <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
+                          <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+
+              <div className="im-phone-action-row">
+                <button
+                  type="button"
+                  className="phone-compact-btn im-phone-action-btn"
+                  onClick={() => {
+                    const safeText = currentCard.metadata?.cipher_text || currentCard.description_public || '';
+                    if (onSendToDecoder) {
+                      onSendToDecoder(safeText);
+                    } else {
+                      setDecoderPayloadOverride(safeText);
+                      setForensicMode('decoder');
+                    }
+                  }}
+                  title="Enviar texto público/cifrado para o Decoder"
+                >
+                  <KeyRound size={13} /> Decoder
+                </button>
+                <button
+                  type="button"
+                  className="phone-compact-btn im-phone-action-btn"
+                  onClick={() => setForensicMode((prev) => (prev === 'hex' ? 'none' : 'hex'))}
+                  title="Abrir conteúdo técnico/hex no Inspetor Hexadecimal"
+                >
+                  <Keyboard size={13} /> Inspetor Hex
+                </button>
+              </div>
+
+              {megaClueMeta && (
+                <div className="im-phone-meta-card">
+                  <h4 className="im-phone-meta-label" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6 }}>
+                    VERDADE FINAL
+                  </h4>
+                  {(megaClueMeta.unlocked === true || isGameMaster) ? (
+                    <div className="im-phone-meta-text">
+                      {megaClueMeta.final_truth_text ? (
+                        <div style={{ marginBottom: 8 }}>{megaClueMeta.final_truth_text}</div>
+                      ) : (
+                        <div style={{ color: '#71717a' }}>Nenhuma verdade final fornecida.</div>
+                      )}
+                      {megaClueMeta.image_url && (
+                        <img src={megaClueMeta.image_url} alt="Verdade final" loading="lazy" style={{ maxWidth: '100%', borderRadius: 6, marginTop: 8 }} />
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: '#71717a' }}>Verdade final bloqueada — colecione os códigos para desbloquear.</div>
+                  )}
+                </div>
+              )}
+
+              {(fieldValueEntries.length > 0 || extraMetaEntries.length > 0) && (
+                <div className="im-phone-meta-card">
+                  <h4 className="im-phone-meta-label" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6 }}>
+                    METADADOS TÉCNICOS
+                  </h4>
+
+                  {fieldValueEntries.length > 0 && (
+                    <div className="im-phone-meta-list">
+                      {fieldValueEntries.map(([key, val]: any) => {
+                        const label = labelMap[key] || key;
+                        return (
+                          <div key={key} className="im-phone-meta-row">
+                            <span className="im-phone-meta-key">{label}</span>
+                            <div className="im-phone-meta-val">
+                              {key === 'gps_coords' && typeof val === 'string' ? (
+                                <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" className="im-meta-link">
+                                  {val}
+                                </a>
+                              ) : key === 'external_link' && typeof val === 'string' && /^https?:\/\//i.test(val) ? (
+                                <a href={val} target="_blank" rel="noreferrer" className="im-meta-link">
+                                  {val}
+                                </a>
+                              ) : (
+                                String(val)
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {extraMetaEntries.length > 0 && (
+                    <div className="im-phone-meta-list" style={fieldValueEntries.length > 0 ? { marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' } : undefined}>
+                      {extraMetaEntries.map(([key, val]: any) => {
+                        let displayVal: any = val;
+                        if (typeof val === 'object') {
+                          if (key === 'person' || key === 'person_meta') {
+                            displayVal = (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12 }}>
+                                <div><b>Nome:</b> {val.name || '—'}</div>
+                                <div><b>Profissão:</b> {val.occupation || '—'}</div>
+                                <div>
+                                  <b>Estado:</b>{' '}
+                                  <span style={{ color: val.status && String(val.status).toLowerCase().includes('dead') ? '#f87171' : '#34d399' }}>
+                                    {val.status || '—'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            displayVal = JSON.stringify(val, null, 2);
+                          }
+                        }
+                        return (
+                          <div key={key} className="im-phone-meta-row">
+                            <span className="im-phone-meta-label" style={{ marginBottom: 2 }}>{key}</span>
+                            <div className="im-phone-meta-val" style={{ fontFamily: 'var(--font-system, monospace)', fontSize: 11.5, whiteSpace: 'pre-wrap' }}>
+                              {displayVal}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {card.metadata && (card.metadata.person || card.metadata.person_meta) && (
+                <div className="im-phone-meta-card">
+                  <h4 className="im-phone-meta-label" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6 }}>
+                    PERFIL DE PESSOA
+                  </h4>
+                  {(() => {
+                    const personData = card.metadata.person || card.metadata.person_meta;
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5, color: '#e4e4e7' }}>
+                        <div><strong>Nome:</strong> {personData.name || '—'}</div>
+                        <div><strong>Profissão:</strong> {personData.occupation || '—'}</div>
+                        <div>
+                          <strong>Status:</strong>{' '}
+                          <span style={{ color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#f87171' : '#34d399' }}>
+                            {personData.status || '—'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div className="im-phone-controls-divider">
+                {isGameMaster && (
+                  <button
+                    type="button"
+                    className="btn-edit-ref"
+                    style={{ width: '100%' }}
+                    onClick={() => {
+                      onClose();
+                      onEdit?.();
+                    }}
+                  >
+                    <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
+                  </button>
+                )}
+
+                <div className="clue-status-control">
+                  <span className="control-label" style={{ fontSize: 11, color: '#a1a1aa', fontWeight: 600 }}>STATUS DA PISTA:</span>
+                  <div className="status-button-group">
+                    <button
+                      type="button"
+                      className={`btn-status pending ${(currentCard.status === 'pending' || !currentCard.status) ? 'active' : ''}`}
+                      onClick={() => handleUpdateStatus('pending')}
+                      title="Marcar como pendente"
+                    >
+                      <Clock className="lucide-icon inline-icon" size={13} /> PENDENTE
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-status confirmed ${currentCard.status === 'confirmed' ? 'active' : ''}`}
+                      onClick={() => handleUpdateStatus('confirmed')}
+                      title="Marcar como confirmada"
+                    >
+                      <CheckCircle2 className="lucide-icon inline-icon" size={13} /> CONFIRMADA
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-status debunked ${currentCard.status === 'debunked' ? 'active' : ''}`}
+                      onClick={() => handleUpdateStatus('debunked')}
+                      title="Marcar como descartada"
+                    >
+                      <XCircle className="lucide-icon inline-icon" size={13} /> DESCARTADA
+                    </button>
+                  </div>
+                </div>
+
+                <div className="z-order-controls">
+                  <span className="control-label text-[11px] text-zinc-400 font-mono font-semibold">ORDEM Z:</span>
+                  <div className="z-button-group">
+                    <button
+                      type="button"
+                      className="btn-z-order"
+                      onClick={() => handleUpdateZIndex(1)}
+                      title="Trazer para frente"
+                    >
+                      <ArrowUp size={14} /> ELEVAR (Z: {currentCard.z_index ?? 1})
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-z-order"
+                      onClick={() => handleUpdateZIndex(-1)}
+                      title="Enviar para trás"
+                    >
+                      <ArrowDown size={14} /> REBAIXAR
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const modal = (
     <div className="inspect-backdrop" ref={backdropRef} onClick={onClose}>
       {/* Dropdown portal for the 'MAIS' menu - positioned relative to modal */}
@@ -1727,7 +2549,7 @@ export default function InspectionModal({
                   <FolderOpen className="lucide-icon inline-icon" size={15} /> MÍDIA ({mediaCount}) ▸
                 </button>
                 <hr className="divider" />
-                {(() => {
+                {visualMode !== 'audio' && (() => {
                   const meta = currentCard?.metadata;
                   const hasThermal = Boolean(meta && (meta.thermal === true || meta.thermal_enabled === true || meta.thermal_overlay === true));
                   const thermalKeyword = meta?.thermal_keyword;
@@ -1771,7 +2593,7 @@ export default function InspectionModal({
         tabIndex={-1}
       >
         {/* Header: hide metadata and action buttons when locked; keep only close button so user can exit */}
-        <div className="inspect-header">
+        <div className="inspect-header shrink-0 z-20">
           {(!isCardLocked(card) || isUnlocked || isGameMaster) ? (
             <>
               <div className="meta-info">
@@ -1828,43 +2650,19 @@ export default function InspectionModal({
                 </div>
               </div>
               <div className="actions">
+                <span className="hidden md:inline-block w-px h-5 bg-white/10 shrink-0 mx-0.5" aria-hidden="true" />
                 <button
                   className="btn-tool-tab btn-expand"
-                  title={visualMode === 'audio' ? 'Expandir para tela cheia' : visualMode === 'phone' ? 'Expandir celular' : 'Expandir imagem'}
+                  title={visualMode === 'audio' ? 'Abrir Console Avançado & Espectrograma' : visualMode === 'phone' ? 'Expandir celular' : 'Expandir imagem'}
                   onClick={(e) => {
                     e.stopPropagation();
 
-                    // Prevenir múltiplos cliques simultâneos
-                    if (audioExpanderLockRef.current) {
-                      console.warn('[InspectionModal] Clique bloqueado - já em processamento');
-                      return;
-                    }
-
-                    audioExpanderLockRef.current = true;
-                    console.log('[InspectionModal] Expandir button clicked, visualMode:', visualMode);
-
                     if (visualMode === 'audio') {
-                      const meta = parsedMetadata;
-                      const audioSrc = unifiedMedia.audioUrl || currentCard.audio_url || meta?.audio_url || meta?.audio || meta?.audioUrl || null;
-                      console.log('[InspectionModal] Audio expand - audioSrc:', audioSrc);
-
-                      if (audioSrc) {
-                        console.log('[InspectionModal] Setting expanderAudioSrc to:', audioSrc);
-                        setExpanderAudioSrc(String(audioSrc));
-
-                        setTimeout(() => {
-                          if (isMounted.current) setAudioExpanderOpen(true);
-                          console.log('[InspectionModal] Audio modal opened');
-                          audioExpanderLockRef.current = false;
-                        }, 50);
-                      } else {
-                        console.warn('[InspectionModal] No audio source found');
-                        audioExpanderLockRef.current = false;
-                      }
+                      handleOpenAudioExpander();
                     } else {
+                      if (audioExpanderLockRef.current) return;
                       console.log('[InspectionModal] Opening fullscreen for visualMode:', visualMode);
                       setFullscreenOpen(true);
-                      audioExpanderLockRef.current = false;
                     }
                   }}
                   style={{ cursor: 'pointer', pointerEvents: 'auto' }}
@@ -1881,17 +2679,81 @@ export default function InspectionModal({
                   <Maximize2 className="lucide-icon inline-icon" size={16} /> TELA CHEIA
                 </button>
 
-                <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}><SlidersHorizontal className="lucide-icon inline-icon" size={15} /> TRATAMENTO</button>
-
-                <button className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`} onClick={() => setLocalUV(!localUV)}><Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV</button>
-
-                {isGlitchPuzzleGlobal && (
+                {visualMode === 'phone' ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`btn-tool-tab im-phone-btn-desktop ${phoneSidebarOpen ? 'active-blue' : ''}`}
+                      onClick={() => setPhoneSidebarOpen((s) => !s)}
+                      title={phoneSidebarOpen ? 'Recolher painel forense' : 'Mostrar painel forense'}
+                    >
+                      {phoneSidebarOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
+                      <span>PAINEL</span>
+                      {activePhonePinsCount > 0 && (
+                        <span className="im-phone-badge">
+                          {activePhonePinsCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn-tool-tab im-phone-btn-mobile ${mobilePhoneDrawerOpen ? 'active-blue' : ''}`}
+                      onClick={() => setMobilePhoneDrawerOpen((s) => !s)}
+                      title="Abrir marcadores e metadados"
+                    >
+                      <Pin size={14} />
+                      <span>DADOS</span>
+                      {activePhonePinsCount > 0 && (
+                        <span className="im-phone-badge">
+                          {activePhonePinsCount}
+                        </span>
+                      )}
+                    </button>
+                  </>
+                ) : visualMode === 'audio' ? (
                   <button
-                    className={`btn-tool-tab ${showGlitchSolver ? 'active-green' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setShowGlitchSolver(true); }}
+                    type="button"
+                    className={`btn-tool-tab im-audio-sidebar-btn ${!sidebarCollapsed ? 'active-blue' : ''}`}
+                    onClick={() => setSidebarCollapsed((prev) => !prev)}
+                    title={sidebarCollapsed ? 'Expandir painel de metadados' : 'Recolher painel de metadados'}
+                    aria-label={sidebarCollapsed ? 'Expandir painel lateral' : 'Recolher painel lateral'}
                   >
-                    <Puzzle className="lucide-icon inline-icon" size={15} /> DECODIFICAR
+                    {sidebarCollapsed ? <PanelRightOpen size={15} /> : <PanelRightClose size={15} />}
+                    <span>{sidebarCollapsed ? 'DETALHES' : 'RECOLHER'}</span>
                   </button>
+                ) : (
+                  <>
+                    <button className={`btn-tool-tab ${showFilters ? 'active-green' : ''}`} onClick={() => disableAllBut('filters')}><SlidersHorizontal className="lucide-icon inline-icon" size={15} /> TRATAMENTO</button>
+
+                    <button
+                      className={`btn-tool-tab ${localUV ? 'active-purple' : ''}`}
+                      onClick={() => {
+                        const next = !localUV;
+                        setLocalUV(next);
+                        if (!next) setUvLensLocked(false);
+                      }}
+                    >
+                      <Flashlight className="lucide-icon inline-icon" size={15} /> LUZ UV
+                    </button>
+                    {localUV && (
+                      <button
+                        className={`btn-tool-tab ${uvLensLocked ? 'active-green' : ''}`}
+                        onClick={() => setUvLensLocked((v) => !v)}
+                        title="Fixar lente / Raio-X completo (ideal para ler com calma no celular e tablet)"
+                      >
+                        {uvLensLocked ? 'RAIO-X FIXO' : 'FIXAR LENTE'}
+                      </button>
+                    )}
+
+                    {isGlitchPuzzleGlobal && (
+                      <button
+                        className={`btn-tool-tab ${showGlitchSolver ? 'active-green' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setShowGlitchSolver(true); }}
+                      >
+                        <Puzzle className="lucide-icon inline-icon" size={15} /> DECODIFICAR
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {/* Group less-used tools under "Mais" */}
@@ -1936,34 +2798,197 @@ export default function InspectionModal({
         {/* debug overlay removed */}
 
         {/* --- CONTEÚDO PRINCIPAL --- */}
+        {(() => {
+          const activeCardObj = serverCard || card;
+          const paceMode = activeCardObj?.pace_mode === 'between_sessions' ? 'between_sessions' : 'in_session';
+          const assistRevealed = Boolean(activeCardObj?.metadata?.cris_assist_revealed);
+          const assistHintText = activeCardObj?.metadata?.cris_assist_hint;
+          const cardStillLocked = Boolean(activeCardObj?.is_locked || activeCardObj?.lock_password);
+
+          return (
+            <>
+              {(paceMode === 'between_sessions' || (isGameMaster && !effectivePlayerView && cardStillLocked) || assistRevealed) && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    padding: '6px 14px',
+                    background: 'rgba(10, 16, 26, 0.92)',
+                    borderBottom: '1px solid rgba(56, 189, 248, 0.18)',
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        fontFamily: 'var(--font-system, monospace)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        background:
+                          paceMode === 'between_sessions'
+                            ? 'rgba(168, 85, 247, 0.22)'
+                            : 'rgba(16, 185, 129, 0.2)',
+                        color: paceMode === 'between_sessions' ? '#d8b4fe' : '#6ee7b7',
+                        border:
+                          paceMode === 'between_sessions'
+                            ? '1px solid rgba(168, 85, 247, 0.45)'
+                            : '1px solid rgba(16, 185, 129, 0.35)',
+                      }}
+                    >
+                      {paceMode === 'between_sessions' ? 'QUARENTENA · ENTRE SESSÕES' : 'EM CENA · RITMO RÁPIDO'}
+                    </span>
+                    {assistRevealed && assistHintText && (
+                      <span style={{ color: '#fde68a' }}>
+                        <strong>[C.R.I.S. ASSIST]</strong> {assistHintText}
+                      </span>
+                    )}
+                    {gmOverrideStatus && (
+                      <span style={{ color: '#6ee7b7' }}>{gmOverrideStatus}</span>
+                    )}
+                  </div>
+
+                  {isGameMaster && !effectivePlayerView && cardStillLocked && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        disabled={gmOverrideBusy}
+                        onClick={() => handleGmSkillOverride('assist_hint')}
+                        style={{
+                          padding: '3px 9px',
+                          fontSize: 11,
+                          borderRadius: 6,
+                          border: '1px solid rgba(251, 191, 36, 0.45)',
+                          background: 'rgba(251, 191, 36, 0.14)',
+                          color: '#fde68a',
+                          cursor: 'pointer',
+                        }}
+                        title="Teste de Perícia parcial: revela a dica orgânica da C.R.I.S."
+                      >
+                        Calibração Assistida (Perícia)
+                      </button>
+                      <button
+                        type="button"
+                        disabled={gmOverrideBusy}
+                        onClick={() => handleGmSkillOverride('override_unlock')}
+                        style={{
+                          padding: '3px 9px',
+                          fontSize: 11,
+                          borderRadius: 6,
+                          border: '1px solid rgba(16, 185, 129, 0.5)',
+                          background: 'rgba(16, 185, 129, 0.18)',
+                          color: '#a7f3d0',
+                          cursor: 'pointer',
+                        }}
+                        title="Override ao vivo: destrava a pista e libera recompensas imediatamente"
+                      >
+                        Override Total (Destravar)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
+
         {!(isUnlocked || isGameMaster) ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
             {(() => {
-              const lockPass = card.lock_password;
-              const isNumeric = lockPass && /^\d+$/.test(String(lockPass));
-              if (isNumeric) {
+              const activeCardObj = serverCard || card;
+              const lockPass = activeCardObj?.lock_password;
+              const lockType =
+                activeCardObj?.lock_type ||
+                (lockPass && /^\d+$/.test(String(lockPass))
+                  ? 'keypad'
+                  : lockPass && /^[1-9](-[1-9]){2,8}$/.test(String(lockPass))
+                  ? 'pattern'
+                  : 'terminal');
+
+              if (lockType === 'keypad') {
                 return (
                   <NumericKeypad
-                    code={lockPass}
-                    onUnlock={(unlockedCode) => persistUnlockForCard(unlockedCode || String(lockPass), 'keypad')}
+                    onVerify={handleVerifyLockedCard}
+                    onUnlock={(unlockedCode) => persistUnlockForCard(unlockedCode || '', 'keypad')}
+                  />
+                );
+              }
+              if (lockType === 'pattern') {
+                return (
+                  <PatternLock
+                    onVerify={handleVerifyLockedCard}
+                    onUnlock={(unlockedPattern) => persistUnlockForCard(unlockedPattern || '', 'keypad')}
                   />
                 );
               }
               return (
                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <HackingTerminal
-                    correctPassword={lockPass}
-                    onUnlock={() => persistUnlockForCard(String(lockPass || ''), 'terminal')}
-                    hint={card.description_public}
+                    onVerify={handleVerifyLockedCard}
+                    onUnlock={(unlockedCode) => persistUnlockForCard(unlockedCode || '', 'terminal')}
+                    hint={activeCardObj?.metadata?.cris_assist_hint || activeCardObj?.description_public}
                   />
                 </div>
               );
             })()}
           </div>
+        ) : visualMode === 'phone' ? (
+          <div className="inspect-phone-layout im-phone-layout">
+            <div className="inspect-phone-stage im-phone-stage">
+              {renderVisualContent()}
+              {renderForensicHudOverlays()}
+            </div>
+
+            {phoneSidebarOpen && (
+              <aside
+                className="im-phone-sidebar"
+                aria-label="Painel forense do celular"
+              >
+                {renderPhoneForensicPanelContent()}
+              </aside>
+            )}
+
+            {mobilePhoneDrawerOpen && (
+              <div className="im-phone-drawer-root">
+                <div
+                  className="im-phone-drawer-backdrop"
+                  onClick={() => setMobilePhoneDrawerOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  role="dialog"
+                  aria-label="Painel forense do celular"
+                  className="im-phone-drawer-sheet"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="im-phone-drawer-header">
+                    <div className="im-phone-drawer-title">
+                      <span className="im-phone-drawer-handle" aria-hidden="true" />
+                      <span>Painel Forense</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePhoneDrawerOpen(false)}
+                      aria-label="Fechar painel forense"
+                      className="phone-compact-btn im-phone-drawer-close"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  {renderPhoneForensicPanelContent()}
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className={`inspect-body-split ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-            <div className={`inspect-visual-area ${isGlitchPuzzleGlobal && showGlitchSolver ? 'is-glitching glitch-mode' : ''}`} style={{ position: 'relative' }}>
-              {visualMode !== 'phone' && (
+          <div className={`inspect-body-split ${visualMode === 'audio' ? 'im-audio-split' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <div className={`inspect-visual-area ${visualMode === 'audio' ? 'im-audio-stage' : ''} ${isGlitchPuzzleGlobal && showGlitchSolver ? 'is-glitching glitch-mode' : ''}`} style={{ position: 'relative' }}>
+              {visualMode !== 'audio' && (
                 <button
                   type="button"
                   className="btn-toggle-sidebar"
@@ -1975,18 +3000,6 @@ export default function InspectionModal({
                 </button>
               )}
               {renderVisualContent()}
-              {visualMode === 'phone' && (
-                <button
-                  onClick={() => setShowPhoneDetails(s => !s)}
-                  style={{
-                    position: 'absolute', right: 12, top: 12, zIndex: 80,
-                    background: 'rgba(0,0,0,0.45)', color: '#fff', border: '1px solid rgba(255,255,255,0.06)',
-                    padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 12
-                  }}
-                >
-                  {showPhoneDetails ? 'Ocultar Metadados' : 'Mostrar Metadados'}
-                </button>
-              )}
 
               {showFilters && (
                 <div className="filters-overlay-panel">
@@ -2015,80 +3028,12 @@ export default function InspectionModal({
                 </div>
               )}
 
-              {forensicMode === 'channel' && (
-                <div className="tools-hud-panel">
-                  <div className="hud-title">ISOLAMENTO DE ESPECTRO</div>
-                  <div className="forensic-controls">
-                    <button
-                      className={`btn-channel ${forensicChannel === 'all' ? 'active' : ''}`}
-                      onClick={() => setForensicChannel('all')}
-                    >RGB</button>
-                    <button
-                      className={`btn-channel red ${forensicChannel === 'r' ? 'active' : ''}`}
-                      onClick={() => setForensicChannel('r')}
-                    >RED</button>
-                    <button
-                      className={`btn-channel green ${forensicChannel === 'g' ? 'active' : ''}`}
-                      onClick={() => setForensicChannel('g')}
-                    >GRN</button>
-                    <button
-                      className={`btn-channel blue ${forensicChannel === 'b' ? 'active' : ''}`}
-                      onClick={() => setForensicChannel('b')}
-                    >BLU</button>
-                  </div>
-                  <p style={{ fontSize: 9, color: '#666', marginTop: 10 }}>
-                    Análise espectral isolada. Útil para encontrar escritas ocultas em cores específicas.
-                  </p>
-                </div>
-              )}
-
-              {forensicMode === 'decoder' && (
-                <div className="tools-hud-panel">
-                  <div className="hud-title">ESTAÇÃO DE DECIFRAGEM</div>
-                  <div style={{ width: '100%' }}>
-                    <UniversalDecoder
-                      initialInput={
-                        decoderPayloadOverride !== undefined
-                          ? decoderPayloadOverride
-                          : (currentCard.metadata?.cipher_text || currentCard.description_public || '')
-                      }
-                      investigationId={currentCard?.investigation_id ? String(currentCard.investigation_id) : undefined}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {forensicMode === 'lens' && (
-                <div className="tools-hud-panel">
-                  <div className="hud-title"><Languages className="lucide-icon inline-icon" size={15} /> TRADUZIR</div>
-                  <div style={{ width: '100%' }}>
-                    <DecipherLens realText={currentCard.metadata?.real_text} cipherText={currentCard.metadata?.cipher_text} />
-                  </div>
-                </div>
-              )}
-
-              {forensicMode === 'hex' && (
-                <div className="tools-hud-panel">
-                  <div className="hud-title"><Keyboard className="lucide-icon inline-icon" size={15} /> INSPETOR HEXADECIMAL</div>
-                  <div style={{ width: '100%' }}>
-                    <HexViewer
-                      hiddenMessage={
-                        currentCard.metadata?.hex_code ||
-                        currentCard.metadata?.hex_hidden_message ||
-                        currentCard.metadata?.technical_note ||
-                        ''
-                      }
-                      xorKey={currentCard.metadata?.hex_xor_key}
-                      focused={true}
-                    />
-                  </div>
-                </div>
-              )}
+              {renderForensicHudOverlays()}
 
               {/* audio is displayed via the 'audio' visual mode/tab now */}
             </div>
 
-            {visualMode !== 'phone' && !sidebarCollapsed && (
+            {!sidebarCollapsed && (
               <aside className="inspect-details" aria-label="Detalhes da evidência">
 
                 {/* Coluna com SCROLL automático */}
@@ -2100,17 +3045,17 @@ export default function InspectionModal({
                     <div className="gm-mode-toggle">
                       <button
                         type="button"
-                        className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
+                        className={`gm-toggle-tab gm-toggle-tab--public ${gmActiveTab === 'public' ? 'active' : ''}`}
                         onClick={() => setGmActiveTab('public')}
                       >
-                        <Eye size={16} /> MODO PÚBLICO
+                        <Eye size={15} /> MODO PÚBLICO
                       </button>
                       <button
                         type="button"
-                        className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
+                        className={`gm-toggle-tab gm-toggle-tab--hidden ${gmActiveTab === 'hidden' ? 'active' : ''}`}
                         onClick={() => setGmActiveTab('hidden')}
                       >
-                        <Lock size={16} /> MODO OCULTO (MESTRE)
+                        <Lock size={15} /> MODO OCULTO (MESTRE)
                       </button>
                     </div>
                   )}
@@ -2143,7 +3088,7 @@ export default function InspectionModal({
                   <div className="inspect-quick-forensics">
                     <button
                       type="button"
-                      className="btn-tool-tab"
+                      className="im-sidebar-action-btn"
                       onClick={() => {
                         const safeText = currentCard.metadata?.cipher_text || currentCard.description_public || '';
                         if (onSendToDecoder) {
@@ -2155,15 +3100,17 @@ export default function InspectionModal({
                       }}
                       title="Enviar texto público/cifrado para o Decoder"
                     >
-                      <KeyRound className="lucide-icon inline-icon" size={15} /> Enviar para Decoder
+                      <KeyRound className="lucide-icon inline-icon" size={14} />
+                      <span>Enviar para Decoder</span>
                     </button>
                     <button
                       type="button"
-                      className="btn-tool-tab"
+                      className="im-sidebar-action-btn"
                       onClick={() => setForensicMode(prev => prev === 'hex' ? 'none' : 'hex')}
                       title="Abrir conteúdo técnico/hex no Inspetor Hexadecimal"
                     >
-                      <Keyboard className="lucide-icon inline-icon" size={15} /> Abrir no Hex
+                      <Keyboard className="lucide-icon inline-icon" size={14} />
+                      <span>Abrir no Hex</span>
                     </button>
                   </div>
 
@@ -2196,8 +3143,8 @@ export default function InspectionModal({
                       <h4>METADADOS TÉCNICOS</h4>
 
                       {/* Mostrar APENAS field_values com valores reais */}
-                      <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #333' }}>
-                        <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>Informações do Arquivo</div>
+                      <div className="im-meta-group">
+                        <div className="im-meta-subhead">Informações do Arquivo</div>
                         {Object.entries(card.metadata.field_values || {}).map(([key, val]: any) => {
                           // Só mostra se tem valor real
                           if (!val && val !== 0) return null;
@@ -2214,11 +3161,15 @@ export default function InspectionModal({
                           };
                           const label = labelMap[key] || key;
                           return (
-                            <div key={key} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid #222', padding: '6px 0' }}>
-                              <span style={{ color: '#c6a45f', fontSize: 11 }}>{label}:</span>
-                              <div style={{ color: '#ddd', fontSize: 12, marginTop: 2 }}>
+                            <div key={key} className="im-meta-row">
+                              <span className="im-meta-row-label">{label}</span>
+                              <div className="im-meta-row-value">
                                 {key === 'gps_coords' && typeof val === 'string' ? (
-                                  <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" style={{ color: '#4a9eff' }}>
+                                  <a href={`https://maps.google.com/?q=${val}`} target="_blank" rel="noreferrer" className="im-meta-link">
+                                    {val}
+                                  </a>
+                                ) : key === 'external_link' && typeof val === 'string' && /^https?:\/\//i.test(val) ? (
+                                  <a href={val} target="_blank" rel="noreferrer" className="im-meta-link">
                                     {val}
                                   </a>
                                 ) : (
@@ -2239,10 +3190,23 @@ export default function InspectionModal({
                       {(() => {
                         const personData = card.metadata.person || card.metadata.person_meta;
                         return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div><strong>Nome:</strong> {personData.name || '—'}</div>
-                            <div><strong>Profissão:</strong> {personData.occupation || '—'}</div>
-                            <div><strong>Status:</strong> <span style={{ color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71' }}>{personData.status || '—'}</span></div>
+                          <div className="im-meta-group">
+                            <div className="im-meta-row">
+                              <span className="im-meta-row-label">Nome</span>
+                              <div className="im-meta-row-value">{personData.name || '—'}</div>
+                            </div>
+                            <div className="im-meta-row">
+                              <span className="im-meta-row-label">Profissão</span>
+                              <div className="im-meta-row-value">{personData.occupation || '—'}</div>
+                            </div>
+                            <div className="im-meta-row">
+                              <span className="im-meta-row-label">Status</span>
+                              <div className="im-meta-row-value">
+                                <span style={{ color: personData.status && String(personData.status).toLowerCase().includes('dead') ? '#f87171' : '#34d399', fontWeight: 600 }}>
+                                  {personData.status || '—'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         );
                       })()}
@@ -2328,114 +3292,6 @@ export default function InspectionModal({
 
               </aside>
             )}
-
-            {visualMode === 'phone' && showPhoneDetails && (
-              <div style={{ width: '100%', borderTop: '1px solid #222', background: '#0b0b0b', padding: 16 }}>
-                <div style={{ display: 'flex', gap: 20 }}>
-                  <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
-                    <div style={{ paddingRight: 10 }}>
-                      <h2 style={{ color: '#f2f2f2', marginTop: 0 }}>{card.title}</h2>
-
-                      {/* Toggle Mestre: Público vs Oculto */}
-                      {isGameMaster && (
-                        <div className="gm-mode-toggle" style={{ marginBottom: 10 }}>
-                          <button
-                            type="button"
-                            className={`gm-toggle-tab ${gmActiveTab === 'public' ? 'active' : ''}`}
-                            onClick={() => setGmActiveTab('public')}
-                          >
-                            <Eye size={14} /> PÚBLICO
-                          </button>
-                          <button
-                            type="button"
-                            className={`gm-toggle-tab ${gmActiveTab === 'hidden' ? 'active' : ''}`}
-                            onClick={() => setGmActiveTab('hidden')}
-                          >
-                            <Lock size={14} /> OCULTO
-                          </button>
-                        </div>
-                      )}
-
-                      {(!isGameMaster || gmActiveTab === 'public') ? (
-                        <>
-                          <span className="desc-title">DESCRIÇÃO:</span>
-                          <p className="public-desc">{card.description_public || 'Nenhuma descrição fornecida.'}</p>
-                        </>
-                      ) : (
-                        isGameMaster && gmActiveTab === 'hidden' && (
-                          <div className="gm-hidden-section">
-                            <span className="desc-title" style={{ color: '#c6a45f' }}>
-                              <Lock className="lucide-icon inline-icon" size={16} /> NOTAS DO MESTRE:
-                            </span>
-                            <div className="gm-note" style={{ marginTop: 6 }}>
-                              {card.description_hidden || 'Nenhuma descrição oculta registrada.'}
-                            </div>
-                            {card.lock_password && (
-                              <div className="gm-secret-password" style={{ marginTop: 8, fontSize: 13, color: '#f39c12' }}>
-                                <strong><KeyRound className="lucide-icon inline-icon" size={14} /> Senha configurada:</strong> <code>{card.lock_password}</code>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      )}
-
-                      {card.metadata && Object.keys(card.metadata).length > 0 && (
-                        <div className="metadata-box" style={{ marginTop: 12 }}>
-                          <h4>METADADOS TÉCNICOS</h4>
-                          {Object.entries(card.metadata || {}).map(([key, val]: any) => {
-                            if (['excalidraw_data', 'chat_data', 'type', 'status', 'image_filter_reveal', 'image_filter_layer', 'image_filter', 'phone_password', 'phone_locked', 'field_values'].includes(key)) return null;
-                            if (!val && val !== 0) return null;
-                            let displayVal: any = val;
-                            if (typeof val === 'object') {
-                              if (key === 'person' || key === 'person_meta') {
-                                displayVal = (
-                                  <div style={{ fontSize: 12, marginLeft: 5 }}>
-                                    <div style={{ color: '#ddd' }}><b>Nome:</b> {val.name || '—'}</div>
-                                    <div style={{ color: '#ddd' }}><b>Profissão:</b> {val.occupation || '—'}</div>
-                                    <div style={{ color: val.status && String(val.status).toLowerCase().includes('dead') ? '#b33' : '#2ecc71' }}><b>Estado:</b> {val.status || '—'}</div>
-                                  </div>
-                                );
-                              } else {
-                                displayVal = JSON.stringify(val, null, 2);
-                              }
-                            }
-                            return (
-                              <div key={key} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid #222', padding: '6px 0' }}>
-                                <span style={{ color: '#666', fontSize: 11, textTransform: 'uppercase' }}>{key}:</span>
-                                <div style={{ color: '#aaa', fontSize: 12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 4 }}>
-                                  {displayVal}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="controls-col">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {isGameMaster && (
-                        <button className="btn-edit-ref" onClick={() => { onClose(); onEdit?.(); }}>
-                          <Pencil className="lucide-icon inline-icon" size={14} /> EDITAR DADOS
-                        </button>
-                      )}
-                      {card.metadata?.type === 'person' && (
-                        <div style={{ padding: 10, background: '#222', border: '1px solid #444', textAlign: 'center', fontSize: 10 }}>
-                          STATUS: <br />
-                          <strong style={{
-                            color: card.metadata.person?.status === 'DEAD' ? '#e74c3c' : card.metadata.person?.status === 'MIA' ? '#f39c12' : '#2ecc71',
-                            fontSize: 14
-                          }}>
-                            {card.metadata.person?.status === 'ALIVE' ? 'VIVO' : card.metadata.person?.status === 'DEAD' ? 'MORTO' : card.metadata.person?.status === 'MIA' ? 'DESAPARECIDO' : 'DESCONHECIDO'}
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -2517,14 +3373,14 @@ export default function InspectionModal({
           <div
             className="fullscreen-stage"
             onClick={(e) => e.stopPropagation()}
-            onPointerDown={handleEvidencePointerMove}
-            onPointerMove={handleEvidencePointerMove}
-            onTouchStart={handleEvidenceTouchMove}
-            onTouchMove={handleEvidenceTouchMove}
-            style={{ touchAction: 'none' }}
+            onPointerDown={visualMode === 'phone' ? undefined : handleEvidencePointerMove}
+            onPointerMove={visualMode === 'phone' ? undefined : handleEvidencePointerMove}
+            onTouchStart={visualMode === 'phone' ? undefined : handleEvidenceTouchMove}
+            onTouchMove={visualMode === 'phone' ? undefined : handleEvidenceTouchMove}
+            style={{ touchAction: visualMode === 'phone' ? 'auto' : 'none' }}
           >
             {visualMode === 'phone' ? (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="w-full h-full min-h-0 flex items-center justify-center p-0 md:p-6 overflow-hidden">
                 <PhoneViewer
                   chatData={headerChatList}
                   contactName={currentCard.title}
@@ -2534,6 +3390,9 @@ export default function InspectionModal({
                   deviceData={parsedMetadata?.device_extraction || null}
                   cardId={currentCard.id}
                   fullscreen={true}
+                  hideInlinePinList={true}
+                  showPins={showPhonePins}
+                  onToggleShowPins={() => setShowPhonePins((s) => !s)}
                 />
               </div>
             ) : (

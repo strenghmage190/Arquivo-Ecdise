@@ -1,9 +1,13 @@
+/* ==========================================================================
+   OrdoFieldManualModal.css — C.R.I.S. Forensic Field Manual Modal
+   ========================================================================== */
+
 .ordo-manual-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 36000;
-  background: rgba(4, 8, 14, 0.82);
-  backdrop-filter: blur(6px);
+  z-index: var(--z-modal-terminal, 60000);
+  background: rgba(3, 6, 10, 0.86);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,67 +16,77 @@
 
 .ordo-manual-dialog {
   width: min(760px, 100%);
-  max-height: 86vh;
-  background: #0a1019;
-  border: 1px solid rgba(0, 243, 255, 0.35);
-  border-radius: 10px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 28px rgba(0, 243, 255, 0.12);
+  max-height: 88vh;
+  background: #070a0f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(45, 212, 191, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #dbe7f3;
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: #e2e8f0;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
 }
 
 .ordo-manual-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 14px 18px;
-  background: linear-gradient(90deg, rgba(0, 243, 255, 0.12), rgba(0, 243, 255, 0.02));
-  border-bottom: 1px solid rgba(0, 243, 255, 0.22);
+  background: #0b1016;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ordo-manual-title-wrap {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #00f3ff;
+  color: #5eead4;
 }
 
 .ordo-manual-title-wrap h2 {
   margin: 0;
   font-size: 14px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+  color: #f4f4f5;
 }
 
 .ordo-manual-title-wrap span {
   display: block;
   font-size: 10px;
-  color: #7c96ad;
+  color: #71717a;
   letter-spacing: 0.08em;
 }
 
 .ordo-manual-close {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #c9d8e8;
-  border-radius: 6px;
-  padding: 6px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  border-radius: 8px;
+  padding: 0;
   cursor: pointer;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .ordo-manual-close:hover {
-  border-color: #00f3ff;
-  color: #00f3ff;
+  background: rgba(244, 63, 94, 0.14);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fda4af;
 }
 
 .ordo-manual-tabs {
   display: flex;
   gap: 6px;
   padding: 10px 16px;
-  background: #070c13;
+  background: #05080c;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-wrap: wrap;
 }
@@ -82,24 +96,34 @@
   align-items: center;
   gap: 7px;
   padding: 7px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
-  color: #9bb1c7;
-  font-size: 12px;
+  color: #a1a1aa;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ordo-manual-tab:hover {
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ordo-manual-tab.active {
-  background: rgba(0, 243, 255, 0.14);
-  border-color: #00f3ff;
-  color: #00f3ff;
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #5eead4;
 }
 
 .ordo-manual-body {
   padding: 18px;
   overflow-y: auto;
   flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) transparent;
 }
 
 .ordo-manual-section {
@@ -111,29 +135,29 @@
 .ordo-manual-section h3 {
   margin: 0 0 4px 0;
   font-size: 14px;
-  color: #ffffff;
+  color: #f4f4f5;
 }
 
 .ordo-manual-card {
   padding: 12px 14px;
-  background: rgba(0, 243, 255, 0.04);
-  border: 1px solid rgba(0, 243, 255, 0.24);
-  border-radius: 6px;
+  background: #0b1016;
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  border-radius: 8px;
 }
 
 .ordo-manual-card strong {
   display: block;
   font-size: 12.5px;
-  color: #8bf7ff;
+  color: #5eead4;
   margin-bottom: 4px;
 }
 
 .ordo-manual-card p {
   margin: 0;
   font-size: 12.5px;
-  line-height: 1.5;
-  color: #c5d4e2;
-  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  color: #d4d4d8;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .ordo-manual-tip {
@@ -141,10 +165,38 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 6px;
-  background: rgba(255, 196, 0, 0.08);
-  border: 1px solid rgba(255, 196, 0, 0.25);
-  color: #ffd76a;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #fcd34d;
   font-size: 12px;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (max-width: 640px) {
+  .ordo-manual-backdrop {
+    padding: 0;
+  }
+
+  .ordo-manual-dialog {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .ordo-manual-tabs {
+    padding: 8px 12px;
+  }
+
+  .ordo-manual-tab {
+    min-height: 40px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .ordo-manual-body {
+    padding: 14px;
+  }
 }

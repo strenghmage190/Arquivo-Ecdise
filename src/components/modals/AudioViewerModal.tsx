@@ -1,4 +1,4 @@
-import { Music, Palette, X, Play, Pause, MoveVertical, MoveHorizontal, Activity, Radio, Flame, Diamond, Mountain, Microscope, Terminal, RotateCcw } from 'lucide-react';
+import { Music, Palette, X, Play, Pause, MoveVertical, MoveHorizontal, Activity, Radio, Flame, Diamond, Mountain, Microscope, Terminal, RotateCcw, Sliders } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
@@ -6,6 +6,7 @@ import ProfessionalSpectrogram from '../tools/ProfessionalSpectrogram';
 import AcousticWorkbench from '../tools/AcousticWorkbench';
 import ForensicTerminalModal from './ForensicTerminalModal';
 import ModalSurface from '../ui/ModalSurface';
+import { unlockAudio } from '../../utils/audio';
 import './AudioViewerModal.css';
 
 interface Props {
@@ -43,6 +44,7 @@ export default function AudioViewerModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisRequestId, setAnalysisRequestId] = useState(0);
   const [showTerminal, setShowTerminal] = useState(false);
+  const [activeView, setActiveView] = useState<'spectrum' | 'workbench'>('spectrum');
 
   useEffect(() => {
     if (!isOpen || !waveformRef.current) {
@@ -57,9 +59,10 @@ export default function AudioViewerModal({
 
     const ws = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: '#00ff00',
-      progressColor: '#00ff00',
-      cursorColor: '#ff0000',
+      waveColor: 'rgba(45, 212, 191, 0.36)',
+      progressColor: '#2dd4bf',
+      cursorColor: '#f43f5e',
+      cursorWidth: 2,
       height: 80,
       responsive: true,
       backend: 'MediaElement',
@@ -124,7 +127,7 @@ export default function AudioViewerModal({
   }, [isOpen, audioSrc]);
 
   useEffect(() => {
-    if (isOpen && spectrogramContainerRef.current) {
+    if (isOpen && activeView === 'spectrum' && spectrogramContainerRef.current) {
       setContainerWidth(spectrogramContainerRef.current.clientWidth);
 
       const resizeObserver = new ResizeObserver((entries) => {
@@ -135,11 +138,11 @@ export default function AudioViewerModal({
       resizeObserver.observe(spectrogramContainerRef.current);
       return () => resizeObserver.disconnect();
     }
-  }, [isOpen]);
+  }, [isOpen, activeView]);
 
   useEffect(() => {
     const container = spectrogramContainerRef.current;
-    if (!container || !wavesurferRef.current) return;
+    if (!container || !wavesurferRef.current || activeView !== 'spectrum') return;
 
     const handleScroll = () => {
       if (isSyncingRef.current) return;
@@ -160,7 +163,7 @@ export default function AudioViewerModal({
     return () => {
       container.removeEventListener('scroll', handleScroll);
     };
-  }, [isOpen]);
+  }, [isOpen, activeView]);
 
   // CORREÇÃO CRÍTICA AQUI:
   const handleAutoAnalysis = (result: { optimalMaxFreq: number; optimalMinDB: number }) => {
@@ -187,6 +190,7 @@ export default function AudioViewerModal({
   }
 
   const handlePlayPause = () => {
+    void unlockAudio();
     if (wavesurferRef.current) {
       wavesurferRef.current.playPause();
     }
@@ -197,9 +201,15 @@ export default function AudioViewerModal({
       <div className="audio-viewer-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="audio-viewer-header">
-          <div className="audio-viewer-title"><Music className="lucide-icon inline-icon" size={16} /> {title}</div>
-          <button 
-            className="audio-viewer-close" 
+          <div className="avm-header-left">
+            <span className="avm-badge">C.R.I.S. AUDIO LAB</span>
+            <div className="audio-viewer-title">
+              <Music className="lucide-icon inline-icon" size={16} />
+              <span>{title}</span>
+            </div>
+          </div>
+          <button
+            className="audio-viewer-close"
             onClick={onClose}
             title="Fechar (ESC)"
             aria-label="Fechar"
@@ -208,20 +218,28 @@ export default function AudioViewerModal({
           </button>
         </div>
 
-        {/* Waveform */}
+        {/* Waveform Oscilloscope */}
         <div className="audio-viewer-waveform">
+          <div className="avm-scope-grid" aria-hidden="true" />
+          <div className="avm-scope-axis" aria-hidden="true" />
           <div ref={waveformRef} id="audio-viewer-wave" />
         </div>
 
         {/* Controles */}
         <div className="audio-viewer-controls">
-          <button 
-            className="audio-viewer-play-btn" 
-            onClick={handlePlayPause}
-            title={isPlaying ? 'Pausar' : 'Reproduzir'}
-          >
-            {isPlaying ? <><Pause size={14} /> PAUSAR</> : <><Play size={14} /> REPRODUZIR</>}
-          </button>
+          <div className="avm-controls-left">
+            <button
+              className={`audio-viewer-play-btn ${isPlaying ? 'is-playing' : ''}`}
+              onClick={handlePlayPause}
+              title={isPlaying ? 'Pausar' : 'Reproduzir'}
+            >
+              {isPlaying ? <><Pause size={14} /> PAUSAR</> : <><Play size={14} /> REPRODUZIR</>}
+            </button>
+            <span className={`avm-status-pill ${isPlaying ? 'is-playing' : ''}`}>
+              <span className="avm-status-dot" aria-hidden="true" />
+              {isPlaying ? 'REPRODUZINDO' : 'STANDBY'}
+            </span>
+          </div>
           <div className="audio-viewer-time">
             <span className="time-current">{currentTime}</span>
             <span className="time-separator">/</span>
@@ -229,124 +247,36 @@ export default function AudioViewerModal({
           </div>
         </div>
 
-        {/* Controles de Espectrograma */}
-        <div className="audio-viewer-spectrum-controls">
-          <div className="spectrum-control-group">
-            <label><MoveVertical className="lucide-icon inline-icon" size={14} /> Altura:</label>
-            <input 
-              type="range" 
-              min="150" 
-              max="800" 
-              step="10"
-              value={spectrogramHeight}
-              onChange={(e) => setSpectrogramHeight(Number(e.target.value))}
-              title="Ajusta a altura do espectrograma"
-            />
-            <span className="control-value">{spectrogramHeight}px</span>
-          </div>
-
-          <div className="spectrum-control-group">
-            <label><MoveHorizontal className="lucide-icon inline-icon" size={14} /> Escala Horizontal:</label>
-            <input 
-              type="range" 
-              min="0.5" 
-              max="5" 
-              step="0.1"
-              value={horizontalScale}
-              onChange={(e) => setHorizontalScale(Number(e.target.value))}
-              title="Ajusta a largura do espectrograma (pixels por segundo)"
-            />
-            <span className="control-value">{horizontalScale.toFixed(1)}x</span>
-          </div>
-
-          <div className="spectrum-control-group">
-            <label><Activity className="lucide-icon inline-icon" size={14} /> Freq Máxima:</label>
-            <input 
-              type="range" 
-              min={2000} 
-              max={22000} 
-              step={500}
-              value={maxFreq}
-              // CORREÇÃO: Usando a função manual protegida
-              onChange={e => handleManualChangeMaxFreq(Number(e.target.value))}
-            />
-            <span className="control-value">{(maxFreq/1000).toFixed(1)}kHz</span>
-          </div>
-
-          <div className="spectrum-control-group">
-            <label><Radio className="lucide-icon inline-icon" size={14} /> Sensibilidade:</label>
-            <input 
-              type="range" 
-              min={-100} 
-              max={-20} 
-              step={5}
-              value={minDB}
-              // CORREÇÃO: Usando a função manual protegida
-              onChange={e => handleManualChangeMinDB(Number(e.target.value))}
-            />
-            <span className="control-value">{minDB}dB</span>
-          </div>
-
-          <div className="spectrum-control-group">
-            <label><Palette className="lucide-icon inline-icon" size={16} /> Cores:</label>
-            <div className="spectrum-color-row">
-              <button 
-                className={`spectrum-color-btn ${colorScheme === 'hot' ? 'active hot' : ''}`}
-                onClick={() => setColorScheme('hot')}
-                title="Hot"
-              >
-                <Flame size={14} />
-              </button>
-              <button 
-                className={`spectrum-color-btn ${colorScheme === 'cyan' ? 'active cyan' : ''}`}
-                onClick={() => setColorScheme('cyan')}
-                title="Cyan"
-              >
-                <Diamond size={14} />
-              </button>
-              <button 
-                className={`spectrum-color-btn ${colorScheme === 'magma' ? 'active magma' : ''}`}
-                onClick={() => setColorScheme('magma')}
-                title="Magma"
-              >
-                <Mountain size={14} />
-              </button>
-            </div>
-          </div>
-
-          <div className="spectrum-analysis-group">
+        {/* Seletor de Modo Analítico (evita dois espectrogramas empilhados) */}
+        <div className="avm-view-tabs" role="tablist" aria-label="Modo de análise acústica">
+          <div className="avm-view-tabs-left">
             <button
-              className="spectrum-action-btn"
-              onClick={() => {
-                setIsAnalyzing(true);
-                setAnalysisRequestId((prev) => prev + 1);
-              }}
-              title="Analisar áudio e ajustar visualização automaticamente"
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'spectrum'}
+              className={`avm-tab-btn ${activeView === 'spectrum' ? 'active' : ''}`}
+              onClick={() => setActiveView('spectrum')}
             >
-              <Microscope size={14} /> ANÁLISE RÁPIDA
+              <Activity size={14} /> Espectrograma HD
             </button>
-            <button 
-              className={`spectrum-action-btn ${showTerminal ? 'active' : ''}`}
-              onClick={() => setShowTerminal(!showTerminal)}
-              title="Abrir Terminal Forense para ler mensagens ocultas LSB"
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeView === 'workbench'}
+              className={`avm-tab-btn ${activeView === 'workbench' ? 'active' : ''}`}
+              onClick={() => setActiveView('workbench')}
             >
-              <Terminal size={14} /> TERMINAL LSB
-            </button>
-            <button 
-              className="spectrum-action-btn"
-              onClick={() => {
-                setIsAnalyzing(false);
-                setSpectrogramHeight(350);
-                setHorizontalScale(1);
-                setMaxFreq(10000);
-                setMinDB(-60);
-                setColorScheme('hot');
-              }}
-              title="Resetar todos os controles"
-            >
-              <RotateCcw size={14} /> RESETAR
+              <Sliders size={14} /> Bancada Acústica (Filtros L/R)
             </button>
           </div>
+          <button
+            type="button"
+            className={`spectrum-action-btn ${showTerminal ? 'active' : ''}`}
+            onClick={() => setShowTerminal(!showTerminal)}
+            title="Abrir Terminal Forense para ler mensagens ocultas LSB"
+          >
+            <Terminal size={14} /> TERMINAL LSB
+          </button>
         </div>
 
         {/* Terminal Modal LSB */}
@@ -356,31 +286,164 @@ export default function AudioViewerModal({
           audioUrl={audioSrc}
         />
 
-        {/* Bancada Acústica Unificada */}
-        <div style={{ marginBottom: 12 }}>
-          <AcousticWorkbench audioSrc={audioSrc} title={title} />
-        </div>
+        {activeView === 'spectrum' ? (
+          <>
+            {/* Controles do Espectrograma HD */}
+            <div className="audio-viewer-spectrum-controls">
+              <div className="avm-controls-grid">
+                <div className="spectrum-control-group">
+                  <div className="avm-control-top">
+                    <label><MoveVertical className="lucide-icon inline-icon" size={13} /> Altura</label>
+                    <span className="control-value">{spectrogramHeight}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="150"
+                    max="800"
+                    step="10"
+                    value={spectrogramHeight}
+                    onChange={(e) => setSpectrogramHeight(Number(e.target.value))}
+                    title="Ajusta a altura do espectrograma"
+                  />
+                </div>
 
-        {/* Espectrograma Principal */}
-        <div className="audio-viewer-spectrogram" ref={spectrogramContainerRef}>
-          {containerWidth > 0 && (
-            <ProfessionalSpectrogram 
-              audioUrl={audioSrc}
-              spectrogramHeight={spectrogramHeight}
-              horizontalScale={horizontalScale}
-              maxFreq={maxFreq}
-              minDB={minDB}
-              colorScheme={colorScheme}
-              width={containerWidth}
-              analysisRequestId={analysisRequestId}
-              onAnalysisComplete={handleAutoAnalysis}
+                <div className="spectrum-control-group">
+                  <div className="avm-control-top">
+                    <label><MoveHorizontal className="lucide-icon inline-icon" size={13} /> Escala Horizontal</label>
+                    <span className="control-value">{horizontalScale.toFixed(1)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="5"
+                    step="0.1"
+                    value={horizontalScale}
+                    onChange={(e) => setHorizontalScale(Number(e.target.value))}
+                    title="Ajusta a largura do espectrograma (pixels por segundo)"
+                  />
+                </div>
+
+                <div className="spectrum-control-group">
+                  <div className="avm-control-top">
+                    <label><Activity className="lucide-icon inline-icon" size={13} /> Freq Máxima</label>
+                    <span className="control-value">{(maxFreq / 1000).toFixed(1)}kHz</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={2000}
+                    max={22000}
+                    step={500}
+                    value={maxFreq}
+                    onChange={(e) => handleManualChangeMaxFreq(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="spectrum-control-group">
+                  <div className="avm-control-top">
+                    <label><Radio className="lucide-icon inline-icon" size={13} /> Sensibilidade</label>
+                    <span className="control-value">{minDB}dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-100}
+                    max={-20}
+                    step={5}
+                    value={minDB}
+                    onChange={(e) => handleManualChangeMinDB(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="spectrum-control-group">
+                  <div className="avm-control-top">
+                    <label><Palette className="lucide-icon inline-icon" size={13} /> Paleta</label>
+                    <span className="control-value">{colorScheme.toUpperCase()}</span>
+                  </div>
+                  <div className="spectrum-color-row">
+                    <button
+                      type="button"
+                      className={`spectrum-color-btn ${colorScheme === 'hot' ? 'active hot' : ''}`}
+                      onClick={() => setColorScheme('hot')}
+                      title="Hot"
+                    >
+                      <Flame size={13} /> Hot
+                    </button>
+                    <button
+                      type="button"
+                      className={`spectrum-color-btn ${colorScheme === 'cyan' ? 'active cyan' : ''}`}
+                      onClick={() => setColorScheme('cyan')}
+                      title="Cyan"
+                    >
+                      <Diamond size={13} /> Ciano
+                    </button>
+                    <button
+                      type="button"
+                      className={`spectrum-color-btn ${colorScheme === 'magma' ? 'active magma' : ''}`}
+                      onClick={() => setColorScheme('magma')}
+                      title="Magma"
+                    >
+                      <Mountain size={13} /> Magma
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="spectrum-analysis-group">
+                <button
+                  type="button"
+                  className="spectrum-action-btn spectrum-action-btn--primary"
+                  onClick={() => {
+                    setIsAnalyzing(true);
+                    setAnalysisRequestId((prev) => prev + 1);
+                  }}
+                  title="Analisar áudio e ajustar visualização automaticamente"
+                >
+                  <Microscope size={14} /> ANÁLISE RÁPIDA
+                </button>
+                <button
+                  type="button"
+                  className="spectrum-action-btn"
+                  onClick={() => {
+                    setIsAnalyzing(false);
+                    setSpectrogramHeight(350);
+                    setHorizontalScale(1);
+                    setMaxFreq(10000);
+                    setMinDB(-60);
+                    setColorScheme('hot');
+                  }}
+                  title="Resetar todos os controles"
+                >
+                  <RotateCcw size={14} /> RESETAR
+                </button>
+              </div>
+            </div>
+
+            {/* Espectrograma Principal */}
+            <div className="audio-viewer-spectrogram" ref={spectrogramContainerRef}>
+              {containerWidth > 0 && (
+                <ProfessionalSpectrogram
+                  audioUrl={audioSrc}
+                  spectrogramHeight={spectrogramHeight}
+                  horizontalScale={horizontalScale}
+                  maxFreq={maxFreq}
+                  minDB={minDB}
+                  colorScheme={colorScheme}
+                  width={containerWidth}
+                  analysisRequestId={analysisRequestId}
+                  onAnalysisComplete={handleAutoAnalysis}
                   onSeek={(percentage: number) => {
                     if (wavesurferRef.current) wavesurferRef.current.seekTo(percentage);
                   }}
                   duration={durationSec}
-            />
-          )}
-        </div>
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          /* Bancada Acústica Unificada (Filtros, L/R e Reverso) */
+          <div className="avm-workbench-wrap">
+            <AcousticWorkbench audioSrc={audioSrc} title={title} />
+          </div>
+        )}
       </div>
     </div>
   );

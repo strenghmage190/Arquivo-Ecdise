@@ -1,26 +1,31 @@
+/* ==========================================================================
+   HexViewer.css — C.R.I.S. Forensic Hexadecimal Binary Inspector
+   ========================================================================== */
+
 .hex-viewer {
-  background: linear-gradient(180deg, rgb(var(--nexus-dark-rgb, 5,8,10) / 64%), rgb(var(--nexus-dark-rgb, 5,8,10) / 92%));
-  color: var(--nexus-blue, #00f3ff);
-  font-family: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
+  background: #05080c;
+  color: #cbd5e1;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
   font-variant-numeric: tabular-nums;
   font-size: 12px;
-  padding: 12px;
-  height: var(--hex-height, 300px);
+  padding: 14px;
+  height: var(--hex-height, 340px);
   overflow-y: auto;
-  border-radius: var(--radius-sm, 6px);
-  border: 1px solid rgb(0 243 255 / 15%);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 60%), 0 0 12px var(--primary-glow-medium, rgba(0, 243, 255, 0.2));
-  background-blend-mode: overlay;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.72);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) transparent;
 }
 
 .hex-title {
-  color: #cfeff0;
+  color: #5eead4;
   margin-bottom: 8px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12.5px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 6px;
 }
 
@@ -34,13 +39,14 @@
 
 .hex-table-header {
   display: flex;
-  font-weight: bold;
-  color: #88a0b0;
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-weight: 700;
+  color: #71717a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .hex-table-body {
@@ -52,12 +58,14 @@
 .hex-row {
   display: flex;
   align-items: center;
-  line-height: 1.4;
+  line-height: 1.5;
   white-space: nowrap;
+  border-radius: 4px;
+  transition: background 0.12s ease;
 }
 
 .hex-row:hover {
-  background: rgb(0 243 255 / 8%);
+  background: rgba(20, 184, 166, 0.08);
 }
 
 .hex-col-offset {
@@ -72,7 +80,7 @@
   flex-wrap: nowrap;
   gap: 6px;
   flex: 1;
-  color: rgb(223 239 243 / 0.95);
+  color: #e2e8f0;
   padding: 0 12px;
   overflow-x: hidden;
 }
@@ -87,36 +95,48 @@
   color: #38bdf8;
   width: auto;
   min-width: 80px;
-  padding-left: 8px;
-  border-left: 1px solid rgb(255 255 255 / 10%);
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
   letter-spacing: 1px;
 }
 
 .hex-hidden {
   display: inline-block;
-  color: var(--nexus-glitch, #ff0055);
-  background: rgb(var(--nexus-blue-rgb, 0,243,255) / 6%);
-  padding: 2px 6px;
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  padding: 1px 6px;
   border-radius: 4px;
   margin: 0 2px;
-  box-shadow: 0 4px 14px rgb(var(--nexus-blue-rgb, 0,243,255) / 10%);
 }
 
-/* Subtle scrollbar styling for webkit */
 .hex-viewer::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
+
+.hex-viewer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .hex-viewer::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
-  border-radius: 6px;
-  border: 1px solid rgb(0 243 255 / 10%);
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+.hex-viewer::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 191, 0.4);
 }
 
 @media (max-width: 520px) {
-  .hex-viewer { font-size: 11px; padding: 10px; }
-  .hex-title { font-size: 12px; }
-}
+  .hex-viewer {
+    font-size: 11px;
+    padding: 10px;
+  }
 
+  .hex-title {
+    font-size: 11.5px;
+  }
+}
 
 .hex-header-bar {
   display: flex;
@@ -124,9 +144,9 @@
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
 }
 
 .hex-header-bar .hex-title {
@@ -143,42 +163,58 @@
 }
 
 .hex-action-btn {
-  background: rgba(0, 243, 255, 0.08);
-  border: 1px solid rgba(0, 243, 255, 0.28);
-  color: #cfeff0;
-  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d4d4d8;
+  padding: 5px 10px;
   font-size: 11px;
   font-family: inherit;
-  border-radius: 4px;
+  font-weight: 600;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .hex-action-btn:hover {
-  background: rgba(0, 243, 255, 0.18);
+  background: rgba(20, 184, 166, 0.14);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #99f6e4;
 }
 
 .hex-action-btn.primary {
-  background: rgba(56, 189, 248, 0.16);
-  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.4);
+  color: #a5f3fc;
+}
+
+.hex-action-btn.primary:hover {
+  background: rgba(34, 211, 238, 0.24);
+  border-color: rgba(34, 211, 238, 0.6);
 }
 
 .hex-search-box {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: #05080d;
-  border: 1px solid rgba(203, 213, 225, 0.2);
-  border-radius: 4px;
-  padding: 2px 6px;
+  gap: 6px;
+  background: #0b1016;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.hex-search-box:focus-within {
+  border-color: rgba(45, 212, 191, 0.5);
 }
 
 .hex-search-box input {
-  background: none;
+  background: transparent;
   border: none;
-  color: #f1f5f9;
+  border-radius: 0;
+  height: auto;
+  padding: 2px 4px;
+  color: #f4f4f5;
   font-size: 11px;
   font-family: inherit;
   outline: none;
-  width: 130px;
+  width: 140px;
 }

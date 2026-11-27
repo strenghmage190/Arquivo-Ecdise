@@ -7,7 +7,8 @@ import './HackingTerminal.css';
 
 interface Props {
   correctPassword?: string;
-  onUnlock: () => void;
+  onVerify?: (attempt: string) => Promise<boolean>;
+  onUnlock: (unlockedCode?: string) => void;
   hint?: string;
 }
 
@@ -17,12 +18,13 @@ interface LogLine {
   type: 'system' | 'warning' | 'user' | 'cris' | 'error' | 'success';
 }
 
-export default function HackingTerminal({ correctPassword, onUnlock, hint }: Props) {
+export default function HackingTerminal({ correctPassword, onVerify, onUnlock, hint }: Props) {
   const { investigationId } = useCollaboration();
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [input, setInput] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [bootComplete, setBootComplete] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const outputRef = useRef<HTMLDivElement | null>(null);
   const timers = useRef<number[]>([]);
 
@@ -85,7 +87,7 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
     timers.current.push(startTimer);
   };
 
-  const processResponse = (query: string) => {
+  const processResponse = async (query: string) => {
     const q = query.trim().toLowerCase();
     const target = (correctPassword || '').trim().toLowerCase();
 
@@ -96,44 +98,67 @@ export default function HackingTerminal({ correctPassword, onUnlock, hint }: Pro
 
     appendLog('> Analisando parâmetros de autenticação...', 'system');
 
-    let responseText = '';
-    let responseType: LogLine['type'] = 'cris';
-
     if (q === 'ajuda' || q === 'help') {
-      responseText = 'Comandos: ajuda | status | dica | clear — ou informe a credencial de acesso.';
-    } else if (q === 'dica') {
-      responseText = hint
+      const t = window.setTimeout(
+        () => typeResponse('Comandos: ajuda | status | dica | clear — ou informe a credencial de acesso.', 'cris'),
+        220
+      );
+      timers.current.push(t);
+      return;
+    }
+    if (q === 'dica') {
+      const msg = hint
         ? `Dica do Sistema: ${hint}`
         : 'Nenhuma dica pública registrada. Consulte as evidências ou os achados da equipe.';
-    } else if (q === 'status') {
-      responseText = `Tentativas registradas: ${attempts + 1}. Terminal C.R.I.S. aguardando credencial válida.`;
-    } else if (target && q === target) {
-      responseText = '[OK] Credencial validada. Concedendo acesso...';
-      responseType = 'success';
-    } else {
-      responseText = '[DENIED] Acesso negado. Credencial inválida.';
-      responseType = 'error';
+      const t = window.setTimeout(() => typeResponse(msg, 'cris'), 220);
+      timers.current.push(t);
+      return;
+    }
+    if (q === 'status') {
+      const t = window.setTimeout(
+        () => typeResponse(`Tentativas registradas: ${attempts + 1}. Terminal C.R.I.S. aguardando credencial válida.`, 'cris'),
+        220
+      );
+      timers.current.push(t);
+      return;
     }
 
-    const t = window.setTimeout(() => typeResponse(responseText, responseType), 250);
-    timers.current.push(t);
+    let matched = false;
+    if (onVerify) {
+      setVerifying(true);
+      try {
+        matched = await onVerify(query);
+      } catch {
+        matched = false;
+      } finally {
+        setVerifying(false);
+      }
+    } else {
+      matched = Boolean(target && q === target);
+    }
+
+    if (matched) {
+      const t = window.setTimeout(() => typeResponse('[OK] Credencial validada. Concedendo acesso...', 'success'), 200);
+      timers.current.push(t);
+      const t2 = window.setTimeout(() => onUnlock(query), 1050);
+      timers.current.push(t2);
+    } else {
+      const t = window.setTimeout(() => typeResponse('[DENIED] Acesso negado. Credencial inválida.', 'error'), 220);
+      timers.current.push(t);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = input.trim();
-    if (!query || !bootComplete) return;
+    if (!query || !bootComplete || verifying) return;
     appendLog(`auth@ordo:~# ${query}`, 'user');
     setInput('');
     setAttempts((a) => a + 1);
 
     const t = window.setTimeout(() => {
-      processResponse(query);
-      if (correctPassword && query.toLowerCase() === correctPassword.trim().toLowerCase()) {
-        const t2 = window.setTimeout(onUnlock, 1100);
-        timers.current.push(t2);
-      }
-    }, 200);
+      void processResponse(query);
+    }, 180);
     timers.current.push(t);
   };
 

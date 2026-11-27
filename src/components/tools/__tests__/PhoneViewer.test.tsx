@@ -99,4 +99,27 @@ describe('PhoneViewer (Device Extraction)', () => {
     fireEvent.click(screen.getByText('Desbloquear Nota'));
     expect(screen.getByText('Segredo revelado')).toBeInTheDocument();
   });
+
+  it('activates UV and Thermal Residual lenses on a locked phone keypad', () => {
+    const lockedDevice: DeviceExtractionMetadata = {
+      ...MOCK_DEVICE,
+      lockScreen: {
+        enabled: true,
+        type: 'pin',
+        code: '1489',
+        smudgeHints: ['1', '4', '8', '9'],
+      },
+    };
+    render(
+      <ForensicDispatchProvider>
+        <PhoneViewer deviceData={lockedDevice} isLocked={true} cardId="card-lock" />
+      </ForensicDispatchProvider>
+    );
+
+    fireEvent.click(screen.getByText(/Termal Residual/i));
+    expect(screen.getByText(/Termografia Residual/i)).toBeInTheDocument();
+    // Last pressed key '9' should have heat 1.00 while first pressed key '1' has 0.30
+    expect(screen.getByRole('button', { name: '9' })).toHaveAttribute('data-heat', '1.00');
+    expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('data-heat', '0.30');
+  });
 });

@@ -52,12 +52,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import * as api from '../../api/investigations';
 import * as connApi from '../../api/connections';
-import InvestigationCardModal from '../modals/InvestigationCardModal';
-import InviteModal from '../modals/InviteModal';
-// CreateClueModal é pesado — import estático para evitar falhas de carregamento dinâmico em produção
-import CreateClueModal from '../modals/CreateClueModal_Refactored';
+import { verifyClueSolution, fetchClueSecretsForInvestigation } from '../../api/clueSecurity';
+const InvestigationCardModal = React.lazy(() => import('../modals/InvestigationCardModal'));
+const InviteModal = React.lazy(() => import('../modals/InviteModal'));
 const CreateClueModalLegacy = React.lazy(() => import('../modals/CreateClueModal'));
-import Sketchpad from '../tools/Sketchpad';
+const Sketchpad = React.lazy(() => import('../tools/Sketchpad'));
 import TerminalSearch from './TerminalSearch';
 import { playAudio } from '../../utils/audio';
 import { uploadInvestigationImage, uploadInvestigationFile } from '../../utils/storage';
@@ -81,21 +80,21 @@ import {
   organizeByVeracity,
   unstackCards,
 } from '../../utils/layoutAlgorithms';
-import InspectionModal from '../modals/InspectionModal';
+const InspectionModal = React.lazy(() => import('../modals/InspectionModal'));
 import { ForensicDispatchProvider } from '../../contexts/ForensicDispatchContext';
 import { CollaborationProvider, useCollaboration } from '../../contexts/CollaborationContext';
 import { useAuth } from '../auth/AuthProvider';
 import FindingsDrawer from '../collaboration/FindingsDrawer';
+import PinNoteComposer from '../collaboration/PinNoteComposer';
 import { useTacticalPings } from '../../hooks/useTacticalPings';
 import { TEAM_STATUS_META, TeamCardStatus } from '../../types/collaboration';
 import { TeamStatusIcon } from '../collaboration/CollaborationIcons';
 import DoomsdayClock from '../ui/DoomsdayClock';
-import SystemTerminal from '../tools/SystemTerminal';
-import UniversalDecoder from '../tools/UniversalDecoder';
-import GlitchMaker from '../tools/GlitchMaker';
+const SystemTerminal = React.lazy(() => import('../tools/SystemTerminal'));
+const UniversalDecoder = React.lazy(() => import('../tools/UniversalDecoder'));
 import CodePromptModal, { CodePromptResult } from '../modals/CodePromptModal';
 import { useGlobalMouseEvents } from '../../hooks/useGlobalMouseEvents';
-import CreatorHub from '../modals/CreatorHub';
+const CreatorHub = React.lazy(() => import('../modals/CreatorHub'));
 const GMOverwatch = React.lazy(() => import('./GMOverwatch'));
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useWindowSize } from '../../hooks/useWindowSize';
@@ -208,18 +207,25 @@ const GlobalUVOverlay = ({ isUV, performanceMode, boardRef, zoom, origin, uvTouc
 function InvestigationBoardInner({
   investigationId,
   onRegisterNavigateToCard,
-}: Props & { onRegisterNavigateToCard?: (fn: (cardId: string) => void) => void }) {
+  onGameMasterChange,
+}: Props & {
+  onRegisterNavigateToCard?: (fn: (cardId: string) => void) => void;
+  onGameMasterChange?: (isGm: boolean) => void;
+}) {
   const navigate = useNavigate();
   const { session } = useAuth();
   const user = session?.user;
   const {
     pinsByCardId,
+    createPin,
+    addFinding,
     cardStatuses,
     setCardTeamStatus,
     findings,
     isDrawerOpen,
     setDrawerOpen,
   } = useCollaboration();
+  const [boardPinTarget, setBoardPinTarget] = useState<{ cardId: string; title: string; x: number; y: number } | null>(null);
   const authorName =
     (user as any)?.user_metadata?.code_name ||
     (user as any)?.email?.split('@')[0] ||
@@ -462,6 +468,27 @@ function InvestigationBoardInner({
   const [decoderInitialMode, setDecoderInitialMode] = useState<string | undefined>(undefined);
   const [inspectInitialForensicMode, setInspectInitialForensicMode] = useState<'none' | 'channel' | 'hex' | 'lens' | 'decoder'>('none');
   const [codesPanelOpen, setCodesPanelOpen] = useState(false);
+  const [gmSecretsByCardId, setGmSecretsByCardId] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!codesPanelOpen || !isGameMaster || playerView || !investigationId) return;
+    let active = true;
+    fetchClueSecretsForInvestigation(investigationId)
+      .then((records) => {
+        if (!active) return;
+        const mapped: Record<string, string> = {};
+        for (const [cardId, rec] of Object.entries(records)) {
+          if (rec?.secret_value) mapped[cardId] = rec.secret_value;
+        }
+        setGmSecretsByCardId(mapped);
+      })
+      .catch(() => {
+        // ignore; GM secrets fallback to card.lock_password
+      });
+    return () => {
+      active = false;
+    };
+  }, [codesPanelOpen, isGameMaster, playerView, investigationId]);
   const [, setTrackingVersion] = useState(0);
   const [unlockedCodes, setUnlockedCodes] = useState<UnlockedCodeEntry[]>(() =>
     investigationId ? getUnlockedCodes(investigationId) : []
@@ -1135,8 +1162,13 @@ function InvestigationBoardInner({
         const details = await api.fetchInvestigationById(investigationId);
         if (!mounted) return;
         setCaseTitle(details?.title || 'CASO');
-        if (user && details && details.owner_id === user.id) setIsGameMaster(true);
-        else setIsGameMaster(false);
+        if (user && details && details.owner_id === user.id) {
+          setIsGameMaster(true);
+          onGameMasterChange?.(true);
+        } else {
+          setIsGameMaster(false);
+          onGameMasterChange?.(false);
+        }
         // read doomsday clock if present
         if (details && details.doomsday_clock) {
           try {
@@ -2276,23 +2308,36 @@ function InvestigationBoardInner({
         return { success: true, message: successMessage, closeModal: unlockedNow };
       }
 
-      const password = (unlockingCard.lock_password || metadata?.lock_pass || metadata?.lock_password || '').toString().toUpperCase();
-      console.debug('unlock attempt', { cardId: unlockingCard?.id, providedCode: code, expected: password, performanceMode });
-      if (!password) {
-        showToast({ id: 'unlock-missing', message: 'Nenhuma senha configurada para este card.' }, 3000);
-        setUnlockingCard(null);
-        openEvidenceViewer(unlockingCard);
-        return { success: true, message: 'Acesso concedido', closeModal: true };
-      }
+      const legacyPassword =
+        unlockingCard.lock_password || metadata?.lock_pass || metadata?.lock_password || null;
+      const solverName =
+        (user?.user_metadata as any)?.codename ||
+        user?.email?.split('@')[0] ||
+        'Agente';
 
-      if (password !== code) {
-        console.debug('unlock failed: code mismatch', { cardId: unlockingCard?.id, providedCode: code, expected: password });
-        showToast({ id: 'unlock-invalid', message: 'Código inválido.' }, 3200);
-        return { success: false, message: 'Código inválido.' };
+      const verifyRes = await verifyClueSolution(
+        String(unlockingCard.id),
+        code,
+        solverName,
+        legacyPassword ? String(legacyPassword) : null
+      );
+
+      if (!verifyRes.unlocked) {
+        const failMsg =
+          verifyRes.error === 'NO_SECRET_CONFIGURED'
+            ? 'Nenhuma credencial configurada no servidor para esta pista.'
+            : 'Código inválido.';
+        showToast({ id: 'unlock-invalid', message: failMsg }, 3200);
+        return { success: false, message: failMsg };
       }
 
       const updatedMeta = { ...metadata, unlocked_at: new Date().toISOString() };
-      await api.updateInvestigationCard(unlockingCard.id, { is_locked: false, metadata: updatedMeta } as any);
+      try {
+        await api.updateInvestigationCard(unlockingCard.id, { is_locked: false, metadata: updatedMeta } as any);
+      } catch (metaSyncErr) {
+        console.warn('Metadata sync after RPC unlock skipped:', metaSyncErr);
+      }
+
       if (investigationId) {
         recordUnlockedCode(
           investigationId,
@@ -2305,11 +2350,17 @@ function InvestigationBoardInner({
           { isGameMaster, playerView }
         );
       }
-      showToast({ id: `unlock-${unlockingCard.id}`, message: 'Acesso concedido' }, 3200);
+
+      const rewardCount = verifyRes.unlocked_reward_ids?.length || 0;
+      const unlockMsg =
+        rewardCount > 0
+          ? `Acesso concedido! ${rewardCount} nova(s) pista(s) revelada(s).`
+          : 'Acesso concedido';
+      showToast({ id: `unlock-${unlockingCard.id}`, message: unlockMsg }, 3600);
       setUnlockingCard(null);
-      openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false });
+      openEvidenceViewer({ ...unlockingCard, metadata: updatedMeta, is_locked: false, lock_password: null });
       await loadBoard();
-      return { success: true, message: 'Acesso concedido', closeModal: true };
+      return { success: true, message: unlockMsg, closeModal: true };
     } catch (err) {
       console.error('Erro ao validar código', err);
       showToast({ id: 'unlock-error', message: 'Falha ao validar código.' }, 3600);
@@ -2648,6 +2699,21 @@ function InvestigationBoardInner({
                  </>
                );
              })()}
+             <button
+               className="hud-btn"
+               onClick={() => {
+                 const targetCard = cards.find((c) => c.id === contextMenu.targetId);
+                 setBoardPinTarget({
+                   cardId: contextMenu.targetId!,
+                   title: targetCard?.title || 'Pista',
+                   x: contextMenu.x,
+                   y: contextMenu.y,
+                 });
+                 setContextMenu(null);
+               }}
+             >
+               <Pin size={15} /> Cravar Marcador
+             </button>
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1000 }); loadBoard(); setContextMenu(null); }}><ArrowUp size={15} /> Trazer para Frente</button>
              <button className="hud-btn" onClick={() => { api.updateInvestigationCard(contextMenu.targetId!, { z_index: 1 }); loadBoard(); setContextMenu(null); }}><ArrowDown size={15} /> Mandar para Trás</button>
              <hr style={{borderColor:'#333', margin:'4px 0'}} />
@@ -2695,6 +2761,7 @@ function InvestigationBoardInner({
         <>
           <BottomNavigationBar
             isGameMaster={isGameMaster}
+            onGoHome={() => navigate('/')}
             activeTools={{
               search: showFinder,
               uv: isUV,
@@ -3087,7 +3154,11 @@ function InvestigationBoardInner({
       )}
 
       {/* Modais */}
-      <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
+      {inviteOpen && (
+        <Suspense fallback={null}>
+          <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} investigationId={investigationId} inviteLink={inviteLink} />
+        </Suspense>
+      )}
       {inspectCard && (
         <ForensicDispatchProvider
           onDispatchToDecoder={(text) => {
@@ -3122,29 +3193,31 @@ function InvestigationBoardInner({
             }
           }}
         >
-          <InspectionModal
-            isOpen={!!inspectCard}
-            card={inspectCard}
-            isGameMaster={isGameMaster}
-            playerView={viewerMode}
-            performanceMode={performanceMode}
-            initialForensicMode={inspectInitialForensicMode}
-            onSendToDecoder={(text, mode) => {
-              setInspectCard(null);
-              setDecoderInitialInput(text);
-              if (mode) setDecoderInitialMode(mode);
-              setDecoderOpen(true);
-            }}
-            onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
-            onEdit={() => {
-              // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
-              setEditingCard(inspectCard);
-              setInspectCard(null);
-              setShowLegacyModal(true);
-            }}
-            externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
-            externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
-          />
+          <Suspense fallback={null}>
+            <InspectionModal
+              isOpen={!!inspectCard}
+              card={inspectCard}
+              isGameMaster={isGameMaster}
+              playerView={viewerMode}
+              performanceMode={performanceMode}
+              initialForensicMode={inspectInitialForensicMode}
+              onSendToDecoder={(text, mode) => {
+                setInspectCard(null);
+                setDecoderInitialInput(text);
+                if (mode) setDecoderInitialMode(mode);
+                setDecoderOpen(true);
+              }}
+              onClose={() => { setInspectCard(null); setInspectInitialForensicMode('none'); }}
+              onEdit={() => {
+                // Open legacy CreateClueModal (full editor) in edit mode instead of CreatorHub
+                setEditingCard(inspectCard);
+                setInspectCard(null);
+                setShowLegacyModal(true);
+              }}
+              externalBaseId={inspectCard ? `card-base-${inspectCard.id}` : undefined}
+              externalHiddenId={inspectCard ? `card-hidden-${inspectCard.id}` : undefined}
+            />
+          </Suspense>
         </ForensicDispatchProvider>
       )}
 
@@ -4244,102 +4317,114 @@ function InvestigationBoardInner({
             </div>
           </BottomSheet>
 
-          <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
-            <CreatorHub
-              isOpen={createModalOpen}
-              onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
-              investigationId={investigationId}
-              onOpenLegacyModal={() => setShowLegacyModal(true)}
-              onPuzzleCreated={async (created?: any) => {
-                try {
+          {createModalOpen && (
+            <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:18}}>CARREGANDO...</div>}>
+              <CreatorHub
+                isOpen={createModalOpen}
+                onClose={() => { setCreateModalOpen(false); setCreateModalPos(null); }}
+                investigationId={investigationId}
+                onOpenLegacyModal={() => setShowLegacyModal(true)}
+                onPuzzleCreated={async (created?: any) => {
+                  try {
+                    await loadBoard();
+                    if (created && created.id) {
+                      const cx = (typeof created.x === 'number' ? created.x : created.x) + 220 / 2;
+                      const cy = (typeof created.y === 'number' ? created.y : created.y) + 160 / 2;
+                      panToPosition(cx, cy);
+                      setLastCreatedId(created.id);
+                      setTimeout(() => setLastCreatedId(null), 6000);
+                    }
+                  } catch (e) {
+                    console.error('Error handling created card pan', e);
+                  }
+                }}
+              />
+            </Suspense>
+          )}
+
+      {modalOpen && (
+        <Suspense fallback={null}>
+          <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
+        </Suspense>
+      )}
+      {sketchOpen && (
+        <Suspense fallback={<div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',color:'var(--nexus-blue)',fontSize:16,zIndex:3000}}>CARREGANDO PRANCHETA...</div>}>
+          <Sketchpad
+            initialData={sketchInitialData || undefined}
+            onClose={() => { setSketchOpen(false); setSketchInitialData(null); setEditingSketchId(null); }}
+            onSaveImage={async (imageFile: File, jsonContent: string) => {
+              try {
+                // upload PNG image
+                const uploaded = await uploadInvestigationImage(imageFile, investigationId);
+                if (!uploaded) throw new Error('Falha ao subir imagem do rascunho');
+
+                // upload JSON content as .json file
+                const jsonBlob = new Blob([jsonContent], { type: 'application/json' });
+                const jsonFile = new File([jsonBlob], `sketch_${Date.now()}.json`, { type: 'application/json' });
+                const jsonUrl = await uploadInvestigationFile(jsonFile, investigationId, 'json');
+                if (!jsonUrl) throw new Error('Falha ao subir JSON do rascunho');
+
+                // decide whether to embed JSON in DB metadata as a fallback (small JSON only)
+                const jsonSize = new Blob([jsonContent]).size;
+                const shouldEmbed = jsonSize <= EMBED_EXCALIDRAW_JSON_LIMIT;
+
+                const payload: any = {
+                  investigation_id: investigationId,
+                  title: 'Rascunho',
+                  description_public: null,
+                  image_url: uploaded,
+                  metadata: { excalidraw_url: jsonUrl, ...(shouldEmbed ? { excalidraw_data: jsonContent } : {}) },
+                };
+
+                if (editingSketchId) {
+                  // update existing card
+                  await api.updateInvestigationCard(editingSketchId, { image_url: uploaded, metadata: { excalidraw_url: jsonUrl, ...(shouldEmbed ? { excalidraw_data: jsonContent } : {}) } } as any);
                   await loadBoard();
-                  if (created && created.id) {
-                    const cx = (typeof created.x === 'number' ? created.x : created.x) + 220 / 2;
-                    const cy = (typeof created.y === 'number' ? created.y : created.y) + 160 / 2;
-                    panToPosition(cx, cy);
-                    setLastCreatedId(created.id);
+                  panToPosition((localPositions[editingSketchId]?.x || 100) + 110, (localPositions[editingSketchId]?.y || 100) + 80);
+                  setLastCreatedId(editingSketchId);
+                  setTimeout(() => setLastCreatedId(null), 6000);
+                } else {
+                  // compute center position for new card
+                  const boardRect = boardRef.current?.getBoundingClientRect();
+                  const viewW = boardRect?.width ?? windowWidth;
+                  const viewH = boardRect?.height ?? window.innerHeight;
+                  const cx = origin.x + (viewW / 2) / zoom;
+                  const cy = origin.y + (viewH / 2) / zoom;
+                  payload.x = Math.round(cx - 220 / 2);
+                  payload.y = Math.round(cy - 160 / 2);
+                  const created = await api.createInvestigationCard(payload as any);
+                  await loadBoard();
+                  if (created && (created as any).id) {
+                    panToPosition(((created as any).x || payload.x) + 110, ((created as any).y || payload.y) + 80);
+                    setLastCreatedId((created as any).id);
                     setTimeout(() => setLastCreatedId(null), 6000);
                   }
-                } catch (e) {
-                  console.error('Error handling created card pan', e);
                 }
-              }}
-            />
-          </Suspense>
-
-      <InvestigationCardModal open={modalOpen} existing={editingCard} investigationId={investigationId} onClose={() => setModalOpen(false)} onSaved={loadBoard} isGameMaster={isGameMaster} />
-      {sketchOpen && (
-        <Sketchpad
-          initialData={sketchInitialData || undefined}
-          onClose={() => { setSketchOpen(false); setSketchInitialData(null); setEditingSketchId(null); }}
-          onSaveImage={async (imageFile: File, jsonContent: string) => {
-            try {
-              // upload PNG image
-              const uploaded = await uploadInvestigationImage(imageFile, investigationId);
-              if (!uploaded) throw new Error('Falha ao subir imagem do rascunho');
-
-              // upload JSON content as .json file
-              const jsonBlob = new Blob([jsonContent], { type: 'application/json' });
-              const jsonFile = new File([jsonBlob], `sketch_${Date.now()}.json`, { type: 'application/json' });
-              const jsonUrl = await uploadInvestigationFile(jsonFile, investigationId, 'json');
-              if (!jsonUrl) throw new Error('Falha ao subir JSON do rascunho');
-
-              // decide whether to embed JSON in DB metadata as a fallback (small JSON only)
-              const jsonSize = new Blob([jsonContent]).size;
-              const shouldEmbed = jsonSize <= EMBED_EXCALIDRAW_JSON_LIMIT;
-
-              const payload: any = {
-                investigation_id: investigationId,
-                title: 'Rascunho',
-                description_public: null,
-                image_url: uploaded,
-                metadata: { excalidraw_url: jsonUrl, ...(shouldEmbed ? { excalidraw_data: jsonContent } : {}) },
-              };
-
-              if (editingSketchId) {
-                // update existing card
-                await api.updateInvestigationCard(editingSketchId, { image_url: uploaded, metadata: { excalidraw_url: jsonUrl, ...(shouldEmbed ? { excalidraw_data: jsonContent } : {}) } } as any);
-                await loadBoard();
-                panToPosition((localPositions[editingSketchId]?.x || 100) + 110, (localPositions[editingSketchId]?.y || 100) + 80);
-                setLastCreatedId(editingSketchId);
-                setTimeout(() => setLastCreatedId(null), 6000);
-              } else {
-                // compute center position for new card
-                const boardRect = boardRef.current?.getBoundingClientRect();
-                const viewW = boardRect?.width ?? windowWidth;
-                const viewH = boardRect?.height ?? window.innerHeight;
-                const cx = origin.x + (viewW / 2) / zoom;
-                const cy = origin.y + (viewH / 2) / zoom;
-                payload.x = Math.round(cx - 220 / 2);
-                payload.y = Math.round(cy - 160 / 2);
-                const created = await api.createInvestigationCard(payload as any);
-                await loadBoard();
-                if (created && (created as any).id) {
-                  panToPosition(((created as any).x || payload.x) + 110, ((created as any).y || payload.y) + 80);
-                  setLastCreatedId((created as any).id);
-                  setTimeout(() => setLastCreatedId(null), 6000);
-                }
+              } catch (err) {
+                console.error('Falha ao salvar rascunho', err);
+                alert('Erro ao salvar rascunho. Veja console.');
+              } finally {
+                setSketchOpen(false);
+                setSketchInitialData(null);
+                setEditingSketchId(null);
               }
-            } catch (err) {
-              console.error('Falha ao salvar rascunho', err);
-              alert('Erro ao salvar rascunho. Veja console.');
-            } finally {
-              setSketchOpen(false);
-              setSketchInitialData(null);
-              setEditingSketchId(null);
-            }
-          }}
-        />
+            }}
+          />
+        </Suspense>
       )}
 
-      <SystemTerminal
-        isOpen={terminalOpen}
-        onClose={() => setTerminalOpen(false)}
-        cards={cards}
-        onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
-        onThermalUnlock={handleThermalUnlock}
-        onDiscoverHidden={handleDiscoverHidden}
-      />
+      {terminalOpen && (
+        <Suspense fallback={null}>
+          <SystemTerminal
+            isOpen={terminalOpen}
+            onClose={() => setTerminalOpen(false)}
+            cards={cards}
+            onOpenCard={(c: any) => { setInspectCard(c); setModalOpen(true); setTerminalOpen(false); }}
+            onThermalUnlock={handleThermalUnlock}
+            onDiscoverHidden={handleDiscoverHidden}
+          />
+        </Suspense>
+      )}
       {unlockingCard && (
         <CodePromptModal
           title={unlockingCard.title || 'ACESSO REQUERIDO'}
@@ -4364,11 +4449,13 @@ function InvestigationBoardInner({
             <button className="hud-btn icon-only" onClick={() => setDecoderOpen(false)} aria-label="Fechar decodificador"><X size={16} /></button>
           </div>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <UniversalDecoder
-              initialInput={decoderInitialInput}
-              initialMode={decoderInitialMode}
-              investigationId={investigationId}
-            />
+            <Suspense fallback={null}>
+              <UniversalDecoder
+                initialInput={decoderInitialInput}
+                initialMode={decoderInitialMode}
+                investigationId={investigationId}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -4381,7 +4468,7 @@ function InvestigationBoardInner({
             const title = card?.title || 'Pista sem título';
             const status = card?.is_hidden ? 'Oculta' : card?.is_locked ? 'Bloqueada' : 'Aberta';
 
-            const lockPass = card?.lock_password || meta?.lock_pass || meta?.lock_password;
+            const lockPass = gmSecretsByCardId[card.id] || card?.lock_password || meta?.lock_pass || meta?.lock_password;
             if (lockPass) {
               gmClueCodes.push({
                 key: `${card.id}-lock`,
@@ -4625,6 +4712,49 @@ function InvestigationBoardInner({
           return map;
         }, [cards])}
       />
+
+      {boardPinTarget && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(2, 6, 23, 0.6)',
+            zIndex: 1300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setBoardPinTarget(null)}
+        >
+          <div style={{ width: 'min(380px, 95vw)' }} onClick={(e) => e.stopPropagation()}>
+            <PinNoteComposer
+              title={`Cravar Marcador: ${boardPinTarget.title}`}
+              subtitle={`Mural (${Math.round(boardPinTarget.x)}, ${Math.round(boardPinTarget.y)})`}
+              onSubmitPin={async (tag, note) => {
+                await createPin({
+                  cardId: boardPinTarget.cardId,
+                  toolType: 'board',
+                  anchorData: { x: Math.round(boardPinTarget.x), y: Math.round(boardPinTarget.y) },
+                  tag,
+                  note,
+                });
+              }}
+              onSubmitFinding={async (category, label, details) => {
+                await addFinding({
+                  category,
+                  label,
+                  details,
+                  sourceCardId: boardPinTarget.cardId,
+                  sourceTool: 'board',
+                  sourceAnchor: { x: Math.round(boardPinTarget.x), y: Math.round(boardPinTarget.y) },
+                });
+              }}
+              onCancel={() => setBoardPinTarget(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -4633,6 +4763,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
   const { session } = useAuth();
   const user = session?.user;
   const navigateRef = useRef<((cardId: string) => void) | null>(null);
+  const [isGameMaster, setIsGameMaster] = useState(false);
   const authorName =
     (user as any)?.user_metadata?.code_name ||
     (user as any)?.email?.split('@')[0] ||
@@ -4643,6 +4774,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
       investigationId={investigationId}
       currentUserId={(user as any)?.id || null}
       authorName={authorName}
+      isGameMaster={isGameMaster}
       onNavigateToCard={(cardId) => navigateRef.current?.(cardId)}
     >
       <InvestigationBoardInner
@@ -4650,6 +4782,7 @@ export const InvestigationBoard = React.memo(function InvestigationBoard({ inves
         onRegisterNavigateToCard={(fn) => {
           navigateRef.current = fn;
         }}
+        onGameMasterChange={setIsGameMaster}
       />
     </CollaborationProvider>
   );

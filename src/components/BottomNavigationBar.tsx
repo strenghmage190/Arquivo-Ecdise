@@ -76,11 +76,13 @@ const MOBILE_TOOL_GROUPS: Array<{ id: string; label: string; tools: MobileToolDe
 interface BottomNavigationBarProps {
   isGameMaster?: boolean;
   activeTools?: Record<string, boolean>;
+  onGoHome?: () => void;
 }
 
 const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   isGameMaster = false,
   activeTools = {},
+  onGoHome,
 }) => {
   const [showMore, setShowMore] = React.useState(false);
   const toggleBtnRef = React.useRef<HTMLButtonElement | null>(null);
@@ -235,7 +237,11 @@ const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
           className="nav-item"
           onClick={() => {
             selection();
-            window.location.href = '/';
+            if (onGoHome) {
+              onGoHome();
+            } else {
+              window.location.href = '/';
+            }
           }}
         >
           <House className="icon" size={20} />

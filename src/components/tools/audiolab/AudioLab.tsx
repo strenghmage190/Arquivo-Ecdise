@@ -1,14 +1,16 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Radio, Music2, BarChart2, Play, Pause, Square } from 'lucide-react';
+import { X, Radio, Music2, BarChart2, Play, Pause, Square, Sparkles } from 'lucide-react';
 import SteganoInputPanel from './SteganoInputPanel';
 import FrequencyControls from './FrequencyControls';
 import AudioLayerPanel from './AudioLayerPanel';
 import DSPFiltersPanel from './DSPFiltersPanel';
 import SignalGeneratorPanel from './SignalGeneratorPanel';
+import AudioRecipesPanel from './AudioRecipesPanel';
 import ProfessionalSpectrogram from '../ProfessionalSpectrogram';
 import ForensicTerminalModal from '../../modals/ForensicTerminalModal';
 import type { DSPFilterNode } from '../../../utils/dspAudioEngine';
+import type { RecipeAudioOutput } from '../../../utils/audioRecipes';
 import './AudioLab.css';
 
 export type ColormapName = 'cyberneon' | 'inferno' | 'viridis';
@@ -20,12 +22,13 @@ export interface AudioLabProps {
   initialBaseAudio?: File | null;
 }
 
-type ActiveTab = 'steg' | 'dsp' | 'synth';
+type ActiveTab = 'recipes' | 'steg' | 'dsp' | 'synth';
 
 const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'steg',   label: 'Esteganografia', icon: <Radio size={13} /> },
-  { id: 'dsp',    label: 'Filtros DSP',    icon: <BarChart2 size={13} /> },
-  { id: 'synth',  label: 'Sintetizador',   icon: <Music2 size={13} /> },
+  { id: 'recipes', label: 'Receitas (1 Clique)', icon: <Sparkles size={13} /> },
+  { id: 'steg',    label: 'Esteganografia',      icon: <Radio size={13} /> },
+  { id: 'dsp',     label: 'Filtros DSP',         icon: <BarChart2 size={13} /> },
+  { id: 'synth',   label: 'Sintetizador',        icon: <Music2 size={13} /> },
 ];
 
 function colormapToScheme(c: ColormapName): 'cyan' | 'hot' | 'magma' {
@@ -35,7 +38,7 @@ function colormapToScheme(c: ColormapName): 'cyan' | 'hot' | 'magma' {
 }
 
 function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabProps, 'isOpen'>) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('steg');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('recipes');
   const [imageData, setImageData] = useState<ImageData | null>(null);
 
   const [minFreqHz, setMinFreqHz] = useState(8000);
@@ -229,48 +232,64 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
       <header className="al-header">
         <div className="al-header-logo">
           <Radio size={16} />
-          AudioLab
+          <span>AudioLab</span>
+          <span className="al-header-badge">C.R.I.S. STUDIO</span>
         </div>
-        <nav className="al-header-tabs">
+        <nav className="al-header-tabs" aria-label="Ferramentas do AudioLab">
           {TABS.map((t) => (
             <button
               key={t.id}
+              type="button"
               className={`al-header-tab ${activeTab === t.id ? 'active' : ''}`}
               onClick={() => setActiveTab(t.id)}
             >
               {t.icon}
-              {t.label}
+              <span>{t.label}</span>
             </button>
           ))}
         </nav>
-        <button className="al-close-btn" onClick={onClose} aria-label="Fechar AudioLab" title="Fechar (Esc)">
+        <button type="button" className="al-close-btn" onClick={onClose} aria-label="Fechar AudioLab" title="Fechar (Esc)">
           <X size={16} />
         </button>
       </header>
 
       <div className="al-body">
         <div className="al-col-left">
-          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--nx-bg-darker)', borderRadius: '4px', border: '1px solid var(--nx-border)' }}>
-            <label style={{ display: 'block', fontSize: '11px', color: 'var(--nx-text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Método de Ocultação
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`al-btn-ghost al-btn-sm ${stegoMethod === 'spectrogram' ? 'active' : ''}`}
-                style={{ flex: 1, border: stegoMethod === 'spectrogram' ? '1px solid var(--al-neon)' : undefined }}
-                onClick={() => setStegoMethod('spectrogram')}
-              >
-                Espectrograma
-              </button>
-              <button
-                className={`al-btn-ghost al-btn-sm ${stegoMethod === 'lsb' ? 'active' : ''}`}
-                style={{ flex: 1, border: stegoMethod === 'lsb' ? '1px solid var(--al-neon)' : undefined }}
-                onClick={() => setStegoMethod('lsb')}
-              >
-                LSB (Silencioso)
-              </button>
+          {activeTab === 'recipes' && (
+            <AudioRecipesPanel
+              baseAudioSamples={baseAudioSamples}
+              onRecipeGenerated={(out: RecipeAudioOutput) => {
+                stopAll();
+                setGeneratedSamples(out.left);
+                setGeneratedSampleRate(out.sampleRate);
+              }}
+              onSaveFile={onSave}
+            />
+          )}
+
+          {activeTab === 'steg' && (
+            <div className="al-card-box">
+              <label className="al-field-label">
+                Método de Ocultação
+              </label>
+              <div className="al-segmented-2">
+                <button
+                  type="button"
+                  className={`al-btn-ghost al-btn-sm ${stegoMethod === 'spectrogram' ? 'active' : ''}`}
+                  onClick={() => setStegoMethod('spectrogram')}
+                >
+                  Espectrograma
+                </button>
+                <button
+                  type="button"
+                  className={`al-btn-ghost al-btn-sm ${stegoMethod === 'lsb' ? 'active' : ''}`}
+                  onClick={() => setStegoMethod('lsb')}
+                >
+                  LSB (Silencioso)
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {activeTab === 'steg' && stegoMethod === 'spectrogram' && (
             <FrequencyControls
@@ -286,13 +305,13 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
             />
           )}
           {activeTab === 'steg' && stegoMethod === 'lsb' && (
-            <div style={{ padding: '12px', color: 'var(--nx-text-muted)', fontSize: '12px', background: 'rgba(0,243,255,0.05)', border: '1px dashed var(--nx-border)', borderRadius: '4px' }}>
+            <div className="al-lsb-notice">
               <strong>Modo LSB (Least Significant Bit)</strong>
               <p style={{ marginTop: '8px', marginBottom: '8px' }}>
                 Este modo não usa ondas sonoras. O texto digitado será convertido em binário e embutido no último bit de cada amostra do arquivo de áudio original.
               </p>
-              <p>
-                O resultado é <strong>100% inaudível</strong> e não aparecerá no espectrograma acima. 
+              <p style={{ margin: 0 }}>
+                O resultado é <strong>100% inaudível</strong> e não aparecerá no espectrograma acima.
                 Somente arquivos base WAV são suportados para manter a integridade dos dados sem perdas.
               </p>
             </div>
@@ -309,33 +328,26 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
           <audio ref={audioRef} style={{ display: 'none' }} />
 
           <div className="al-preview-section" ref={centerRef}>
-            <span className="al-preview-label">Espectrograma Preview</span>
+            <div className="al-preview-header">
+              <span className="al-preview-label">
+                <span className={`al-status-dot ${isPlaying ? 'playing' : ''}`} aria-hidden="true" />
+                Espectrograma Preview {hasAudio ? (isPlaying ? '• Reproduzindo' : '• Pronto') : '• Aguardando Áudio'}
+              </span>
+            </div>
 
             {hasAudio && (
               <div className="al-player-bar">
                 <button
+                  type="button"
                   className={`al-player-btn ${isPlaying ? 'active' : ''}`}
                   onClick={handlePlayPause}
                   title={isPlaying ? 'Parar' : 'Reproduzir'}
                 >
-                  {isPlaying ? <Square size={12} /> : <Play size={12} />}
+                  {isPlaying ? <><Square size={12} /> <span>Parar</span></> : <><Play size={12} /> <span>Ouvir</span></>}
                 </button>
                 <span className="al-player-time">
                   {fmt(currentTime)} / {fmt(totalDuration)}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px', marginRight: '8px' }}>
-                  <label style={{ fontSize: '11px', color: 'var(--nx-text-muted, #4a5a6a)' }}>Zoom:</label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="1"
-                    value={zoom}
-                    onChange={(e) => setZoom(parseFloat(e.target.value))}
-                    style={{ width: '100px', accentColor: 'var(--nexus-blue, #00f3ff)', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '11px', color: 'var(--nexus-blue, #00f3ff)', width: '30px' }}>{zoom.toFixed(1)}x</span>
-                </div>
                 <div
                   className="al-player-seek"
                   onClick={handleSeek}
@@ -346,13 +358,26 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                     style={{ width: totalDuration > 0 ? `${(currentTime / totalDuration) * 100}%` : '0%' }}
                   />
                 </div>
+                <div className="al-zoom-group">
+                  <span className="al-zoom-label">Zoom</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value={zoom}
+                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                    className="al-slider-sm"
+                    aria-label="Zoom do espectrograma"
+                  />
+                  <span className="al-zoom-val">{zoom.toFixed(1)}x</span>
+                </div>
               </div>
             )}
 
             <div
               ref={wrapRef}
               className="al-preview-canvas-wrap"
-              style={{ overflowX: 'auto', overflowY: 'auto', height: '100%' }}
             >
               {generatedSamples ? (
                 <div style={{ position: 'relative', zIndex: 1, minWidth: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -376,13 +401,12 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
                   />
                 </div>
               ) : (
-                <div style={{
-                  position: 'relative', zIndex: 1, height: '100%', minHeight: '350px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--nx-text-muted, #4a5a6a)', fontSize: 13,
-                  border: '1px solid var(--nx-border, #1a2535)', borderRadius: 4,
-                }}>
-                  Carregue um áudio base ou configure os parâmetros
+                <div className="al-empty-preview">
+                  <div className="al-empty-preview-icon">
+                    <Radio size={20} />
+                  </div>
+                  <strong>Console Espectral em Standby</strong>
+                  <span>Carregue um áudio base à direita, escolha uma receita de 1 clique ou configure os parâmetros para visualizar o espectrograma.</span>
                 </div>
               )}
             </div>
@@ -416,10 +440,10 @@ function AudioLabContent({ onClose, onSave, initialBaseAudio }: Omit<AudioLabPro
           />
           
           {/* SEU NOVO MINIGAME DE INVESTIGAÇÃO AQUI: */}
-          <div className="al-section-divider" style={{ marginTop: '16px', marginBottom: '16px' }} />
-          <button 
-            className="al-btn-secondary" 
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px', border: '1px solid var(--nx-neon-cyan)', color: 'var(--nx-neon-cyan)' }}
+          <div className="al-section-divider" />
+          <button
+            type="button"
+            className="al-btn-forensic"
             onClick={() => setShowForensicTerminal(true)}
           >
             Abrir Terminal Forense (LSB)

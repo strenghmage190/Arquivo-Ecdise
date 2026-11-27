@@ -62,6 +62,11 @@ export default defineConfig({
             return 'vendor-crypto';
           }
 
+          // Excalidraw (lazy-loaded Sketchpad)
+          if (id.includes('node_modules/@excalidraw')) {
+            return 'vendor-excalidraw';
+          }
+
           // UI libraries, icons, toast, motions
           if (
             id.includes('node_modules/lucide-react') ||

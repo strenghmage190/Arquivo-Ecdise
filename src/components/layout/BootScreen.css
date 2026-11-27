@@ -337,6 +337,24 @@
   margin-top: 0;
 }
 
+.boot-skip-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #2A2A2C);
+  background: #0A0A0B;
+  color: var(--text-secondary, #8A8A8C);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: .12em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms, border-color 140ms;
+}
+
+.boot-skip-btn:hover {
+  color: #E8E8EA;
+  border-color: var(--institutional-red, #8B1414);
+}
+
 @media (max-width: 920px) {
   .boot-content {
     grid-template-columns: 1fr;

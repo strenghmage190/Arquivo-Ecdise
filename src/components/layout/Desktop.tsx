@@ -1,8 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Desktop.css';
 import SystemTerminal from '../tools/SystemTerminal';
 import FileExplorer from '../tools/FileExplorer';
 import NetUplink from '../tools/NetUplink';
+import AgentProfileModal from '../modals/AgentProfileModal';
+import { eventManager } from '../../utils/EventManager';
 
 const SIGIL_ELEMENTS = ['sangue', 'morte', 'conhecimento', 'energia', 'medo'] as const;
 const SIGIL_GLYPHS = ['A', 'S', 'R', 'N', 'V', 'O', 'X', 'E', 'K', 'M', 'T', 'C'];
@@ -20,10 +23,11 @@ const FALLING_SIGILS = Array.from({ length: 64 }, (_, index) => ({
 }));
 
 export default function Desktop({ cases }: { cases: any[] }) {
+  const navigate = useNavigate();
   const [openWindow, setOpenWindow] = React.useState<string | null>(null);
   const navigateToCase = (id?: string) => {
     if (!id) return;
-    window.location.href = `/case/${String(id).split(':')[0]}`;
+    navigate(`/case/${String(id).split(':')[0]}`);
   };
 
   React.useEffect(() => {
@@ -38,8 +42,10 @@ export default function Desktop({ cases }: { cases: any[] }) {
   React.useEffect(() => {
     if (openWindow) {
       window.dispatchEvent(new Event('modal-opened'));
+      eventManager.emit('modal:opened');
     } else {
       window.dispatchEvent(new Event('modal-closed'));
+      eventManager.emit('modal:closed');
     }
   }, [openWindow]);
 
@@ -66,6 +72,7 @@ export default function Desktop({ cases }: { cases: any[] }) {
 
       {openWindow === 'files' && <FileExplorer onClose={() => setOpenWindow(null)} />}
       {openWindow === 'net' && <NetUplink onClose={() => setOpenWindow(null)} />}
+      {openWindow === 'profile' && <AgentProfileModal onClose={() => setOpenWindow(null)} />}
       {openWindow === 'terminal' && (
         <SystemTerminal
           isOpen={true}

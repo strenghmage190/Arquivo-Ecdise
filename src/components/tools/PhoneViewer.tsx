@@ -15,6 +15,9 @@ import {
   Flashlight,
   Pin,
   AlertTriangle,
+  Flame,
+  Signal,
+  BatteryMedium,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import NumericKeypad from './NumericKeypad';
@@ -26,7 +29,8 @@ import {
 } from '../../types/forensicPillars';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
 import { useCollaboration } from '../../contexts/CollaborationContext';
-import { PhonePinAnchor } from '../../types/collaboration';
+import { CasePin, PhonePinAnchor } from '../../types/collaboration';
+import PinListBar from '../collaboration/PinListBar';
 import PinNoteComposer from '../collaboration/PinNoteComposer';
 import TeamFindingsPopover from '../collaboration/TeamFindingsPopover';
 import { decryptNoteBody } from '../../utils/webCryptoLock';
@@ -57,6 +61,9 @@ interface PhoneViewerProps {
   passwordType?: 'pin' | 'pattern';
   deviceData?: DeviceExtractionMetadata | null;
   cardId?: string;
+  hideInlinePinList?: boolean;
+  showPins?: boolean;
+  onToggleShowPins?: () => void;
 }
 
 type AppScreen = 'home' | 'messages' | 'gallery' | 'notes' | 'voicemails' | 'trash';
@@ -70,6 +77,9 @@ export default function PhoneViewer({
   passwordType = 'pin',
   deviceData,
   cardId,
+  hideInlinePinList = false,
+  showPins: showPinsProp,
+  onToggleShowPins,
 }: PhoneViewerProps): React.ReactElement {
   const { sendToForensics, openFieldManual } = useForensicDispatch();
   const {
@@ -82,6 +92,11 @@ export default function PhoneViewer({
   } = useCollaboration();
   const [pendingPinTarget, setPendingPinTarget] = useState<PhonePinAnchor | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [lockLens, setLockLens] = useState<'none' | 'uv' | 'thermal'>('none');
+  const [internalShowPins, setInternalShowPins] = useState(true);
+
+  const effectiveShowPins = showPinsProp !== undefined ? showPinsProp : internalShowPins;
+  const handleToggleShowPins = onToggleShowPins || (() => setInternalShowPins((s) => !s));
 
   const resolvedDevice: DeviceExtractionMetadata = useMemo(() => {
     if (deviceData) return deviceData;
@@ -147,10 +162,13 @@ export default function PhoneViewer({
     setUnlocked(!resolvedDevice.lockScreen.enabled);
   }, [resolvedDevice.lockScreen.enabled]);
 
-  useEffect(() => {
-    if (!pendingAnchorJump || !cardId) return;
-    if (pendingAnchorJump.cardId === cardId && pendingAnchorJump.toolType === 'phone') {
-      const a = pendingAnchorJump.anchorData as PhonePinAnchor;
+  const phonePins = useMemo(() => {
+    if (!cardId) return [];
+    return (pinsByCardId[cardId] || []).filter((p) => p.tool_type === 'phone');
+  }, [pinsByCardId, cardId]);
+
+  const jumpToPhoneAnchor = React.useCallback(
+    (a: PhonePinAnchor) => {
       if (a.app) setActiveApp(a.app);
       if (a.threadId) setActiveThreadId(a.threadId);
       if (a.app === 'gallery' && a.itemId) {
@@ -165,9 +183,17 @@ export default function PhoneViewer({
         setHighlightedItemId(a.itemId);
         setTimeout(() => setHighlightedItemId(null), 2600);
       }
+    },
+    [resolvedDevice.gallery, resolvedDevice.notes]
+  );
+
+  useEffect(() => {
+    if (!pendingAnchorJump || !cardId) return;
+    if (pendingAnchorJump.cardId === cardId && pendingAnchorJump.toolType === 'phone') {
+      jumpToPhoneAnchor(pendingAnchorJump.anchorData as PhonePinAnchor);
       clearAnchorJump();
     }
-  }, [pendingAnchorJump, cardId, resolvedDevice.gallery, resolvedDevice.notes, clearAnchorJump]);
+  }, [pendingAnchorJump, cardId, jumpToPhoneAnchor, clearAnchorJump]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -207,68 +233,176 @@ export default function PhoneViewer({
     setActiveApp('home');
   };
 
+  const renderHeaderTitle = () => {
+    if (activeApp === 'messages') return activeThread?.contactName || 'Mensagens';
+    if (activeApp === 'gallery') return 'Galeria';
+    if (activeApp === 'notes') return 'Notas';
+    if (activeApp === 'voicemails') return 'Gravador / Caixa Postal';
+    return 'Lixeira / Backup';
+  };
+
+  const renderHeaderAvatar = () => {
+    if (activeApp === 'messages' && activeThread) {
+      const initials = (activeThread.contactName || '?')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || '')
+        .join('');
+      return <span>{initials || '?'}</span>;
+    }
+    if (activeApp === 'messages') return <MessageSquare size={15} />;
+    if (activeApp === 'gallery') return <ImageIcon size={15} />;
+    if (activeApp === 'notes') return <FileText size={15} />;
+    if (activeApp === 'voicemails') return <Mic size={15} />;
+    return <Trash2 size={15} />;
+  };
+
+  const renderPinAnchorSummary = (pin: CasePin) => {
+    const a = pin.anchor_data as PhonePinAnchor;
+    const appNames: Record<string, string> = {
+      messages: 'Msg',
+      gallery: 'Foto',
+      notes: 'Nota',
+      voicemails: 'Áudio',
+      trash: 'Lixeira',
+    };
+    return a.label ? `[${appNames[a.app] || a.app}] ${a.label}` : `[${appNames[a.app] || a.app}]`;
+  };
+
+  const isOnlineStatus = Boolean(activeApp === 'messages' && activeThread);
+
   return (
-    <div className="phone-mockup-wrapper">
-      <div className={`nexus-phone-mockup ${fullscreen ? 'fullscreen' : ''} ${!unlocked ? 'locked' : ''}`}>
-        <div className="phone-notch" />
-        <div className="status-bar">
-          <span>{currentTime}</span>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+    <div className="phone-mockup-wrapper pv-wrapper">
+      <div
+        className={`nexus-phone-mockup pv-chassis ${
+          fullscreen ? 'fullscreen' : ''
+        } ${!unlocked ? 'locked' : ''}`}
+      >
+        {/* Status Bar (Topo fixo, nunca cortado) */}
+        <div className="phone-status-bar pv-status-bar">
+          <span className="pv-status-time">{currentTime}</span>
+
+          <div className="pv-notch" aria-hidden="true">
+            <span className="pv-notch-speaker" />
+            <span className="pv-notch-cam" />
+          </div>
+
+          <div className="pv-status-right">
             <button
               type="button"
               onClick={() => openFieldManual('device')}
-              style={{ background: 'none', border: 'none', color: '#00f3ff', cursor: 'pointer', padding: 0 }}
+              className="phone-compact-btn pv-manual-btn"
               title="Manual de Extração Móvel"
             >
               <BookOpen size={12} />
             </button>
-            <span>ORDO-OS</span>
-            <span>84%</span>
+            <span className="pv-status-os">ORDO-OS</span>
+            <Signal size={11} style={{ color: '#d4d4d8' }} />
+            <BatteryMedium size={13} style={{ color: 'rgba(52, 211, 153, 0.9)' }} />
+            <span className="pv-status-bat">84%</span>
           </div>
         </div>
 
         {!unlocked && resolvedDevice.lockScreen.code ? (
-          <div className="chat-body locked-body" style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ marginBottom: 20, textAlign: 'center' }}>
-              <Lock className="lucide-icon inline-icon" size={28} />
-              <h3 style={{ margin: '8px 0 4px', color: '#fff', fontSize: 15 }}>Acesso Restrito</h3>
-              <p style={{ color: '#888', fontSize: 11, margin: 0 }}>
-                {resolvedDevice.lockScreen.smudgeHints && resolvedDevice.lockScreen.smudgeHints.length > 0
+          <div className="locked-body pv-lock-body phone-scroll">
+            <div className="pv-lock-header">
+              <div className="pv-lock-icon">
+                <Lock size={18} />
+              </div>
+              <h3 className="pv-lock-title">Acesso Restrito</h3>
+              <p className="pv-lock-desc">
+                {lockLens === 'thermal'
+                  ? 'Termografia Residual: Frio (1º toque) → Quente (último toque).'
+                  : lockLens === 'uv'
+                  ? 'Luz UV: Resíduos biológicos/oleosidade nas teclas tocadas.'
+                  : resolvedDevice.lockScreen.smudgeHints && resolvedDevice.lockScreen.smudgeHints.length > 0
                   ? 'Marcas de gordura visíveis em algumas teclas.'
-                  : 'Insira as credenciais do aparelho.'}
+                  : 'Insira as credenciais ou use lentes forenses na tela.'}
               </p>
+              <div className="pv-lens-row">
+                <button
+                  type="button"
+                  onClick={() => setLockLens((l) => (l === 'uv' ? 'none' : 'uv'))}
+                  className={`phone-compact-btn pv-lens-btn ${
+                    lockLens === 'uv' ? 'pv-lens-btn--uv' : ''
+                  }`}
+                >
+                  <Flashlight size={12} /> Lente UV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLockLens((l) => (l === 'thermal' ? 'none' : 'thermal'))}
+                  className={`phone-compact-btn pv-lens-btn ${
+                    lockLens === 'thermal' ? 'pv-lens-btn--thermal' : ''
+                  }`}
+                >
+                  <Flame size={12} /> Termal Residual
+                </button>
+              </div>
             </div>
 
-            {resolvedDevice.lockScreen.type === 'pattern' ? (
-              <PatternLock
-                code={resolvedDevice.lockScreen.code}
-                onUnlock={() => setUnlocked(true)}
-              />
-            ) : (
-              <NumericKeypad
-                code={resolvedDevice.lockScreen.code}
-                smudgeHints={resolvedDevice.lockScreen.smudgeHints}
-                onUnlock={() => setUnlocked(true)}
-              />
-            )}
+            {(() => {
+              const rawCode = String(resolvedDevice.lockScreen.code || '');
+              if (resolvedDevice.lockScreen.type === 'pattern') {
+                const nodes = rawCode
+                  .split('-')
+                  .map((s) => Number(s.trim()))
+                  .filter((n) => n >= 1 && n <= 9);
+                const thermalMap: Record<number, number> = {};
+                nodes.forEach((node, idx) => {
+                  const ratio = nodes.length > 1 ? 0.3 + (idx / (nodes.length - 1)) * 0.7 : 1;
+                  thermalMap[node] = Math.max(thermalMap[node] || 0, ratio);
+                });
+                return (
+                  <PatternLock
+                    code={rawCode}
+                    forensicLens={lockLens}
+                    smudgeNodes={nodes}
+                    thermalMap={thermalMap}
+                    onUnlock={() => setUnlocked(true)}
+                  />
+                );
+              }
+
+              const digits = rawCode.replace(/\D/g, '').split('');
+              const effectiveSmudges =
+                resolvedDevice.lockScreen.smudgeHints && resolvedDevice.lockScreen.smudgeHints.length > 0
+                  ? resolvedDevice.lockScreen.smudgeHints
+                  : Array.from(new Set(digits));
+              const thermalMap: Record<string, number> = {};
+              digits.forEach((d, idx) => {
+                const ratio = digits.length > 1 ? 0.3 + (idx / (digits.length - 1)) * 0.7 : 1;
+                thermalMap[d] = Math.max(thermalMap[d] || 0, ratio);
+              });
+              return (
+                <NumericKeypad
+                  code={rawCode}
+                  smudgeHints={effectiveSmudges}
+                  forensicLens={lockLens}
+                  thermalMap={thermalMap}
+                  onUnlock={() => setUnlocked(true)}
+                />
+              );
+            })()}
             {investigationId && (
-              <div style={{ marginTop: 12 }}>
+              <div className="mt-2">
                 <TeamFindingsPopover />
               </div>
             )}
           </div>
         ) : activeApp === 'home' ? (
-          <div className="phone-home-screen">
-            <div className="phone-home-banner">
+          <div className="phone-home-screen pv-home-body phone-scroll phone-chat-bg">
+            <div className="pv-home-banner">
               <strong>{resolvedDevice.ownerName || 'Dispositivo Extraído'}</strong>
               <span>C.R.I.S. Mobile Forensics</span>
             </div>
 
-            <div className="phone-app-grid">
+            <div className="pv-app-grid">
               {resolvedDevice.enabledApps.messages && (
                 <button
                   type="button"
-                  className="phone-app-icon"
+                  className="pv-app-tile"
                   onClick={() => {
                     setActiveApp('messages');
                     if (resolvedDevice.threads.length === 1) {
@@ -276,35 +410,51 @@ export default function PhoneViewer({
                     }
                   }}
                 >
-                  <MessageSquare size={22} />
+                  <MessageSquare size={20} style={{ color: '#67e8f9' }} />
                   <span>Mensagens ({resolvedDevice.threads.length})</span>
                 </button>
               )}
 
               {resolvedDevice.enabledApps.gallery && (
-                <button type="button" className="phone-app-icon" onClick={() => setActiveApp('gallery')}>
-                  <ImageIcon size={22} />
+                <button
+                  type="button"
+                  className="pv-app-tile"
+                  onClick={() => setActiveApp('gallery')}
+                >
+                  <ImageIcon size={20} style={{ color: '#6ee7b7' }} />
                   <span>Galeria ({resolvedDevice.gallery.length})</span>
                 </button>
               )}
 
               {resolvedDevice.enabledApps.notes && (
-                <button type="button" className="phone-app-icon" onClick={() => setActiveApp('notes')}>
-                  <FileText size={22} />
+                <button
+                  type="button"
+                  className="pv-app-tile"
+                  onClick={() => setActiveApp('notes')}
+                >
+                  <FileText size={20} style={{ color: '#fcd34d' }} />
                   <span>Notas ({resolvedDevice.notes.length})</span>
                 </button>
               )}
 
               {resolvedDevice.enabledApps.voicemails && (
-                <button type="button" className="phone-app-icon" onClick={() => setActiveApp('voicemails')}>
-                  <Mic size={22} />
+                <button
+                  type="button"
+                  className="pv-app-tile"
+                  onClick={() => setActiveApp('voicemails')}
+                >
+                  <Mic size={20} style={{ color: '#c4b5fd' }} />
                   <span>Gravador ({resolvedDevice.voicemails.length})</span>
                 </button>
               )}
 
               {resolvedDevice.enabledApps.trash && (
-                <button type="button" className="phone-app-icon trash" onClick={() => setActiveApp('trash')}>
-                  <Trash2 size={22} />
+                <button
+                  type="button"
+                  className="pv-app-tile pv-app-tile--danger"
+                  onClick={() => setActiveApp('trash')}
+                >
+                  <Trash2 size={20} style={{ color: '#f87171' }} />
                   <span>Lixeira ({resolvedDevice.trash.length})</span>
                 </button>
               )}
@@ -312,43 +462,57 @@ export default function PhoneViewer({
           </div>
         ) : (
           <>
-            <div className="phone-header">
-              <button type="button" aria-label="Voltar" className="phone-nav-btn" onClick={handleBack}>
+            {/* Header do Chat / App */}
+            <div className="phone-header pv-header">
+              <button
+                type="button"
+                aria-label="Voltar"
+                className="phone-nav-btn phone-compact-btn pv-back-btn"
+                onClick={handleBack}
+              >
                 <ArrowLeft size={16} />
               </button>
-              <div className="contact-info" style={{ marginLeft: 8 }}>
-                <div className="contact-name">
-                  {activeApp === 'messages'
-                    ? activeThread?.contactName || 'Mensagens'
-                    : activeApp === 'gallery'
-                    ? 'Galeria'
-                    : activeApp === 'notes'
-                    ? 'Notas'
-                    : activeApp === 'voicemails'
-                    ? 'Gravador / Caixa Postal'
-                    : 'Lixeira / Backup'}
+
+              <div className="pv-avatar">
+                {renderHeaderAvatar()}
+              </div>
+
+              <div className="pv-header-info">
+                <div className="pv-header-title">
+                  {renderHeaderTitle()}
                 </div>
-                <div className="contact-status">
-                  {activeApp === 'messages' && activeThread
-                    ? activeThread.contactStatus || 'offline'
-                    : 'Extração Forense'}
+                <div className="pv-header-sub">
+                  <span
+                    className={`pv-status-dot ${
+                      isOnlineStatus ? 'pv-status-dot--online' : 'pv-status-dot--forensic'
+                    }`}
+                  />
+                  <span className="pv-header-sub-text">
+                    {isOnlineStatus && activeThread
+                      ? activeThread.contactStatus || 'offline'
+                      : 'Extração Forense'}
+                  </span>
                 </div>
               </div>
             </div>
 
             {activeApp === 'messages' && !activeThread && (
-              <div className="phone-list-body">
+              <div className="pv-list-body phone-scroll phone-chat-bg">
                 {resolvedDevice.threads.map((th) => (
                   <button
                     key={th.id}
                     type="button"
-                    className="phone-thread-row"
+                    className="pv-list-card"
                     onClick={() => setActiveThreadId(th.id)}
                   >
-                    <div className="contact-avatar">{th.contactName[0]?.toUpperCase() || '?'}</div>
-                    <div className="phone-thread-meta">
-                      <strong>{th.contactName}</strong>
-                      <span>{th.messages[th.messages.length - 1]?.text || 'Sem mensagens'}</span>
+                    <div className="pv-avatar">
+                      {th.contactName[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong className="pv-list-title">{th.contactName}</strong>
+                      <span className="pv-list-sub">
+                        {th.messages[th.messages.length - 1]?.text || 'Sem mensagens'}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -356,30 +520,36 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'messages' && activeThread && (
-              <div className="chat-body" ref={chatBodyRef}>
+              <div
+                className="chat-body pv-chat-body phone-chat-bg phone-scroll"
+                ref={chatBodyRef}
+              >
                 {activeThread.messages.map((msg) => {
                   const isMe = msg.sender === 'me';
                   const isRestored = restoredMessageIds.has(msg.id);
                   const msgPins = (cardId && pinsByCardId[cardId] ? pinsByCardId[cardId] : []).filter(
                     (p) => !p.is_resolved && p.tool_type === 'phone' && (p.anchor_data as PhonePinAnchor).itemId === msg.id
                   );
-                  const isPinned = msgPins.length > 0 || highlightedItemId === msg.id;
+                  const isPinned = (effectiveShowPins && msgPins.length > 0) || highlightedItemId === msg.id;
                   return (
                     <div
                       key={msg.id}
-                      className={`nexus-bubble ${isMe ? 'sent' : 'received'}`}
-                      style={
-                        isPinned
-                          ? { outline: '2px solid #f59e0b', background: 'rgba(245, 158, 11, 0.14)' }
-                          : undefined
-                      }
+                      className={`nexus-bubble pv-bubble ${
+                        isMe ? 'sent pv-bubble--sent' : 'received pv-bubble--received'
+                      } ${
+                        highlightedItemId === msg.id
+                          ? 'pv-bubble--highlighted'
+                          : isPinned
+                          ? 'pv-bubble--pinned'
+                          : ''
+                      }`}
                     >
                       {msg.mediaUrl && msg.type === 'image' && (
-                        <div className="phone-media-wrap">
+                        <div className="mb-1.5">
                           <img src={msg.mediaUrl} alt="anexo" className="chat-image" loading="lazy" />
                           <button
                             type="button"
-                            className="phone-forensic-chip"
+                            className="phone-forensic-chip phone-compact-btn appearance-none"
                             onClick={() =>
                               sendToForensics('document_table', {
                                 sourceCardId: cardId,
@@ -396,7 +566,7 @@ export default function PhoneViewer({
                       {msg.mediaUrl && msg.type === 'audio' && (
                         <button
                           type="button"
-                          className="phone-forensic-chip"
+                          className="phone-forensic-chip phone-compact-btn appearance-none mb-1.5"
                           onClick={() =>
                             sendToForensics('acoustic_workbench', {
                               sourceCardId: cardId,
@@ -411,7 +581,7 @@ export default function PhoneViewer({
                       )}
                       {msg.isDeleted && !isRestored ? (
                         <div className="phone-deleted-msg">
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span className="inline-flex items-center gap-1">
                             <AlertTriangle size={11} /> Mensagem apagada
                           </span>
                           {msg.restorableText && (
@@ -424,16 +594,27 @@ export default function PhoneViewer({
                           )}
                         </div>
                       ) : (
-                        <span className="msg-text">{isRestored ? msg.restorableText : msg.text}</span>
+                        <span className="msg-text pv-msg-text">
+                          {isRestored ? msg.restorableText : msg.text}
+                        </span>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                        <span className="msg-time">{msg.time || currentTime}</span>
+                      <div className="pv-msg-meta">
+                        {isPinned && msgPins.length > 0 && (
+                          <span className="pv-pin-badge">
+                            <Pin size={9} /> Marcada{msgPins.length > 1 ? ` (${msgPins.length})` : ''}
+                          </span>
+                        )}
+                        <span className="msg-time pv-msg-time">
+                          {msg.time || currentTime}
+                        </span>
                         {cardId && investigationId && (
                           <button
                             type="button"
-                            className="phone-forensic-chip"
-                            style={{ padding: '1px 5px', fontSize: '0.65rem' }}
+                            className={`phone-compact-btn pv-pin-btn ${
+                              isPinned ? 'pv-pin-btn--active' : ''
+                            }`}
                             title="Marcar evidência ou salvar na Gaveta"
+                            aria-label="Marcar mensagem"
                             onClick={() =>
                               setPendingPinTarget({
                                 app: 'messages',
@@ -443,7 +624,7 @@ export default function PhoneViewer({
                               })
                             }
                           >
-                            <Pin size={10} /> {msgPins.length > 0 ? msgPins.length : 'Marcar'}
+                            <Pin size={11} />
                           </button>
                         )}
                       </div>
@@ -454,36 +635,49 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'gallery' && !selectedPhoto && (
-              <div className="phone-gallery-grid">
+              <div className="pv-gallery-grid phone-scroll phone-chat-bg">
                 {resolvedDevice.gallery.map((photo) => (
                   <button
                     key={photo.id}
                     type="button"
-                    className="phone-gallery-thumb"
+                    className="pv-gallery-item"
                     onClick={() => setSelectedPhoto(photo)}
                   >
-                    <img src={photo.url} alt={photo.caption || 'Foto'} />
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || 'Foto'}
+                    />
                   </button>
                 ))}
               </div>
             )}
 
             {activeApp === 'gallery' && selectedPhoto && (
-              <div className="phone-photo-detail">
+              <div className="phone-photo-detail pv-detail-body phone-scroll phone-chat-bg">
                 <img src={selectedPhoto.url} alt={selectedPhoto.caption || 'Foto'} />
-                {selectedPhoto.caption && <p className="phone-photo-cap">{selectedPhoto.caption}</p>}
+                {selectedPhoto.caption && (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#e4e4e7', lineHeight: 1.5 }}>
+                    {selectedPhoto.caption}
+                  </p>
+                )}
                 {selectedPhoto.exif && (
                   <div className="phone-exif-box">
-                    <div><Clock size={12} /> {selectedPhoto.exif.date || '--'} {selectedPhoto.exif.time || ''}</div>
-                    <div><Camera size={12} /> {selectedPhoto.exif.camera || 'Sensor desconhecido'}</div>
-                    <div><MapPin size={12} /> {selectedPhoto.exif.gps || 'Sem GPS'}</div>
+                    <div>
+                      <Clock size={12} /> {selectedPhoto.exif.date || '--'} {selectedPhoto.exif.time || ''}
+                    </div>
+                    <div>
+                      <Camera size={12} /> {selectedPhoto.exif.camera || 'Sensor desconhecido'}
+                    </div>
+                    <div>
+                      <MapPin size={12} /> {selectedPhoto.exif.gps || 'Sem GPS'}
+                    </div>
                     {selectedPhoto.exif.locationNote && <small>{selectedPhoto.exif.locationNote}</small>}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    className="phone-forensic-action"
+                    className="phone-forensic-action phone-compact-btn"
                     onClick={() =>
                       sendToForensics('document_table', {
                         sourceCardId: cardId,
@@ -498,7 +692,7 @@ export default function PhoneViewer({
                   {cardId && investigationId && (
                     <button
                       type="button"
-                      className="phone-forensic-action"
+                      className="phone-forensic-action phone-compact-btn"
                       onClick={() =>
                         setPendingPinTarget({
                           app: 'gallery',
@@ -515,20 +709,22 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'notes' && !selectedNote && (
-              <div className="phone-list-body">
+              <div className="pv-list-body phone-scroll phone-chat-bg">
                 {resolvedDevice.notes.map((n) => (
                   <button
                     key={n.id}
                     type="button"
-                    className="phone-thread-row"
+                    className="pv-list-card"
                     onClick={() => setSelectedNote(n)}
                   >
-                    <div className="contact-avatar">
+                    <div className="pv-avatar" style={{ width: 32, height: 32, color: '#fcd34d' }}>
                       {n.isLocked && !unlockedNoteIds.has(n.id) ? <Lock size={14} /> : <FileText size={14} />}
                     </div>
-                    <div className="phone-thread-meta">
-                      <strong>{n.title}</strong>
-                      <span>{n.isLocked && !unlockedNoteIds.has(n.id) ? 'Nota protegida por senha' : n.body.slice(0, 32)}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong className="pv-list-title">{n.title}</strong>
+                      <span className="pv-list-sub">
+                        {n.isLocked && !unlockedNoteIds.has(n.id) ? 'Nota protegida por senha' : n.body.slice(0, 32)}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -536,8 +732,10 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'notes' && selectedNote && (
-              <div className="phone-note-detail">
-                <h4>{selectedNote.title}</h4>
+              <div className="phone-note-detail pv-detail-body phone-scroll phone-chat-bg">
+                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#f4f4f5' }}>
+                  {selectedNote.title}
+                </h4>
                 {selectedNote.isLocked && !unlockedNoteIds.has(selectedNote.id) ? (
                   <div className="phone-note-lock">
                     <p>{selectedNote.hint || 'Digite a senha desta nota'}</p>
@@ -565,18 +763,20 @@ export default function PhoneViewer({
                       Desbloquear Nota
                     </button>
                     {investigationId && (
-                      <div style={{ marginTop: 8 }}>
+                      <div style={{ marginTop: 4 }}>
                         <TeamFindingsPopover onSelectValue={(val) => setNotePasswordInput(val)} />
                       </div>
                     )}
                   </div>
                 ) : (
                   <div>
-                    <p className="phone-note-body">{decryptedNoteBodies[selectedNote.id] ?? selectedNote.body}</p>
+                    <p className="phone-note-body">
+                      {decryptedNoteBodies[selectedNote.id] ?? selectedNote.body}
+                    </p>
                     {cardId && investigationId && (
                       <button
                         type="button"
-                        className="phone-forensic-chip"
+                        className="phone-forensic-chip phone-compact-btn"
                         onClick={() =>
                           setPendingPinTarget({
                             app: 'notes',
@@ -594,16 +794,22 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'voicemails' && (
-              <div className="phone-list-body">
+              <div className="pv-list-body phone-scroll phone-chat-bg">
                 {resolvedDevice.voicemails.map((vm) => (
-                  <div key={vm.id} className="phone-vm-card">
-                    <div>
-                      <strong>{vm.caller}</strong>
-                      <span>{vm.date} • {vm.duration}</span>
+                  <div
+                    key={vm.id}
+                    className="pv-list-card pv-list-card--static"
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <strong className="pv-list-title">{vm.caller}</strong>
+                      <span className="pv-list-sub">
+                        {vm.date} • {vm.duration}
+                      </span>
                     </div>
                     <button
                       type="button"
-                      className="phone-forensic-chip"
+                      className="phone-forensic-chip phone-compact-btn"
+                      style={{ flexShrink: 0, marginTop: 0 }}
                       onClick={() =>
                         sendToForensics('acoustic_workbench', {
                           sourceCardId: cardId,
@@ -621,7 +827,7 @@ export default function PhoneViewer({
             )}
 
             {activeApp === 'trash' && (
-              <div className="phone-list-body">
+              <div className="pv-list-body phone-scroll phone-chat-bg">
                 {!trashUnlocked ? (
                   <div className="phone-note-lock">
                     <p>Backup Corrompido protegido. Insira o código:</p>
@@ -642,24 +848,28 @@ export default function PhoneViewer({
                       Acessar Lixeira
                     </button>
                     {investigationId && (
-                      <div style={{ marginTop: 8 }}>
+                      <div style={{ marginTop: 4 }}>
                         <TeamFindingsPopover onSelectValue={(val) => setTrashPin(val)} />
                       </div>
                     )}
                   </div>
                 ) : (
                   resolvedDevice.trash.map((item) => (
-                    <div key={item.id} className="phone-vm-card">
-                      <div>
-                        <strong>{item.label}</strong>
-                        <span>
+                    <div
+                      key={item.id}
+                      className="pv-list-card pv-list-card--static"
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <strong className="pv-list-title">{item.label}</strong>
+                        <span className="pv-list-sub" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
                           {restoredTrashIds.has(item.id) ? item.preview : '[Arquivo apagado — clique para restaurar]'}
                         </span>
                       </div>
                       {!restoredTrashIds.has(item.id) && (
                         <button
                           type="button"
-                          className="phone-forensic-chip"
+                          className="phone-forensic-chip phone-compact-btn"
+                          style={{ flexShrink: 0, marginTop: 0 }}
                           onClick={() => setRestoredTrashIds((s) => new Set(s).add(item.id))}
                         >
                           <RotateCcw size={12} /> Restaurar
@@ -672,33 +882,62 @@ export default function PhoneViewer({
             )}
           </>
         )}
+
+        {/* Barra Inferior do Celular (Modo Somente Leitura + Home Bar) */}
+        <div className="phone-footer pv-footer">
+          <div className="pv-footer-pill">
+            <Lock size={11} style={{ flexShrink: 0, color: '#71717a' }} />
+            <span>Modo Somente Leitura • Extração C.R.I.S.</span>
+          </div>
+          <div className="pv-home-bar" aria-hidden="true" />
+        </div>
+
+        {/* Compositor de marcador em overlay interno para não deslocar o aparelho */}
+        {pendingPinTarget && cardId && (
+          <div
+            className="pv-pin-overlay"
+            onClick={() => setPendingPinTarget(null)}
+          >
+            <div style={{ width: '100%' }} onClick={(e) => e.stopPropagation()}>
+              <PinNoteComposer
+                title="Marcar Evidência no Celular"
+                subtitle={pendingPinTarget.label}
+                onSubmitPin={async (tag, note) => {
+                  await createPin({
+                    cardId,
+                    toolType: 'phone',
+                    anchorData: pendingPinTarget,
+                    tag,
+                    note,
+                  });
+                }}
+                onSubmitFinding={async (category, label, details) => {
+                  await addFinding({
+                    category,
+                    label,
+                    details,
+                    sourceCardId: cardId,
+                    sourceTool: 'phone',
+                    sourceAnchor: pendingPinTarget,
+                  });
+                }}
+                onCancel={() => setPendingPinTarget(null)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {pendingPinTarget && cardId && (
-        <PinNoteComposer
-          title="Marcar Evidência no Celular"
-          subtitle={pendingPinTarget.label}
-          onSubmitPin={async (tag, note) => {
-            await createPin({
-              cardId,
-              toolType: 'phone',
-              anchorData: pendingPinTarget,
-              tag,
-              note,
-            });
-          }}
-          onSubmitFinding={async (category, label, details) => {
-            await addFinding({
-              category,
-              label,
-              details,
-              sourceCardId: cardId,
-              sourceTool: 'phone',
-              sourceAnchor: pendingPinTarget,
-            });
-          }}
-          onCancel={() => setPendingPinTarget(null)}
-        />
+      {!hideInlinePinList && cardId && investigationId && (
+        <div className="pv-pin-list-wrap">
+          <PinListBar
+            pins={phonePins}
+            showPins={effectiveShowPins}
+            onToggleShowPins={handleToggleShowPins}
+            onSelectPin={(pin: CasePin) => jumpToPhoneAnchor(pin.anchor_data as PhonePinAnchor)}
+            renderAnchorSummary={renderPinAnchorSummary}
+          />
+        </div>
       )}
     </div>
   );

@@ -853,9 +853,8 @@
 .ccm-overlay .ccm-phone-frame .nexus-phone-mockup {
   width: 100%;
   max-width: 300px;
-  height: auto;
+  height: 580px;
   max-height: 600px;
-  aspect-ratio: 9 / 19.5;
 }
 
 .ccm-overlay .ccm-chat-thumb {

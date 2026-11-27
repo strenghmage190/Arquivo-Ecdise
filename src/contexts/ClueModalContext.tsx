@@ -8,6 +8,7 @@ import {
   defaultDisplayConfig,
 } from '../config/displayConfig';
 import { InvestigationCardInsight } from '../api/investigations';
+import { fetchClueSecretForGM, PaceMode } from '../api/clueSecurity';
 import {
   FilterTransformRect,
   hydrateClueStateFromCard,
@@ -106,6 +107,9 @@ export interface SecurityState {
   isLocked: boolean;
   lockPass: string;
   lockPasses: string[];
+  paceMode: PaceMode;
+  rewardCardIds: string[];
+  assistHint: string;
   securityLayerEnabled: boolean;
   revealLogicMode: 'always_visible' | 'aligned_only' | 'aligned_keyword';
   signalTargets: { visual: boolean; audio: boolean };
@@ -367,6 +371,9 @@ export const ClueModalProvider: React.FC<{
     isLocked: false,
     lockPass: '',
     lockPasses: [],
+    paceMode: 'in_session',
+    rewardCardIds: [],
+    assistHint: '',
     securityLayerEnabled: false,
     revealLogicMode: 'aligned_only',
     signalTargets: { visual: true, audio: false },
@@ -536,6 +543,9 @@ export const ClueModalProvider: React.FC<{
       isLocked: false,
       lockPass: '',
       lockPasses: [],
+      paceMode: 'in_session',
+      rewardCardIds: [],
+      assistHint: '',
       securityLayerEnabled: false,
       revealLogicMode: 'aligned_only',
       signalTargets: { visual: true, audio: false },
@@ -650,6 +660,17 @@ export const ClueModalProvider: React.FC<{
     const hydrated = hydrateClueStateFromCard(card);
     setCoreState(hydrated.coreState);
     setSecurityState(hydrated.securityState);
+    if (card?.id && card?.is_locked && !card?.lock_password) {
+      fetchClueSecretForGM(String(card.id)).then((secret) => {
+        if (secret) {
+          setSecurityState((prev) => ({
+            ...prev,
+            lockPass: secret.secret_value || prev.lockPass,
+            assistHint: secret.assist_hint || prev.assistHint,
+          }));
+        }
+      });
+    }
     setMediaState(hydrated.mediaState);
     setCipherState(hydrated.cipherState);
     setGlitchState(hydrated.glitchState);

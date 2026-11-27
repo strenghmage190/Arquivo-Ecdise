@@ -1,81 +1,89 @@
+/* ==========================================================================
+   ForensicTerminalModal.css — C.R.I.S. LSB Forensic Extraction Terminal
+   ========================================================================== */
+
 .ftm-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+  inset: 0;
+  background-color: rgba(3, 6, 10, 0.86);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10000;
-  backdrop-filter: none;
+  z-index: var(--z-modal-terminal, 60000);
+  backdrop-filter: blur(8px);
+  padding: 16px;
   animation: ftm-fadeIn 0.2s ease-out;
 }
 
 .ftm-modal {
-  background: var(--bg-1, #11141b);
-  border: 1px solid var(--nexus-blue, #cbd5e1);
-  border-radius: 0;
-  width: 90%;
+  background: #070a0f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  width: 100%;
   max-width: 600px;
-  box-shadow: 0 0 20px rgb(203 213 225 / 0.1), inset 0 0 10px rgb(203 213 225 / 0.05);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(45, 212, 191, 0.08);
   display: flex;
   flex-direction: column;
-  animation: ftm-slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: ftm-slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .ftm-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: rgb(203 213 225 / 0.05);
-  border-bottom: 1px solid var(--nexus-blue, #cbd5e1);
+  gap: 12px;
+  padding: 13px 16px;
+  background: #0b1016;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ftm-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--nexus-blue, #cbd5e1);
-  font-family: var(--font-terminal, "Share Tech Mono", monospace);
-  font-size: 14px;
+  color: #5eead4;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  text-shadow: 0 0 5px rgb(203 213 225 / 0.5);
 }
 
 .ftm-close-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-color-muted, #94a3b8);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
   cursor: pointer;
-  padding: 4px;
-  display: flex;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .ftm-close-btn:hover {
-  color: var(--nexus-glitch, #e63946);
-  background: rgb(230 57 70 / 0.1);
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.4);
+  background: rgba(244, 63, 94, 0.14);
 }
 
 .ftm-body {
-  padding: 20px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .ftm-description {
   font-size: 13px;
-  color: var(--text-color-muted, #94a3b8);
+  color: #a1a1aa;
   line-height: 1.5;
 }
 
@@ -90,45 +98,48 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-color, #f1f5f9);
+  color: #e4e4e7;
   font-weight: 600;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
 }
 
 .ftm-input {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid var(--border-color, #29313d);
-  color: var(--nexus-blue, #cbd5e1);
+  background: #05080c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
   padding: 10px 12px;
-  border-radius: 0;
-  font-family: var(--font-terminal, "Share Tech Mono", monospace);
-  font-size: 14px;
+  height: auto;
+  border-radius: 8px;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 13px;
   outline: none;
-  transition: all 0.2s;
-  letter-spacing: 1px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.06em;
 }
 
 .ftm-input:focus {
-  border-color: var(--nexus-blue, #cbd5e1);
-  box-shadow: 0 0 10px rgb(203 213 225 / 0.2);
+  border-color: rgba(45, 212, 191, 0.55);
+  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.15);
 }
 
 .ftm-input::placeholder {
-  color: var(--text-color-muted, #94a3b8);
+  color: #71717a;
   letter-spacing: normal;
 }
 
 .ftm-btn-extract {
-  background: var(--nexus-blue, #cbd5e1);
-  color: #000;
-  border: none;
-  padding: 12px;
-  border-radius: 0;
+  background: rgba(20, 184, 166, 0.18);
+  color: #99f6e4;
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.2s;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -136,79 +147,76 @@
 }
 
 .ftm-btn-extract:hover:not(:disabled) {
-  background: #fff;
-  box-shadow: 0 0 15px rgb(203 213 225 / 0.6);
+  background: rgba(20, 184, 166, 0.28);
+  border-color: rgba(45, 212, 191, 0.7);
+  color: #ccfbf1;
 }
 
 .ftm-btn-extract:disabled {
-  background: var(--bg-elevated, #1b2330);
-  color: var(--text-color-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.04);
+  color: #71717a;
   cursor: not-allowed;
-  border: 1px solid var(--border-color, #29313d);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .ftm-btn-extract.loading {
-  background: transparent;
-  color: var(--nexus-blue, #cbd5e1);
-  border: 1px dashed var(--nexus-blue, #cbd5e1);
+  background: rgba(34, 211, 238, 0.1);
+  color: #67e8f9;
+  border: 1px dashed rgba(34, 211, 238, 0.5);
   animation: ftm-pulse 1.5s infinite;
 }
 
 .ftm-terminal-screen {
-  background: #0b0c10;
-  border: 1px solid var(--border-color, #29313d);
-  border-radius: 0;
-  padding: 16px;
-  font-family: var(--font-terminal, "Share Tech Mono", monospace);
-  font-size: 13px;
-  min-height: 200px;
+  background: #05080c;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  font-size: 12.5px;
+  line-height: 1.55;
+  min-height: 190px;
   max-height: 300px;
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+  box-shadow: inset 0 2px 16px rgba(0, 0, 0, 0.85);
   position: relative;
 }
 
-/* CRT Scanline effect */
+/* Subtle forensic scanline texture */
 .ftm-terminal-screen::after {
-  content: " ";
+  content: "";
   display: block;
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgb(34 197 94 / 0.02), rgba(0, 0, 255, 0.06));
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
   z-index: 2;
-  background-size: 100% 2px, 3px 100%;
+  background-size: 100% 3px;
   pointer-events: none;
 }
 
 .ftm-log-default {
-  color: var(--nexus-blue, #cbd5e1);
+  color: #cbd5e1;
 }
 
 .ftm-log-success {
-  color: #22c55e;
-  text-shadow: 0 0 5px rgb(34 197 94 / 0.3);
+  color: #34d399;
 }
 
 .ftm-log-error {
-  color: var(--nexus-glitch, #e63946);
-  text-shadow: 0 0 5px rgb(230 57 70 / 0.3);
+  color: #fb7185;
 }
 
 .ftm-hint {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #eab308;
+  gap: 8px;
+  color: #fcd34d;
   font-size: 12px;
-  background: rgb(234 179 8 / 0.05);
-  padding: 8px 12px;
-  border-radius: 0;
-  border: 1px solid rgb(234 179 8 / 0.2);
+  background: rgba(245, 158, 11, 0.08);
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .ftm-chips {
@@ -225,37 +233,43 @@
 }
 
 .ftm-chip {
-  background: rgba(203, 213, 225, 0.08);
-  border: 1px solid rgba(203, 213, 225, 0.2);
-  color: var(--nexus-blue, #cbd5e1);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
   padding: 4px 10px;
   font-size: 11px;
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: 999px;
   white-space: nowrap;
-  font-family: var(--font-terminal, "Share Tech Mono", monospace);
-  min-height: 32px;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  min-height: 30px;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .ftm-chip:hover {
-  background: rgba(203, 213, 225, 0.2);
+  background: rgba(20, 184, 166, 0.14);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #99f6e4;
 }
 
 .ftm-chip:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 @media (max-width: 600px) {
+  .ftm-overlay {
+    padding: 8px;
+  }
+
   .ftm-modal {
-    width: 96%;
-    max-height: 90vh;
+    max-height: 92dvh;
+    overflow-y: auto;
   }
 
   .ftm-body {
     padding: 14px;
-    gap: 14px;
+    gap: 12px;
   }
 
   .ftm-btn-extract {
@@ -275,22 +289,25 @@
 }
 
 @keyframes ftm-pulse {
-  0% { box-shadow: 0 0 0 rgb(203 213 225 / 0.4); }
-  50% { box-shadow: 0 0 15px rgb(203 213 225 / 0.4); }
-  100% { box-shadow: 0 0 0 rgb(203 213 225 / 0.4); }
+  0% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.35); }
+  50% { box-shadow: 0 0 14px rgba(34, 211, 238, 0.25); }
+  100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0.35); }
 }
 
 /* Custom Scrollbar */
 .ftm-terminal-screen::-webkit-scrollbar {
   width: 6px;
 }
+
 .ftm-terminal-screen::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .ftm-terminal-screen::-webkit-scrollbar-thumb {
-  background: var(--border-color, #29313d);
-  border-radius: 0;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
+
 .ftm-terminal-screen::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color-muted, #94a3b8);
+  background: rgba(45, 212, 191, 0.4);
 }

@@ -204,7 +204,48 @@
 
 .aw-slider-row input[type='range'] {
   width: 100%;
-  accent-color: var(--ccm-accent, var(--accent, #5eead4));
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.aw-slider-row input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.aw-slider-row input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  margin-top: -4.5px;
+  border-radius: 999px;
+  background: var(--ccm-accent, var(--accent, #5eead4));
+  border: 2px solid #04070c;
+  cursor: pointer;
+}
+
+.aw-slider-row input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.aw-slider-row input[type='range']::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--ccm-accent, var(--accent, #5eead4));
+  border: 2px solid #04070c;
+  cursor: pointer;
 }
 
 .aw-transport {

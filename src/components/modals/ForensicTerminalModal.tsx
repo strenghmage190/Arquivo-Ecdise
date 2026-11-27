@@ -118,7 +118,7 @@ export default function ForensicTerminalModal({ isOpen, onClose, baseAudioSample
 
           <div className="ftm-control-group">
             <label className="ftm-label">
-              {password ? <Lock size={14} color="var(--nx-warning)" /> : <Unlock size={14} />}
+              {password ? <Lock size={14} color="#f59e0b" /> : <Unlock size={14} />}
               Chave de Descriptografia XOR (Opcional)
             </label>
             <input

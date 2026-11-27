@@ -4,14 +4,15 @@ import { isValidId } from '../utils/supabaseHelpers';
 
 // --- Allowlists para Mass Assignment ---
 const INVESTIGATION_UPDATABLE_FIELDS = [
-  'title', 'description', 'cover_url', 'whiteboard_data',
+  'title', 'description', 'cover_url', 'whiteboard_data', 'element', 'evolution',
 ] as const;
 type InvestigationUpdatableKey = typeof INVESTIGATION_UPDATABLE_FIELDS[number];
 
 const CARD_UPDATABLE_FIELDS = [
   'title', 'description_public', 'description_hidden', 'image_url', 'image_uv_url',
   'video_url', 'audio_url', 'audio_hidden_url', 'audio_target_freq', 'image_filter_layer',
-  'is_locked', 'lock_password', 'is_hidden', 'discovery_code', 'x', 'y', 'z_index',
+  'is_locked', 'lock_password', 'lock_type', 'pace_mode', 'reward_card_ids', 'solved_at', 'solved_by_name',
+  'is_hidden', 'discovery_code', 'x', 'y', 'z_index',
   'visibility', 'tags', 'insights', 'metadata', 'chat_data', 'chat_contact_name', 'type',
 ] as const;
 type CardUpdatableKey = typeof CARD_UPDATABLE_FIELDS[number];
@@ -20,6 +21,16 @@ function pickAllowed<T extends string>(obj: Record<string, unknown>, allowed: re
   return Object.fromEntries(
     Object.entries(obj).filter(([k]) => (allowed as readonly string[]).includes(k))
   ) as Partial<Record<T, unknown>>;
+}
+
+function isMissingColumnError(err: any): boolean {
+  const code = String(err?.code || '');
+  const msg = String(err?.message || '');
+  return (
+    code === '42703' ||
+    code === 'PGRST204' ||
+    /column .* does not exist|Could not find the .* column/i.test(msg)
+  );
 }
 
 
@@ -56,6 +67,11 @@ export interface InvestigationCard {
   audio_target_freq?: number | null;
   is_locked?: boolean;
   lock_password?: string | null;
+  lock_type?: 'keypad' | 'terminal' | 'pattern' | null;
+  pace_mode?: 'in_session' | 'between_sessions';
+  reward_card_ids?: string[];
+  solved_at?: string | null;
+  solved_by_name?: string | null;
   is_hidden?: boolean;
   discovery_code?: string | null;
 }
@@ -89,6 +105,20 @@ export async function updateInvestigation(id: string, updates: Record<string, un
     .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data')
     .single();
   if (error) {
+    if (isMissingColumnError(error) && ('element' in safe || 'evolution' in safe)) {
+      const { element: _el, evolution: _ev, ...fallbackSafe } = safe as Record<string, unknown>;
+      const retry = await (supabase as any)
+        .from('investigations')
+        .update(fallbackSafe)
+        .eq('id', id)
+        .select('id, title, description, cover_url, created_at, owner_id, whiteboard_data')
+        .single();
+      if (retry.error) {
+        console.error('updateInvestigation error', retry.error);
+        throw retry.error;
+      }
+      return retry.data;
+    }
     console.error('updateInvestigation error', error);
     throw error;
   }
@@ -139,6 +169,9 @@ export async function createInvestigationCard(card: InvestigationCard) {
     audio_target_freq: (card as any).audio_target_freq || null,
     is_locked: (card as any).is_locked || false,
     lock_password: (card as any).lock_password || null,
+    lock_type: (card as any).lock_type || null,
+    pace_mode: (card as any).pace_mode || 'in_session',
+    reward_card_ids: Array.isArray((card as any).reward_card_ids) ? (card as any).reward_card_ids : [],
     is_hidden: (card as any).is_hidden || false,
     discovery_code: card.discovery_code || null,
     description_public: card.description_public || null,
@@ -183,9 +216,10 @@ export async function updateCard(id: string, updates: Partial<Record<CardUpdatab
 }
 
 export async function updateInvestigationCard(id: string, patch: Partial<InvestigationCard>) {
+  const safe = pickAllowed(patch as Record<string, unknown>, CARD_UPDATABLE_FIELDS);
   const { data, error } = await (supabase as any)
     .from('investigation_cards')
-    .update(patch as any)
+    .update(safe)
     .eq('id', id)
     .select()
     .single();
@@ -238,7 +272,7 @@ export async function fetchOrCreateInvestigationForCampaign(campaignId: string) 
     const currentUserId = userRes.data?.user?.id || null;
     const { data: created, error: insErr } = await (supabase as any)
       .from('investigations')
-      .insert({ campaign_id: campaignId, name: 'Quadro de Investigação', owner_id: currentUserId, created_by: currentUserId } as any)
+      .insert({ campaign_id: campaignId, title: 'Quadro de Investigação', owner_id: currentUserId } as any)
       .select()
       .single();
 
@@ -271,18 +305,47 @@ export async function fetchInvestigationDetails(id: string) {
 // ...existing code...
 
 // Create a new investigation and set current user as owner
-export async function createInvestigation(title: string, description?: string, coverUrl?: string) {
+export async function createInvestigation(
+  title: string,
+  description?: string,
+  coverUrl?: string,
+  element?: string | null,
+  evolution?: string | null
+) {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user || null;
   if (!user) throw new Error('Usuário não autenticado');
 
   const { data, error } = await (supabase as any)
     .from('investigations')
-    .insert([{ title, owner_id: user.id, description: description || null, cover_url: coverUrl || null } as any])
+    .insert([{
+      title,
+      owner_id: user.id,
+      description: description || null,
+      cover_url: coverUrl || null,
+      element: element || null,
+      evolution: evolution || null,
+    } as any])
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingColumnError(error)) {
+      const retry = await (supabase as any)
+        .from('investigations')
+        .insert([{
+          title,
+          owner_id: user.id,
+          description: description || null,
+          cover_url: coverUrl || null,
+        } as any])
+        .select()
+        .single();
+      if (retry.error) throw retry.error;
+      return retry.data;
+    }
+    throw error;
+  }
   return data;
 }
 

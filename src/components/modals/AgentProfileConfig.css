@@ -1,12 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
-:root {
+.agent-profile-modal {
   --nexus-blue: #00f3ff;
   --nexus-blue-glow: rgb(0 243 255 / 40%);
   --nexus-dark: #05080a;
-}
-
-.agent-profile-modal {
   position: fixed;
   inset: 0;
   background: rgb(5 8 10 / 90%);

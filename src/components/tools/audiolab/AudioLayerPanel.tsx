@@ -70,11 +70,11 @@ function WaveformThumb({ samples }: { samples: Float32Array }) {
     const c = canvasRef.current;
     if (!c || !samples.length) return;
     const ctx = c.getContext('2d')!;
-    ctx.fillStyle = '#050a12';
+    ctx.fillStyle = '#05080c';
     ctx.fillRect(0, 0, c.width, c.height);
     const step = Math.ceil(samples.length / c.width);
     const half = c.height / 2;
-    ctx.strokeStyle = '#00f3ff';
+    ctx.strokeStyle = '#2dd4bf';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x < c.width; x++) {
@@ -383,8 +383,8 @@ export default function AudioLayerPanel({
               placeholder="Senha de Criptografia (Opcional)"
               value={encodePassword}
               onChange={(e) => setEncodePassword(e.target.value)}
-              className="al-synth-input"
-              style={{ width: '100%', fontFamily: 'monospace', fontSize: '11px' }}
+              className="al-input-dark"
+              style={{ fontFamily: 'var(--font-system, monospace)', fontSize: '11.5px' }}
             />
           </div>
         )}
@@ -395,6 +395,7 @@ export default function AudioLayerPanel({
       <div className="al-section-title">Síntese</div>
 
       <button
+        type="button"
         className={`al-btn-primary ${isSynthesizing ? 'loading' : ''}`}
         onClick={synthesize}
         disabled={(stegoMethod === 'spectrogram' && !imageData) || (stegoMethod === 'lsb' && !baseAudioInfo) || isSynthesizing}
@@ -423,25 +424,26 @@ export default function AudioLayerPanel({
       <div className="al-section-divider" style={{ marginTop: 'auto' }} />
       <div className="al-export-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button
-          className={`al-btn-primary ${isExporting ? 'loading' : ''}`}
+          type="button"
+          className="al-btn-save"
           disabled={!generatedSamples || isExporting}
           onClick={saveToClue}
         >
           {isExporting ? <Loader2 size={14} className="al-spin" /> : <Save size={14} />}
           Salvar na Pista
         </button>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="al-export-btns">
           <button
+            type="button"
             className="al-btn-ghost al-btn-sm"
-            style={{ flex: 1 }}
             disabled={!generatedSamples || isExporting}
             onClick={exportWav}
           >
             <Download size={14} /> WAV
           </button>
           <button
+            type="button"
             className="al-btn-ghost al-btn-sm"
-            style={{ flex: 1 }}
             disabled={!generatedSamples || isExporting || stegoMethod === 'lsb'}
             onClick={exportMp3}
             title={stegoMethod === 'lsb' ? 'MP3 não é suportado para LSB (destrói os dados)' : 'Exportar MP3'}

@@ -10,7 +10,13 @@ export default function Investigation() {
   const [investigation, setInvestigation] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bootDone, setBootDone] = useState(false);
+  const [bootDone, setBootDone] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.sessionStorage.getItem('cris_boot_seen') === '1';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     let mounted = true;

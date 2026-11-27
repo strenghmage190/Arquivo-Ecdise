@@ -1,6 +1,7 @@
-import { X, Image as ImageIcon, Video, Volume2, FileText, ClipboardList } from 'lucide-react';
+import { X, Image as ImageIcon, Video, Volume2, FileText, ClipboardList, Unlock } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import { fetchSolveLog, ClueSolveLogEntry } from '../../api/clueSecurity';
 import Toast from '../ui/Toast';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileDrawer } from '../ui/MobileDrawer';
@@ -26,6 +27,8 @@ interface HiddenCard {
 
 export default function GMOverwatch({ investigationId, isVisible, onToggle }: GMOverwatchProps) {
   const [allCards, setAllCards] = useState<HiddenCard[]>([]);
+  const [solveLog, setSolveLog] = useState<ClueSolveLogEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<'cards' | 'solves'>('cards');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant?: 'success' | 'error' } | null>(null);
   const isMobile = useIsMobile();
@@ -33,14 +36,18 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
   const loadAllCards = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('investigation_cards')
-        .select('id, title, discovery_code, type, image_url, created_at, description_public, description_hidden, is_hidden')
-        .eq('investigation_id', investigationId)
-        .order('created_at', { ascending: false });
+      const [{ data, error }, logEntries] = await Promise.all([
+        supabase
+          .from('investigation_cards')
+          .select('id, title, discovery_code, type, image_url, created_at, description_public, description_hidden, is_hidden')
+          .eq('investigation_id', investigationId)
+          .order('created_at', { ascending: false }),
+        fetchSolveLog(investigationId, 30),
+      ]);
 
       if (error) throw error;
       setAllCards((data as HiddenCard[]) || []);
+      setSolveLog(logEntries);
     } catch (err) {
       console.error('GMOverwatch: Error loading cards:', err);
       setToast({ message: 'Erro ao carregar pistas', variant: 'error' });
@@ -94,6 +101,21 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
             });
           } else if (ev === 'DELETE' && oldRow) {
             setAllCards((prev) => prev.filter((c) => c.id !== oldRow.id));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'clue_solve_log',
+          filter: `investigation_id=eq.${investigationId}`,
+        },
+        (payload) => {
+          const entry = payload.new as ClueSolveLogEntry;
+          if (entry?.id) {
+            setSolveLog((prev) => [entry, ...prev.filter((x) => x.id !== entry.id)].slice(0, 30));
           }
         }
       )
@@ -157,7 +179,110 @@ export default function GMOverwatch({ investigationId, isVisible, onToggle }: GM
 
   const content = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
-      {loading ? (
+      <div
+        style={{
+          display: 'flex',
+          gap: 6,
+          padding: isMobile ? '8px 12px 0' : '0 0 10px',
+          borderBottom: '1px solid var(--border, #29313d)',
+          marginBottom: 10,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveTab('cards')}
+          style={{
+            flex: 1,
+            padding: '6px 8px',
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: '1px solid var(--border, #29313d)',
+            background: activeTab === 'cards' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+            color: activeTab === 'cards' ? '#e0f2fe' : '#94a3b8',
+          }}
+        >
+          PISTAS ({allCards.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('solves')}
+          style={{
+            flex: 1,
+            padding: '6px 8px',
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: '1px solid var(--border, #29313d)',
+            background: activeTab === 'solves' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+            color: activeTab === 'solves' ? '#d1fae5' : '#94a3b8',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 4,
+          }}
+        >
+          <Unlock size={12} /> DESBLOQUEIOS ({solveLog.length})
+        </button>
+      </div>
+
+      {activeTab === 'solves' ? (
+        <div
+          className="overscroll-contain"
+          style={{
+            overflowY: 'auto',
+            padding: isMobile ? 'var(--space-3, 12px)' : '0',
+            paddingBottom: isMobile ? 'max(var(--space-4, 16px), env(safe-area-inset-bottom, 0px))' : 'var(--space-4, 16px)',
+          }}
+        >
+          {solveLog.length === 0 ? (
+            <div style={{ color: 'var(--text-secondary, #94a3b8)', padding: '16px', fontSize: 12 }}>
+              Nenhum enigma resolvido ou override registrado ainda.
+            </div>
+          ) : (
+            solveLog.map((entry) => {
+              const cardTitle = allCards.find((c) => c.id === entry.card_id)?.title || 'Evidência';
+              const methodLabel =
+                entry.method === 'player_solution'
+                  ? 'RESOLVIDO PELO GRUPO'
+                  : entry.method === 'gm_override'
+                  ? 'OVERRIDE DO MESTRE'
+                  : 'CALIBRAÇÃO ASSISTIDA';
+              return (
+                <div
+                  key={entry.id}
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.78)',
+                    border: '1px solid var(--border, #29313d)',
+                    borderRadius: 8,
+                    padding: 10,
+                    marginBottom: 8,
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                    <strong style={{ color: '#e2e8f0' }}>{cardTitle}</strong>
+                    <span style={{ fontSize: 10, color: '#6ee7b7', fontFamily: 'monospace' }}>
+                      {methodLabel}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                    Por <strong>{entry.solver_name}</strong> ·{' '}
+                    {new Date(entry.created_at).toLocaleString('pt-BR')}
+                  </div>
+                  {entry.unlocked_reward_ids?.length > 0 && (
+                    <div style={{ fontSize: 11, color: '#d8b4fe', marginTop: 4 }}>
+                      +{entry.unlocked_reward_ids.length} recompensa(s) revelada(s) automaticamente
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : loading ? (
         <div style={{ color: 'var(--text-secondary, #94a3b8)', padding: 'var(--space-4, 16px)' }}>
           Carregando pistas...
         </div>

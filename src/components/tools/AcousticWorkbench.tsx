@@ -14,6 +14,7 @@ import {
   analyzeAudioAnomalies,
   SAMPLE_RATE_48K,
 } from '../../utils/audioStegoSynthesizer';
+import { decodeLSB } from '../../utils/lsbStegoEngine';
 import { AudioAnomalyReport } from '../../types/forensicPillars';
 import { useForensicDispatch } from '../../contexts/ForensicDispatchContext';
 import { useCollaboration } from '../../contexts/CollaborationContext';
@@ -95,6 +96,10 @@ export default function AcousticWorkbench({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isReversed, setIsReversed] = useState(false);
   const [savingSnippet, setSavingSnippet] = useState(false);
+  const [activePreset, setActivePreset] = useState<'normal' | 'voice' | 'diff' | 'spectrum' | 'lsb'>('normal');
+  const [showLsbPanel, setShowLsbPanel] = useState(false);
+  const [lsbPassword, setLsbPassword] = useState('');
+  const [lsbResult, setLsbResult] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,25 +107,22 @@ export default function AcousticWorkbench({
     setLoadError(null);
 
     const load = async () => {
-      let localCtx: AudioContext | null = null;
+      let decodeCtx: AudioContext | null = null;
       try {
         const res = await fetch(audioSrc);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const arrayBuf = await res.arrayBuffer();
         if (cancelled) return;
+        // Mobile-safe decoding: use a temporary context and close it immediately;
+        // playback AudioContext is created/resumed strictly inside the Play tap gesture.
         const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        localCtx = new Ctx();
-        audioCtxRef.current = localCtx;
-        const decoded = await localCtx.decodeAudioData(arrayBuf);
-        if (cancelled) {
-          try {
-            await localCtx.close();
-          } catch {}
-          if (audioCtxRef.current === localCtx) {
-            audioCtxRef.current = null;
-          }
-          return;
-        }
+        decodeCtx = new Ctx();
+        const decoded = await decodeCtx.decodeAudioData(arrayBuf.slice(0));
+        try {
+          await decodeCtx.close();
+        } catch {}
+        decodeCtx = null;
+        if (cancelled) return;
         setSampleRate(decoded.sampleRate);
         setBandMaxHz(Math.floor(decoded.sampleRate / 2));
         setLpFreq(Math.floor(decoded.sampleRate / 2));
@@ -132,9 +134,9 @@ export default function AcousticWorkbench({
         );
         setLoading(false);
       } catch {
-        if (localCtx && cancelled) {
+        if (decodeCtx) {
           try {
-            await localCtx.close();
+            await decodeCtx.close();
           } catch {}
         }
         if (!cancelled) {
@@ -335,9 +337,16 @@ export default function AcousticWorkbench({
       stopPlayback();
       return;
     }
-    if (!activeSamples || !audioCtxRef.current) return;
+    if (!activeSamples) return;
+    // Mobile-safe: lazily create/resume AudioContext strictly inside user tap/click gesture
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new Ctx();
+    }
     const ctx = audioCtxRef.current;
-    if (ctx.state === 'suspended') await ctx.resume();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
 
     const buf = ctx.createBuffer(1, activeSamples.length, sampleRate);
     buf.getChannelData(0).set(activeSamples);
@@ -603,6 +612,176 @@ export default function AcousticWorkbench({
             return `${(a.timeSec ?? 0).toFixed(1)}s (${(a.channel || 'mix').toUpperCase()})`;
           }}
         />
+      )}
+
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 6,
+          padding: '8px 10px',
+          marginBottom: 8,
+          background: 'rgba(10, 16, 26, 0.85)',
+          border: '1px solid rgba(56, 189, 248, 0.2)',
+          borderRadius: 8,
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', marginRight: 4 }}>
+          PRESETS C.R.I.S.:
+        </span>
+        {[
+          {
+            id: 'normal' as const,
+            label: 'Escuta Normal',
+            run: () => {
+              setChannelRoute('mix');
+              setBandMinHz(0);
+              setBandMaxHz(nyquist);
+              setHpFreq(20);
+              setLpFreq(nyquist);
+              setContrastDb(65);
+              setColorScheme('cyan');
+              setShowLsbPanel(false);
+            },
+          },
+          {
+            id: 'voice' as const,
+            label: 'Isolar Voz',
+            run: () => {
+              setChannelRoute('mix');
+              setBandMinHz(250);
+              setBandMaxHz(Math.min(4000, nyquist));
+              setHpFreq(300);
+              setLpFreq(Math.min(3400, nyquist));
+              setContrastDb(60);
+              setShowLsbPanel(false);
+            },
+          },
+          {
+            id: 'diff' as const,
+            label: 'Diferença Estéreo (L-R)',
+            run: () => {
+              setChannelRoute('diff');
+              setBandMinHz(0);
+              setBandMaxHz(nyquist);
+              setHpFreq(20);
+              setLpFreq(nyquist);
+              setShowLsbPanel(false);
+            },
+          },
+          {
+            id: 'spectrum' as const,
+            label: 'Espectro Oculto (Agudos)',
+            run: () => {
+              setChannelRoute('mix');
+              setBandMinHz(Math.min(7500, Math.floor(nyquist * 0.4)));
+              setBandMaxHz(nyquist);
+              setContrastDb(82);
+              setColorScheme('hot');
+              setShowLsbPanel(false);
+            },
+          },
+          {
+            id: 'lsb' as const,
+            label: 'Extração Profunda (LSB)',
+            run: () => {
+              setShowLsbPanel(true);
+              if (leftSamples) {
+                try {
+                  const text = decodeLSB(leftSamples, lsbPassword.trim() || undefined);
+                  setLsbResult(text || 'Nenhuma carga LSB legível encontrada com essa chave.');
+                } catch {
+                  setLsbResult('Nenhuma carga LSB legível detectada neste arquivo.');
+                }
+              }
+            },
+          },
+        ].map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className="aw-btn-ghost"
+            style={{
+              fontSize: 11,
+              padding: '4px 9px',
+              borderColor: activePreset === p.id ? '#38bdf8' : undefined,
+              color: activePreset === p.id ? '#e0f2fe' : undefined,
+              background: activePreset === p.id ? 'rgba(56, 189, 248, 0.18)' : undefined,
+            }}
+            onClick={() => {
+              setActivePreset(p.id);
+              p.run();
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {showLsbPanel && (
+        <div
+          style={{
+            padding: '10px 12px',
+            marginBottom: 10,
+            background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(56, 189, 248, 0.35)',
+            borderRadius: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="text"
+              value={lsbPassword}
+              onChange={(e) => setLsbPassword(e.target.value)}
+              placeholder="Chave XOR opcional (deixe vazio se não houver senha)"
+              style={{
+                flex: '1 1 200px',
+                padding: '6px 9px',
+                borderRadius: 6,
+                border: '1px solid rgba(148, 163, 184, 0.3)',
+                background: 'rgba(2, 6, 23, 0.85)',
+                color: '#f8fafc',
+                fontFamily: 'monospace',
+                fontSize: 12,
+              }}
+            />
+            <button
+              type="button"
+              className="aw-btn-primary"
+              onClick={() => {
+                if (!leftSamples) return;
+                try {
+                  const text = decodeLSB(leftSamples, lsbPassword.trim() || undefined);
+                  setLsbResult(text || 'Nenhuma carga LSB legível encontrada.');
+                } catch {
+                  setLsbResult('Falha ao decodificar LSB.');
+                }
+              }}
+            >
+              Extrair Bits LSB
+            </button>
+          </div>
+          {lsbResult && (
+            <div
+              style={{
+                fontFamily: 'monospace',
+                fontSize: 12,
+                color: '#6ee7b7',
+                background: 'rgba(2, 6, 23, 0.8)',
+                padding: '8px 10px',
+                borderRadius: 6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {lsbResult}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="aw-rack">

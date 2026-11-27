@@ -9,6 +9,7 @@ interface PinListBarProps {
   onToggleShowPins: () => void;
   onSelectPin: (pin: CasePin) => void;
   renderAnchorSummary?: (pin: CasePin) => string;
+  variant?: 'card' | 'sidebar';
 }
 
 export default function PinListBar({
@@ -17,6 +18,7 @@ export default function PinListBar({
   onToggleShowPins,
   onSelectPin,
   renderAnchorSummary,
+  variant = 'card',
 }: PinListBarProps) {
   const { resolvePin, deletePin, currentUserId, isGameMaster } = useCollaboration();
   const [showResolved, setShowResolved] = useState(false);
@@ -28,6 +30,61 @@ export default function PinListBar({
     const tagMeta = PIN_TAG_META[pin.tag] || PIN_TAG_META.look_here;
     const canDelete = isGameMaster || (currentUserId && pin.created_by === currentUserId);
     const summary = renderAnchorSummary ? renderAnchorSummary(pin) : '';
+
+    if (variant === 'sidebar') {
+      return (
+        <div
+          key={pin.id}
+          className={`plb-row ${pin.is_resolved ? 'plb-row--resolved' : ''}`}
+          style={!pin.is_resolved ? { borderColor: `${tagMeta.color}44` } : undefined}
+        >
+          <button
+            type="button"
+            onClick={() => onSelectPin(pin)}
+            className="plb-row-main"
+          >
+            <div className="plb-row-tags">
+              <span
+                className="plb-tag"
+                style={{ color: tagMeta.color }}
+              >
+                [{tagMeta.label}]
+              </span>
+              {summary && (
+                <span className="plb-summary">
+                  {summary}
+                </span>
+              )}
+            </div>
+            <span className="plb-note">
+              {pin.note}
+            </span>
+            <small className="plb-author">— {pin.author_name}</small>
+          </button>
+
+          <div className="plb-row-actions">
+            <button
+              type="button"
+              className="phone-compact-btn plb-icon-btn"
+              onClick={() => resolvePin(pin.id, !pin.is_resolved)}
+              title={pin.is_resolved ? 'Reabrir marcação' : 'Marcar como resolvido'}
+            >
+              <CheckCircle2 size={12} color={pin.is_resolved ? '#10b981' : '#94a3b8'} />
+            </button>
+            {canDelete && (
+              <button
+                type="button"
+                className="phone-compact-btn plb-icon-btn plb-icon-btn--danger"
+                onClick={() => deletePin(pin.id)}
+                title="Excluir marcação"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -95,6 +152,56 @@ export default function PinListBar({
       </div>
     );
   };
+
+  if (variant === 'sidebar') {
+    return (
+      <div className="plb-sidebar">
+        <div className="plb-header">
+          <div className="plb-header-left">
+            <Pin size={13} style={{ color: '#fbbf24', flexShrink: 0 }} />
+            <span className="plb-title">
+              Marcadores da Equipe
+            </span>
+            <span className="plb-count">
+              {activePins.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleShowPins}
+            className="phone-compact-btn plb-toggle-btn"
+          >
+            {showPins ? <EyeOff size={12} /> : <Eye size={12} />}
+            <span>{showPins ? 'Ocultar' : 'Mostrar'}</span>
+          </button>
+        </div>
+
+        {activePins.length === 0 ? (
+          <div className="plb-empty">
+            Nenhum marcador ativo. Passe o cursor ou toque em uma mensagem e clique no alfinete para marcar.
+          </div>
+        ) : (
+          <div className="plb-list">{activePins.map(renderPinRow)}</div>
+        )}
+
+        {resolvedPins.length > 0 && (
+          <div className="plb-resolved-section">
+            <button
+              type="button"
+              onClick={() => setShowResolved((s) => !s)}
+              className="phone-compact-btn plb-resolved-toggle"
+            >
+              {showResolved ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <span>Resolvidos ({resolvedPins.length})</span>
+            </button>
+            {showResolved && (
+              <div className="plb-list" style={{ marginTop: 8 }}>{resolvedPins.map(renderPinRow)}</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,6 +1,17 @@
 import { DisplayConfig, defaultDisplayConfig } from '../config/displayConfig';
 import { FieldVisibilityConfig, defaultFieldVisibility } from '../config/fieldVisibilityConfig';
 import { InvestigationCardInsight } from '../api/investigations';
+
+export type PaceMode = 'in_session' | 'between_sessions';
+export type LockType = 'keypad' | 'terminal' | 'pattern';
+
+export function inferLockTypeFromSecret(secret: string | null | undefined): LockType {
+  const clean = String(secret || '').trim();
+  if (!clean) return 'terminal';
+  if (/^\d{1,6}$/.test(clean)) return 'keypad';
+  if (/^[1-9](-[1-9]){2,8}$/.test(clean)) return 'pattern';
+  return 'terminal';
+}
 import {
   textToHex,
   hexToText,
@@ -27,6 +38,9 @@ export const CARD_ALLOWED_PAYLOAD_KEYS = [
   'image_filter_layer',
   'is_locked',
   'lock_password',
+  'lock_type',
+  'pace_mode',
+  'reward_card_ids',
   'is_hidden',
   'discovery_code',
   'x',
@@ -110,6 +124,10 @@ export interface BuildCluePayloadParams {
     isLocked: boolean;
     lockPass: string;
     lockPasses: string[];
+    paceMode: PaceMode;
+    rewardCardIds: string[];
+    assistHint: string;
+    useServerSecret: boolean;
     securityLayerEnabled: boolean;
     revealLogicMode: 'always_visible' | 'aligned_only' | 'aligned_keyword' | string;
     signalTargets: { visual: boolean; audio: boolean };
@@ -571,6 +589,9 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
       isLocked: Boolean(card?.is_locked),
       lockPass: card?.lock_password || '',
       lockPasses: Array.isArray(mc.required_codes) ? [...mc.required_codes] : [],
+      paceMode: (card?.pace_mode === 'between_sessions' ? 'between_sessions' : 'in_session') as PaceMode,
+      rewardCardIds: Array.isArray(card?.reward_card_ids) ? [...card.reward_card_ids] : [],
+      assistHint: typeof m.cris_assist_hint === 'string' ? m.cris_assist_hint : '',
       securityLayerEnabled:
         Boolean(m.security_layer?.enabled ?? m.security_layer) ||
         Boolean(m.glitch_puzzle) ||
@@ -1487,9 +1508,17 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     image_filter_layer: filterUrl,
     is_locked: Boolean(security.isLocked),
     lock_password:
-      security.isLocked && core.evidenceType !== 'mega_clue'
+      security.isLocked && core.evidenceType !== 'mega_clue' && !security.useServerSecret
         ? security.lockPass || null
         : null,
+    lock_type:
+      security.isLocked && core.evidenceType !== 'mega_clue'
+        ? ((security.lockPass ? inferLockTypeFromSecret(security.lockPass) : existingCard?.lock_type || 'terminal') as LockType)
+        : null,
+    pace_mode: (security.paceMode === 'between_sessions' ? 'between_sessions' : 'in_session') as PaceMode,
+    reward_card_ids: Array.isArray(security.rewardCardIds)
+      ? security.rewardCardIds.filter((id) => typeof id === 'string' && id.trim().length > 0)
+      : [],
     is_hidden: Boolean(core.isHidden),
     discovery_code: core.isHidden
       ? (core.discoveryCode || '').trim().toUpperCase() || null

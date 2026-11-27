@@ -1,35 +1,44 @@
-/* Professional Spectrogram Styles */
+/* ==========================================================================
+   ProfessionalSpectrogram.css — C.R.I.S. Forensic Dark Spectrogram Styling
+   ========================================================================== */
 
 .spectrogram-container {
-  container-type: inline-size;
-  container-name: professional-spectrogram;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3, 12px);
-  background: #000;
-  border: 1px solid #333;
-  padding: var(--space-3, 12px);
-  border-radius: var(--radius-sm, 4px);
-  height: 100%;
-  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  background: #070a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: var(--font-system, "JetBrains Mono", monospace);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Header with Telemetry */
 .spectrogram-header {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  background: #0b1016;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 14px;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .header-title {
-  color: #fff;
-  margin: 0;
-  font-size: 14px;
+  color: #5eead4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -40,308 +49,270 @@
 }
 
 .status-text {
+  color: #a1a1aa;
   font-size: 11px;
-  font-family: monospace;
-  color: #888;
-  font-weight: 600;
 }
 
 .status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #00f3ff;
-  animation: pulse 2s infinite;
-  box-shadow: 0 0 12px rgb(0 243 255 / 60%);
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(0.9);
-  }
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2dd4bf;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .progress-percent {
-  font-size: 12px;
-  font-weight: 800;
-  color: #00f3ff;
-  background: rgb(0 243 255 / 10%);
-  padding: 3px 8px;
-  border-radius: 4px;
+  color: #22d3ee;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-bar-container {
-  margin-top: 10px;
+  width: 100%;
   height: 3px;
-  background: rgb(0 0 0 / 50%);
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  margin-top: 8px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0ff, #08f);
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px rgb(0 243 255 / 50%);
+  background: linear-gradient(90deg, #14b8a6, #22d3ee);
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.45);
 }
 
-/* Grid de Controles - Organiza os botões em colunas flexíveis */
+/* Controls Panel */
 .spectrogram-controls {
-  background: #111;
-  padding: 15px;
-  border: 1px solid #222;
-  border-radius: 4px;
+  background: #090d13;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 14px;
 }
 
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .control-label-row {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  color: #888;
-  font-weight: bold;
+  align-items: center;
+  gap: 8px;
 }
 
 .control-label {
+  color: #a1a1aa;
   font-size: 11px;
-  font-weight: 700;
-  color: #00f3ff;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .control-value {
-  color: #00f3ff;
+  color: #5eead4;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Estilização dos Sliders */
 .control-slider {
   width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
   cursor: pointer;
-  accent-color: #00f3ff;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-/* Botões de Cores */
+.control-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.control-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  cursor: pointer;
+  border: 2px solid #05080c;
+  box-shadow: 0 0 6px rgba(45, 212, 191, 0.5);
+}
+
+.control-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.control-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  cursor: pointer;
+  border: 2px solid #05080c;
+}
+
 .color-scheme-buttons {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 
 .color-btn {
   flex: 1;
-  background: #222;
-  border: 1px solid #444;
-  color: #ccc;
-  padding: 6px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #a1a1aa;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 11px;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .color-btn:hover {
-  background: #333;
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f4f4f5;
 }
 
 .color-btn.active.hot {
-  border-color: #ff4500;
-  color: #ff4500;
-  background: rgb(255 69 0 / 10%);
-}
-.color-btn.active.cyan {
-  border-color: #00f3ff;
-  color: #00f3ff;
-  background: rgb(0 243 255 / 10%);
-}
-.color-btn.active.magma {
-  border-color: #f0f;
-  color: #f0f;
-  background: rgb(255 0 255 / 10%);
+  background: rgba(249, 115, 22, 0.16);
+  color: #fdba74;
+  border-color: rgba(251, 146, 60, 0.55);
 }
 
-/* Container do Canvas com Scroll Horizontal */
+.color-btn.active.cyan {
+  background: rgba(34, 211, 238, 0.16);
+  color: #67e8f9;
+  border-color: rgba(34, 211, 238, 0.55);
+}
+
+.color-btn.active.magma {
+  background: rgba(168, 85, 247, 0.18);
+  color: #d8b4fe;
+  border-color: rgba(192, 132, 252, 0.55);
+}
+
+/* Canvas Area */
 .canvas-container {
   position: relative;
+  background: #05080c;
   overflow: auto;
-  background: #000;
-  border: 1px solid #00f3ff;
   min-height: 200px;
+  max-height: 62vh;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45, 212, 191, 0.3) rgba(5, 8, 12, 0.6);
+}
+
+.canvas-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.canvas-container::-webkit-scrollbar-track {
+  background: rgba(5, 8, 12, 0.7);
+}
+
+.canvas-container::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 191, 0.3);
+  border-radius: 999px;
 }
 
 .canvas-wrapper {
+  position: relative;
   display: inline-block;
+  min-width: 100%;
+  min-height: 200px;
 }
 
 .spectrogram-canvas {
   display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
 }
 
-/* Marcadores de Frequência */
+/* Frequency Grid Markers */
 .frequency-markers {
-  position: absolute;
+  position: sticky;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 50px;
   pointer-events: none;
-  background: rgb(0 0 0 / 30%);
-  border-right: 1px solid rgb(255 255 255 / 10%);
+  z-index: 4;
 }
 
 .freq-marker {
   position: absolute;
-  left: 5px;
-  font-size: 10px;
-  color: #666;
-  font-family: monospace;
+  left: 6px;
+  transform: translateY(-50%);
+  color: #a1a1aa;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(5, 8, 12, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 .freq-marker.highlight {
-  color: #f0f;
-  font-weight: bold;
+  color: #5eead4;
+  border-color: rgba(45, 212, 191, 0.35);
 }
 
+/* Footer */
 .spectrogram-footer {
-  font-size: 11px;
-  color: #666;
-  border-top: 1px solid #222;
-  padding-top: 10px;
-}
-
-.footer-text {
-  font-size: 11px;
-  color: #666;
+  background: #0b1016;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 14px;
   text-align: center;
 }
 
-.footer-text strong {
-  color: #00f3ff;
-  font-weight: 700;
+.footer-text {
+  color: #71717a;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
-/* Responsive */
-@media (width <= 768px) {
-  .control-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .header-title {
-    font-size: 14px;
-  }
-
-  .color-scheme-buttons {
-    flex-direction: column;
-  }
-
-  .canvas-container {
-    min-height: 250px;
-  }
-
-  .spectrogram-controls {
-    padding: 12px;
-  }
-
-  .control-grid {
-    gap: 14px;
-  }
-}
-
-@media (width <= 480px) {
-  .header-title {
-    font-size: 12px;
-  }
-
-  .canvas-container {
-    min-height: 200px;
-  }
-
-  .control-value {
-    font-size: 11px;
-  }
-
-  .spectrogram-header {
-    padding: 12px;
-  }
-
-  .spectrogram-controls {
-    padding: 12px;
-  }
-
-  .spectrogram-footer {
-    padding: 10px;
-  }
-}
-
-/* Scrollbar */
-.canvas-container::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.canvas-container::-webkit-scrollbar-track {
-  background: rgb(0 0 0 / 30%);
-}
-
-.canvas-container::-webkit-scrollbar-thumb {
-  background: rgb(0 243 255 / 30%);
-  border-radius: 5px;
-}
-
-.canvas-container::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 243 255 / 50%);
-}
-
-/* Custom Scrollbar - Cyberpunk Style */
-.canvas-container::-webkit-scrollbar {
-  height: 8px; /* Altura da barra horizontal */
-}
-
-.canvas-container::-webkit-scrollbar-track {
-  background: #05080a; /* Fundo escuro */
-  border-top: 1px solid #222;
-}
-
-.canvas-container::-webkit-scrollbar-thumb {
-  background: #004d52; /* Cor inativa escura */
-  border-radius: 0;
-  border: 1px solid #00f3ff; /* Borda neon */
-}
-
-.canvas-container::-webkit-scrollbar-thumb:hover {
-  background: #00f3ff; /* Aceso no hover */
-  box-shadow: 0 0 10px #00f3ff;
-}
-
-/* Crosshair inspector */
-.canvas-container {
-  position: relative;
-  cursor: crosshair;
-}
-
+/* Crosshair Overlay */
 .crosshair-v {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgb(255 255 255 / 50%);
+  background: rgba(34, 211, 238, 0.65);
   pointer-events: none;
-  z-index: 8;
+  z-index: 5;
 }
 
 .crosshair-h {
@@ -349,35 +320,81 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: rgb(255 255 255 / 50%);
+  background: rgba(34, 211, 238, 0.65);
   pointer-events: none;
-  z-index: 8;
+  z-index: 5;
 }
 
 .crosshair-tooltip {
   position: absolute;
-  background: rgb(0 0 0 / 90%);
-  color: #00f3ff;
+  background: rgba(7, 10, 15, 0.94);
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  border-radius: 6px;
   padding: 4px 8px;
-  border: 1px solid #00f3ff;
-  border-radius: var(--radius-sm, 4px);
-  font-size: 11px;
-  font-family: monospace;
+  color: #99f6e4;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
   pointer-events: none;
   z-index: 10;
-  white-space: nowrap;
-  box-shadow: 0 0 10px rgb(0 243 255 / 40%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
 }
 
 .crosshair-tooltip.touch-tooltip-above {
-  transform: translateX(-50%);
-  bottom: auto;
+  transform: translate(-50%, -100%);
+  background: rgba(7, 10, 15, 0.96);
+  border-color: rgba(34, 211, 238, 0.55);
 }
 
-/* Subtle grid when canvas is empty */
-.spectrogram-container {
-  background-image:
-    linear-gradient(rgb(0 243 255 / 3%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(0 243 255 / 3%) 1px, transparent 1px);
-  background-size: 20px 20px;
+@media (width <= 768px) {
+  .spectrogram-controls {
+    padding: 10px 12px;
+  }
+
+  .control-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .control-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  .control-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  .canvas-container {
+    min-height: 180px;
+    max-height: 55vh;
+  }
+
+  .color-scheme-buttons {
+    flex-wrap: wrap;
+  }
+
+  .color-btn {
+    min-height: 36px;
+    font-size: 11px;
+  }
+}
+
+@media (width <= 480px) {
+  .spectrogram-header {
+    padding: 8px 12px;
+  }
+
+  .header-title {
+    font-size: 10px;
+  }
+
+  .freq-marker {
+    font-size: 8px;
+  }
+
+  .footer-text {
+    font-size: 9px;
+  }
 }

@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Circle, FolderOpen, Image, Plus, ShieldCheck, Trash2, X, Pencil, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '../supabaseClient';
+import { useAuth } from '../components/auth/AuthProvider';
+import { validateFile } from '../utils/storage';
 import styles from './Home.module.scss';
 import Desktop from '../components/layout/Desktop';
 import { createInvestigation, deleteInvestigation, updateInvestigation } from '../api/investigations';
@@ -86,9 +89,23 @@ function getCaseArt(id: unknown, element?: string | null) {
   return CASE_ART[index];
 }
 
+function isMissingColumnError(err: any): boolean {
+  const code = String(err?.code || '');
+  const msg = String(err?.message || '');
+  return (
+    code === '42703' ||
+    code === 'PGRST204' ||
+    /column .* does not exist|Could not find the .* column/i.test(msg)
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const currentUserId = session?.user?.id || null;
   const [cases, setCases] = useState<any[]>([]);
+  const [loadingCases, setLoadingCases] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -143,26 +160,45 @@ export default function Home() {
   }, [showCreateModal]);
 
   async function fetchCases() {
-    const res = await supabase
-      .from('investigations')
-      .select('id, title, description, cover_url, created_at, owner_id')
-      .order('created_at', { ascending: false });
+    setLoadingCases(true);
+    setFetchError(null);
+    try {
+      let res = await supabase
+        .from('investigations')
+        .select('id, title, description, cover_url, element, evolution, created_at, owner_id')
+        .order('created_at', { ascending: false });
 
-    if (res.error) {
+      if (res.error && isMissingColumnError(res.error)) {
+        res = await (supabase as any)
+          .from('investigations')
+          .select('id, title, description, cover_url, created_at, owner_id')
+          .order('created_at', { ascending: false });
+      }
+
+      if (res.error) {
+        setFetchError(res.error.message || 'Erro ao carregar arquivos da Ordem.');
+        setCases([]);
+      } else {
+        const classifications = readCaseClassifications();
+        setCases(((res.data as any[]) || []).map((currentCase: any) => {
+          let nextCoverUrl = currentCase.cover_url;
+          if (nextCoverUrl && nextCoverUrl.includes('cdn.builder.io')) {
+            nextCoverUrl = null;
+          }
+          const localClass: Partial<CaseClassification> = classifications[String(currentCase.id)] || {};
+          return {
+            ...currentCase,
+            cover_url: nextCoverUrl,
+            element: currentCase.element || localClass.element,
+            evolution: currentCase.evolution || localClass.evolution,
+          };
+        }));
+      }
+    } catch (err: any) {
+      setFetchError(err?.message || 'Erro de conexão ao buscar casos.');
       setCases([]);
-    } else {
-      const classifications = readCaseClassifications();
-      setCases(((res.data as any[]) || []).map((currentCase: any) => {
-        let coverUrl = currentCase.cover_url;
-        if (coverUrl && coverUrl.includes('cdn.builder.io')) {
-          coverUrl = null;
-        }
-        return {
-          ...currentCase,
-          cover_url: coverUrl,
-          ...(classifications[String(currentCase.id)] || {}),
-        };
-      }));
+    } finally {
+      setLoadingCases(false);
     }
   }
 
@@ -173,9 +209,21 @@ export default function Home() {
     try {
       let targetId = editingCaseId;
       if (editingCaseId) {
-        await updateInvestigation(editingCaseId, { title, description: newDescription.trim() || null, cover_url: coverUrl.trim() || null });
+        await updateInvestigation(editingCaseId, {
+          title,
+          description: newDescription.trim() || null,
+          cover_url: coverUrl.trim() || null,
+          element: newElement,
+          evolution: newEvolution || null,
+        });
       } else {
-        const created = await createInvestigation(title, newDescription.trim() || undefined, coverUrl.trim() || undefined);
+        const created = await createInvestigation(
+          title,
+          newDescription.trim() || undefined,
+          coverUrl.trim() || undefined,
+          newElement,
+          newEvolution || null
+        );
         targetId = created?.id;
       }
       if (targetId) {
@@ -190,8 +238,8 @@ export default function Home() {
         await fetchCases();
         if (!editingCaseId) navigate(`/case/${newId}`);
       }
-    } catch (error) {
-      alert('Erro ao salvar caso');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao salvar caso');
     } finally {
       setCreating(false);
     }
@@ -204,9 +252,10 @@ export default function Home() {
       const classifications = readCaseClassifications();
       delete classifications[String(id).split(':')[0]];
       window.localStorage.setItem(CLASSIFICATIONS_STORAGE_KEY, JSON.stringify(classifications));
+      toast.success('Caso removido do arquivo.');
       await fetchCases();
-    } catch (error) {
-      alert('Erro ao apagar caso. Verifique permissões.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao apagar caso. Verifique permissões.');
     }
   }
 
@@ -355,32 +404,34 @@ export default function Home() {
                   <div className={styles['case-scanline']} aria-hidden="true" />
                   <div className={styles['case-card-top']}>
                     <span className={styles['case-index']}>CASO {String(index + 1).padStart(2, '0')}</span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        className={styles['case-delete']}
-                        title="Editar caso"
-                        aria-label={`Editar caso ${currentCase.title}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditModal(currentCase);
-                        }}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className={styles['case-delete']}
-                        title="Apagar caso"
-                        aria-label={`Apagar caso ${currentCase.title}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDelete(currentCase.id);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    {currentUserId && currentCase.owner_id === currentUserId && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          type="button"
+                          className={styles['case-delete']}
+                          title="Editar caso"
+                          aria-label={`Editar caso ${currentCase.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditModal(currentCase);
+                          }}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles['case-delete']}
+                          title="Apagar caso"
+                          aria-label={`Apagar caso ${currentCase.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDelete(currentCase.id);
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className={styles['case-card-body']}>
                     <span className={styles['case-element']}><Image size={12} /> {art.label}</span>
@@ -398,7 +449,20 @@ export default function Home() {
             })}
           </div>
 
-          {cases.length === 0 ? (
+          {loadingCases ? (
+            <div className={styles['empty-state']} role="status" aria-live="polite">
+              <span>SINCRONIZANDO ARQUIVOS...</span>
+              <small>Consultando registros ativos no terminal da Ordem.</small>
+            </div>
+          ) : fetchError ? (
+            <div className={styles['empty-state']} role="alert">
+              <span>FALHA AO CARREGAR ARQUIVOS</span>
+              <small>{fetchError}</small>
+              <button type="button" className={styles['secondary-action']} style={{ marginTop: 12 }} onClick={fetchCases}>
+                Tentar novamente
+              </button>
+            </div>
+          ) : cases.length === 0 ? (
             <div className={styles['empty-state']}>
               <span>NENHUM REGISTRO INDEXADO</span>
               <small>O primeiro caso ainda aguarda autorização de abertura.</small>
@@ -544,6 +608,11 @@ export default function Home() {
                     onChange={async (event) => {
                       const file = event.target.files?.[0];
                       if (!file) return;
+                      const check = validateFile(file, 'image');
+                      if (!check.valid) {
+                        toast.error(check.error || 'Arquivo de imagem inválido.');
+                        return;
+                      }
                       setUploadingImage(true);
                       try {
                         const fileExt = file.name.split('.').pop() || 'png';
@@ -553,9 +622,10 @@ export default function Home() {
                         if (error) throw error;
                         const { data } = supabase.storage.from('investigation-assets').getPublicUrl(path);
                         setCoverUrl(data.publicUrl);
-                      } catch (error) {
+                        toast.success('Imagem de capa enviada!');
+                      } catch (error: any) {
                         console.error(error);
-                        alert('Erro ao enviar imagem');
+                        toast.error(error?.message || 'Erro ao enviar imagem');
                       } finally {
                         setUploadingImage(false);
                       }

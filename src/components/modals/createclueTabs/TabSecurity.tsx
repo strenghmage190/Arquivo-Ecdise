@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useClueModal } from '../../../contexts/ClueModalContext';
-import { Lock, ShieldAlert, Smartphone, Flame, Info } from 'lucide-react';
+import { Lock, ShieldAlert, Smartphone, Flame, Info, Clock, Gift } from 'lucide-react';
 import { Tooltip } from 'react-tooltip';
 import PatternLock from '../../tools/PatternLock';
 import NumericKeypad from '../../tools/NumericKeypad';
 import FakePhoneChatBuilder from './FakePhoneChatBuilder';
+import { supabase } from '../../../supabaseClient';
 
-export default function TabSecurity() {
+interface TabSecurityProps {
+  investigationId?: string;
+  currentCardId?: string;
+}
+
+interface RewardCandidate {
+  id: string;
+  title: string;
+  is_hidden: boolean;
+}
+
+export default function TabSecurity({ investigationId, currentCardId }: TabSecurityProps = {}) {
   const {
     coreState,
     megaClueState,
@@ -19,10 +31,79 @@ export default function TabSecurity() {
     setActiveTab,
   } = useClueModal();
 
+  const [rewardCandidates, setRewardCandidates] = useState<RewardCandidate[]>([]);
+
+  useEffect(() => {
+    if (!investigationId) return;
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('investigation_cards')
+          .select('id, title, is_hidden')
+          .eq('investigation_id', investigationId)
+          .order('created_at', { ascending: false });
+        if (active && Array.isArray(data)) {
+          setRewardCandidates(
+            (data as RewardCandidate[]).filter((c) => c.id && c.id !== currentCardId)
+          );
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [investigationId, currentCardId]);
+
+  const toggleRewardCard = (id: string) => {
+    setSecurityState((s) => {
+      const current = s.rewardCardIds || [];
+      const exists = current.includes(id);
+      return {
+        ...s,
+        rewardCardIds: exists ? current.filter((x) => x !== id) : [...current, id],
+      };
+    });
+  };
+
   const isMegaLocked = securityState.isLocked && coreState.evidenceType === 'mega_clue';
 
   return (
     <div className="ccm-tab-stack">
+      <section className="ccm-section">
+        <div className="ccm-section-head">
+          <h3 className="ccm-section-title">
+            <Clock size={17} /> RITMO DA INVESTIGAÇÃO (DOIS RITMOS)
+          </h3>
+        </div>
+        <div className="ccm-grid-2">
+          <button
+            type="button"
+            className={`ccm-btn ${securityState.paceMode === 'in_session' ? 'ccm-btn-primary' : ''}`}
+            onClick={() => setSecurityState((s) => ({ ...s, paceMode: 'in_session' }))}
+            style={{ justifyContent: 'flex-start', textAlign: 'left', padding: '10px 12px' }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 12 }}>EM CENA (30s – 3min)</div>
+              <div style={{ fontSize: 11, opacity: 0.78 }}>Ritmo rápido para resolver ao vivo na call</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            className={`ccm-btn ${securityState.paceMode === 'between_sessions' ? 'ccm-btn-primary' : ''}`}
+            onClick={() => setSecurityState((s) => ({ ...s, paceMode: 'between_sessions' }))}
+            style={{ justifyContent: 'flex-start', textAlign: 'left', padding: '10px 12px' }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 12 }}>ENTRE SESSÕES (QUARENTENA)</div>
+              <div style={{ fontSize: 11, opacity: 0.78 }}>Enigma denso para o grupo quebrar durante a semana</div>
+            </div>
+          </button>
+        </div>
+      </section>
+
       <section className="ccm-section">
         <div className="ccm-section-head">
           <h3 className="ccm-section-title">
@@ -32,7 +113,7 @@ export default function TabSecurity() {
 
         <label className="ccm-toggle-row">
           <span className="ccm-toggle-text">
-            <span className="ccm-toggle-title">Bloquear Pista com Senha</span>
+            <span className="ccm-toggle-title">Bloquear Pista com Senha (Anti-F12)</span>
           </span>
           <input
             type="checkbox"
@@ -43,15 +124,73 @@ export default function TabSecurity() {
         </label>
 
         {securityState.isLocked && !isMegaLocked && (
-          <div className="ccm-field">
-            <label className="ccm-label">Senha de Desbloqueio Principal *</label>
-            <input
-              type="text"
-              className="ccm-input ccm-input-mono"
-              value={securityState.lockPass}
-              onChange={(e) => setSecurityState((s) => ({ ...s, lockPass: e.target.value }))}
-              placeholder="Ex: 1234, ALFA-99..."
-            />
+          <div className="ccm-list-stack">
+            <div className="ccm-field">
+              <label className="ccm-label">Senha de Desbloqueio Principal *</label>
+              <input
+                type="text"
+                className="ccm-input ccm-input-mono"
+                value={securityState.lockPass}
+                onChange={(e) => setSecurityState((s) => ({ ...s, lockPass: e.target.value }))}
+                placeholder="Ex: 4812 (Keypad), 1-2-5-8 (Pattern), ou ECDISE (Terminal)"
+              />
+              <div className="ccm-note">
+                Validada no servidor via Supabase RPC — nunca exposta no inspetor do navegador (F12).
+              </div>
+            </div>
+
+            <div className="ccm-field">
+              <label className="ccm-label">Dica de Calibração Assistida (C.R.I.S. / Teste de Perícia)</label>
+              <input
+                type="text"
+                className="ccm-input"
+                value={securityState.assistHint}
+                onChange={(e) => setSecurityState((s) => ({ ...s, assistHint: e.target.value }))}
+                placeholder="Ex: A senha está nos dígitos térmicos do celular apreendido."
+              />
+            </div>
+
+            {rewardCandidates.length > 0 && (
+              <div className="ccm-field">
+                <label className="ccm-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Gift size={14} /> Recompensas Automáticas (Dead-Drop ao Resolver)
+                </label>
+                <div className="ccm-note" style={{ marginBottom: 6 }}>
+                  Cards ocultos marcados abaixo serão revelados automaticamente no mural assim que os agentes destravarem esta pista.
+                </div>
+                <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, padding: 6, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6 }}>
+                  {rewardCandidates.map((c) => {
+                    const checked = (securityState.rewardCardIds || []).includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRewardCard(c.id)}
+                        />
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.title || 'Sem título'}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            padding: '1px 6px',
+                            borderRadius: 999,
+                            background: c.is_hidden ? 'rgba(230, 57, 70, 0.25)' : 'rgba(16, 185, 129, 0.2)',
+                            color: c.is_hidden ? '#fda4af' : '#6ee7b7',
+                          }}
+                        >
+                          {c.is_hidden ? 'OCULTA' : 'VISÍVEL'}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

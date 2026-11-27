@@ -45,6 +45,7 @@ import { useClueTour } from '../../hooks/useClueTour';
 import { useClueDraft } from '../../hooks/useClueDraft';
 import { useDirtyGuard } from '../../hooks/useDirtyGuard';
 import { createInvestigationCard, updateInvestigationCard } from '../../api/investigations';
+import { upsertClueSecret } from '../../api/clueSecurity';
 import {
   ClueTemplate,
   fetchClueTemplates,
@@ -68,9 +69,11 @@ import TabFieldsVisibility from './createclueTabs/TabFieldsVisibility';
 import TabDisplayConfig from './createclueTabs/TabDisplayConfig';
 import TabSecurity from './createclueTabs/TabSecurity';
 import TabMetadata from './createclueTabs/TabMetadata';
-import QuickClueMode from './createclueTabs/QuickClueMode';
+import GuidedRecipeMode from './createclueTabs/GuidedRecipeMode';
 import FakePhoneChatBuilder from './createclueTabs/FakePhoneChatBuilder';
 import PlayerViewSimulatorModal from './PlayerViewSimulatorModal';
+import { supabase } from '../../supabaseClient';
+import { analyzeClueSolvability, BoardCardSummary } from '../../utils/solvabilityLinter';
 
 export type { ClueArchetype };
 
@@ -88,11 +91,12 @@ export interface CreateClueModalProps {
 }
 
 const ARCHETYPES: { id: ClueArchetype; label: string; icon: LucideIcon }[] = [
+  { id: 'quick', label: 'Receitas (3 Passos)', icon: Sparkles },
   { id: 'forensic_doc', label: 'Documento/Foto', icon: FileText },
   { id: 'fake_phone', label: 'Celular Apreendido', icon: Smartphone },
   { id: 'secret_audio', label: 'Interceptação/Áudio', icon: Music },
   { id: 'puzzle_lock', label: 'Terminal/Cripto', icon: KeyRound },
-  { id: 'complete', label: 'Modo Completo', icon: SlidersHorizontal },
+  { id: 'complete', label: 'Modo Completo (10 Abas)', icon: SlidersHorizontal },
 ];
 
 const TABS: { id: string; label: string; icon: LucideIcon; group: 'content' | 'config' }[] = [
@@ -179,6 +183,80 @@ function CreateClueModalContent({
   const [templates, setTemplates] = useState<ClueTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+
+  // Board cards snapshot for live Solvability Linter & Dead-Drop reward picker
+  const [boardCards, setBoardCards] = useState<BoardCardSummary[]>([]);
+
+  useEffect(() => {
+    if (!isOpen || !investigationId) return;
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('investigation_cards')
+          .select('id, title, description_public, description_hidden, discovery_code, is_hidden, chat_data, metadata')
+          .eq('investigation_id', investigationId)
+          .order('created_at', { ascending: false });
+        if (active && Array.isArray(data)) {
+          setBoardCards(data as BoardCardSummary[]);
+        }
+      } catch {
+        // ignore offline/test errors
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isOpen, investigationId]);
+
+  const solvabilitySummary = useMemo(
+    () =>
+      analyzeClueSolvability({
+        currentCardId: existingCard?.id,
+        title: coreState.title,
+        evidenceType: coreState.evidenceType,
+        isLocked: securityState.isLocked,
+        lockPass: securityState.lockPass,
+        paceMode: securityState.paceMode,
+        assistHint: securityState.assistHint,
+        rewardCardIds: securityState.rewardCardIds || [],
+        hasUvOrThermal: Boolean(
+          mediaState.uvPreviewUrl ||
+            mediaState.uvFile ||
+            thermalConfig.enabled ||
+            mediaState.thermalPreviewUrl ||
+            mediaState.forensicPreviewUrl
+        ),
+        hasHiddenAudio: Boolean(mediaState.audioHiddenPreview || mediaState.audioHidden),
+        hasCipherOrHex: Boolean(cipherState.cipherText?.trim() || cipherState.hexCode?.trim()),
+        isShredded: Boolean(cipherState.isShredded),
+        shredPiecesCount: (cipherState.shredRows || 1) * (cipherState.shredCols || 8),
+        boardCards,
+      }),
+    [
+      existingCard?.id,
+      coreState.title,
+      coreState.evidenceType,
+      securityState.isLocked,
+      securityState.lockPass,
+      securityState.paceMode,
+      securityState.assistHint,
+      securityState.rewardCardIds,
+      mediaState.uvPreviewUrl,
+      mediaState.uvFile,
+      mediaState.thermalPreviewUrl,
+      mediaState.forensicPreviewUrl,
+      mediaState.audioHiddenPreview,
+      mediaState.audioHidden,
+      thermalConfig.enabled,
+      cipherState.cipherText,
+      cipherState.hexCode,
+      cipherState.isShredded,
+      cipherState.shredRows,
+      cipherState.shredCols,
+      boardCards,
+    ]
+  );
 
   const draftWatchValue = useMemo(
     () =>
@@ -694,7 +772,7 @@ function CreateClueModalContent({
         isDuplicate: isDuplicateMode,
         uploadedUrls,
         coreState,
-        securityState,
+        securityState: { ...securityState, useServerSecret: true },
         mediaState,
         cipherState,
         glitchState,
@@ -719,6 +797,26 @@ function CreateClueModalContent({
         resultCard = await updateInvestigationCard(existingCard.id, payload);
       } else {
         resultCard = await createInvestigationCard(payload as any);
+      }
+
+      if (
+        resultCard?.id &&
+        securityState.isLocked &&
+        coreState.evidenceType !== 'mega_clue' &&
+        securityState.lockPass.trim()
+      ) {
+        const savedSecret = await upsertClueSecret(
+          String(resultCard.id),
+          investigationId,
+          securityState.lockPass,
+          securityState.assistHint
+        );
+        // Backwards-compatible fallback if Phase 5 SQL migration has not been applied yet
+        if (!savedSecret) {
+          resultCard = await updateInvestigationCard(String(resultCard.id), {
+            lock_password: securityState.lockPass.trim(),
+          });
+        }
       }
 
       clearDraft();
@@ -992,7 +1090,11 @@ function CreateClueModalContent({
 
           <div className="ccm-content">
             {creatorMode === 'quick' ? (
-              <QuickClueMode />
+              <GuidedRecipeMode
+                investigationId={investigationId}
+                currentCardId={existingCard?.id}
+                boardCards={boardCards}
+              />
             ) : (
               <AnimatePresence custom={direction} mode="wait">
                 <motion.div
@@ -1010,7 +1112,9 @@ function CreateClueModalContent({
                   {activeTab === 'cifra' && <TabCipher />}
                   {activeTab === 'glitch' && <TabGlitch />}
                   {activeTab === 'mega' && <TabMegaClue investigationId={investigationId} />}
-                  {activeTab === 'seguranca' && <TabSecurity />}
+                  {activeTab === 'seguranca' && (
+                    <TabSecurity investigationId={investigationId} currentCardId={existingCard?.id} />
+                  )}
                   {activeTab === 'metadata' && <TabMetadata />}
                   {activeTab === 'campos' && <TabFieldsVisibility />}
                   {activeTab === 'display' && <TabDisplayConfig />}
@@ -1026,6 +1130,23 @@ function CreateClueModalContent({
               <span className="ccm-status-dot" />
               <span>{isSaving ? 'Processando...' : 'Pronto'}</span>
             </span>
+
+            {creatorMode === 'complete' && solvabilitySummary.issues.length > 0 && (
+              <button
+                type="button"
+                className="ccm-checklist-badge has-warnings"
+                onClick={() => {
+                  setActiveArchetype('quick');
+                  applyArchetype('quick');
+                }}
+                title={solvabilitySummary.issues.map((i) => `• ${i.title}`).join('\n')}
+              >
+                <AlertTriangle size={13} />
+                <span>
+                  Linter: {solvabilitySummary.issues.length} alerta(s) · {solvabilitySummary.estimatedMinutesLabel}
+                </span>
+              </button>
+            )}
 
             <button
               type="button"

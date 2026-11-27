@@ -92,6 +92,12 @@
     --space-6: 24px;
     --space-8: 32px;
 
+    /* Aliases legados de espaçamento (_buttons.scss / _layers.scss) */
+    --spacing-sm: var(--space-2);
+    --spacing-md: var(--space-3);
+    --spacing-lg: var(--space-4);
+    --spacing-2xl: var(--space-8);
+
     /* Border-radius padronizados */
     --radius-none: 0px;
     --radius-sm: 4px;
@@ -127,6 +133,10 @@
     --z-modal-backdrop: 1900;
     --z-modal-base: var(--z-modals);
     --z-modal-top: 2100;
+    --z-modal-nested: 25000;
+    --z-modal-overlay: 40000;
+    --z-modal-studio: 55000;
+    --z-modal-terminal: 60000;
   }
 
   html {
@@ -184,8 +194,8 @@
     background: #475569;
   }
 
-  /* Inputs, selects e textareas: font-size >= 16px no mobile para prevenir auto-zoom no iOS */
-  input,
+  /* Inputs de texto, selects e textareas: font-size >= 16px no mobile para prevenir auto-zoom no iOS */
+  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']),
   textarea,
   select {
     border-radius: var(--radius-none);
@@ -201,6 +211,34 @@
   textarea {
     height: auto;
     padding: var(--space-2) var(--space-3);
+  }
+
+  input[type='range'] {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    height: auto;
+    min-height: 0;
+    accent-color: #2dd4bf;
+    cursor: pointer;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    accent-color: #2dd4bf;
+    cursor: pointer;
+  }
+
+  input[type='color'] {
+    padding: 2px;
+    height: var(--control-h-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
   }
 
   /* Ordo Realitas Focus Ring (WCAG AA) */
@@ -441,7 +479,7 @@
       min-width: var(--control-h-md-mobile);
     }
 
-    input,
+    input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']),
     textarea,
     select {
       font-size: max(16px, 1rem);
