@@ -1032,9 +1032,11 @@
   height: 100%;
 }
 
-/* Force all MysteryImage layers to occupy the same fullscreen bounds */
+/* Force all MysteryImage layers to occupy the same fullscreen bounds.
+   A camada de revelação do tratamento é a exceção: ela precisa manter o
+   recorte/posição configurado pelo mestre. */
 .fullscreen-stage .uv-container,
-.fullscreen-stage .uv-container > div,
+.fullscreen-stage .uv-container > div:not(.filter-reveal-layer),
 .fullscreen-stage .uv-container img.bg-blur,
 .fullscreen-stage .uv-container canvas.forensic-canvas,
 .fullscreen-stage .uv-container .main-evidence {
@@ -1047,9 +1049,15 @@
 
 /* layering order: background blur (behind), base image, overlay canvas */
 .fullscreen-stage .uv-container img.bg-blur { z-index: 2; }
-.fullscreen-stage .uv-container > div { z-index: 5; }
+.fullscreen-stage .uv-container > div:not(.filter-reveal-layer) { z-index: 5; }
 .fullscreen-stage .uv-container .main-evidence { z-index: 10; }
 .fullscreen-stage .uv-container canvas.forensic-canvas { z-index: 30; }
+
+/* Camada de tratamento: sempre acima da imagem base e sem bloquear cliques */
+.filter-reveal-layer {
+  pointer-events: none;
+  z-index: 30;
+}
 
 /* -----------------------------
    Zoom UI / Controls & polish

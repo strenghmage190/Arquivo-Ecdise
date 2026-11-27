@@ -1,6 +1,7 @@
 import { DisplayConfig, defaultDisplayConfig } from '../config/displayConfig';
 import { FieldVisibilityConfig, defaultFieldVisibility } from '../config/fieldVisibilityConfig';
 import { InvestigationCardInsight } from '../api/investigations';
+import { clampImageFilterValue } from '../config/imageFilter';
 
 export type PaceMode = 'in_session' | 'between_sessions';
 export type LockType = 'keypad' | 'terminal' | 'pattern';
@@ -718,9 +719,9 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
         : [],
     },
     filterConfig: {
-      brightness: m.image_filter_reveal?.brightness ?? 100,
-      contrast: m.image_filter_reveal?.contrast ?? 100,
-      saturate: m.image_filter_reveal?.saturate ?? 100,
+      brightness: clampImageFilterValue('brightness', m.image_filter_reveal?.brightness ?? 100),
+      contrast: clampImageFilterValue('contrast', m.image_filter_reveal?.contrast ?? 100),
+      saturate: clampImageFilterValue('saturate', m.image_filter_reveal?.saturate ?? 100),
       transform: m.image_filter_layer_transform || null,
     },
     thermalConfig: {
@@ -1050,9 +1051,9 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
     },
     field_visibility: fieldVisCfg,
     image_filter_reveal: {
-      brightness: filter.brightness ?? 100,
-      contrast: filter.contrast ?? 100,
-      saturate: filter.saturate ?? 100,
+      brightness: clampImageFilterValue('brightness', filter.brightness ?? 100),
+      contrast: clampImageFilterValue('contrast', filter.contrast ?? 100),
+      saturate: clampImageFilterValue('saturate', filter.saturate ?? 100),
     },
     audio_target_freq: audioTargetFreq,
   };

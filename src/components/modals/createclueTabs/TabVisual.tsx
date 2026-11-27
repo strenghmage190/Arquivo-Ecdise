@@ -17,12 +17,18 @@ import {
   FlipHorizontal,
   Scissors,
   Plus,
+  RotateCcw,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Tooltip } from 'react-tooltip';
 import { toast } from 'sonner';
 import { validateImageFile } from '../../../utils/fileValidators';
 import { validateFile } from '../../../utils/storage';
+import {
+  DEFAULT_IMAGE_FILTERS,
+  IMAGE_FILTER_LIMITS,
+  clampImageFilterValue,
+} from '../../../config/imageFilter';
 import {
   DocumentLayer,
   FragmentationConfig,
@@ -932,46 +938,145 @@ export default function TabVisual() {
               <div className="ccm-slider-field">
                 <div className="ccm-slider-head">
                   <label className="ccm-label">Brilho</label>
-                  <span className="ccm-slider-val">{filterConfig.brightness}%</span>
+                  <div className="ccm-slider-value-edit">
+                    <input
+                      type="number"
+                      className="ccm-input ccm-input-number"
+                      min={IMAGE_FILTER_LIMITS.brightness.min}
+                      max={IMAGE_FILTER_LIMITS.brightness.max}
+                      step={1}
+                      value={filterConfig.brightness}
+                      aria-label="Brilho de revelação em porcentagem"
+                      onChange={(e) =>
+                        setFilterConfig((s) => ({
+                          ...s,
+                          brightness: clampImageFilterValue(
+                            'brightness',
+                            parseInt(e.target.value, 10)
+                          ),
+                        }))
+                      }
+                    />
+                    <span className="ccm-slider-unit">%</span>
+                  </div>
                 </div>
                 <input
                   type="range"
                   className="ccm-range"
-                  min="0"
-                  max="200"
+                  min={IMAGE_FILTER_LIMITS.brightness.min}
+                  max={IMAGE_FILTER_LIMITS.brightness.max}
+                  step={1}
                   value={filterConfig.brightness}
-                  onChange={(e) => setFilterConfig((s) => ({ ...s, brightness: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setFilterConfig((s) => ({
+                      ...s,
+                      brightness: clampImageFilterValue(
+                        'brightness',
+                        parseInt(e.target.value, 10)
+                      ),
+                    }))
+                  }
                 />
               </div>
 
               <div className="ccm-slider-field">
                 <div className="ccm-slider-head">
                   <label className="ccm-label">Contraste</label>
-                  <span className="ccm-slider-val">{filterConfig.contrast}%</span>
+                  <div className="ccm-slider-value-edit">
+                    <input
+                      type="number"
+                      className="ccm-input ccm-input-number"
+                      min={IMAGE_FILTER_LIMITS.contrast.min}
+                      max={IMAGE_FILTER_LIMITS.contrast.max}
+                      step={1}
+                      value={filterConfig.contrast}
+                      aria-label="Contraste de revelação em porcentagem"
+                      onChange={(e) =>
+                        setFilterConfig((s) => ({
+                          ...s,
+                          contrast: clampImageFilterValue(
+                            'contrast',
+                            parseInt(e.target.value, 10)
+                          ),
+                        }))
+                      }
+                    />
+                    <span className="ccm-slider-unit">%</span>
+                  </div>
                 </div>
                 <input
                   type="range"
                   className="ccm-range"
-                  min="0"
-                  max="200"
+                  min={IMAGE_FILTER_LIMITS.contrast.min}
+                  max={IMAGE_FILTER_LIMITS.contrast.max}
+                  step={1}
                   value={filterConfig.contrast}
-                  onChange={(e) => setFilterConfig((s) => ({ ...s, contrast: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setFilterConfig((s) => ({
+                      ...s,
+                      contrast: clampImageFilterValue(
+                        'contrast',
+                        parseInt(e.target.value, 10)
+                      ),
+                    }))
+                  }
                 />
               </div>
 
               <div className="ccm-slider-field">
                 <div className="ccm-slider-head">
                   <label className="ccm-label">Saturação</label>
-                  <span className="ccm-slider-val">{filterConfig.saturate}%</span>
+                  <div className="ccm-slider-value-edit">
+                    <input
+                      type="number"
+                      className="ccm-input ccm-input-number"
+                      min={IMAGE_FILTER_LIMITS.saturate.min}
+                      max={IMAGE_FILTER_LIMITS.saturate.max}
+                      step={1}
+                      value={filterConfig.saturate}
+                      aria-label="Saturação de revelação em porcentagem"
+                      onChange={(e) =>
+                        setFilterConfig((s) => ({
+                          ...s,
+                          saturate: clampImageFilterValue(
+                            'saturate',
+                            parseInt(e.target.value, 10)
+                          ),
+                        }))
+                      }
+                    />
+                    <span className="ccm-slider-unit">%</span>
+                  </div>
                 </div>
                 <input
                   type="range"
                   className="ccm-range"
-                  min="0"
-                  max="200"
+                  min={IMAGE_FILTER_LIMITS.saturate.min}
+                  max={IMAGE_FILTER_LIMITS.saturate.max}
+                  step={1}
                   value={filterConfig.saturate}
-                  onChange={(e) => setFilterConfig((s) => ({ ...s, saturate: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setFilterConfig((s) => ({
+                      ...s,
+                      saturate: clampImageFilterValue(
+                        'saturate',
+                        parseInt(e.target.value, 10)
+                      ),
+                    }))
+                  }
                 />
+              </div>
+
+              <div className="ccm-btn-row" style={{ justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="ccm-btn ccm-btn-sm"
+                  onClick={() =>
+                    setFilterConfig((s) => ({ ...s, ...DEFAULT_IMAGE_FILTERS }))
+                  }
+                >
+                  <RotateCcw size={13} /> Restaurar 100%
+                </button>
               </div>
 
               {mediaState.filterPreviewUrl && (
