@@ -10,7 +10,8 @@ docs/
 .agent
 .github
 .opencode
-/cypress
+/cypress/screenshots/
+/cypress/videos/
 graphify-out/
 .agents/
 .kilo/

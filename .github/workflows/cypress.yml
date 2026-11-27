@@ -34,10 +34,6 @@ jobs:
   cypress-run:
     runs-on: ubuntu-24.04
     needs: install
-    strategy:
-      fail-fast: false
-      matrix:
-        containers: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,11 +47,5 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          start: npx serve dist -p 3000 -s
-          wait-on: 'http://localhost:3000'
-          record: true
-          parallel: true
-          group: 'UI-Electron'
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY || '' }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          start: npm run preview -- --host 127.0.0.1 --port 3000 --strictPort
+          wait-on: 'http://127.0.0.1:3000'
