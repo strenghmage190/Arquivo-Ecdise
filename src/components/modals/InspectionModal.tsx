@@ -36,6 +36,7 @@ import {
   DEFAULT_IMAGE_FILTERS,
   IMAGE_FILTER_LIMITS,
   clampImageFilterValue,
+  normalizeFilterLayerTransform,
   normalizeImageFilterValues,
 } from '../../config/imageFilter';
 
@@ -849,14 +850,7 @@ export default function InspectionModal({
   const filterLayerTransform = React.useMemo(() => {
     const raw = parsedMetadata?.image_filter_layer_transform;
     if (!raw) return null;
-    if (typeof raw === 'string') {
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return null;
-      }
-    }
-    return typeof raw === 'object' ? raw : null;
+    return normalizeFilterLayerTransform(raw);
   }, [parsedMetadata]);
 
   // Mega-clue metadata (compat: mega_clue or megaClue)

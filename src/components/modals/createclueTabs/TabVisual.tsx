@@ -26,8 +26,10 @@ import { validateImageFile } from '../../../utils/fileValidators';
 import { validateFile } from '../../../utils/storage';
 import {
   DEFAULT_IMAGE_FILTERS,
+  FULL_FILTER_LAYER_TRANSFORM,
   IMAGE_FILTER_LIMITS,
   clampImageFilterValue,
+  resolveFilterLayerTransform,
 } from '../../../config/imageFilter';
 import {
   DocumentLayer,
@@ -253,7 +255,7 @@ export default function TabVisual() {
       brightness: fc.brightness === 100 && fc.contrast === 100 ? 150 : fc.brightness,
       contrast: fc.contrast === 100 && fc.brightness === 100 ? 150 : fc.contrast,
       saturate: fc.saturate,
-      transform: fc.transform || { left: 25, top: 25, width: 50, height: 50 },
+      transform: fc.transform || { ...FULL_FILTER_LAYER_TRANSFORM },
     }));
     setAlignLayer('filter');
     e.target.value = '';
@@ -384,7 +386,7 @@ export default function TabVisual() {
     }));
   };
 
-  const filterTransform = filterConfig.transform || { left: 25, top: 25, width: 50, height: 50 };
+  const filterTransform = resolveFilterLayerTransform(filterConfig.transform);
 
   // Available overlay layers for the Visual Alignment conference preview
   const availableAlignLayers: { key: AlignLayerKey; label: string; url: string; color: string }[] =
