@@ -40,7 +40,7 @@ import {
   useClueModal,
   ClueArchetype,
 } from '../../contexts/ClueModalContext';
-import { FULL_FILTER_LAYER_TRANSFORM } from '../../config/imageFilter';
+/* image filter transform removed: treatment layer is always 100% */
 import { useCyberpunkUI } from '../../hooks/useCyberpunkUI';
 import { useClueTour } from '../../hooks/useClueTour';
 import { useClueDraft } from '../../hooks/useClueDraft';
@@ -1321,7 +1321,7 @@ function CreateClueModalContent({
                       brightness: fc.brightness === 100 && fc.contrast === 100 ? 150 : fc.brightness,
                       contrast: fc.contrast === 100 && fc.brightness === 100 ? 150 : fc.contrast,
                       saturate: fc.saturate,
-                      transform: fc.transform || { ...FULL_FILTER_LAYER_TRANSFORM },
+                      transform: null,
                     }));
                   }
                   setEditorState((prev) => ({

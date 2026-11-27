@@ -982,7 +982,8 @@ export const ClueModalProvider: React.FC<{
       ...(data.filterRevealSaturate !== undefined && {
         saturate: data.filterRevealSaturate,
       }),
-      ...(data.filterTransform !== undefined && { transform: data.filterTransform }),
+      // transform da camada de tratamento é ignorado: sempre 100% alinhada à base
+      transform: null,
     }));
 
     setThermalConfig((prev) => ({

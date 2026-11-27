@@ -695,5 +695,29 @@ describe('cluePayloadBuilder (buildClueDbPayload & serializePublicClueCard)', ()
         saturate: 300,
       });
     });
+
+    it('sempre remove transform da camada de tratamento (camada deve ser 100% alinhada à base)', () => {
+      const payload = buildClueDbPayload(
+        makeBaseParams({
+          existingCard: {
+            metadata: {
+              image_filter_layer_transform: { left: 25, top: 25, width: 50, height: 50 },
+            },
+          },
+          uploadedUrls: {
+            filterUrl: 'https://example.com/filter.png',
+          },
+          filterConfig: {
+            brightness: 120,
+            contrast: 130,
+            saturate: 110,
+            transform: { left: 10, top: 10, width: 80, height: 80 },
+          },
+        })
+      );
+
+      expect(payload.metadata?.image_filter_layer).toBe('https://example.com/filter.png');
+      expect(payload.metadata?.image_filter_layer_transform).toBeUndefined();
+    });
   });
 });

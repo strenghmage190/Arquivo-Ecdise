@@ -27,12 +27,6 @@ interface Props {
     contrast?: number;
     saturate?: number;
   } | null;
-  filterLayerTransform?: {
-    left?: number;
-    top?: number;
-    width?: number;
-    height?: number;
-  } | null;
   isUVMode: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -52,7 +46,6 @@ export function MysteryImage({
   ambientBlur = false,
   filters = { ...DEFAULT_IMAGE_FILTERS },
   revealSettings = null,
-  filterLayerTransform = null,
   className = '',
   style = {},
   fit = 'cover',
@@ -206,47 +199,137 @@ export function MysteryImage({
   }
   hiddenLayerOpacity = Math.min(1, Math.max(0, hiddenLayerOpacity));
 
-  // A camada de filtro é exportada no mesmo enquadramento da imagem base.
-  // Quando o GM define posição/tamanho, respeitamos esse recorte para que o
-  // resultado na investigação seja idêntico ao preview de criação.
-  const overlayRect = useMemo(() => {
-    const t = filterLayerTransform;
-    if (!t) return null;
-    const toNumber = (value: unknown) =>
-      typeof value === 'number' ? value : Number(value);
-    const left = toNumber(t.left);
-    const top = toNumber(t.top);
-    const width = toNumber(t.width);
-    const height = toNumber(t.height);
-    if (![left, top, width, height].every((value) => Number.isFinite(value))) {
-      return null;
-    }
-    const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
-    return {
-      left: `${clampPercent(left)}%`,
-      top: `${clampPercent(top)}%`,
-      width: `${Math.min(100, Math.max(1, width))}%`,
-      height: `${Math.min(100, Math.max(1, height))}%`,
-    };
-  }, [filterLayerTransform]);
+  // Camada de tratamento é sempre a folha inteira, alinhada 1:1 à base.
+  // O CSS de inspeção/fullscreen pode usar object-fit: contain na base;
+  // o overlay acompanha a imagem renderizada (não o container) para evitar drift.
+  const [overlayRect, setOverlayRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    backgroundSize: string;
+  } | null>(null);
 
-  // Precompute overlayStyle with useMemo so hooks are not called conditionally during render
+  useEffect(() => {
+    if (!filterImage) {
+      setOverlayRect(null);
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateRect = () => {
+      const containerRect = container.getBoundingClientRect();
+      const cW = containerRect.width;
+      const cH = containerRect.height;
+      if (!cW || !cH) return;
+
+      const baseImg = container.querySelector<HTMLImageElement>('img.main-evidence');
+      if (!baseImg) {
+        setOverlayRect({ left: 0, top: 0, width: cW, height: cH, backgroundSize: '100% 100%' });
+        return;
+      }
+
+      const imgRect = baseImg.getBoundingClientRect();
+      const naturalW = baseImg.naturalWidth || 0;
+      const naturalH = baseImg.naturalHeight || 0;
+      const objectFit = getComputedStyle(baseImg).objectFit;
+
+      const boxLeft = imgRect.left - containerRect.left;
+      const boxTop = imgRect.top - containerRect.top;
+      const boxW = imgRect.width;
+      const boxH = imgRect.height;
+
+      if (!naturalW || !naturalH || !boxW || !boxH) {
+        setOverlayRect({
+          left: boxLeft, top: boxTop, width: boxW || cW, height: boxH || cH,
+          backgroundSize: '100% 100%',
+        });
+        return;
+      }
+
+      if (objectFit === 'contain') {
+        const scale = Math.min(boxW / naturalW, boxH / naturalH);
+        const drawW = naturalW * scale;
+        const drawH = naturalH * scale;
+        setOverlayRect({
+          left: boxLeft + (boxW - drawW) / 2,
+          top: boxTop + (boxH - drawH) / 2,
+          width: drawW,
+          height: drawH,
+          backgroundSize: '100% 100%',
+        });
+        return;
+      }
+
+      if (objectFit === 'cover') {
+        const scale = Math.max(boxW / naturalW, boxH / naturalH);
+        const drawW = naturalW * scale;
+        const drawH = naturalH * scale;
+        // Overlay cobre o box visível da imagem, mas o background é escalado
+        // como cover para alinhar 1:1 com os pixels renderizados da base.
+        setOverlayRect({
+          left: boxLeft,
+          top: boxTop,
+          width: boxW,
+          height: boxH,
+          backgroundSize: `${drawW}px ${drawH}px`,
+        });
+        return;
+      }
+
+      setOverlayRect({
+        left: boxLeft, top: boxTop, width: boxW, height: boxH,
+        backgroundSize: '100% 100%',
+      });
+    };
+
+    updateRect();
+    const baseImg = container.querySelector<HTMLImageElement>('img.main-evidence');
+    baseImg?.addEventListener('load', updateRect);
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateRect);
+      observer.observe(container);
+      if (baseImg) observer.observe(baseImg);
+    }
+    window.addEventListener('resize', updateRect);
+    return () => {
+      baseImg?.removeEventListener('load', updateRect);
+      observer?.disconnect();
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [filterImage, fit, baseSrc, className, style]);
+
+  // A camada revelada acompanha o tratamento visualmente, mas com limites
+  // seguros para nunca estourar/escurecer a ponto de esconder o conteúdo.
+  const overlayFilter = useMemo(() => {
+    const clampReadable = (value: number, min: number, max: number) =>
+      Math.min(max, Math.max(min, value));
+    const b = clampReadable(filters.brightness, 55, 165);
+    const c = clampReadable(filters.contrast, 60, 165);
+    const s = clampReadable(filters.saturate, 35, 170);
+    return `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+  }, [filters.brightness, filters.contrast, filters.saturate]);
+
   const overlayStyle: React.CSSProperties = useMemo<React.CSSProperties>(() => ({
-    backgroundSize: overlayRect ? 'contain' : fit,
+    backgroundSize: overlayRect?.backgroundSize ?? '100% 100%',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
-    transition: 'opacity 0.12s linear',
+    transition: 'opacity 0.14s linear, filter 0.12s linear',
     position: 'absolute',
-    ...(overlayRect || { inset: 0 }),
+    left: overlayRect?.left ?? 0,
+    top: overlayRect?.top ?? 0,
+    width: overlayRect?.width ?? '100%',
+    height: overlayRect?.height ?? '100%',
     zIndex: 30,
     pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
     backgroundImage: filterImage,
-    // Sem amplificação: a camada já contém as cores autorais do segredo.
-    // Filtros extras (brightness/contrast altos) estouravam a imagem.
     mixBlendMode: 'normal' as any,
     opacity: hiddenLayerOpacity,
-    filter: 'none',
-  }), [fit, hiddenLayerOpacity, filterImage, overlayRect]);
+    filter: overlayFilter,
+  }), [hiddenLayerOpacity, filterImage, overlayRect, overlayFilter]);
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

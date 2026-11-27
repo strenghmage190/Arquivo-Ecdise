@@ -26,10 +26,8 @@ import { validateImageFile } from '../../../utils/fileValidators';
 import { validateFile } from '../../../utils/storage';
 import {
   DEFAULT_IMAGE_FILTERS,
-  FULL_FILTER_LAYER_TRANSFORM,
   IMAGE_FILTER_LIMITS,
   clampImageFilterValue,
-  resolveFilterLayerTransform,
 } from '../../../config/imageFilter';
 import {
   DocumentLayer,
@@ -255,7 +253,7 @@ export default function TabVisual() {
       brightness: fc.brightness === 100 && fc.contrast === 100 ? 150 : fc.brightness,
       contrast: fc.contrast === 100 && fc.brightness === 100 ? 150 : fc.contrast,
       saturate: fc.saturate,
-      transform: fc.transform || { ...FULL_FILTER_LAYER_TRANSFORM },
+      transform: null,
     }));
     setAlignLayer('filter');
     e.target.value = '';
@@ -385,8 +383,6 @@ export default function TabVisual() {
       layers: prev.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)),
     }));
   };
-
-  const filterTransform = resolveFilterLayerTransform(filterConfig.transform);
 
   // Available overlay layers for the Visual Alignment conference preview
   const availableAlignLayers: { key: AlignLayerKey; label: string; url: string; color: string }[] =
@@ -614,22 +610,8 @@ export default function TabVisual() {
                   <img
                     src={activeAlignObj.url}
                     alt={`Sobreposição ${activeAlignObj.label}`}
-                    className={activeAlignObj.key === 'filter' ? undefined : 'ccm-align-overlay'}
-                    style={
-                      activeAlignObj.key === 'filter'
-                        ? {
-                          position: 'absolute',
-                          left: `${filterTransform.left}%`,
-                          top: `${filterTransform.top}%`,
-                          width: `${filterTransform.width}%`,
-                          height: `${filterTransform.height}%`,
-                          objectFit: 'contain',
-                          opacity: alignOpacity / 100,
-                          pointerEvents: 'none',
-                          outline: '1px dashed #38bdf8',
-                        }
-                        : { opacity: alignOpacity / 100 }
-                    }
+                    className="ccm-align-overlay"
+                    style={{ opacity: alignOpacity / 100 }}
                   />
                 </div>
               </div>
@@ -932,7 +914,7 @@ export default function TabVisual() {
             className={`ccm-btn ccm-btn-block ${showAdvancedFilter ? 'ccm-btn-primary' : ''}`}
           >
             <Sliders size={14} />{' '}
-            {showAdvancedFilter ? 'Ocultar Ajustes de Filtro' : 'Ajustes de Revelação e Posição do Filtro'}
+            {showAdvancedFilter ? 'Ocultar Ajustes de Filtro' : 'Ajustes de Revelação do Filtro'}
           </button>
 
           {showAdvancedFilter && (
@@ -1082,74 +1064,8 @@ export default function TabVisual() {
               </div>
 
               {mediaState.filterPreviewUrl && (
-                <div className="ccm-list-stack">
-                  <div className="ccm-label">Posição & Tamanho da Camada Filtro (%)</div>
-                  <div className="ccm-grid-4">
-                    <div className="ccm-field">
-                      <label className="ccm-label">Esquerda %</label>
-                      <input
-                        type="number"
-                        className="ccm-input"
-                        min={0}
-                        max={100}
-                        value={filterTransform.left}
-                        onChange={(e) =>
-                          setFilterConfig((s) => ({
-                            ...s,
-                            transform: { ...filterTransform, left: Number(e.target.value) || 0 },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="ccm-field">
-                      <label className="ccm-label">Topo %</label>
-                      <input
-                        type="number"
-                        className="ccm-input"
-                        min={0}
-                        max={100}
-                        value={filterTransform.top}
-                        onChange={(e) =>
-                          setFilterConfig((s) => ({
-                            ...s,
-                            transform: { ...filterTransform, top: Number(e.target.value) || 0 },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="ccm-field">
-                      <label className="ccm-label">Largura %</label>
-                      <input
-                        type="number"
-                        className="ccm-input"
-                        min={5}
-                        max={100}
-                        value={filterTransform.width}
-                        onChange={(e) =>
-                          setFilterConfig((s) => ({
-                            ...s,
-                            transform: { ...filterTransform, width: Number(e.target.value) || 50 },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="ccm-field">
-                      <label className="ccm-label">Altura %</label>
-                      <input
-                        type="number"
-                        className="ccm-input"
-                        min={5}
-                        max={100}
-                        value={filterTransform.height}
-                        onChange={(e) =>
-                          setFilterConfig((s) => ({
-                            ...s,
-                            transform: { ...filterTransform, height: Number(e.target.value) || 50 },
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
+                <div className="ccm-note-muted">
+                  A camada de tratamento sempre cobre 100% da imagem base, alinhada 1:1, para que a revelação funcione como troca de folha.
                 </div>
               )}
             </div>

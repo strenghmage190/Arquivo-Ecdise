@@ -1,11 +1,7 @@
 import { DisplayConfig, defaultDisplayConfig } from '../config/displayConfig';
 import { FieldVisibilityConfig, defaultFieldVisibility } from '../config/fieldVisibilityConfig';
 import { InvestigationCardInsight } from '../api/investigations';
-import {
-  FULL_FILTER_LAYER_TRANSFORM,
-  clampImageFilterValue,
-  normalizeFilterLayerTransform,
-} from '../config/imageFilter';
+import { clampImageFilterValue } from '../config/imageFilter';
 
 export type PaceMode = 'in_session' | 'between_sessions';
 export type LockType = 'keypad' | 'terminal' | 'pattern';
@@ -726,7 +722,7 @@ export function hydrateClueStateFromCard(card?: Record<string, any> | null) {
       brightness: clampImageFilterValue('brightness', m.image_filter_reveal?.brightness ?? 100),
       contrast: clampImageFilterValue('contrast', m.image_filter_reveal?.contrast ?? 100),
       saturate: clampImageFilterValue('saturate', m.image_filter_reveal?.saturate ?? 100),
-      transform: normalizeFilterLayerTransform(m.image_filter_layer_transform),
+      transform: null,
     },
     thermalConfig: {
       enabled: Boolean(m.thermal || thermalUrl),
@@ -1124,16 +1120,11 @@ export function buildClueDbPayload(params: BuildCluePayloadParams): Record<strin
 
   if (filterUrl) {
     metadata.image_filter_layer = filterUrl;
-    metadata.image_filter_layer_transform =
-      normalizeFilterLayerTransform(filter.transform) ||
-      normalizeFilterLayerTransform(existingMeta.image_filter_layer_transform) ||
-      { ...FULL_FILTER_LAYER_TRANSFORM };
-  } else if (filter.transform) {
-    metadata.image_filter_layer_transform = filter.transform;
   } else if (media.removedFilter) {
     delete metadata.image_filter_layer;
-    delete metadata.image_filter_layer_transform;
   }
+  // Camada de tratamento é sempre 100% alinhada à base; transform legado é ignorado.
+  delete metadata.image_filter_layer_transform;
 
   // Shredder & Cipher inside metadata (NEVER as stray top-level columns)
   if (cipher.isShredded) {
