@@ -171,9 +171,9 @@ export function MysteryImage({
   }, [isUVMode, baseFilter, fit, baseSrc, isForensicActive]);
   // Cálculo de opacidade da camada de tratamento (puzzle)
   let hiddenLayerOpacity = 0;
-  // Se o mestre forneceu valores alvo, usamos modo de enigma: mostrar apenas
-  // quando o jogador se aproximar. Usamos a maior diferença entre os canais
-  // (em vez da soma) para que a tolerância seja previsível e igual para todos.
+  let revealProximity = 0; // 0..1, usado para feedback visual sutil
+  // Faixa de "ponto ideal": opacidade 100% sem precisar acertar no pixel exato.
+  const SWEET_SPOT = 4;
   if (revealSettings !== null && typeof revealSettings === 'object') {
     const rb = revealSettings.brightness ?? DEFAULT_IMAGE_FILTERS.brightness;
     const rc = revealSettings.contrast ?? DEFAULT_IMAGE_FILTERS.contrast;
@@ -183,10 +183,15 @@ export function MysteryImage({
       Math.abs(filters.contrast - rc),
       Math.abs(filters.saturate - rs)
     );
-    if (maxDiff < IMAGE_FILTER_REVEAL_TOLERANCE) {
-      const raw = 1 - maxDiff / IMAGE_FILTER_REVEAL_TOLERANCE;
-      // smoothstep: no alvo exato fica 100% opaco, e some suavemente ao errar
+    if (maxDiff <= SWEET_SPOT) {
+      hiddenLayerOpacity = 1;
+      revealProximity = 1;
+    } else if (maxDiff < IMAGE_FILTER_REVEAL_TOLERANCE) {
+      const t = (maxDiff - SWEET_SPOT) / (IMAGE_FILTER_REVEAL_TOLERANCE - SWEET_SPOT);
+      const raw = 1 - t;
+      // smoothstep: transição suave até sumir fora da faixa
       hiddenLayerOpacity = raw * raw * (3 - 2 * raw);
+      revealProximity = hiddenLayerOpacity;
     }
   } else {
     // Modo legado: revela proporcionalmente à distorção a partir de 100
@@ -196,140 +201,39 @@ export function MysteryImage({
       Math.abs(filters.saturate - DEFAULT_IMAGE_FILTERS.saturate)
     );
     hiddenLayerOpacity = Math.min(1, distortionLevel / 40);
+    revealProximity = hiddenLayerOpacity;
   }
   hiddenLayerOpacity = Math.min(1, Math.max(0, hiddenLayerOpacity));
 
-  // Camada de tratamento é sempre a folha inteira, alinhada 1:1 à base.
-  // O CSS de inspeção/fullscreen pode usar object-fit: contain na base;
-  // o overlay acompanha a imagem renderizada (não o container) para evitar drift.
-  const [overlayRect, setOverlayRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    backgroundSize: string;
-  } | null>(null);
-
+  // Feedback sutil para UI externa (painel de tratamento).
   useEffect(() => {
-    if (!filterImage) {
-      setOverlayRect(null);
-      return;
-    }
-    const container = containerRef.current;
-    if (!container) return;
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.setProperty('--reveal-proximity', String(revealProximity));
+    if (revealProximity > 0) el.dataset.revealActive = revealProximity >= 0.999 ? 'full' : 'partial';
+    else delete el.dataset.revealActive;
+  }, [revealProximity]);
 
-    const updateRect = () => {
-      const containerRect = container.getBoundingClientRect();
-      const cW = containerRect.width;
-      const cH = containerRect.height;
-      if (!cW || !cH) return;
-
-      const baseImg = container.querySelector<HTMLImageElement>('img.main-evidence');
-      if (!baseImg) {
-        setOverlayRect({ left: 0, top: 0, width: cW, height: cH, backgroundSize: '100% 100%' });
-        return;
-      }
-
-      const imgRect = baseImg.getBoundingClientRect();
-      const naturalW = baseImg.naturalWidth || 0;
-      const naturalH = baseImg.naturalHeight || 0;
-      const objectFit = getComputedStyle(baseImg).objectFit;
-
-      const boxLeft = imgRect.left - containerRect.left;
-      const boxTop = imgRect.top - containerRect.top;
-      const boxW = imgRect.width;
-      const boxH = imgRect.height;
-
-      if (!naturalW || !naturalH || !boxW || !boxH) {
-        setOverlayRect({
-          left: boxLeft, top: boxTop, width: boxW || cW, height: boxH || cH,
-          backgroundSize: '100% 100%',
-        });
-        return;
-      }
-
-      if (objectFit === 'contain') {
-        const scale = Math.min(boxW / naturalW, boxH / naturalH);
-        const drawW = naturalW * scale;
-        const drawH = naturalH * scale;
-        setOverlayRect({
-          left: boxLeft + (boxW - drawW) / 2,
-          top: boxTop + (boxH - drawH) / 2,
-          width: drawW,
-          height: drawH,
-          backgroundSize: '100% 100%',
-        });
-        return;
-      }
-
-      if (objectFit === 'cover') {
-        const scale = Math.max(boxW / naturalW, boxH / naturalH);
-        const drawW = naturalW * scale;
-        const drawH = naturalH * scale;
-        // Overlay cobre o box visível da imagem, mas o background é escalado
-        // como cover para alinhar 1:1 com os pixels renderizados da base.
-        setOverlayRect({
-          left: boxLeft,
-          top: boxTop,
-          width: boxW,
-          height: boxH,
-          backgroundSize: `${drawW}px ${drawH}px`,
-        });
-        return;
-      }
-
-      setOverlayRect({
-        left: boxLeft, top: boxTop, width: boxW, height: boxH,
-        backgroundSize: '100% 100%',
-      });
-    };
-
-    updateRect();
-    const baseImg = container.querySelector<HTMLImageElement>('img.main-evidence');
-    baseImg?.addEventListener('load', updateRect);
-
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(updateRect);
-      observer.observe(container);
-      if (baseImg) observer.observe(baseImg);
-    }
-    window.addEventListener('resize', updateRect);
-    return () => {
-      baseImg?.removeEventListener('load', updateRect);
-      observer?.disconnect();
-      window.removeEventListener('resize', updateRect);
-    };
-  }, [filterImage, fit, baseSrc, className, style]);
-
-  // A camada revelada acompanha o tratamento visualmente, mas com limites
-  // seguros para nunca estourar/escurecer a ponto de esconder o conteúdo.
-  const overlayFilter = useMemo(() => {
-    const clampReadable = (value: number, min: number, max: number) =>
-      Math.min(max, Math.max(min, value));
-    const b = clampReadable(filters.brightness, 55, 165);
-    const c = clampReadable(filters.contrast, 60, 165);
-    const s = clampReadable(filters.saturate, 35, 170);
-    return `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
-  }, [filters.brightness, filters.contrast, filters.saturate]);
-
+  // Camada de tratamento: folha inteira, 1:1 com a base.
+  // Usa o mesmo box e object-fit da base para nunca desalinhar no zoom/pan.
   const overlayStyle: React.CSSProperties = useMemo<React.CSSProperties>(() => ({
-    backgroundSize: overlayRect?.backgroundSize ?? '100% 100%',
+    backgroundSize: fit,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
-    transition: 'opacity 0.14s linear, filter 0.12s linear',
+    transition: 'opacity 0.16s linear',
     position: 'absolute',
-    left: overlayRect?.left ?? 0,
-    top: overlayRect?.top ?? 0,
-    width: overlayRect?.width ?? '100%',
-    height: overlayRect?.height ?? '100%',
+    inset: 0,
+    width: '100%',
+    height: '100%',
     zIndex: 30,
     pointerEvents: 'none' as React.CSSProperties['pointerEvents'],
     backgroundImage: filterImage,
     mixBlendMode: 'normal' as any,
     opacity: hiddenLayerOpacity,
-    filter: overlayFilter,
-  }), [hiddenLayerOpacity, filterImage, overlayRect, overlayFilter]);
+    // Sem filtro na camada revelada: o tratamento fica só na base,
+    // evitando "lavar" os textos/detalhes escondidos.
+    filter: 'none',
+  }), [fit, hiddenLayerOpacity, filterImage]);
 
   // canvasRef and drawing effect for pixel-precise forensic channel isolation
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -639,17 +543,15 @@ export function MysteryImage({
       style={{
         ...style,
         cursor: isUVMode ? 'none' : (hasSecret ? 'pointer' : 'default'),
-        // Fundo preto no forense para contraste correto
         backgroundColor: isForensicActive ? '#000' : 'transparent',
-        // Evitar scroll/gesto no mobile e criar contexto de empilhamento isolado
         touchAction: 'none' as React.CSSProperties['touchAction'],
         isolation: 'isolate' as React.CSSProperties['isolation'],
         userSelect: 'none' as React.CSSProperties['userSelect'],
         WebkitUserSelect: 'none' as any,
-        // expose CSS vars for radius and pointer to enable CSS-only masks
         ['--uv-radius' as any]: `${RADIUS}px`,
         ['--mouse-x' as any]: `${xy.x}px`,
-        ['--mouse-y' as any]: `${xy.y}px`
+        ['--mouse-y' as any]: `${xy.y}px`,
+        ['--reveal-proximity' as any]: revealProximity,
       }}
     >
       {/* MUDANÇA 2: Esconder camadas normais se forense estiver ativo */}
